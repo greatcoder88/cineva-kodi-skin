@@ -139,6 +139,7 @@ def update_xml(data, path):
         stale_visibility = normal_label.find("visible")
         if stale_visibility is not None:
             normal_label.remove(stale_visibility)
+        set_child_text(normal_label, "visible", "!ListItem.IsSelected")
         for tag, value in (("left", 25), ("top", -7), ("width", 200), ("height", 290)):
             set_child_text(focused_image, tag, value)
         for tag, value in (("left", 30), ("width", 190), ("top", 266)):
