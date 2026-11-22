@@ -40,10 +40,6 @@ def request_bytes(url):
         return response.read()
 
 
-def normalize_poster(raw, target):
-    raw.write_bytes(request_bytes(raw_url[0]))
-
-
 def save_poster(url, target):
     raw = target.with_suffix(target.suffix + ".download")
     raw.write_bytes(request_bytes(url))
@@ -54,7 +50,7 @@ def save_poster(url, target):
     ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     raw.unlink(missing_ok=True)
     data = target.read_bytes()
-    if len(data) < 5000 or not data.startswith(b"\\xff\\xd8\\xff"):
+    if len(data) < 5000 or not data.startswith(b"\xff\xd8\xff"):
         raise SystemExit("Downloaded poster is empty or not a valid JPEG: " + target.name)
     dimensions = subprocess.check_output(
         ["identify", "-format", "%wx%h", str(target)], text=True
