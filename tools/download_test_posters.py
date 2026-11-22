@@ -30,6 +30,15 @@ SHOWS = [
     ("tv-6.jpg", "Sherlock"),
 ]
 TMDB_IMAGE = "https://image.tmdb.org/t/p/w500/{}"
+TMDB_BACKDROP = "https://image.tmdb.org/t/p/w1280/{}"
+BACKDROPS = [
+    ("movie-1-fanart.jpg", "kXfqcdQKsToO0OUXHcrrNCHDBzO.jpg"),
+    ("movie-2-fanart.jpg", "nMKdUUepR0i5zn0y1T4CsSB5aww.jpg"),
+    ("movie-3-fanart.jpg", "xJHokMbljvjADYdit5fK5VQsXEG.jpg"),
+    ("movie-4-fanart.jpg", "s3TBrRGB1iahjT3x5i8U9q9c1x.jpg"),
+    ("movie-5-fanart.jpg", "icmmSD4vTTDKOq2vvdulafOGw.jpg"),
+    ("movie-6-fanart.jpg", "zViRwl3ySscZnbXZJ2Q9wq3SeUG.jpg"),
+]
 TVMAZE_SEARCH = "https://api.tvmaze.com/singlesearch/shows?q={}"
 USER_AGENT = "CINEVA-Kodi-Skin-CI/1.0 (https://github.com/greatcoder88/cineva-kodi-skin)"
 
