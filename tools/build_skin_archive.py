@@ -163,7 +163,7 @@ def update_xml(data, path):
             set_child_text(fallback_image, "visible", f"!Control.HasFocus({container_id})")
             set_child_text(active_image, "visible", f"Control.HasFocus({container_id})")
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
-            for tag, value in (("left", 0), ("top", 270), ("width", 270), ("height", 24), ("align", "center"), ("font", "font12"), ("textcolor", "white")):
+            for tag, value in (("left", 0), ("top", 278), ("width", 270), ("height", 20), ("align", "center"), ("font", "font10"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
             set_child_text(active_label, "visible", f"Control.HasFocus({container_id})")
             set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
