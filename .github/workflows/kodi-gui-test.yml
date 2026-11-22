@@ -49,7 +49,7 @@ jobs:
           if confirm.findtext("defaultcontrol") != "11":
             raise SystemExit("Keep Skin must default to control 11 (Yes); control 10 is No")
           for button in confirm.findall(".//control[@type='button']"):
-            if button.findtext("texturefocus") != "focus-bar.png" or button.findtext("texturenofocus") != "-":
+            if button.findtext("texturefocus") != "focus-bar.png" or button.findtext("texturenofocus") != "black.png":
               raise SystemExit("Keep Skin buttons need explicit visible focus and no-focus textures")
           startup = ET.parse("skin.cineva/xml/Startup.xml").getroot()
           if startup.find("defaultcontrol") is not None or startup.find(".//control[@id='50']") is not None:
