@@ -73,6 +73,12 @@ jobs:
           top_texture = top_shade.find("texture") if top_shade is not None else None
           if top_shade is None or top_shade.findtext("height") != "260" or top_texture is None or top_texture.attrib.get("flipy") != "true":
             raise SystemExit("Home hero is missing the mirrored top fade for readable navigation")
+          rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
+          if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("72", "370", "1776", "680") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "4", "220"):
+            raise SystemExit("Home rails are missing their vertical scrolling viewport")
+          rail_children = list(rail_list) if rail_list is not None else []
+          if len(rail_children) != 8:
+            raise SystemExit("Home scrolling viewport must contain four heading/shelf pairs")
           for container_id, play_id, nav_target in ((9001, 9111, 1001), (9002, 9113, 1001), (9003, 9115, 1002), (9004, 9117, 1003)):
             action_group = controls.find(f"./control[@id='{9100 + container_id - 9000}']")
             buttons = action_group.findall("./control[@type='button']") if action_group is not None else []
@@ -82,24 +88,27 @@ jobs:
               raise SystemExit(f"Home row {container_id} hero actions are not wired to its selected item")
             if [button.findtext("texturenofocus") for button in buttons] != ["white.png", "black.png"] or [button.findtext("textcolor") for button in buttons] != ["black", "white"]:
               raise SystemExit(f"Home row {container_id} hero actions do not have contrasting Play/Info surfaces")
-            shelf = controls.find(f"./control[@type='fixedlist'][@id='{container_id}']")
+            shelf = rail_list.find(f"./control[@type='fixedlist'][@id='{container_id}']") if rail_list is not None else None
             if shelf is None or shelf.findtext("onup") != f"SetFocus({play_id})":
               raise SystemExit(f"Home row {container_id} cannot navigate up to its hero actions")
-          row_positions = ((370, 406), (715, 751), (1060, 1096), (1405, 1441))
-          for index, (heading_top, shelf_top) in enumerate(row_positions, 1):
-            heading = next((c for c in controls.findall("control")
-                            if c.get("type") == "label"
-                            and c.findtext("label") == f"$INFO[Skin.String(Cineva.Widget{index}.Name)]"), None)
-            shelf = controls.find(f"./control[@type='fixedlist'][@id='{9000 + index}']")
-            if heading is None or heading.findtext("top") != str(heading_top):
-              raise SystemExit(f"Home widget {index} heading is not at the verified non-overlap position")
-            if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "300":
-              raise SystemExit(f"Home widget {index} shelf geometry is incorrect")
+          for index in range(1, 5):
+            heading = rail_children[(index - 1) * 2] if len(rail_children) == 8 else None
+            shelf = rail_children[(index - 1) * 2 + 1] if len(rail_children) == 8 else None
+            if heading is None or heading.get("type") != "label" or heading.findtext("label") != f"$INFO[Skin.String(Cineva.Widget{index}.Name)]" or heading.findtext("height") != "32":
+              raise SystemExit(f"Home widget {index} heading is missing from the scrolling viewport")
+            if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or shelf.findtext("height") != "260" or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
+              raise SystemExit(f"Home widget {index} shelf geometry or upward focus route is incorrect")
+            expected_down = f"SetFocus({9000 + index + 1})" if index < 4 else "SetFocus(1001)"
+            if shelf.findtext("ondown") != expected_down:
+              raise SystemExit(f"Home widget {index} cannot navigate down to the next rail")
+            for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
+              if (layout.get("width"), layout.get("height")) != ("222", "260"):
+                raise SystemExit(f"Home widget {index} poster card geometry is not the 8-up layout")
           if controls.find("./control[@id='9010']") is not None:
             raise SystemExit("Obstructive floating More Widgets button is still present")
           includes = ET.parse("skin.cineva/xml/Includes.xml").getroot()
           poster = includes.find("./include[@name='CinevaPosterItem']")
-          if poster is None or poster.findtext("./control[@type='image']/height") != "276" or poster.findtext("./control[@type='label']/width") != "270" or poster.findtext("./control[@type='label']/top") != "278" or poster.findtext("./control[@type='label']/height") != "20":
+          if poster is None or poster.findtext("./control[@type='image']/height") != "234" or poster.findtext("./control[@type='label']/width") != "222" or poster.findtext("./control[@type='label']/top") != "236" or poster.findtext("./control[@type='label']/height") != "20":
             raise SystemExit("Home poster and title layout is missing its redesigned large-card geometry")
           catalogue = ET.parse("skin.cineva/xml/MyVideoNav.xml").getroot()
           panel = catalogue.find("./controls/control[@type='panel']")
@@ -164,7 +173,7 @@ jobs:
           python tools/download_test_posters.py "$POV/resources/posters"
           test -s "$POV/resources/posters/movie-1.jpg"
           test -s "$POV/resources/posters/tv-1.jpg"
-          for index in 1 2 3 4 5 6; do test -s "$POV/resources/posters/backdrop-$index.jpg"; done
+          for index in 1 2 3 4 5 6 7 8; do test -s "$POV/resources/posters/backdrop-$index.jpg"; done
           curl -fL --retry 3 -o /tmp/script.skinshortcuts.zip https://github.com/MikeSiLVO/script.skinshortcuts/archive/refs/tags/v3.0.1.zip
           mkdir -p "$HOME/.var/app/tv.kodi.Kodi/data/addons/script.skinshortcuts"
           unzip -q /tmp/script.skinshortcuts.zip -d /tmp/skinshortcuts
@@ -401,8 +410,8 @@ jobs:
               poster_count = sum(1 for poster in posters if poster)
               unique_posters = len(set(poster for poster in posters if poster))
               print(f"Widget row {row}: items={len(items)}, poster_art={poster_count}, unique_posters={unique_posters}, first={items[0] if items else None}")
-              if len(items) < 6 or poster_count < 6 or unique_posters < 6:
-                raise SystemExit(f"Widget row {row} did not return six distinct poster-backed items")
+              if len(items) < 8 or poster_count < 8 or unique_posters < 8:
+                raise SystemExit(f"Widget row {row} did not return eight distinct poster-backed items")
             rpc("Input.Down")  # Home navigation -> PLAY action
             rpc("Input.Down")  # PLAY action -> first poster
             deadline = time.time() + 12
@@ -445,6 +454,27 @@ jobs:
               time.sleep(0.25)
             else:
               raise SystemExit(f"Hero action Down did not return to the selected poster: {state}")
+            # Move through every row; the grouplist must scroll the lower shelves into view.
+            for row_number in (2, 3, 4):
+              subprocess.run(["xdotool","key","Down"],check=True)
+              deadline = time.time() + 10
+              expected_control = 9000 + row_number
+              while time.time() < deadline:
+                state = gui()
+                current = state.get("currentcontrol",{})
+                try:
+                  current_id = int(current.get("id",-1))
+                except (TypeError, ValueError):
+                  current_id = -1
+                if current_id == expected_control:
+                  break
+                time.sleep(0.25)
+              else:
+                raise SystemExit(f"D-pad Down did not reach Home row {row_number}: {state}")
+              print(f"Scrolled Home to row {row_number}; focused control:", state.get("currentcontrol"))
+              if row_number == 4:
+                time.sleep(0.8)
+                subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row4-scroll.png"],check=True)
           logs = log_text()
           if "EXCEPTION: Invalid setting type" in logs:
             raise SystemExit("GUI test found a widget settings type error")

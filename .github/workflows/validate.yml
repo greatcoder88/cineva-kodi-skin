@@ -69,7 +69,6 @@ jobs:
               errors.append("Startup.xml still focuses the empty panel")
           if (startup.findtext("onload") or "").strip() != "ActivateWindow(Home)":
               errors.append("Startup.xml must hand off to Home")
-          row_positions = ((370, 406), (715, 751), (1060, 1096), (1405, 1441))
           controls = home.find("controls")
           hero_group = next((g for g in controls.findall("control") if g.get("type") == "group" and g.findtext("control/label", "").startswith("$INFO[Container(")), None)
           hero_title = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Label]" in c.findtext("label", "")), None) if hero_group is not None else None
@@ -87,6 +86,12 @@ jobs:
           top_texture = top_shade.find("texture") if top_shade is not None else None
           if top_shade is None or top_shade.findtext("height") != "260" or top_texture is None or top_texture.attrib.get("flipy") != "true":
               errors.append("Home hero is missing the mirrored top fade for readable navigation")
+          rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
+          if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("72", "370", "1776", "680") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "4", "220"):
+              errors.append("Home rails must use the pinned-hero vertical scrolling viewport")
+          rail_children = list(rail_list) if rail_list is not None else []
+          if len(rail_children) != 8:
+              errors.append("Home scrolling viewport must contain four heading/shelf pairs")
           for container_id, play_id, nav_target in ((9001, 9111, 1001), (9002, 9113, 1001), (9003, 9115, 1002), (9004, 9117, 1003)):
               action_group = controls.find(f"./control[@id='{9100 + container_id - 9000}']")
               buttons = action_group.findall("./control[@type='button']") if action_group is not None else []
@@ -99,18 +104,23 @@ jobs:
                   errors.append(f"Home row {container_id} MORE INFO action is not bound to its selected item")
               if any(button.findtext("texturefocus") != "focus-bar.png" for button in buttons) or [button.findtext("texturenofocus") for button in buttons] != ["white.png", "black.png"] or [button.findtext("textcolor") for button in buttons] != ["black", "white"]:
                   errors.append(f"Home row {container_id} hero actions are missing their contrasting surfaces and focus treatment")
-              shelf = controls.find(f"./control[@type='fixedlist'][@id='{container_id}']")
+              shelf = rail_list.find(f"./control[@type='fixedlist'][@id='{container_id}']") if rail_list is not None else None
               if shelf is None or shelf.findtext("onup") != f"SetFocus({play_id})":
                   errors.append(f"Home row {container_id} cannot navigate up to its hero actions")
-          for index, (heading_top, shelf_top) in enumerate(row_positions, 1):
-              heading = next((c for c in controls.findall("control")
-                              if c.get("type") == "label"
-                              and c.findtext("label") == f"$INFO[Skin.String(Cineva.Widget{index}.Name)]"), None)
-              shelf = controls.find(f"./control[@type='fixedlist'][@id='{9000 + index}']")
-              if heading is None or heading.findtext("top") != str(heading_top):
-                  errors.append(f"Home widget {index} heading overlaps the shelf above")
-              if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "300":
-                  errors.append(f"Home widget {index} shelf geometry is incorrect")
+          for index in range(1, 5):
+              heading = rail_children[(index - 1) * 2] if len(rail_children) == 8 else None
+              shelf = rail_children[(index - 1) * 2 + 1] if len(rail_children) == 8 else None
+              if heading is None or heading.get("type") != "label" or heading.findtext("label") != f"$INFO[Skin.String(Cineva.Widget{index}.Name)]" or heading.findtext("height") != "32":
+                  errors.append(f"Home widget {index} heading is missing from the scrolling rail list")
+              if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or shelf.findtext("height") != "260" or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
+                  errors.append(f"Home widget {index} shelf geometry or upward focus route is incorrect")
+              if shelf is not None:
+                  expected_down = f"SetFocus({9000 + index + 1})" if index < 4 else "SetFocus(1001)"
+                  if shelf.findtext("ondown") != expected_down:
+                      errors.append(f"Home widget {index} shelf cannot move down to the next row")
+                  for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
+                      if (layout.get("width"), layout.get("height")) != ("222", "260"):
+                          errors.append(f"Home widget {index} poster cards do not use the 8-up rail geometry")
           nav = next((g for g in controls.findall("control") if g.get("type") == "group" and g.find("./control[@id='1001']") is not None), None)
           if nav is None or any(button.findtext("focusedcolor") != "white" or button.findtext("texturefocus") != "focus-bar.png" for button in nav.findall("./control[@type='button']")):
               errors.append("Home navigation buttons need visible explicit textures and text color")
@@ -130,14 +140,14 @@ jobs:
           normal_title = poster.find("./control[@type='label']") if poster is not None else None
           focused_poster = includes.find("./include[@name='CinevaFocusedPosterItem']")
           focused_title = focused_poster.find("./control[@type='label']") if focused_poster is not None else None
-          if poster is None or poster.findtext("./control[@type='image']/height") != "276" or normal_title is None or (normal_title.findtext("width"), normal_title.findtext("top"), normal_title.findtext("height")) != ("270", "278", "20"):
+          if poster is None or poster.findtext("./control[@type='image']/height") != "234" or normal_title is None or (normal_title.findtext("width"), normal_title.findtext("top"), normal_title.findtext("height")) != ("222", "236", "20"):
               errors.append("Poster image and normal title geometry is not the redesigned large-card layout")
           if normal_title is None or normal_title.findtext("visible") != "!ListItem.IsSelected":
               errors.append("Normal poster title must yield to the row-aware selected-item title")
           if focused_title is not None:
               errors.append("Base focused poster template must not retain an unused title layer")
           for container_id in (9001, 9002, 9003, 9004):
-              row = controls.find(f"./control[@type='fixedlist'][@id='{container_id}']")
+              row = rail_list.find(f"./control[@type='fixedlist'][@id='{container_id}']") if rail_list is not None else None
               row_focus = row.find("./focusedlayout/include") if row is not None else None
               focus_include = includes.find(f"./include[@name='CinevaFocusedPosterItem{container_id}']")
               focus_images = focus_include.findall("./control[@type='image']") if focus_include is not None else []
@@ -147,11 +157,11 @@ jobs:
                   errors.append(f"Home row {container_id} does not use its own focus layout")
               if len(focus_images) != 3 or focus_images[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_images[1].findtext("visible") != f"Control.HasFocus({container_id})":
                   errors.append(f"Home row {container_id} must show a normal poster when inactive and focus artwork only when active")
-              elif (focus_images[2].findtext("texture"), focus_images[2].findtext("visible"), focus_images[2].findtext("top"), focus_images[2].findtext("width"), focus_images[2].findtext("height")) != ("focus-bar.png", f"Control.HasFocus({container_id})", "270", "190", "4"):
+              elif (focus_images[2].findtext("texture"), focus_images[2].findtext("visible"), focus_images[2].findtext("top"), focus_images[2].findtext("width"), focus_images[2].findtext("height")) != ("focus-bar.png", f"Control.HasFocus({container_id})", "230", "156", "4"):
                   errors.append(f"Home row {container_id} focused poster is missing its red selection accent")
               if len(focus_labels) != 2 or focus_labels[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_labels[1].findtext("visible") != f"Control.HasFocus({container_id})":
                   errors.append(f"Home row {container_id} must keep exactly one correctly styled title visible")
-              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width")) != ("font10", "278", "20", "270"):
+              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width")) != ("font10", "236", "20", "222"):
                   errors.append(f"Home row {container_id} focused title must fit fully inside the poster card")
               zoom = focus_images[1].find("./animation[@effect='zoom']") if len(focus_images) > 1 else None
               if zoom is None or (zoom.get("end"), zoom.get("time")) != ("108", "150"):

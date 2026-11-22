@@ -15,6 +15,8 @@ MOVIES = [
     ("Inception", 2010, "Sci-Fi / Thriller"),
     ("The Matrix", 1999, "Sci-Fi / Action"),
     ("Dune: Part Two", 2024, "Sci-Fi / Adventure"),
+    ("Oppenheimer", 2023, "Biography / Drama"),
+    ("Barbie", 2023, "Comedy / Fantasy"),
 ]
 SHOWS = [
     ("Breaking Bad", 2008, "Crime / Drama"),
@@ -23,6 +25,8 @@ SHOWS = [
     ("The Last of Us", 2023, "Drama / Horror"),
     ("The Bear", 2022, "Comedy / Drama"),
     ("Sherlock", 2010, "Crime / Mystery"),
+    ("Game of Thrones", 2011, "Fantasy / Drama"),
+    ("Succession", 2018, "Drama"),
 ]
 
 

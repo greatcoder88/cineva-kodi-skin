@@ -22,6 +22,8 @@ MOVIES = [
     ("movie-4.jpg", "Inception", "oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg"),
     ("movie-5.jpg", "The Matrix", "p96dm7sCMn4VYAStA6siNz30G1r.jpg"),
     ("movie-6.jpg", "Dune: Part Two", "6izwz7rsy95ARzTR3poZ8H6c5pp.jpg"),
+    ("movie-7.jpg", "Oppenheimer", "ptpr0kGAckfQkJeJIt8st5dglvd.jpg"),
+    ("movie-8.jpg", "Barbie", "iuFNMS8U5cb6xfzi51Dbkovj7vM.jpg"),
 ]
 SHOWS = [
     ("tv-1.jpg", "Breaking Bad"),
@@ -30,6 +32,8 @@ SHOWS = [
     ("tv-4.jpg", "The Last of Us"),
     ("tv-5.jpg", "The Bear"),
     ("tv-6.jpg", "Sherlock"),
+    ("tv-7.jpg", "Game of Thrones"),
+    ("tv-8.jpg", "Succession"),
 ]
 MOVIE_BACKDROPS = [
     ("backdrop-1.jpg", "The Shawshank Redemption", 278),
@@ -38,6 +42,8 @@ MOVIE_BACKDROPS = [
     ("backdrop-4.jpg", "Inception", 27205),
     ("backdrop-5.jpg", "The Matrix", 603),
     ("backdrop-6.jpg", "Dune: Part Two", 693134),
+    ("backdrop-7.jpg", "Oppenheimer", 872585),
+    ("backdrop-8.jpg", "Barbie", 346698),
 ]
 TMDB_API_KEY = "9d2bff12ed955c7f1f74b83187f188ae"
 TMDB_DETAILS = "https://api.themoviedb.org/3/movie/{}?api_key=" + TMDB_API_KEY
@@ -119,7 +125,7 @@ def main():
         poster_hashes.add(digest)
         print("{} -> {} ({} bytes)".format(title, filename, size))
 
-    # Match the fixture's exact backdrop-1.jpg ... backdrop-6.jpg contract.
+    # Match the fixture's exact backdrop-1.jpg ... backdrop-8.jpg contract.
     backdrop_hashes = set()
     for filename, title, movie_id in MOVIE_BACKDROPS:
         details = request_json(TMDB_DETAILS.format(movie_id))
@@ -140,12 +146,12 @@ def main():
         print("{} -> {} ({} bytes)".format(title, filename, size))
 
     if len(poster_hashes) != len(MOVIES) + len(SHOWS):
-        raise SystemExit("Expected 12 distinct poster images; got {}".format(len(poster_hashes)))
+        raise SystemExit("Expected 16 distinct poster images; got {}".format(len(poster_hashes)))
     if len(backdrop_hashes) != len(MOVIE_BACKDROPS):
-        raise SystemExit("Expected six distinct landscape backdrops; got {}".format(
+        raise SystemExit("Expected eight distinct landscape backdrops; got {}".format(
             len(backdrop_hashes)
         ))
-    print("Downloaded and verified 12 distinct posters and six landscape backdrops.")
+    print("Downloaded and verified 16 distinct posters and eight landscape backdrops.")
 
 
 if __name__ == "__main__":

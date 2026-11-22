@@ -158,39 +158,52 @@ def update_xml(data, path):
             play_id = 9111 + (container_id - 9001) * 2
             set_child_text(hero_group, "visible",
                            f"Control.HasFocus({container_id}) | Control.HasFocus({play_id}) | Control.HasFocus({play_id + 1})")
-        # Two full large-poster rails sit above the fold; the remaining shelves stay reachable by D-pad navigation.
-        row_positions = ((370, 406), (715, 751), (1060, 1096), (1405, 1441))
-        for index, (heading_top, shelf_top) in enumerate(row_positions, 1):
+        # Keep the cinematic hero pinned while the four Home rails scroll as one catalogue.
+        # A grouplist owns the vertical movement; each child remains a normal horizontal fixedlist.
+        rail_list = ET.Element("control", {"type": "grouplist", "id": "9050"})
+        for tag, value in (("left", 72), ("top", 370), ("width", 1776), ("height", 680)):
+            set_child_text(rail_list, tag, value)
+        set_child_text(rail_list, "orientation", "vertical")
+        set_child_text(rail_list, "itemgap", 4)
+        set_child_text(rail_list, "scrolltime", 220)
+        set_child_text(rail_list, "usecontrolcoords", "false")
+        first_row_index = None
+        for index in range(1, 5):
             heading_label = f"$INFO[Skin.String(Cineva.Widget{index}.Name)]"
             heading = next((c for c in controls.findall("control")
                             if c.get("type") == "label" and c.findtext("label") == heading_label), None)
             shelf = controls.find(f"./control[@type='fixedlist'][@id='{9000 + index}']")
             if heading is None or shelf is None:
                 raise SystemExit(f"Home.xml is missing widget row {index}")
-            set_child_text(heading, "top", heading_top)
+            if first_row_index is None:
+                first_row_index = list(controls).index(heading)
+            controls.remove(heading)
+            controls.remove(shelf)
+            # The grouplist places each child in sequence; local coordinates start at zero.
+            set_child_text(heading, "left", 0)
+            set_child_text(heading, "top", 0)
+            set_child_text(heading, "width", 1100)
             set_child_text(heading, "height", 32)
             set_child_text(heading, "font", "font16")
-            set_child_text(shelf, "top", shelf_top)
-            set_child_text(shelf, "height", 300)
+            set_child_text(shelf, "left", 0)
+            set_child_text(shelf, "top", 0)
+            set_child_text(shelf, "width", 1776)
+            set_child_text(shelf, "height", 260)
             set_child_text(shelf, "onup", f"SetFocus({9111 + (index - 1) * 2})")
+            next_target = 9000 + index + 1 if index < 4 else 1001
+            set_child_text(shelf, "ondown", f"SetFocus({next_target})")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
-                layout.set("width", "270")
-                layout.set("height", "300")
-                for child in layout.findall("control"):
-                    if child.get("type") == "image":
-                        set_child_text(child, "left", 30)
-                        set_child_text(child, "width", 190)
-                        set_child_text(child, "height", 276)
-                    elif child.get("type") == "label":
-                        set_child_text(child, "left", 0)
-                        set_child_text(child, "top", 278)
-                        set_child_text(child, "width", 270)
-                        set_child_text(child, "height", 20)
-                        set_child_text(child, "align", "center")
+                layout.set("width", "222")
+                layout.set("height", "260")
             focused_layout = shelf.find("./focusedlayout")
             focused_include = focused_layout.find("include") if focused_layout is not None else None
             if focused_include is not None:
                 focused_include.text = f"CinevaFocusedPosterItem{9000 + index}"
+            rail_list.append(heading)
+            rail_list.append(shelf)
+        if first_row_index is None:
+            raise SystemExit("Home.xml has no widget rows to place in the scrolling rail list")
+        controls.insert(first_row_index, rail_list)
         nav_group = next((node for node in controls.findall("control") if node.get("type") == "group" and node.find("./control[@id='1001']") is not None), None)
         if nav_group is not None:
             for button in nav_group.findall("./control[@type='button']"):
@@ -230,22 +243,22 @@ def update_xml(data, path):
             raise SystemExit("Includes.xml has an incomplete poster layout")
         if focused_label is None:
             focused_label = ET.fromstring(ET.tostring(normal_label, encoding="unicode"))
-        for tag, value in (("left", 30), ("top", 0), ("width", 190), ("height", 276)):
+        for tag, value in (("left", 33), ("top", 0), ("width", 156), ("height", 234)):
             set_child_text(normal_image, tag, value)
-        for tag, value in (("left", 0), ("top", 278), ("width", 270), ("height", 20), ("align", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
+        for tag, value in (("left", 0), ("top", 236), ("width", 222), ("height", 20), ("align", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
             set_child_text(normal_label, tag, value)
         stale_visibility = normal_label.find("visible")
         if stale_visibility is not None:
             normal_label.remove(stale_visibility)
         set_child_text(normal_label, "visible", "!ListItem.IsSelected")
-        for tag, value in (("left", 25), ("top", -7), ("width", 200), ("height", 290)):
+        for tag, value in (("left", 29), ("top", -6), ("width", 164), ("height", 246)):
             set_child_text(focused_image, tag, value)
         focus_animation = focused_image.find("./animation[@effect='zoom']")
         if focus_animation is None:
             raise SystemExit("Includes.xml focused poster is missing its zoom animation")
         focus_animation.set("end", "108")
         focus_animation.set("time", "150")
-        for tag, value in (("left", 30), ("width", 190), ("top", 266)):
+        for tag, value in (("left", 33), ("width", 156), ("top", 225)):
             set_child_text(progress, tag, value)
         if focused_label is not None and focused_label in list(focused):
             focused.remove(focused_label)
@@ -267,12 +280,12 @@ def update_xml(data, path):
             set_child_text(fallback_image, "visible", f"!Control.HasFocus({container_id})")
             set_child_text(active_image, "visible", f"Control.HasFocus({container_id})")
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
-            for tag, value in (("left", 0), ("top", 278), ("width", 270), ("height", 20), ("align", "center"), ("font", "font10"), ("textcolor", "white")):
+            for tag, value in (("left", 0), ("top", 236), ("width", 222), ("height", 20), ("align", "center"), ("font", "font10"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
             set_child_text(active_label, "visible", f"Control.HasFocus({container_id})")
             set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
             focus_accent = ET.Element("control", {"type": "image"})
-            for tag, value in (("left", 30), ("top", 270), ("width", 190), ("height", 4)):
+            for tag, value in (("left", 33), ("top", 230), ("width", 156), ("height", 4)):
                 set_child_text(focus_accent, tag, value)
             set_child_text(focus_accent, "texture", "focus-bar.png")
             set_child_text(focus_accent, "visible", f"Control.HasFocus({container_id})")
