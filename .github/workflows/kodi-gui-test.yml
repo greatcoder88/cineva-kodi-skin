@@ -45,19 +45,19 @@ jobs:
           onload = root.find("onload")
           if onload is None: raise SystemExit("Home.xml has no widget initialization onload")
           widgets = [
-            ("1", "Continue Watching Movies", "plugin://plugin.video.pov/?mode=build_movie_list&action=in_progress_movies&name=Continue%20Watching%20Movies"),
-            ("2", "Continue Watching TV Shows", "plugin://plugin.video.pov/?mode=build_tvshow_list&action=in_progress_tvshows&name=Continue%20Watching%20TV%20Shows"),
-            ("3", "Trending Movies", "plugin://plugin.video.pov/?mode=build_movie_list&action=tmdb_movies_trending&name=Trending%20Movies"),
-            ("4", "Trending TV Shows", "plugin://plugin.video.pov/?mode=build_tvshow_list&action=tmdb_tv_trending&name=Trending%20TV%20Shows"),
+            ("1", "ContinueWatchingMovies", "plugin://plugin.video.pov/?mode=build_movie_list&action=in_progress_movies&name=Continue%20Watching%20Movies"),
+            ("2", "ContinueWatchingTVShows", "plugin://plugin.video.pov/?mode=build_tvshow_list&action=in_progress_tvshows&name=Continue%20Watching%20TV%20Shows"),
+            ("3", "TrendingMovies", "plugin://plugin.video.pov/?mode=build_movie_list&action=tmdb_movies_trending&name=Trending%20Movies"),
+            ("4", "TrendingTVShows", "plugin://plugin.video.pov/?mode=build_tvshow_list&action=tmdb_tv_trending&name=Trending%20TV%20Shows"),
           ]
           commands = []
           for number, title, path in widgets:
             for suffix, value in [("Title", title), ("Path", path), ("Name", title), ("Type", "video"), ("Target", "video")]:
-              commands.append('Skin.SetString(Cineva.Widget' + number + '.' + suffix + ',"' + value + '")')
+              commands.append('Skin.SetString(Cineva.Widget' + number + '.' + suffix + ',' + value + ')')
           commands.append("Skin.SetBool(Cineva.Initialized)")
           onload.text = ";".join(commands)
           tree.write(p, encoding="UTF-8", xml_declaration=True)
-          print("Rebuilt Home widget onload with quoted Skin.SetString arguments.")
+          print("Rebuilt Home widget onload with parser-safe no-space Skin.SetString arguments.")
           PY
           # Kodi's confirmation dialog uses control 11 for the affirmative action.
           # The previous custom dialog defaulted to 10 (revert), so Return silently
