@@ -41,7 +41,7 @@ jobs:
       - name: Install Kodi Piers beta from Flathub beta
         run: |
           flatpak remote-add --user --if-not-exists flathub-beta https://dl.flathub.org/beta-repo/flathub-beta.flatpakrepo
-          flatpak install --user --noninteractive -y flathub-beta tv.kodi.Kodi//beta
+          flatpak install --user --noninteractive -y flathub-beta org.freedesktop.Platform//26.08 tv.kodi.Kodi//beta
           flatpak info --user tv.kodi.Kodi//beta
 
       - name: Install CINÉVA into isolated Kodi profile
