@@ -97,27 +97,27 @@ jobs:
             row_controls = [child for child in row_group if child.tag == "control"] if row_group is not None else []
             heading = row_controls[0] if len(row_controls) == 2 else None
             shelf = row_controls[1] if len(row_controls) == 2 else None
-            if row_group is None or row_group.get("type") != "group" or row_group.get("id") != str(9060 + index) or row_group.findtext("height") != "292":
+            if row_group is None or row_group.get("type") != "group" or row_group.get("id") != str(9060 + index) or row_group.findtext("height") != "304":
               raise SystemExit(f"Home widget {index} is not a single scrollable row group")
             if heading is None or heading.get("type") != "label" or heading.findtext("label") != f"$INFO[Skin.String(Cineva.Widget{index}.Name)]" or (heading.findtext("top"), heading.findtext("height")) != ("0", "32"):
               raise SystemExit(f"Home widget {index} heading is missing from its row group")
-            if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("32", "260") or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
+            if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("32", "272") or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
               raise SystemExit(f"Home widget {index} shelf geometry or upward focus route is incorrect")
             expected_down = f"SetFocus({9000 + index + 1})" if index < 4 else "SetFocus(1001)"
             if shelf.findtext("ondown") != expected_down or row_group.findtext("ondown") != expected_down:
               raise SystemExit(f"Home widget {index} cannot navigate down to the next rail")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
-              if (layout.get("width"), layout.get("height")) != ("222", "260"):
+              if (layout.get("width"), layout.get("height")) != ("222", "272"):
                 raise SystemExit(f"Home widget {index} poster card geometry is not the 8-up layout")
           if controls.find("./control[@id='9010']") is not None:
             raise SystemExit("Obstructive floating More Widgets button is still present")
           includes = ET.parse("skin.cineva/xml/Includes.xml").getroot()
           poster = includes.find("./include[@name='CinevaPosterItem']")
-          if poster is None or poster.findtext("./control[@type='image']/height") != "234" or poster.findtext("./control[@type='label']/width") != "222" or poster.findtext("./control[@type='label']/top") != "236" or poster.findtext("./control[@type='label']/height") != "20" or poster.findtext("./control[@type='label']/font") != "font9":
+          if poster is None or poster.findtext("./control[@type='image']/height") != "234" or poster.findtext("./control[@type='label']/width") != "222" or poster.findtext("./control[@type='label']/top") != "236" or poster.findtext("./control[@type='label']/height") != "34" or poster.findtext("./control[@type='label']/font") != "font9":
             raise SystemExit("Home poster and title layout is missing its redesigned large-card geometry or readable title font")
           focused_poster = includes.find("./include[@name='CinevaFocusedPosterItem9001']")
           focused_title = next((label for label in focused_poster.findall("./control[@type='label']") if label.findtext("textcolor") == "white"), None) if focused_poster is not None else None
-          if focused_title is None or focused_title.findtext("font") != "font9" or focused_title.findtext("scroll") != "true":
+          if focused_title is None or focused_title.findtext("font") != "font9" or focused_title.findtext("height") != "34" or focused_title.findtext("wrap") != "true":
             raise SystemExit("Focused poster titles must use the compact font and scroll when their full title exceeds the card width")
           catalogue = ET.parse("skin.cineva/xml/MyVideoNav.xml").getroot()
           panel = catalogue.find("./controls/control[@type='panel']")
@@ -464,23 +464,20 @@ jobs:
             else:
               raise SystemExit(f"Hero action Down did not return to the selected poster: {state}")
             # Move through every row; the grouplist must scroll the lower shelves into view.
+            expected_row_labels = {2: "Breaking Bad", 3: "The Shawshank Redemption", 4: "Breaking Bad"}
             for row_number in (2, 3, 4):
               subprocess.run(["xdotool","key","Down"],check=True)
               deadline = time.time() + 10
-              expected_control = 9000 + row_number
+              expected_label = expected_row_labels[row_number]
               while time.time() < deadline:
                 state = gui()
-                current = state.get("currentcontrol",{})
-                try:
-                  current_id = int(current.get("id",-1))
-                except (TypeError, ValueError):
-                  current_id = -1
-                if current_id == expected_control:
+                current_label = state.get("currentcontrol",{}).get("label","").strip()
+                if current_label == expected_label:
                   break
                 time.sleep(0.25)
               else:
-                raise SystemExit(f"D-pad Down did not reach Home row {row_number}: {state}")
-              print(f"Scrolled Home to row {row_number}; focused control:", state.get("currentcontrol"))
+                raise SystemExit(f"D-pad Down did not reach Home row {row_number} ({expected_label}): {state}")
+              print(f"Scrolled Home to row {row_number}; focused item:", state.get("currentcontrol"))
               if row_number == 4:
                 time.sleep(0.8)
                 subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row4-scroll.png"],check=True)
