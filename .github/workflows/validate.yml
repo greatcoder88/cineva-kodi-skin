@@ -120,6 +120,9 @@ jobs:
                   button = nav.find(f"./control[@id='{button_id}']")
                   if button is None or button.findtext("ondown") != f"SetFocus({target_id})":
                       errors.append(f"Home navigation button {button_id} does not enter its matching hero actions")
+              active_marker = nav.find("./control[@id='9201']")
+              if active_marker is None or active_marker.findtext("texture") != "focus-bar.png" or active_marker.findtext("visible") != "Window.IsActive(home)":
+                  errors.append("Home navigation must retain its active-section marker after focus moves into the shelves")
           if controls.find("./control[@id='9010']") is not None:
               errors.append("Floating More Widgets button still obscures the fourth shelf")
           includes = ET.parse(root / "xml/Includes.xml").getroot()
@@ -142,12 +145,17 @@ jobs:
               focus_progress = focus_include.find("./control[@type='progress']") if focus_include is not None else None
               if row_focus is None or row_focus.text != f"CinevaFocusedPosterItem{container_id}":
                   errors.append(f"Home row {container_id} does not use its own focus layout")
-              if len(focus_images) != 2 or focus_images[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_images[1].findtext("visible") != f"Control.HasFocus({container_id})":
+              if len(focus_images) != 3 or focus_images[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_images[1].findtext("visible") != f"Control.HasFocus({container_id})":
                   errors.append(f"Home row {container_id} must show a normal poster when inactive and focus artwork only when active")
+              elif (focus_images[2].findtext("texture"), focus_images[2].findtext("visible"), focus_images[2].findtext("top"), focus_images[2].findtext("width"), focus_images[2].findtext("height")) != ("focus-bar.png", f"Control.HasFocus({container_id})", "270", "190", "4"):
+                  errors.append(f"Home row {container_id} focused poster is missing its red selection accent")
               if len(focus_labels) != 2 or focus_labels[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_labels[1].findtext("visible") != f"Control.HasFocus({container_id})":
                   errors.append(f"Home row {container_id} must keep exactly one correctly styled title visible")
-              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width")) != ("font10", "278", "20", "270"):
+              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width")) != ("font12", "278", "24", "270"):
                   errors.append(f"Home row {container_id} focused title must fit fully inside the poster card")
+              zoom = focus_images[1].find("./animation[@effect='zoom']") if len(focus_images) > 1 else None
+              if zoom is None or (zoom.get("end"), zoom.get("time")) != ("108", "150"):
+                  errors.append(f"Home row {container_id} focused poster needs the stronger, smooth selection zoom")
               if focus_progress is None or focus_progress.findtext("visible") != f"Control.HasFocus({container_id}) + ListItem.IsResumable":
                   errors.append(f"Home row {container_id} progress overlay is not scoped to the active row")
           catalogue = ET.parse(root / "xml/MyVideoNav.xml").getroot()
