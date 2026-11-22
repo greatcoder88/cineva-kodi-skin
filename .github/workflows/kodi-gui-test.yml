@@ -230,10 +230,13 @@ jobs:
               raise SystemExit("Kodi never logged a CINÉVA skin load")
             time.sleep(2)
             subprocess.run(["import","-display",":99","-window","root",f"artifacts/cineva-confirmation-{cycle}.png"],check=True)
-            # Kodi opens this confirmation with its default action focused.
-            # Do not send Left: that moves focus away from the default Keep/Yes action.
+            # The captured Kodi dialog visibly highlights No, not Yes.
+            # Move focus left onto Yes, then confirm; never assume Kodi's default focus.
+            subprocess.run(["xdotool","key","Left"],check=True)
+            time.sleep(0.3)
+            subprocess.run(["import","-display",":99","-window","root",f"artifacts/cineva-confirmation-focused-{cycle}.png"],check=True)
             subprocess.run(["xdotool","key","Return"],check=True)
-            print("Sent explicit Keep confirmation after CINÉVA load.")
+            print("Moved confirmation focus from No to Yes and confirmed.")
             time.sleep(3)
             selected = rpc("Settings.GetSettingValue", {"setting":"lookandfeel.skin"})
             selected_value = selected.get("value") if isinstance(selected, dict) else selected
