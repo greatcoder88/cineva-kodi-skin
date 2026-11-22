@@ -56,7 +56,7 @@ jobs:
             raise SystemExit("Startup.xml still focuses the empty panel 50")
           if (startup.findtext("onload") or "").strip() != "ActivateWindow(Home)":
             raise SystemExit("Startup.xml must hand off to Home after a skin switch")
-          row_positions = ((324, 354), (510, 540), (696, 726), (882, 912))
+          row_positions = ((324, 354), (504, 534), (684, 714), (864, 894))
           controls = home.find("controls")
           for index, (heading_top, shelf_top) in enumerate(row_positions, 1):
             heading = next((c for c in controls.findall("control")
@@ -65,13 +65,13 @@ jobs:
             shelf = controls.find(f"./control[@type='fixedlist'][@id='{9000 + index}']")
             if heading is None or heading.findtext("top") != str(heading_top):
               raise SystemExit(f"Home widget {index} heading is not at the verified non-overlap position")
-            if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "160":
+            if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "144":
               raise SystemExit(f"Home widget {index} shelf geometry is incorrect")
           if controls.find("./control[@id='9010']") is not None:
             raise SystemExit("Obstructive floating More Widgets button is still present")
           includes = ET.parse("skin.cineva/xml/Includes.xml").getroot()
           poster = includes.find("./include[@name='CinevaPosterItem']")
-          if poster is None or poster.findtext("./control[@type='image']/height") != "134":
+          if poster is None or poster.findtext("./control[@type='image']/height") != "120":
             raise SystemExit("Home poster layout is missing its compact 1080p geometry")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
           if skin.attrib.get("version") != "0.5.3":
