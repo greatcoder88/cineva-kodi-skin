@@ -180,6 +180,7 @@ jobs:
             # Retain a screenshot for every in-process reload attempt.
             import subprocess
             subprocess.run(["import","-display",":99","-window","root",f"artifacts/cineva-cycle-{cycle}.png"],check=True)
+          PY
           xdotool getdisplaygeometry
           import -display :99 -window root artifacts/kodi-startup.png
           xdotool key --clearmodifiers Escape
