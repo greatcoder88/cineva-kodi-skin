@@ -61,14 +61,8 @@ jobs:
           cat > "$HOME/.var/app/tv.kodi.Kodi/data/userdata/advancedsettings.xml" <<'XML'
           <advancedsettings><loglevel hide="false">2</loglevel></advancedsettings>
           XML
-          cat > "$HOME/.var/app/tv.kodi.Kodi/data/userdata/guisettings.xml" <<'XML'
-          <settings>
-            <setting id="lookandfeel.skin">skin.cineva</setting>
-            <setting id="services.esenabled">true</setting>
-            <setting id="services.esport">9090</setting>
-            <setting id="services.esallinterfaces">true</setting>
-          </settings>
-          XML
+          # Kodi must generate its complete settings file (including resolutions).
+
 
       - name: Launch Kodi, verify active skin through JSON-RPC, and capture GUI
         run: |
@@ -77,6 +71,36 @@ jobs:
           Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset > /tmp/xvfb.log 2>&1 &
           echo $! > /tmp/xvfb.pid
           sleep 2
+          # First boot: allow Kodi to create a valid, version-specific guisettings.xml.
+          flatpak run --user tv.kodi.Kodi//beta --standalone > /tmp/kodi-firstboot.log 2>&1 &
+          FIRST_PID=$!
+          for i in $(seq 1 45); do
+            test -s "$HOME/.var/app/tv.kodi.Kodi/data/userdata/guisettings.xml" && break
+            sleep 2
+          done
+          test -s "$HOME/.var/app/tv.kodi.Kodi/data/userdata/guisettings.xml" || (echo "Kodi did not create guisettings.xml"; exit 1)
+          kill "$FIRST_PID" 2>/dev/null || true
+          pkill -x kodi.bin 2>/dev/null || true
+          pkill -x kodi-x11 2>/dev/null || true
+          sleep 3
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          p = Path.home()/".var/app/tv.kodi.Kodi/data/userdata/guisettings.xml"
+          tree = ET.parse(p)
+          root = tree.getroot()
+          for key, value in {
+            "lookandfeel.skin": "skin.cineva",
+            "services.webserver": "true",
+            "services.webserverport": "8080",
+            "services.webserverauthentication": "false"
+          }.items():
+            node = root.find(f"./setting[@id='{key}']")
+            if node is None: node = ET.SubElement(root, "setting", {"id": key})
+            node.text = value
+          tree.write(p, encoding="UTF-8", xml_declaration=True)
+          print("Configured CINÉVA while preserving Kodi-generated resolution settings.")
+          PY
           flatpak run --user tv.kodi.Kodi//beta --standalone > /tmp/kodi-stdout.log 2>&1 &
           echo $! > /tmp/kodi.pid
           for i in $(seq 1 60); do
@@ -84,30 +108,24 @@ jobs:
             sleep 2
           done
           pgrep -a -x kodi.bin || pgrep -a -x kodi-x11 || (echo "Kodi process did not start"; exit 1)
-          sleep 30
+          sleep 15
           python - <<'PY'
-          import json, socket, time
-          request = {"jsonrpc":"2.0","method":"Settings.GetSettingValue","params":{"setting":"lookandfeel.skin"},"id":1}
+          import json, time, urllib.request
+          url = "http://127.0.0.1:8080/jsonrpc"
+          payload = json.dumps({"jsonrpc":"2.0","method":"Settings.GetSettingValue","params":{"setting":"lookandfeel.skin"},"id":1}).encode()
+          request = urllib.request.Request(url, data=payload, headers={"Content-Type":"application/json"})
           last = None
-          for attempt in range(20):
-              try:
-                  with socket.create_connection(("127.0.0.1", 9090), timeout=3) as sock:
-                      sock.settimeout(3)
-                      sock.sendall((json.dumps(request) + "\n").encode())
-                      data = sock.recv(65536).decode("utf-8", "replace")
-                  response = json.loads(data.strip().splitlines()[-1])
-                  if "error" in response:
-                      raise RuntimeError(response["error"])
-                  skin = response.get("result", {}).get("value")
-                  print("Kodi JSON-RPC active skin:", skin)
-                  if skin != "skin.cineva":
-                      raise SystemExit(f"GUI TEST FAILED: expected skin.cineva, Kodi reports {skin!r}")
-                  break
-              except Exception as exc:
-                  last = exc
-                  time.sleep(2)
-          else:
-              raise SystemExit(f"GUI TEST FAILED: could not verify active skin over Kodi JSON-RPC: {last}")
+          for attempt in range(30):
+            try:
+              with urllib.request.urlopen(request, timeout=4) as response: result = json.load(response)
+              skin = result.get("result", {}).get("value")
+              print("Kodi JSON-RPC selected skin:", skin)
+              if skin != "skin.cineva": raise SystemExit(f"GUI TEST FAILED: Kodi reports selected skin {skin!r}")
+              break
+            except Exception as exc:
+              last = exc
+              time.sleep(2)
+          else: raise SystemExit(f"GUI TEST FAILED: JSON-RPC HTTP did not respond: {last}")
           PY
           xdotool getdisplaygeometry
           import -display :99 -window root artifacts/kodi-startup.png
