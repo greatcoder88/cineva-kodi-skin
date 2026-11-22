@@ -101,10 +101,22 @@ jobs:
           focused_title = focused_poster.find("./control[@type='label']") if focused_poster is not None else None
           if poster is None or poster.findtext("./control[@type='image']/height") != "276" or normal_title is None or (normal_title.findtext("width"), normal_title.findtext("top"), normal_title.findtext("height")) != ("270", "278", "20"):
               errors.append("Poster image and normal title geometry is not the redesigned large-card layout")
-          if normal_title is None or normal_title.findtext("visible") != "!ListItem.IsSelected":
-              errors.append("Normal poster title must hide on the selected item to prevent doubled text")
-          if focused_title is None or (focused_title.findtext("font"), focused_title.findtext("height")) != ("font12", "24"):
-              errors.append("Focused poster title is missing its stronger readable focus treatment")
+          if normal_title is None or normal_title.find("visible") is not None:
+              errors.append("Normal poster title must remain the single title layer for each card")
+          if focused_title is not None:
+              errors.append("Focused poster layout must not draw a second title over the normal title")
+          for container_id in (9001, 9002, 9003, 9004):
+              row = controls.find(f"./control[@type='fixedlist'][@id='{container_id}']")
+              row_focus = row.find("./focusedlayout/include") if row is not None else None
+              focus_include = includes.find(f"./include[@name='CinevaFocusedPosterItem{container_id}']")
+              focus_image = focus_include.find("./control[@type='image']") if focus_include is not None else None
+              focus_progress = focus_include.find("./control[@type='progress']") if focus_include is not None else None
+              if row_focus is None or row_focus.text != f"CinevaFocusedPosterItem{container_id}":
+                  errors.append(f"Home row {container_id} does not use its own focus layout")
+              if focus_image is None or focus_image.findtext("visible") != f"Control.HasFocus({container_id})":
+                  errors.append(f"Home row {container_id} focus artwork leaks into inactive rows")
+              if focus_progress is None or focus_progress.findtext("visible") != f"Control.HasFocus({container_id}) + ListItem.IsResumable":
+                  errors.append(f"Home row {container_id} progress overlay is not scoped to the active row")
           catalogue = ET.parse(root / "xml/MyVideoNav.xml").getroot()
           panel = catalogue.find("./controls/control[@type='panel']")
           layout = panel.find("itemlayout") if panel is not None else None
