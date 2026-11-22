@@ -146,7 +146,7 @@ jobs:
             try:
               current = rpc("Settings.GetSettingValue", {"setting":"lookandfeel.skin"})
               current_value = current.get("value") if isinstance(current, dict) else current
-          print("Kodi selected skin at test start:", current_value)
+              print("Kodi selected skin at test start:", current_value)
               break
             except Exception as exc:
               last = exc
