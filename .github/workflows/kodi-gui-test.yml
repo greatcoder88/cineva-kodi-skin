@@ -115,9 +115,9 @@ jobs:
             request = {"jsonrpc":"2.0","method":method,"params":params or {},"id":1}
             with socket.create_connection(("127.0.0.1", 9090), timeout=5) as sock:
               sock.settimeout(5)
-              sock.sendall((json.dumps(request) + "\\n").encode())
+              sock.sendall((json.dumps(request) + "\n").encode())
               data = b""
-              while b"\\n" not in data:
+              while b"\n" not in data:
                 chunk = sock.recv(65536)
                 if not chunk: break
                 data += chunk
