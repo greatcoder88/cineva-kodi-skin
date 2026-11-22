@@ -63,7 +63,7 @@ jobs:
                               if node.tag == "control" and node.findtext("texture") == "hero-shade.png"), -1)
           if topbar_index <= shade_index:
             raise SystemExit("CINÉVA top navigation is layered underneath the hero artwork")
-          row_positions = ((390, 426), (660, 696), (930, 966), (1200, 1236))
+          row_positions = ((370, 406), (625, 661), (880, 916), (1135, 1171))
           for index, (heading_top, shelf_top) in enumerate(row_positions, 1):
             heading = next((c for c in controls.findall("control")
                             if c.get("type") == "label"
@@ -71,7 +71,7 @@ jobs:
             shelf = controls.find(f"./control[@type='fixedlist'][@id='{9000 + index}']")
             if heading is None or heading.findtext("top") != str(heading_top):
               raise SystemExit(f"Home widget {index} heading is not at the verified non-overlap position")
-            if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "232":
+            if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "220":
               raise SystemExit(f"Home widget {index} shelf geometry is incorrect")
           if controls.find("./control[@id='9010']") is not None:
             raise SystemExit("Obstructive floating More Widgets button is still present")
