@@ -48,6 +48,21 @@ def update_xml(data, path):
                 set_child_text(control, "height", 440)
             if control.get("type") == "image" and control.findtext("texture") == "hero-shade.png":
                 set_child_text(control, "height", 490)
+        # Add a mirrored top fade so the logo/date remain legible over bright fanart.
+        hero_shade = next((node for node in controls.findall("control")
+                           if node.get("type") == "image" and node.findtext("texture") == "hero-shade.png"), None)
+        if hero_shade is None:
+            raise SystemExit("Home.xml is missing the hero fade texture")
+        previous_top_shade = controls.find("./control[@id='9100']")
+        if previous_top_shade is not None:
+            controls.remove(previous_top_shade)
+        top_shade = ET.Element("control", {"type": "image", "id": "9100"})
+        for tag, value in (("left", 0), ("top", 0), ("width", 1920), ("height", 260)):
+            set_child_text(top_shade, tag, value)
+        top_texture = ET.SubElement(top_shade, "texture", {"flipy": "true"})
+        top_texture.text = "hero-shade.png"
+        set_child_text(top_shade, "aspectratio", "scale")
+        controls.insert(list(controls).index(hero_shade) + 1, top_shade)
         # Keep navigation above full-bleed artwork; it was previously painted first
         # and then hidden beneath the hero image controls.
         topbar = next((node for node in list(controls)
@@ -63,19 +78,87 @@ def update_xml(data, path):
                 labels = [child for child in group.findall("control") if child.get("type") == "label"]
                 if labels:
                     # Title first, metadata second: separate vertical baselines.
-                    set_child_text(labels[0], "top", 54)
+                    set_child_text(labels[0], "top", 30)
                     set_child_text(labels[0], "font", "font36")
                     set_child_text(labels[0], "height", 64)
                 if len(labels) > 1:
-                    set_child_text(labels[1], "top", 30)
+                    set_child_text(labels[1], "top", 8)
                     set_child_text(labels[1], "height", 30)
                 for child in group.findall("control"):
                     if child.get("type") == "textbox":
-                        set_child_text(child, "top", 142)
-                        set_child_text(child, "height", 84)
+                        set_child_text(child, "top", 96)
+                        set_child_text(child, "height", 58)
             if group.get("type") == "group" and group.findtext("control/label", "").startswith("$INFO[Container("):
                 set_child_text(group, "width", 1200)
-        # Three compact, consistently spaced catalogue rails; no giant dead zone between rows.
+        # Hero actions follow whichever Home rail supplies the current hero item.
+        # The play command uses the selected ListItem.File; Info first returns focus
+        # to that rail so Kodi opens the correct item's information dialog.
+        for control in list(controls):
+            if control.get("id") in {"9101", "9102", "9103", "9104"}:
+                controls.remove(control)
+        action_specs = ((9001, 9111, 1001), (9002, 9113, 1001),
+                        (9003, 9115, 1002), (9004, 9117, 1003))
+        nav_focus = " | ".join(f"Control.HasFocus({button_id})" for button_id in range(1001, 1007))
+        action_groups = []
+        for container_id, play_id, nav_target in action_specs:
+            info_id = play_id + 1
+            group_id = 9100 + container_id - 9000
+            action_group = ET.Element("control", {"type": "group", "id": str(group_id)})
+            for tag, value in (("left", 72), ("top", 292), ("width", 500), ("height", 48)):
+                set_child_text(action_group, tag, value)
+            visible_terms = [f"Control.HasFocus({container_id})",
+                             f"Control.HasFocus({play_id})", f"Control.HasFocus({info_id})"]
+            if container_id == 9001:
+                visible_terms.insert(0, nav_focus)
+            set_child_text(action_group, "visible", " | ".join(visible_terms))
+            for button_id, label, left, width in (
+                (play_id, "PLAY", 0, 180), (info_id, "MORE INFO", 204, 230)
+            ):
+                button = ET.SubElement(action_group, "control",
+                                       {"type": "button", "id": str(button_id)})
+                for tag, value in (
+                    ("left", left), ("top", 0), ("width", width), ("height", 44),
+                    ("label", label), ("font", "font12"),
+                    ("onup", f"SetFocus({nav_target})"),
+                    ("ondown", f"SetFocus({container_id})"),
+                    ("onleft", f"SetFocus({play_id})" if button_id == play_id else f"SetFocus({play_id})"),
+                    ("onright", f"SetFocus({info_id})"),
+                    ("texturefocus", "focus-bar.png"), ("texturenofocus", "-"),
+                    ("textcolor", "lightgrey"), ("focusedcolor", "white"),
+                    ("align", "center"), ("aligny", "center")
+                ):
+                    set_child_text(button, tag, value)
+                if button_id == play_id:
+                    set_child_text(button, "onclick",
+                                   f"PlayMedia($INFO[Container({container_id}).ListItem.File])")
+                else:
+                    set_child_text(button, "onclick", f"SetFocus({container_id})")
+                    ET.SubElement(button, "onclick").text = "Action(Info)"
+            action_groups.append(action_group)
+        first_heading = next((node for node in controls.findall("control")
+                              if node.get("type") == "label"
+                              and node.findtext("label") == "$INFO[Skin.String(Cineva.Widget1.Name)]"), None)
+        if first_heading is None:
+            raise SystemExit("Home.xml is missing the first widget heading")
+        insert_at = list(controls).index(first_heading)
+        for action_group in action_groups:
+            controls.insert(insert_at, action_group)
+            insert_at += 1
+        # Keep hero metadata visible while either action button in its row is focused.
+        for hero_group in controls.findall("control"):
+            if hero_group.get("type") != "group":
+                continue
+            source_label = hero_group.findtext("control/label", "")
+            if not source_label.startswith("$INFO[Container("):
+                continue
+            current_visible = hero_group.findtext("visible", "")
+            if "Control.HasFocus(1001)" in current_visible:
+                continue
+            container_id = int(source_label.split("Container(", 1)[1].split(")", 1)[0])
+            play_id = 9111 + (container_id - 9001) * 2
+            set_child_text(hero_group, "visible",
+                           f"Control.HasFocus({container_id}) | Control.HasFocus({play_id}) | Control.HasFocus({play_id + 1})")
+        # Two full large-poster rails sit above the fold; the remaining shelves stay reachable by D-pad navigation.
         row_positions = ((370, 406), (715, 751), (1060, 1096), (1405, 1441))
         for index, (heading_top, shelf_top) in enumerate(row_positions, 1):
             heading_label = f"$INFO[Skin.String(Cineva.Widget{index}.Name)]"
@@ -89,6 +172,7 @@ def update_xml(data, path):
             set_child_text(heading, "font", "font16")
             set_child_text(shelf, "top", shelf_top)
             set_child_text(shelf, "height", 300)
+            set_child_text(shelf, "onup", f"SetFocus({9111 + (index - 1) * 2})")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
                 layout.set("width", "270")
                 layout.set("height", "300")
@@ -111,6 +195,9 @@ def update_xml(data, path):
         if nav_group is not None:
             for button in nav_group.findall("./control[@type='button']"):
                 # Text-first navigation: remove the heavy black button slabs.
+                action_targets = {"1001": "9111", "1002": "9115", "1003": "9117"}
+                if button.get("id") in action_targets:
+                    set_child_text(button, "ondown", f"SetFocus({action_targets[button.get('id')]})")
                 for tag, value in (("texturefocus", "focus-bar.png"), ("texturenofocus", "-"), ("textcolor", "lightgrey"), ("focusedcolor", "white"), ("align", "center"), ("aligny", "center")):
                     set_child_text(button, tag, value)
         # The top navigation already has a My Widgets destination. The extra

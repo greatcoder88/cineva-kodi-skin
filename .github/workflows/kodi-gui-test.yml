@@ -60,14 +60,29 @@ jobs:
           hero_group = next((g for g in controls.findall("control") if g.get("type") == "group" and g.findtext("control/label", "").startswith("$INFO[Container(")), None)
           hero_title = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Label]" in c.findtext("label", "")), None) if hero_group is not None else None
           hero_plot = hero_group.find("./control[@type='textbox']") if hero_group is not None else None
-          if hero_group is None or hero_group.findtext("top") != "124" or hero_title is None or hero_title.findtext("top") != "54" or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height")) != ("142", "84"):
-            raise SystemExit("Home hero title and synopsis do not have the required breathing room")
+          hero_meta = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Year]" in c.findtext("label", "")), None) if hero_group is not None else None
+          if hero_group is None or hero_group.findtext("top") != "124" or hero_title is None or hero_title.findtext("top") != "30" or hero_meta is None or hero_meta.findtext("top") != "8" or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height")) != ("96", "58"):
+            raise SystemExit("Home hero title, metadata and synopsis do not have the compact action-ready composition")
           topbar_index = next((i for i, node in enumerate(list(controls))
                                if node.tag == "include" and (node.text or "").strip() == "CinevaTopBar"), -1)
           shade_index = next((i for i, node in enumerate(list(controls))
                               if node.tag == "control" and node.findtext("texture") == "hero-shade.png"), -1)
           if topbar_index <= shade_index:
             raise SystemExit("CINÉVA top navigation is layered underneath the hero artwork")
+          top_shade = controls.find("./control[@id='9100']")
+          top_texture = top_shade.find("texture") if top_shade is not None else None
+          if top_shade is None or top_shade.findtext("height") != "260" or top_texture is None or top_texture.attrib.get("flipy") != "true":
+            raise SystemExit("Home hero is missing the mirrored top fade for readable navigation")
+          for container_id, play_id, nav_target in ((9001, 9111, 1001), (9002, 9113, 1001), (9003, 9115, 1002), (9004, 9117, 1003)):
+            action_group = controls.find(f"./control[@id='{9100 + container_id - 9000}']")
+            buttons = action_group.findall("./control[@type='button']") if action_group is not None else []
+            if len(buttons) != 2 or [button.findtext("label") for button in buttons] != ["PLAY", "MORE INFO"]:
+              raise SystemExit(f"Home row {container_id} is missing its two hero actions")
+            if buttons[0].findtext("onclick") != f"PlayMedia($INFO[Container({container_id}).ListItem.File])" or buttons[1].findtext("onclick") != f"SetFocus({container_id})" or [node.text for node in buttons[1].findall("onclick")] != [f"SetFocus({container_id})", "Action(Info)"]:
+              raise SystemExit(f"Home row {container_id} hero actions are not wired to its selected item")
+            shelf = controls.find(f"./control[@type='fixedlist'][@id='{container_id}']")
+            if shelf is None or shelf.findtext("onup") != f"SetFocus({play_id})":
+              raise SystemExit(f"Home row {container_id} cannot navigate up to its hero actions")
           row_positions = ((370, 406), (715, 751), (1060, 1096), (1405, 1441))
           for index, (heading_top, shelf_top) in enumerate(row_positions, 1):
             heading = next((c for c in controls.findall("control")
@@ -386,7 +401,8 @@ jobs:
               print(f"Widget row {row}: items={len(items)}, poster_art={poster_count}, unique_posters={unique_posters}, first={items[0] if items else None}")
               if len(items) < 6 or poster_count < 6 or unique_posters < 6:
                 raise SystemExit(f"Widget row {row} did not return six distinct poster-backed items")
-            rpc("Input.Down")
+            rpc("Input.Down")  # Home navigation -> PLAY action
+            rpc("Input.Down")  # PLAY action -> first poster
             deadline = time.time() + 12
             focused_label = ""
             while time.time() < deadline:
@@ -399,6 +415,34 @@ jobs:
               raise SystemExit(f"Home shelf 9001 did not focus its first item: {state}")
             print("Home poster shelf focused on:", focused_label)
             subprocess.run(["import","-display",":99","-window","root",f"artifacts/cineva-home-cycle-{cycle}.png"],check=True)
+            subprocess.run(["xdotool","key","Up"],check=True)
+            deadline = time.time() + 8
+            while time.time() < deadline:
+              state = gui()
+              if state.get("currentcontrol",{}).get("label","").strip().upper() == "PLAY":
+                break
+              time.sleep(0.25)
+            else:
+              raise SystemExit(f"Home shelf Up did not focus the PLAY hero action: {state}")
+            subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-actions.png"],check=True)
+            subprocess.run(["xdotool","key","Right"],check=True)
+            deadline = time.time() + 8
+            while time.time() < deadline:
+              state = gui()
+              if state.get("currentcontrol",{}).get("label","").strip().upper() == "MORE INFO":
+                break
+              time.sleep(0.25)
+            else:
+              raise SystemExit(f"Hero action Right did not focus MORE INFO: {state}")
+            subprocess.run(["xdotool","key","Down"],check=True)
+            deadline = time.time() + 8
+            while time.time() < deadline:
+              state = gui()
+              if state.get("currentcontrol",{}).get("label","").strip() == "The Shawshank Redemption":
+                break
+              time.sleep(0.25)
+            else:
+              raise SystemExit(f"Hero action Down did not return to the selected poster: {state}")
           logs = log_text()
           if "EXCEPTION: Invalid setting type" in logs:
             raise SystemExit("GUI test found a widget settings type error")
@@ -406,7 +450,7 @@ jobs:
             raise SystemExit("GUI test found the Startup.xml empty-panel focus error")
           if "CINEVA_WIDGETS_INITIALIZED=4" not in logs:
             raise SystemExit("GUI test never confirmed four default widgets were initialized")
-          print("Verified all live reload cycles, confirmation closure, four poster-backed rows, and Home shelf focus.")
+          print("Verified all live reload cycles, confirmation closure, four poster-backed rows, Home shelf focus, and hero Play/More Info D-pad navigation.")
           PY
           xdotool getdisplaygeometry
           import -display :99 -window root artifacts/kodi-startup.png

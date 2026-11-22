@@ -74,14 +74,34 @@ jobs:
           hero_group = next((g for g in controls.findall("control") if g.get("type") == "group" and g.findtext("control/label", "").startswith("$INFO[Container(")), None)
           hero_title = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Label]" in c.findtext("label", "")), None) if hero_group is not None else None
           hero_plot = hero_group.find("./control[@type='textbox']") if hero_group is not None else None
-          if hero_group is None or hero_group.findtext("top") != "124" or hero_title is None or hero_title.findtext("top") != "54" or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height")) != ("142", "84"):
-              errors.append("Home hero title and synopsis do not have the required breathing room")
+          hero_meta = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Year]" in c.findtext("label", "")), None) if hero_group is not None else None
+          if hero_group is None or hero_group.findtext("top") != "124" or hero_title is None or hero_title.findtext("top") != "30" or hero_meta is None or hero_meta.findtext("top") != "8" or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height")) != ("96", "58"):
+              errors.append("Home hero title, metadata and synopsis do not have the compact action-ready composition")
           topbar_index = next((i for i, node in enumerate(list(controls))
                                if node.tag == "include" and (node.text or "").strip() == "CinevaTopBar"), -1)
           shade_index = next((i for i, node in enumerate(list(controls))
                               if node.tag == "control" and node.findtext("texture") == "hero-shade.png"), -1)
           if topbar_index <= shade_index:
               errors.append("CINÉVA top navigation is layered underneath the hero artwork")
+          top_shade = controls.find("./control[@id='9100']")
+          top_texture = top_shade.find("texture") if top_shade is not None else None
+          if top_shade is None or top_shade.findtext("height") != "260" or top_texture is None or top_texture.attrib.get("flipy") != "true":
+              errors.append("Home hero is missing the mirrored top fade for readable navigation")
+          for container_id, play_id, nav_target in ((9001, 9111, 1001), (9002, 9113, 1001), (9003, 9115, 1002), (9004, 9117, 1003)):
+              action_group = controls.find(f"./control[@id='{9100 + container_id - 9000}']")
+              buttons = action_group.findall("./control[@type='button']") if action_group is not None else []
+              if len(buttons) != 2 or [button.findtext("label") for button in buttons] != ["PLAY", "MORE INFO"]:
+                  errors.append(f"Home row {container_id} is missing its two hero actions")
+                  continue
+              if buttons[0].findtext("onclick") != f"PlayMedia($INFO[Container({container_id}).ListItem.File])":
+                  errors.append(f"Home row {container_id} PLAY action is not bound to its selected item")
+              if [node.text for node in buttons[1].findall("onclick")] != [f"SetFocus({container_id})", "Action(Info)"]:
+                  errors.append(f"Home row {container_id} MORE INFO action is not bound to its selected item")
+              if any(button.findtext("texturefocus") != "focus-bar.png" or button.findtext("texturenofocus") != "-" for button in buttons):
+                  errors.append(f"Home row {container_id} hero actions are missing the unified focus treatment")
+              shelf = controls.find(f"./control[@type='fixedlist'][@id='{container_id}']")
+              if shelf is None or shelf.findtext("onup") != f"SetFocus({play_id})":
+                  errors.append(f"Home row {container_id} cannot navigate up to its hero actions")
           for index, (heading_top, shelf_top) in enumerate(row_positions, 1):
               heading = next((c for c in controls.findall("control")
                               if c.get("type") == "label"
@@ -92,8 +112,14 @@ jobs:
               if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "300":
                   errors.append(f"Home widget {index} shelf geometry is incorrect")
           nav = next((g for g in controls.findall("control") if g.get("type") == "group" and g.find("./control[@id='1001']") is not None), None)
-          if nav is None or any(button.findtext("focusedcolor") != "white" or button.findtext("texturefocus") != "focus-bar.png" for button in nav.findall("./control[@type='button']")):
+          if nav is None or any(button.findtext("focusedcolor") != "white" or button.findtext("texturefocus") != "focus-bar.png" for button in nav.findall("./control[@type='button'])):
               errors.append("Home navigation buttons need visible explicit textures and text color")
+          if nav is not None:
+              expected_down = {"1001": "9111", "1002": "9115", "1003": "9117"}
+              for button_id, target_id in expected_down.items():
+                  button = nav.find(f"./control[@id='{button_id}']")
+                  if button is None or button.findtext("ondown") != f"SetFocus({target_id})":
+                      errors.append(f"Home navigation button {button_id} does not enter its matching hero actions")
           if controls.find("./control[@id='9010']") is not None:
               errors.append("Floating More Widgets button still obscures the fourth shelf")
           includes = ET.parse(root / "xml/Includes.xml").getroot()
