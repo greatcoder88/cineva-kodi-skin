@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<addon id="plugin.video.pov" name="POV GUI Test Fixture" version="0.0.1" provider-name="CINEVA CI">
+  <requires>
+    <import addon="xbmc.python" version="3.0.0" />
+    <import addon="xbmc.gui" version="5.18.0" />
+  </requires>
+  <extension point="xbmc.python.pluginsource" library="default.py">
+    <provides>video</provides>
+  </extension>
+  <extension point="xbmc.addon.metadata">
+    <summary lang="en_GB">Test-only POV-compatible video directory</summary>
+    <description lang="en_GB">Returns deterministic movie and TV items with local poster art for CINÉVA GUI tests. Not a production add-on.</description>
+    <platform>all</platform>
+    <license>MIT</license>
+  </extension>
+</addon>

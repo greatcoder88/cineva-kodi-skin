@@ -96,12 +96,15 @@ class WidgetManager:
             for index in range(1, 5):
                 item = items[index - 1] if len(items) >= index else {}
                 values = {'Name': item.get('name', ''), 'Path': item.get('path', ''),
-                          'Target': 'video' if item else '', 'Type': 'video' if item else ''}
+                          'Target': 'videos' if item else '', 'Type': 'video' if item else ''}
                 for suffix, value in values.items():
                     # Quote values so Kodi does not parse URL punctuation as syntax.
                     encoded = json.dumps(str(value), ensure_ascii=False)
                     xbmc.executebuiltin('Skin.SetString({}{}.{},{})'.format(prefix, index, suffix, encoded))
         xbmc.executebuiltin('Skin.SetBool(Cineva.Initialized)')
+        if xbmc.getCondVisibility('Window.IsActive(home)'):
+            for control_id in (9001, 9002, 9003, 9004):
+                xbmc.executebuiltin('Container.Refresh({})'.format(control_id))
 
     def installed_video_addons(self):
         result = KodiRPC.call('Addons.GetAddons', {

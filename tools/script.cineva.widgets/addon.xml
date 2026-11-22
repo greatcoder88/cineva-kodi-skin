@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="script.cineva.widgets" name="CINÉVA Widget Manager" version="0.1.2" provider-name="CINÉVA">
+<addon id="script.cineva.widgets" name="CINÉVA Widget Manager" version="0.1.3" provider-name="CINÉVA">
   <requires><import addon="xbmc.python" version="3.0.0"/><import addon="xbmc.gui" version="5.18.0"/></requires>
   <extension point="xbmc.python.pluginsource" library="default.py"><provides>video</provides></extension>
   <extension point="xbmc.python.script" library="default.py"><provides>executable</provides></extension>

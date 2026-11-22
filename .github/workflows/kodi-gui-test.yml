@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   kodi-gui:
@@ -16,6 +16,17 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
+
+      - name: Build release ZIP and commit it when source fixes change
+        run: |
+          python tools/build_skin_archive.py
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && ! git diff --quiet -- skin.cineva-0.5.3.zip; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add skin.cineva-0.5.3.zip
+            git commit -m "Build updated CINÉVA 0.5.3 skin archive"
+            git push origin HEAD:main || echo "::warning::Could not push rebuilt skin ZIP; GUI test still uses the rebuilt local ZIP."
+          fi
 
       - name: Expand uploaded skin archive and prepare add-ons
         run: |
@@ -26,65 +37,37 @@ jobs:
           test -d skin.cineva/xml
           test -f skin.cineva/xml/Home.xml
           test -f tools/script.cineva.widgets/addon.xml
-          # Home must initially focus an always-visible navigation control.
-          # Widget rows can be hidden until their onload skin strings are set.
-          python - <<'PY'
-          from pathlib import Path
-          p = Path("skin.cineva/xml/Home.xml")
-          s = p.read_text()
-          s2 = s.replace('<defaultcontrol always="true">9001</defaultcontrol>',
-                         '<defaultcontrol always="true">1001</defaultcontrol>')
-          if s2 == s:
-            raise SystemExit("Expected Home.xml default focus was not found")
-          p.write_text(s2)
-          print("Patched Home default focus to visible HOME navigation control.")
-          # Run initialization in Python; semicolon-chained skin builtins were
-          # being passed to SplitParams as one malformed command.
-          import xml.etree.ElementTree as ET
-          tree = ET.parse(p)
-          root = tree.getroot()
-          onload = root.find("onload")
-          if onload is None:
-            onload = ET.SubElement(root, "onload")
-          onload.attrib.clear()
-          onload.text = "RunScript(script.cineva.widgets,action=init)"
-          tree.write(p, encoding="UTF-8", xml_declaration=True)
-          print("Home widgets now initialize through the Python add-on.")
-          PY
-          # Kodi's confirmation dialog uses control 11 for the affirmative action.
-          # The previous custom dialog defaulted to 10 (revert), so Return silently
-          # rolled the skin back to Estuary. Keep the affirmative button in focus.
-          python - <<'PY'
-          from pathlib import Path
-          import xml.etree.ElementTree as ET
-          p = Path("skin.cineva/xml/DialogConfirm.xml")
-          tree = ET.parse(p)
-          root = tree.getroot()
-          default = root.find("defaultcontrol")
-          if default is None:
-            default = ET.Element("defaultcontrol")
-            root.insert(0, default)
-          default.text = "11"
-          # Keep the two action controls inside the dialog's visible panel.
-          for control in root.findall(".//control[@type='button']"):
-            top = control.find("top")
-            if top is not None:
-              top.text = "270"
-          tree.write(p, encoding="UTF-8", xml_declaration=True)
-          print("Patched Keep Skin dialog: affirmative control 11 receives default focus.")
-          PY
+          # Validate the packaged runtime fixes; never silently patch the test copy.
           python - <<'PY'
           import xml.etree.ElementTree as ET
-          root = ET.parse("skin.cineva/addon.xml").getroot()
-          print("CINÉVA add-on version:", root.attrib.get("version"))
-          print("Kodi GUI dependency:", next(x.attrib["version"] for x in root.findall("./requires/import") if x.attrib.get("addon") == "xbmc.gui"))
+          home = ET.parse("skin.cineva/xml/Home.xml").getroot()
+          if home.findtext("defaultcontrol") != "1001":
+            raise SystemExit("Home must default to HOME navigation control 1001")
+          if (home.findtext("onload") or "").strip() != "RunScript(script.cineva.widgets,action=init)":
+            raise SystemExit("Home must initialize widget strings through the Python manager")
+          confirm = ET.parse("skin.cineva/xml/DialogConfirm.xml").getroot()
+          if confirm.findtext("defaultcontrol") != "10":
+            raise SystemExit("Keep Skin must default to control 10 (Yes); control 11 is No")
+          startup = ET.parse("skin.cineva/xml/Startup.xml").getroot()
+          if startup.find("defaultcontrol") is not None or startup.find(".//control[@id='50']") is not None:
+            raise SystemExit("Startup.xml still focuses the empty panel 50")
+          skin = ET.parse("skin.cineva/addon.xml").getroot()
+          if skin.attrib.get("version") != "0.5.3":
+            raise SystemExit("Skin archive version must be 0.5.3")
+          widget = ET.parse("tools/script.cineva.widgets/addon.xml").getroot()
+          if widget.attrib.get("version") != "0.1.3":
+            raise SystemExit("Widget manager version must be 0.1.3")
+          setting = ET.parse("tools/script.cineva.widgets/resources/settings.xml").getroot().find(".//setting[@id='widget_registry']")
+          if setting is None or setting.attrib.get("type") != "string":
+            raise SystemExit("widget_registry must be declared as a string setting")
+          print("Packaged Home, dialog, Startup and settings schema validated.")
           PY
-          zip -qr artifacts/cineva-expanded-source.zip skin.cineva tools/script.cineva.widgets
+          zip -qr artifacts/cineva-expanded-source.zip skin.cineva tools/script.cineva.widgets tools/test-fixtures/plugin.video.pov
 
       - name: Install GUI runtime
         run: |
           sudo apt-get update
-          sudo apt-get install -y flatpak xvfb xdotool imagemagick jq
+          sudo apt-get install -y flatpak xvfb xdotool imagemagick jq fonts-dejavu-core
 
       - name: Install Kodi Piers beta from Flathub beta
         run: |
@@ -100,6 +83,17 @@ jobs:
           mkdir -p "$HOME/.var/app/tv.kodi.Kodi/data/addons/script.cineva.widgets"
           cp -a skin.cineva/. "$HOME/.var/app/tv.kodi.Kodi/data/addons/skin.cineva/"
           cp -a tools/script.cineva.widgets/. "$HOME/.var/app/tv.kodi.Kodi/data/addons/script.cineva.widgets/"
+          # Test-only POV-compatible provider returns deterministic poster-backed ListItems.
+          POV="$HOME/.var/app/tv.kodi.Kodi/data/addons/plugin.video.pov"
+          mkdir -p "$POV/resources/posters"
+          cp -a tools/test-fixtures/plugin.video.pov/. "$POV/"
+          convert -size 342x513 "gradient:#141e30-#243b55" -fill white -font DejaVu-Sans-Bold -pointsize 25 -gravity center -annotate +0-24 "The Shawshank Redemption" -fill '#e5e5e5' -font DejaVu-Sans -pointsize 14 -annotate +0+92 "CINEVA GUI TEST FIXTURE" "$POV/resources/posters/1.png"
+          convert -size 342x513 "gradient:#232526-#414345" -fill white -font DejaVu-Sans-Bold -pointsize 25 -gravity center -annotate +0-24 "The Dark Knight" -fill '#e5e5e5' -font DejaVu-Sans -pointsize 14 -annotate +0+92 "CINEVA GUI TEST FIXTURE" "$POV/resources/posters/2.png"
+          convert -size 342x513 "gradient:#0f2027-#2c5364" -fill white -font DejaVu-Sans-Bold -pointsize 25 -gravity center -annotate +0-24 "Interstellar" -fill '#e5e5e5' -font DejaVu-Sans -pointsize 14 -annotate +0+92 "CINEVA GUI TEST FIXTURE" "$POV/resources/posters/3.png"
+          convert -size 342x513 "gradient:#42275a-#734b6d" -fill white -font DejaVu-Sans-Bold -pointsize 25 -gravity center -annotate +0-24 "Inception" -fill '#e5e5e5' -font DejaVu-Sans -pointsize 14 -annotate +0+92 "CINEVA GUI TEST FIXTURE" "$POV/resources/posters/4.png"
+          convert -size 342x513 "gradient:#000000-#434343" -fill white -font DejaVu-Sans-Bold -pointsize 25 -gravity center -annotate +0-24 "The Matrix" -fill '#e5e5e5' -font DejaVu-Sans -pointsize 14 -annotate +0+92 "CINEVA GUI TEST FIXTURE" "$POV/resources/posters/5.png"
+          convert -size 342x513 "gradient:#1f1c2c-#928dab" -fill white -font DejaVu-Sans-Bold -pointsize 25 -gravity center -annotate +0-24 "Dune Part Two" -fill '#e5e5e5' -font DejaVu-Sans -pointsize 14 -annotate +0+92 "CINEVA GUI TEST FIXTURE" "$POV/resources/posters/6.png"
+          test -s "$POV/resources/posters/1.png"
           curl -fL --retry 3 -o /tmp/script.skinshortcuts.zip https://github.com/MikeSiLVO/script.skinshortcuts/archive/refs/tags/v3.0.1.zip
           mkdir -p "$HOME/.var/app/tv.kodi.Kodi/data/addons/script.skinshortcuts"
           unzip -q /tmp/script.skinshortcuts.zip -d /tmp/skinshortcuts
@@ -211,59 +205,111 @@ jobs:
           details = rpc("Addons.GetAddonDetails", {"addonid":"skin.cineva","properties":["enabled","version"]})
           print("CINÉVA add-on details after enable:", details)
 
-          # Keep this single Kodi process alive. Reinstall/reload only the skin
-          # add-on files and switch skins in-process for repeatable GUI checks.
+          # Keep one Kodi process alive. Each cycle waits for a fresh skin load,
+          # a successful widget-manager run, and a closed Keep Skin dialog.
           from pathlib import Path
           import shutil
           source = Path.cwd() / "skin.cineva"
           target = Path.home() / ".var/app/tv.kodi.Kodi/data/addons/skin.cineva"
+          log_path = Path.home()/".var/app/tv.kodi.Kodi/data/temp/kodi.log"
+          def log_text():
+            return log_path.read_text(errors="replace") if log_path.exists() else ""
+          def gui():
+            return rpc("GUI.GetProperties", {"properties":["currentwindow","currentcontrol","skin"]})
+          pov_details = rpc("Addons.GetAddonDetails", {"addonid":"plugin.video.pov","properties":["enabled","version"]})
+          print("POV GUI fixture before enable:", pov_details)
+          rpc("Addons.SetAddonEnabled", {"addonid":"plugin.video.pov","enabled":True})
+          time.sleep(2)
+          pov_details = rpc("Addons.GetAddonDetails", {"addonid":"plugin.video.pov","properties":["enabled","version"]})
+          print("POV GUI fixture after enable:", pov_details)
           for cycle in range(1, 4):
             print(f"===== CINÉVA live test cycle {cycle}/3 =====")
-            # Leave CINÉVA before replacing its files; Kodi itself stays running.
             result = rpc("Settings.SetSettingValue", {"setting":"lookandfeel.skin","value":"skin.estuary"})
             print("Switched to Estuary:", result)
-            time.sleep(3)
+            deadline = time.time() + 20
+            while time.time() < deadline:
+              state = gui()
+              if state.get("skin",{}).get("id") == "skin.estuary" and state.get("currentwindow",{}).get("id") != 10100:
+                break
+              time.sleep(0.5)
+            else:
+              raise SystemExit(f"Cycle {cycle}: Kodi did not leave CINÉVA for Estuary")
+            before = log_text()
+            before_loads = before.count("load skin from:")
+            before_inits = before.count("CINEVA_WIDGETS_INITIALIZED=4")
             if target.exists():
               shutil.rmtree(target)
             shutil.copytree(source, target)
             print("Refreshed CINÉVA add-on files in place.")
             result = rpc("Settings.SetSettingValue", {"setting":"lookandfeel.skin","value":"skin.cineva"})
             print("Switched to CINÉVA:", result)
-            # Wait until Kodi has actually loaded CINÉVA before interacting
-            # with the skin confirmation dialog; a fixed short sleep races the reload.
-            log_path = Path.home()/".var/app/tv.kodi.Kodi/data/temp/kodi.log"
-            deadline = time.time() + 25
+            deadline = time.time() + 35
             while time.time() < deadline:
-              log_text = log_path.read_text(errors="replace") if log_path.exists() else ""
-              if "load skin from:" in log_text and "skin.cineva/" in log_text:
+              logs = log_text()
+              if "EXCEPTION: Invalid setting type" in logs:
+                raise SystemExit("Widget manager failed: widget_registry has an invalid setting type")
+              load_count = logs.count("load skin from:")
+              init_count = logs.count("CINEVA_WIDGETS_INITIALIZED=4")
+              state = gui()
+              if load_count > before_loads and init_count > before_inits and state.get("currentwindow",{}).get("id") == 10100:
                 break
-              time.sleep(1)
+              time.sleep(0.5)
             else:
-              raise SystemExit("Kodi never logged a CINÉVA skin load")
-            time.sleep(2)
+              raise SystemExit(f"Cycle {cycle}: fresh CINÉVA load, widget initialization or Keep Skin dialog was missing. Log tail:\n{log_text()[-6000:]}")
+            print("Keep Skin dialog state:", state)
             subprocess.run(["import","-display",":99","-window","root",f"artifacts/cineva-confirmation-{cycle}.png"],check=True)
-            # The captured Kodi dialog visibly highlights No, not Yes.
-            # Move focus left onto Yes, then confirm; never assume Kodi's default focus.
-            subprocess.run(["xdotool","key","Left"],check=True)
-            time.sleep(0.3)
-            subprocess.run(["import","-display",":99","-window","root",f"artifacts/cineva-confirmation-focused-{cycle}.png"],check=True)
+            current_label = state.get("currentcontrol",{}).get("label","").strip()
+            if current_label.lower() != "yes":
+              raise SystemExit(f"Cycle {cycle}: Keep Skin did not default to Yes; focused control={current_label!r}")
             subprocess.run(["xdotool","key","Return"],check=True)
-            print("Moved confirmation focus from No to Yes and confirmed.")
-            time.sleep(3)
+            deadline = time.time() + 15
+            while time.time() < deadline:
+              state = gui()
+              if state.get("currentwindow",{}).get("id") != 10100:
+                break
+              time.sleep(0.5)
+            else:
+              raise SystemExit(f"Cycle {cycle}: Keep Skin dialog did not close after confirming Yes")
             selected = rpc("Settings.GetSettingValue", {"setting":"lookandfeel.skin"})
             selected_value = selected.get("value") if isinstance(selected, dict) else selected
-            for _ in range(15):
-              if selected_value == "skin.cineva":
+            if selected_value != "skin.cineva" or state.get("skin",{}).get("id") != "skin.cineva":
+              raise SystemExit(f"Cycle {cycle}: CINÉVA not retained after confirmation: {selected}; GUI={state}")
+            print("Keep Skin dialog closed; active skin:", state.get("skin"), "window:", state.get("currentwindow"))
+            paths = [
+              "plugin://plugin.video.pov/?mode=build_movie_list&action=in_progress_movies&name=Continue%20Watching%20Movies",
+              "plugin://plugin.video.pov/?mode=build_tvshow_list&action=in_progress_tvshows&name=Continue%20Watching%20TV%20Shows",
+              "plugin://plugin.video.pov/?mode=build_movie_list&action=tmdb_movies_trending&name=Trending%20Movies",
+              "plugin://plugin.video.pov/?mode=build_tvshow_list&action=tmdb_tv_trending&name=Trending%20TV%20Shows",
+            ]
+            for row, path in enumerate(paths, 1):
+              directory = rpc("Files.GetDirectory", {"directory":path,"media":"video","properties":["title","file","thumbnail","art"]})
+              items = directory.get("files",[]) if isinstance(directory,dict) else []
+              posters = [item.get("thumbnail") or (item.get("art") or {}).get("poster") or (item.get("art") or {}).get("thumb") for item in items]
+              poster_count = sum(1 for poster in posters if poster)
+              print(f"Widget row {row}: items={len(items)}, poster_art={poster_count}, first={items[0] if items else None}")
+              if len(items) < 6 or poster_count < 6:
+                raise SystemExit(f"Widget row {row} did not return six poster-backed items")
+            rpc("Input.Down")
+            deadline = time.time() + 12
+            focused_label = ""
+            while time.time() < deadline:
+              state = gui()
+              focused_label = state.get("currentcontrol",{}).get("label","").strip()
+              if focused_label == "The Shawshank Redemption":
                 break
-              time.sleep(1)
-              selected = rpc("Settings.GetSettingValue", {"setting":"lookandfeel.skin"})
-              selected_value = selected.get("value") if isinstance(selected, dict) else selected
-            print("Selected skin after confirmation:", selected)
-            if selected_value != "skin.cineva":
-              raise SystemExit(f"Cycle {cycle} failed after Keep confirmation: Kodi selected {selected_value!r}")
-            # Retain a screenshot for every in-process reload attempt.
-            import subprocess
-            subprocess.run(["import","-display",":99","-window","root",f"artifacts/cineva-cycle-{cycle}.png"],check=True)
+              time.sleep(0.5)
+            if focused_label != "The Shawshank Redemption":
+              raise SystemExit(f"Home shelf 9001 did not focus its first item: {state}")
+            print("Home poster shelf focused on:", focused_label)
+            subprocess.run(["import","-display",":99","-window","root",f"artifacts/cineva-home-cycle-{cycle}.png"],check=True)
+          logs = log_text()
+          if "EXCEPTION: Invalid setting type" in logs:
+            raise SystemExit("GUI test found a widget settings type error")
+          if "Control 50 in window 12999 has been asked to focus" in logs:
+            raise SystemExit("GUI test found the Startup.xml empty-panel focus error")
+          if "CINEVA_WIDGETS_INITIALIZED=4" not in logs:
+            raise SystemExit("GUI test never confirmed four default widgets were initialized")
+          print("Verified all live reload cycles, confirmation closure, four poster-backed rows, and Home shelf focus.")
           PY
           xdotool getdisplaygeometry
           import -display :99 -window root artifacts/kodi-startup.png
@@ -272,14 +318,13 @@ jobs:
           import -display :99 -window root artifacts/kodi-after-input.png
           test -s artifacts/kodi-startup.png
           test -s artifacts/kodi-after-input.png
-          # A stored preference is not proof that Kodi loaded the skin.
+          # The Python GUI assertions above prove the modal closes, shelves populate,
+          # and the focused Home item is returned by the test provider.
           LOG="$HOME/.var/app/tv.kodi.Kodi/data/temp/kodi.log"
-          if ! grep -F "load skin from:" "$LOG" | grep -F "skin.cineva/" >/dev/null; then
-            echo "GUI TEST FAILED: Kodi did not actually load CINÉVA; screenshot/log are retained."
-            grep -Ei "Failed to load skin|load skin from:|skin.cineva" "$LOG" || true
-            exit 1
-          fi
-          echo "Verified: Kodi actually loaded CINÉVA from its add-on directory."
+          grep -F "CINEVA_WIDGETS_INITIALIZED=4" "$LOG" >/dev/null
+          ! grep -F "EXCEPTION: Invalid setting type" "$LOG"
+          ! grep -F "Control 50 in window 12999 has been asked to focus" "$LOG"
+          echo "Verified: widget manager initialized and all GUI assertions passed."
 
       - name: Collect Kodi logs and runtime details
         if: always()
