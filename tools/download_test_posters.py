@@ -45,6 +45,7 @@ TMDB_IMAGE = "https://image.tmdb.org/t/p/w500/{}"
 TMDB_BACKDROP = "https://image.tmdb.org/t/p/w1280{}"
 TVMAZE_SEARCH = "https://api.tvmaze.com/singlesearch/shows?q={}"
 USER_AGENT = "CINEVA-Kodi-Skin-CI/1.0 (https://github.com/greatcoder88/cineva-kodi-skin)"
+JPEG_SIGNATURE = bytes.fromhex("ffd8ff")
 
 
 def request_bytes(url):
@@ -66,7 +67,7 @@ def convert_and_validate(raw, target, width, height):
     ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     raw.unlink(missing_ok=True)
     data = target.read_bytes()
-    if len(data) < 5000 or not data.startswith(b"\\xff\\xd8\\xff"):
+    if len(data) < 5000 or not data.startswith(JPEG_SIGNATURE):
         raise SystemExit("Downloaded artwork is empty or not a valid JPEG: " + target.name)
     dimensions = subprocess.check_output(
         ["identify", "-format", "%wx%h", str(target)], text=True
