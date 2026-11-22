@@ -74,7 +74,7 @@ jobs:
           if top_shade is None or top_shade.findtext("height") != "260" or top_texture is None or top_texture.attrib.get("flipy") != "true":
             raise SystemExit("Home hero is missing the mirrored top fade for readable navigation")
           rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
-          if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("72", "370", "1776", "680") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "4", "220"):
+          if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("72", "410", "1776", "636") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "4", "220"):
             raise SystemExit("Home rails are missing their vertical scrolling viewport")
           rail_children = [child for child in rail_list if child.tag == "control"] if rail_list is not None else []
           if len(rail_children) != 4:
