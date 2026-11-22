@@ -208,10 +208,8 @@ jobs:
               raise SystemExit("Kodi never logged a CINÉVA skin load")
             time.sleep(2)
             subprocess.run(["import","-display",":99","-window","root",f"artifacts/cineva-confirmation-{cycle}.png"],check=True)
-            # Kodi's confirmation is a Yes/No dialog. Explicitly select Yes
-            # rather than blindly pressing Return on whatever control had focus.
-            subprocess.run(["xdotool","key","Left"],check=True)
-            time.sleep(0.5)
+            # Kodi opens this confirmation with its default action focused.
+            # Do not send Left: that moves focus away from the default Keep/Yes action.
             subprocess.run(["xdotool","key","Return"],check=True)
             print("Sent explicit Keep confirmation after CINÉVA load.")
             time.sleep(3)
