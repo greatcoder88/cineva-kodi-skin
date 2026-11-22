@@ -60,7 +60,7 @@ jobs:
           if confirm.findtext("defaultcontrol") != "11":
               errors.append("Keep Skin must default to Yes (control 11)")
           for button in confirm.findall(".//control[@type='button']"):
-              if button.findtext("texturefocus") != "focus-bar.png" or button.findtext("texturenofocus") != "-":
+              if button.findtext("texturefocus") != "focus-bar.png" or button.findtext("texturenofocus") != "black.png":
                   errors.append("Keep Skin buttons need explicit visible textures")
           startup = ET.parse(root / "xml/Startup.xml").getroot()
           if startup.find("defaultcontrol") is not None or startup.find(".//control[@id='50']") is not None:
