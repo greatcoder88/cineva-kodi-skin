@@ -38,26 +38,18 @@ jobs:
             raise SystemExit("Expected Home.xml default focus was not found")
           p.write_text(s2)
           print("Patched Home default focus to visible HOME navigation control.")
-          # Rebuild onload with quoted values; unquoted spaces break Kodi SplitParams.
+          # Run initialization in Python; semicolon-chained skin builtins were
+          # being passed to SplitParams as one malformed command.
           import xml.etree.ElementTree as ET
           tree = ET.parse(p)
           root = tree.getroot()
           onload = root.find("onload")
-          if onload is None: raise SystemExit("Home.xml has no widget initialization onload")
-          widgets = [
-            ("1", "ContinueWatchingMovies", "plugin://plugin.video.pov/?mode=build_movie_list&action=in_progress_movies&name=Continue%20Watching%20Movies"),
-            ("2", "ContinueWatchingTVShows", "plugin://plugin.video.pov/?mode=build_tvshow_list&action=in_progress_tvshows&name=Continue%20Watching%20TV%20Shows"),
-            ("3", "TrendingMovies", "plugin://plugin.video.pov/?mode=build_movie_list&action=tmdb_movies_trending&name=Trending%20Movies"),
-            ("4", "TrendingTVShows", "plugin://plugin.video.pov/?mode=build_tvshow_list&action=tmdb_tv_trending&name=Trending%20TV%20Shows"),
-          ]
-          commands = []
-          for number, title, path in widgets:
-            for suffix, value in [("Title", title), ("Path", path), ("Name", title), ("Type", "video"), ("Target", "video")]:
-              commands.append('Skin.SetString(Cineva.Widget' + number + '.' + suffix + ',' + value + ')')
-          commands.append("Skin.SetBool(Cineva.Initialized)")
-          onload.text = ";".join(commands)
+          if onload is None:
+            onload = ET.SubElement(root, "onload")
+          onload.attrib.clear()
+          onload.text = "RunScript(script.cineva.widgets,action=init)"
           tree.write(p, encoding="UTF-8", xml_declaration=True)
-          print("Rebuilt Home widget onload with parser-safe no-space Skin.SetString arguments.")
+          print("Home widgets now initialize through the Python add-on.")
           PY
           # Kodi's confirmation dialog uses control 11 for the affirmative action.
           # The previous custom dialog defaulted to 10 (revert), so Return silently
