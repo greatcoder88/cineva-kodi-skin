@@ -59,7 +59,7 @@ jobs:
               errors.append("Startup.xml still focuses the empty panel")
           if (startup.findtext("onload") or "").strip() != "ActivateWindow(Home)":
               errors.append("Startup.xml must hand off to Home")
-          row_positions = ((324, 354), (510, 540), (696, 726), (882, 912))
+          row_positions = ((324, 354), (504, 534), (684, 714), (864, 894))
           controls = home.find("controls")
           for index, (heading_top, shelf_top) in enumerate(row_positions, 1):
               heading = next((c for c in controls.findall("control")
@@ -68,13 +68,13 @@ jobs:
               shelf = controls.find(f"./control[@type='fixedlist'][@id='{9000 + index}']")
               if heading is None or heading.findtext("top") != str(heading_top):
                   errors.append(f"Home widget {index} heading overlaps the shelf above")
-              if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "160":
+              if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "144":
                   errors.append(f"Home widget {index} shelf geometry is incorrect")
           if controls.find("./control[@id='9010']") is not None:
               errors.append("Floating More Widgets button still obscures the fourth shelf")
           includes = ET.parse(root / "xml/Includes.xml").getroot()
           poster = includes.find("./include[@name='CinevaPosterItem']")
-          if poster is None or poster.findtext("./control[@type='image']/height") != "134":
+          if poster is None or poster.findtext("./control[@type='image']/height") != "120":
               errors.append("Poster image geometry is not the compact 1080p layout")
           skin = ET.parse(root / "addon.xml").getroot()
           if skin.attrib.get("version") != "0.5.3":
