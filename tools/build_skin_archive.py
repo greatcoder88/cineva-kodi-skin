@@ -200,6 +200,17 @@ def update_xml(data, path):
                     set_child_text(button, "ondown", f"SetFocus({action_targets[button.get('id')]})")
                 for tag, value in (("texturefocus", "focus-bar.png"), ("texturenofocus", "-"), ("textcolor", "lightgrey"), ("focusedcolor", "white"), ("align", "center"), ("aligny", "center")):
                     set_child_text(button, tag, value)
+            # Keep a persistent red section marker under HOME even after focus
+            # moves into the catalogue, so users never lose their location.
+            old_marker = nav_group.find("./control[@id='9201']")
+            if old_marker is not None:
+                nav_group.remove(old_marker)
+            active_marker = ET.Element("control", {"type": "image", "id": "9201"})
+            for tag, value in (("left", 34), ("top", 42), ("width", 62), ("height", 4)):
+                set_child_text(active_marker, tag, value)
+            set_child_text(active_marker, "texture", "focus-bar.png")
+            set_child_text(active_marker, "visible", "Window.IsActive(home)")
+            nav_group.append(active_marker)
         # The top navigation already has a My Widgets destination. The extra
         # floating button obscured the fourth shelf and is intentionally removed.
         for control in list(controls):
@@ -229,6 +240,11 @@ def update_xml(data, path):
         set_child_text(normal_label, "visible", "!ListItem.IsSelected")
         for tag, value in (("left", 25), ("top", -7), ("width", 200), ("height", 290)):
             set_child_text(focused_image, tag, value)
+        focus_animation = focused_image.find("./animation[@effect='zoom']")
+        if focus_animation is None:
+            raise SystemExit("Includes.xml focused poster is missing its zoom animation")
+        focus_animation.set("end", "108")
+        focus_animation.set("time", "150")
         for tag, value in (("left", 30), ("width", 190), ("top", 266)):
             set_child_text(progress, tag, value)
         if focused_label is not None and focused_label in list(focused):
@@ -251,13 +267,18 @@ def update_xml(data, path):
             set_child_text(fallback_image, "visible", f"!Control.HasFocus({container_id})")
             set_child_text(active_image, "visible", f"Control.HasFocus({container_id})")
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
-            for tag, value in (("left", 0), ("top", 278), ("width", 270), ("height", 20), ("align", "center"), ("font", "font10"), ("textcolor", "white")):
+            for tag, value in (("left", 0), ("top", 278), ("width", 270), ("height", 24), ("align", "center"), ("font", "font12"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
             set_child_text(active_label, "visible", f"Control.HasFocus({container_id})")
             set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
+            focus_accent = ET.Element("control", {"type": "image"})
+            for tag, value in (("left", 30), ("top", 270), ("width", 190), ("height", 4)):
+                set_child_text(focus_accent, tag, value)
+            set_child_text(focus_accent, "texture", "focus-bar.png")
+            set_child_text(focus_accent, "visible", f"Control.HasFocus({container_id})")
             for child in list(clone.findall("control")):
                 clone.remove(child)
-            for child in (fallback_image, active_image, fallback_label, active_label, clone_progress):
+            for child in (fallback_image, active_image, fallback_label, active_label, clone_progress, focus_accent):
                 clone.append(child)
             root.append(clone)
     elif path == "skin.cineva/xml/DialogConfirm.xml":
