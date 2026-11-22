@@ -23,6 +23,14 @@ jobs:
           unzip -q skin.cineva-0.5.3.zip -d .
       - name: Python syntax
         run: python -m compileall -q tools/build_skin_archive.py tools/download_test_posters.py tools/script.cineva.widgets tools/test-fixtures/plugin.video.pov
+      - name: Validate GUI artwork JPEG signature contract
+        run: |
+          python - <<'PY'
+          import runpy
+          module = runpy.run_path("tools/download_test_posters.py")
+          assert module["JPEG_SIGNATURE"] == bytes.fromhex("ffd8ff")
+          print("GUI artwork downloader uses the correct JPEG SOI signature.")
+          PY
       - name: Widget manager unit tests (Kodi API mocked)
         run: python -m unittest discover -s tests -v
       - name: Validate packaged skin and widget settings
