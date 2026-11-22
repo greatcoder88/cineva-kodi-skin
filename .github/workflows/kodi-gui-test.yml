@@ -145,7 +145,8 @@ jobs:
           for attempt in range(30):
             try:
               current = rpc("Settings.GetSettingValue", {"setting":"lookandfeel.skin"})
-              print("Kodi selected skin at test start:", current)
+              current_value = current.get("value") if isinstance(current, dict) else current
+          print("Kodi selected skin at test start:", current_value)
               break
             except Exception as exc:
               last = exc
@@ -175,8 +176,9 @@ jobs:
             time.sleep(10)
             selected = rpc("Settings.GetSettingValue", {"setting":"lookandfeel.skin"})
             print("Selected skin after cycle:", selected)
-            if selected != "skin.cineva":
-              raise SystemExit(f"Cycle {cycle} failed: Kodi selected {selected!r}")
+            selected_value = selected.get("value") if isinstance(selected, dict) else selected
+            if selected_value != "skin.cineva":
+              raise SystemExit(f"Cycle {cycle} failed: Kodi selected {selected_value!r}")
             # Retain a screenshot for every in-process reload attempt.
             import subprocess
             subprocess.run(["import","-display",":99","-window","root",f"artifacts/cineva-cycle-{cycle}.png"],check=True)
