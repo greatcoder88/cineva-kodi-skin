@@ -143,7 +143,7 @@ def update_xml(data, path):
             set_child_text(focused_image, tag, value)
         for tag, value in (("left", 30), ("width", 190), ("top", 266)):
             set_child_text(progress, tag, value)
-        if focused_label is not None:
+        if focused_label is not None and focused_label in list(focused):
             focused.remove(focused_label)
         for container_id in (9001, 9002, 9003, 9004):
             include_name = f"CinevaFocusedPosterItem{container_id}"
