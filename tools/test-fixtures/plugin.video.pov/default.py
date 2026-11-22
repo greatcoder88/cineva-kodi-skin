@@ -34,20 +34,23 @@ def main():
     records = SHOWS if is_tv else MOVIES
     addon_path = xbmcaddon.Addon().getAddonInfo("path")
     poster_dir = os.path.join(addon_path, "resources", "posters")
+    poster_kind = "tv" if is_tv else "movie"
     entries = []
     for index, (title, year, genre) in enumerate(records, 1):
-        poster = os.path.join(poster_dir, "{}.png".format(index))
+        poster = os.path.join(poster_dir, "{}-{}.jpg".format(poster_kind, index))
+        if not os.path.isfile(poster):
+            raise RuntimeError("Missing downloaded poster artwork: {}".format(poster))
         play_url = "plugin://plugin.video.pov/play?id={}".format(index)
         item = xbmcgui.ListItem(label=title, path=play_url)
         item.setInfo("video", {
             "title": title,
             "year": year,
             "genre": genre,
-            "plot": "CINÉVA GUI test fixture item — {}".format(title),
             "mediatype": "tvshow" if is_tv else "movie",
             "rating": 8.4,
         })
-        item.setArt({"poster": poster, "thumb": poster, "fanart": poster})
+        # A portrait poster must not be stretched across the Home hero area.
+        item.setArt({"poster": poster, "thumb": poster})
         item.setProperty("Cineva.TestFixture", "true")
         entries.append((play_url, item, False))
     xbmcplugin.addDirectoryItems(handle, entries, len(entries))

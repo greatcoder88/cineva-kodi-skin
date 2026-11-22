@@ -55,9 +55,24 @@ jobs:
           if startup.find("defaultcontrol") is not None or startup.find(".//control[@id='50']") is not None:
             raise SystemExit("Startup.xml still focuses the empty panel 50")
           if (startup.findtext("onload") or "").strip() != "ActivateWindow(Home)":
-            raise SystemExit("Startup.xml must explicitly transition from Kodi Startup to Home")
-          if (startup.findtext("onload") or "").strip() != "ActivateWindow(Home)":
             raise SystemExit("Startup.xml must hand off to Home after a skin switch")
+          row_positions = ((324, 354), (510, 540), (696, 726), (882, 912))
+          controls = home.find("controls")
+          for index, (heading_top, shelf_top) in enumerate(row_positions, 1):
+            heading = next((c for c in controls.findall("control")
+                            if c.get("type") == "label"
+                            and c.findtext("label") == f"$INFO[Skin.String(Cineva.Widget{index}.Name)]"), None)
+            shelf = controls.find(f"./control[@type='fixedlist'][@id='{9000 + index}']")
+            if heading is None or heading.findtext("top") != str(heading_top):
+              raise SystemExit(f"Home widget {index} heading is not at the verified non-overlap position")
+            if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "160":
+              raise SystemExit(f"Home widget {index} shelf geometry is incorrect")
+          if controls.find("./control[@id='9010']") is not None:
+            raise SystemExit("Obstructive floating More Widgets button is still present")
+          includes = ET.parse("skin.cineva/xml/Includes.xml").getroot()
+          poster = includes.find("./include[@name='CinevaPosterItem']")
+          if poster is None or poster.findtext("./control[@type='image']/height") != "134":
+            raise SystemExit("Home poster layout is missing its compact 1080p geometry")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
           if skin.attrib.get("version") != "0.5.3":
             raise SystemExit("Skin archive version must be 0.5.3")
@@ -69,7 +84,7 @@ jobs:
             raise SystemExit("widget_registry must be declared as a string setting")
           print("Packaged Home, dialog, Startup and settings schema validated.")
           PY
-          zip -qr artifacts/cineva-expanded-source.zip skin.cineva tools/script.cineva.widgets tools/test-fixtures/plugin.video.pov
+          zip -qr artifacts/cineva-expanded-source.zip skin.cineva tools/script.cineva.widgets tools/test-fixtures/plugin.video.pov tools/download_test_posters.py
 
       - name: Install GUI runtime
         run: |
@@ -94,12 +109,7 @@ jobs:
           POV="$HOME/.var/app/tv.kodi.Kodi/data/addons/plugin.video.pov"
           mkdir -p "$POV/resources/posters"
           cp -a tools/test-fixtures/plugin.video.pov/. "$POV/"
-          convert -size 342x513 "gradient:#141e30-#243b55" -fill white -font DejaVu-Sans-Bold -pointsize 25 -gravity center -annotate +0-24 "The Shawshank Redemption" -fill '#e5e5e5' -font DejaVu-Sans -pointsize 14 -annotate +0+92 "CINEVA GUI TEST FIXTURE" "$POV/resources/posters/1.png"
-          convert -size 342x513 "gradient:#232526-#414345" -fill white -font DejaVu-Sans-Bold -pointsize 25 -gravity center -annotate +0-24 "The Dark Knight" -fill '#e5e5e5' -font DejaVu-Sans -pointsize 14 -annotate +0+92 "CINEVA GUI TEST FIXTURE" "$POV/resources/posters/2.png"
-          convert -size 342x513 "gradient:#0f2027-#2c5364" -fill white -font DejaVu-Sans-Bold -pointsize 25 -gravity center -annotate +0-24 "Interstellar" -fill '#e5e5e5' -font DejaVu-Sans -pointsize 14 -annotate +0+92 "CINEVA GUI TEST FIXTURE" "$POV/resources/posters/3.png"
-          convert -size 342x513 "gradient:#42275a-#734b6d" -fill white -font DejaVu-Sans-Bold -pointsize 25 -gravity center -annotate +0-24 "Inception" -fill '#e5e5e5' -font DejaVu-Sans -pointsize 14 -annotate +0+92 "CINEVA GUI TEST FIXTURE" "$POV/resources/posters/4.png"
-          convert -size 342x513 "gradient:#000000-#434343" -fill white -font DejaVu-Sans-Bold -pointsize 25 -gravity center -annotate +0-24 "The Matrix" -fill '#e5e5e5' -font DejaVu-Sans -pointsize 14 -annotate +0+92 "CINEVA GUI TEST FIXTURE" "$POV/resources/posters/5.png"
-          convert -size 342x513 "gradient:#1f1c2c-#928dab" -fill white -font DejaVu-Sans-Bold -pointsize 25 -gravity center -annotate +0-24 "Dune Part Two" -fill '#e5e5e5' -font DejaVu-Sans -pointsize 14 -annotate +0+92 "CINEVA GUI TEST FIXTURE" "$POV/resources/posters/6.png"
+          python tools/download_test_posters.py "$POV/resources/posters"
           test -s "$POV/resources/posters/1.png"
           curl -fL --retry 3 -o /tmp/script.skinshortcuts.zip https://github.com/MikeSiLVO/script.skinshortcuts/archive/refs/tags/v3.0.1.zip
           mkdir -p "$HOME/.var/app/tv.kodi.Kodi/data/addons/script.skinshortcuts"
@@ -306,9 +316,10 @@ jobs:
               items = directory.get("files",[]) if isinstance(directory,dict) else []
               posters = [item.get("thumbnail") or (item.get("art") or {}).get("poster") or (item.get("art") or {}).get("thumb") for item in items]
               poster_count = sum(1 for poster in posters if poster)
-              print(f"Widget row {row}: items={len(items)}, poster_art={poster_count}, first={items[0] if items else None}")
-              if len(items) < 6 or poster_count < 6:
-                raise SystemExit(f"Widget row {row} did not return six poster-backed items")
+              unique_posters = len(set(poster for poster in posters if poster))
+              print(f"Widget row {row}: items={len(items)}, poster_art={poster_count}, unique_posters={unique_posters}, first={items[0] if items else None}")
+              if len(items) < 6 or poster_count < 6 or unique_posters < 6:
+                raise SystemExit(f"Widget row {row} did not return six distinct poster-backed items")
             rpc("Input.Down")
             deadline = time.time() + 12
             focused_label = ""
