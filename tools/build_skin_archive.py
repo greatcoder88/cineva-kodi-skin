@@ -130,9 +130,12 @@ def update_xml(data, path):
             set_child_text(normal_image, tag, value)
         for tag, value in (("left", 0), ("top", 278), ("width", 270), ("height", 20), ("align", "center")):
             set_child_text(normal_label, tag, value)
+        # Kodi paints the focusedlayout over itemlayout; hide the normal title
+        # for the selected item so its brighter focused title is never doubled.
+        set_child_text(normal_label, "visible", "!ListItem.IsSelected")
         for tag, value in (("left", 25), ("top", -7), ("width", 200), ("height", 290)):
             set_child_text(focused_image, tag, value)
-        for tag, value in (("left", 0), ("top", 278), ("width", 270), ("height", 20), ("align", "center")):
+        for tag, value in (("left", 0), ("top", 278), ("width", 270), ("height", 24), ("align", "center"), ("font", "font12")):
             set_child_text(focused_label, tag, value)
         set_child_text(progress, "left", 30)
         set_child_text(progress, "width", 190)
