@@ -37,8 +37,7 @@ def update_xml(data, path):
         onload.attrib.clear()
         onload.text = "RunScript(script.cineva.widgets,action=init)"
         # Rebuild Home as a cinematic hero plus large, breathable content rails.
-        # Three rails are intentionally visible on a 1080p screen; the fourth
-        # remains reachable by vertical navigation instead of shrinking cards.
+        # Two full large-poster rails fit above the fold; remaining shelves stay reachable by D-pad navigation.
         controls = root.find("controls")
         if controls is None:
             raise SystemExit("Home.xml is missing its controls container")

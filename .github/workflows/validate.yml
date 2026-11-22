@@ -112,7 +112,7 @@ jobs:
               if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "300":
                   errors.append(f"Home widget {index} shelf geometry is incorrect")
           nav = next((g for g in controls.findall("control") if g.get("type") == "group" and g.find("./control[@id='1001']") is not None), None)
-          if nav is None or any(button.findtext("focusedcolor") != "white" or button.findtext("texturefocus") != "focus-bar.png" for button in nav.findall("./control[@type='button'])):
+          if nav is None or any(button.findtext("focusedcolor") != "white" or button.findtext("texturefocus") != "focus-bar.png" for button in nav.findall("./control[@type='button']")):
               errors.append("Home navigation buttons need visible explicit textures and text color")
           if nav is not None:
               expected_down = {"1001": "9111", "1002": "9115", "1003": "9117"}
