@@ -99,9 +99,9 @@ def update_xml(data, path):
                         set_child_text(child, "height", 276)
                     elif child.get("type") == "label":
                         set_child_text(child, "left", 0)
-                        set_child_text(child, "top", 280)
+                        set_child_text(child, "top", 278)
                         set_child_text(child, "width", 270)
-                        set_child_text(child, "height", 24)
+                        set_child_text(child, "height", 20)
                         set_child_text(child, "align", "center")
         nav_group = next((node for node in controls.findall("control") if node.get("type") == "group" and node.find("./control[@id='1001']") is not None), None)
         if nav_group is not None:
@@ -128,11 +128,11 @@ def update_xml(data, path):
             raise SystemExit("Includes.xml has an incomplete poster layout")
         for tag, value in (("left", 30), ("width", 190), ("height", 276)):
             set_child_text(normal_image, tag, value)
-        for tag, value in (("left", 0), ("top", 280), ("width", 270), ("height", 24), ("align", "center")):
+        for tag, value in (("left", 0), ("top", 278), ("width", 270), ("height", 20), ("align", "center")):
             set_child_text(normal_label, tag, value)
         for tag, value in (("left", 25), ("top", -7), ("width", 200), ("height", 290)):
             set_child_text(focused_image, tag, value)
-        for tag, value in (("left", 0), ("top", 292), ("width", 270), ("height", 22), ("align", "center")):
+        for tag, value in (("left", 0), ("top", 278), ("width", 270), ("height", 20), ("align", "center")):
             set_child_text(focused_label, tag, value)
         set_child_text(progress, "left", 30)
         set_child_text(progress, "width", 190)

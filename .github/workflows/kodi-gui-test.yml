@@ -77,8 +77,8 @@ jobs:
             raise SystemExit("Obstructive floating More Widgets button is still present")
           includes = ET.parse("skin.cineva/xml/Includes.xml").getroot()
           poster = includes.find("./include[@name='CinevaPosterItem']")
-          if poster is None or poster.findtext("./control[@type='image']/height") != "276" or poster.findtext("./control[@type='label']/width") != "270":
-            raise SystemExit("Home poster layout is missing its redesigned large-card geometry")
+          if poster is None or poster.findtext("./control[@type='image']/height") != "276" or poster.findtext("./control[@type='label']/width") != "270" or poster.findtext("./control[@type='label']/top") != "278" or poster.findtext("./control[@type='label']/height") != "20":
+            raise SystemExit("Home poster and title layout is missing its redesigned large-card geometry")
           catalogue = ET.parse("skin.cineva/xml/MyVideoNav.xml").getroot()
           panel = catalogue.find("./controls/control[@type='panel']")
           layout = panel.find("itemlayout") if panel is not None else None
@@ -273,8 +273,24 @@ jobs:
           print("POV GUI fixture after enable:", pov_details)
           for cycle in range(1, 4):
             print(f"===== CINÉVA live test cycle {cycle}/3 =====")
+            previous_skin_loads = log_text().count("load skin from:")
             result = rpc("Settings.SetSettingValue", {"setting":"lookandfeel.skin","value":"skin.estuary"})
             print("Switched to Estuary:", result)
+            # Every skin change opens a Keep Skin confirmation in the newly
+            # selected skin. Confirm Estuary before requesting CINÉVA again;
+            # otherwise the second switch races the still-open modal.
+            deadline = time.time() + 25
+            while time.time() < deadline:
+              state = gui()
+              if state.get("skin",{}).get("id") == "skin.estuary" and state.get("currentwindow",{}).get("id") == 10100:
+                break
+              time.sleep(0.5)
+            else:
+              raise SystemExit(f"Cycle {cycle}: Estuary Keep Skin dialog did not open: {state}")
+            estuary_label = state.get("currentcontrol",{}).get("label","").strip()
+            if estuary_label.lower() != "yes":
+              raise SystemExit(f"Cycle {cycle}: Estuary Keep Skin did not default to Yes: {estuary_label!r}")
+            subprocess.run(["xdotool","key","Return"],check=True)
             deadline = time.time() + 20
             while time.time() < deadline:
               state = gui()
@@ -282,7 +298,10 @@ jobs:
                 break
               time.sleep(0.5)
             else:
-              raise SystemExit(f"Cycle {cycle}: Kodi did not leave CINÉVA for Estuary")
+              raise SystemExit(f"Cycle {cycle}: Estuary confirmation did not close: {state}")
+            if log_text().count("load skin from:") <= previous_skin_loads:
+              raise SystemExit(f"Cycle {cycle}: Estuary skin reload was not recorded")
+            time.sleep(1)
             before = log_text()
             before_loads = before.count("load skin from:")
             before_inits = before.count("CINEVA_WIDGETS_INITIALIZED=4")
