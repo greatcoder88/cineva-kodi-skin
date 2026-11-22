@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Fetch distinct real poster thumbnails for the deterministic Kodi GUI fixture.
+"""Fetch distinct real movie and TV poster artwork for the Kodi GUI fixture.
 
-Images are downloaded only on the CI runner and are not committed. Wikipedia
-page-image thumbnails keep this test independent of API keys while exercising
-Kodi's actual local poster rendering path.
+Posters are downloaded only on the CI runner. Movies use public TMDB image CDN
+poster paths; series artwork is resolved through TVmaze's keyless singlesearch
+API. This avoids synthetic cards and does not commit third-party images.
 """
 import hashlib
 import json
@@ -13,20 +13,24 @@ import sys
 import urllib.parse
 import urllib.request
 
-PAGES = [
-    ("movie-1.jpg", "The Shawshank Redemption"),
-    ("movie-2.jpg", "The Dark Knight (film)"),
-    ("movie-3.jpg", "Interstellar (film)"),
-    ("movie-4.jpg", "Inception"),
-    ("movie-5.jpg", "The Matrix"),
-    ("movie-6.jpg", "Dune: Part Two"),
-    ("tv-1.jpg", "Breaking Bad"),
-    ("tv-2.jpg", "Dark (TV series)"),
-    ("tv-3.jpg", "Severance (TV series)"),
-    ("tv-4.jpg", "The Last of Us (TV series)"),
-    ("tv-5.jpg", "The Bear (TV series)"),
-    ("tv-6.jpg", "Sherlock (TV series)"),
+MOVIES = [
+    ("movie-1.jpg", "The Shawshank Redemption", "q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg"),
+    ("movie-2.jpg", "The Dark Knight", "qJ2tW6WMUDux911r6m7haRef0WH.jpg"),
+    ("movie-3.jpg", "Interstellar", "gEU2QniE6E77NI6lCU6MxlNBvIx.jpg"),
+    ("movie-4.jpg", "Inception", "pIkRyD18kl4FhoCNQuWxWu5cBLM.jpg"),
+    ("movie-5.jpg", "The Matrix", "p96dm7sCMn4VYAStA6siNz30G1r.jpg"),
+    ("movie-6.jpg", "Dune: Part Two", "6izwz7rsy95ARzTR3poZ8H6c5pp.jpg"),
 ]
+SHOWS = [
+    ("tv-1.jpg", "Breaking Bad"),
+    ("tv-2.jpg", "Dark"),
+    ("tv-3.jpg", "Severance"),
+    ("tv-4.jpg", "The Last of Us"),
+    ("tv-5.jpg", "The Bear"),
+    ("tv-6.jpg", "Sherlock"),
+]
+TMDB_IMAGE = "https://image.tmdb.org/t/p/w500/{}"
+TVMAZE_SEARCH = "https://api.tvmaze.com/singlesearch/shows?q={}"
 USER_AGENT = "CINEVA-Kodi-Skin-CI/1.0 (https://github.com/greatcoder88/cineva-kodi-skin)"
 
 
@@ -36,62 +40,62 @@ def request_bytes(url):
         return response.read()
 
 
+def normalize_poster(raw, target):
+    raw.write_bytes(request_bytes(raw_url[0]))
+
+
+def save_poster(url, target):
+    raw = target.with_suffix(target.suffix + ".download")
+    raw.write_bytes(request_bytes(url))
+    subprocess.run([
+        "convert", str(raw), "-auto-orient", "-resize", "342x513^",
+        "-gravity", "center", "-extent", "342x513", "-strip",
+        "-quality", "88", str(target),
+    ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    raw.unlink(missing_ok=True)
+    data = target.read_bytes()
+    if len(data) < 5000 or not data.startswith(b"\\xff\\xd8\\xff"):
+        raise SystemExit("Downloaded poster is empty or not a valid JPEG: " + target.name)
+    dimensions = subprocess.check_output(
+        ["identify", "-format", "%wx%h", str(target)], text=True
+    ).strip()
+    if dimensions != "342x513":
+        raise SystemExit("Unexpected poster dimensions for {}: {}".format(target.name, dimensions))
+    return hashlib.sha256(data).hexdigest(), len(data)
+
+
 def main():
     if len(sys.argv) != 2:
         raise SystemExit("usage: download_test_posters.py POSTER_DIRECTORY")
     output = pathlib.Path(sys.argv[1])
     output.mkdir(parents=True, exist_ok=True)
-    titles = "|".join(title for _, title in PAGES)
-    query = urllib.parse.urlencode({
-        "action": "query", "format": "json", "prop": "pageimages",
-        "piprop": "thumbnail", "pithumbsize": "600", "redirects": "1",
-        "titles": titles,
-    })
-    payload = json.loads(request_bytes("https://en.wikipedia.org/w/api.php?" + query))
-    query_data = payload.get("query", {})
-    aliases = {}
-    for mapping in query_data.get("normalized", []) + query_data.get("redirects", []):
-        aliases[mapping["from"].casefold()] = mapping["to"]
-
-    def resolve(title):
-        seen = set()
-        while title.casefold() in aliases and title.casefold() not in seen:
-            seen.add(title.casefold())
-            title = aliases[title.casefold()]
-        return title
-
-    pages = {page.get("title", "").casefold(): page
-             for page in query_data.get("pages", {}).values()}
     hashes = set()
-    for filename, requested_title in PAGES:
-        canonical = resolve(requested_title)
-        page = pages.get(canonical.casefold())
-        image_url = (page.get("thumbnail", {}) if page else {}).get("source")
-        if not image_url:
-            raise SystemExit("Wikipedia returned no poster thumbnail for: " + requested_title)
-        raw = output / (filename + ".download")
-        raw.write_bytes(request_bytes(image_url))
+
+    for filename, title, poster_path in MOVIES:
         target = output / filename
-        subprocess.run([
-            "convert", str(raw), "-auto-orient", "-resize", "342x513^",
-            "-gravity", "center", "-extent", "342x513", "-strip",
-            "-quality", "88", str(target),
-        ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        raw.unlink(missing_ok=True)
-        data = target.read_bytes()
-        if len(data) < 5000 or not data.startswith(b"\xff\xd8\xff"):
-            raise SystemExit("Downloaded poster is empty or not a valid JPEG: " + filename)
-        digest = hashlib.sha256(data).hexdigest()
+        digest, size = save_poster(TMDB_IMAGE.format(poster_path), target)
         if digest in hashes:
-            raise SystemExit("Duplicate poster artwork returned for: " + requested_title)
+            raise SystemExit("Duplicate poster artwork returned for: " + title)
         hashes.add(digest)
-        dimensions = subprocess.check_output(
-            ["identify", "-format", "%wx%h", str(target)], text=True
-        ).strip()
-        if dimensions != "342x513":
-            raise SystemExit("Unexpected poster dimensions for {}: {}".format(filename, dimensions))
-        print("{}: {} -> {} ({} bytes)".format(requested_title, canonical, filename, len(data)))
-    if len(hashes) != len(PAGES):
+        print("{} -> {} ({} bytes)".format(title, filename, size))
+
+    for filename, title in SHOWS:
+        query = urllib.parse.quote(title, safe="")
+        show = json.loads(request_bytes(TVMAZE_SEARCH.format(query)))
+        if show.get("name", "").casefold() != title.casefold():
+            raise SystemExit("TVmaze returned the wrong show for {}: {}".format(title, show.get("name")))
+        image = show.get("image") or {}
+        image_url = image.get("original") or image.get("medium")
+        if not image_url:
+            raise SystemExit("TVmaze returned no poster artwork for: " + title)
+        target = output / filename
+        digest, size = save_poster(image_url, target)
+        if digest in hashes:
+            raise SystemExit("Duplicate poster artwork returned for: " + title)
+        hashes.add(digest)
+        print("{} -> {} ({} bytes)".format(title, filename, size))
+
+    if len(hashes) != len(MOVIES) + len(SHOWS):
         raise SystemExit("Expected 12 distinct poster images; got {}".format(len(hashes)))
     print("Downloaded and verified 12 distinct real poster images.")
 

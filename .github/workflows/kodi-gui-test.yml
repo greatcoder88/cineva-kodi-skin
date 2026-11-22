@@ -110,7 +110,8 @@ jobs:
           mkdir -p "$POV/resources/posters"
           cp -a tools/test-fixtures/plugin.video.pov/. "$POV/"
           python tools/download_test_posters.py "$POV/resources/posters"
-          test -s "$POV/resources/posters/1.png"
+          test -s "$POV/resources/posters/movie-1.jpg"
+          test -s "$POV/resources/posters/tv-1.jpg"
           curl -fL --retry 3 -o /tmp/script.skinshortcuts.zip https://github.com/MikeSiLVO/script.skinshortcuts/archive/refs/tags/v3.0.1.zip
           mkdir -p "$HOME/.var/app/tv.kodi.Kodi/data/addons/script.skinshortcuts"
           unzip -q /tmp/script.skinshortcuts.zip -d /tmp/skinshortcuts
