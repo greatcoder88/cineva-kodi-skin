@@ -71,13 +71,13 @@ jobs:
             shelf = controls.find(f"./control[@type='fixedlist'][@id='{9000 + index}']")
             if heading is None or heading.findtext("top") != str(heading_top):
               raise SystemExit(f"Home widget {index} heading is not at the verified non-overlap position")
-            if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "220":
+            if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "245":
               raise SystemExit(f"Home widget {index} shelf geometry is incorrect")
           if controls.find("./control[@id='9010']") is not None:
             raise SystemExit("Obstructive floating More Widgets button is still present")
           includes = ET.parse("skin.cineva/xml/Includes.xml").getroot()
           poster = includes.find("./include[@name='CinevaPosterItem']")
-          if poster is None or poster.findtext("./control[@type='image']/height") != "204":
+          if poster is None or poster.findtext("./control[@type='image']/height") != "204" or poster.findtext("./control[@type='label']/width") != "230":
             raise SystemExit("Home poster layout is missing its redesigned large-card geometry")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
           if skin.attrib.get("version") != "0.5.3":
