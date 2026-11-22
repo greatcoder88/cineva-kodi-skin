@@ -49,8 +49,17 @@ def update_xml(data, path):
             controls.remove(previous_rail_list)
             for child in list(previous_rail_list.findall("control")):
                 previous_rail_list.remove(child)
-                controls.insert(row_insert_index, child)
-                row_insert_index += 1
+                # Newer builds wrap each heading/shelf pair in a row group.
+                # Unwrap those groups before rebuilding so two consecutive
+                # archive builds remain structurally identical.
+                if child.get("type") == "group" and child.get("id", "").startswith("906"):
+                    for row_child in list(child.findall("control")):
+                        child.remove(row_child)
+                        controls.insert(row_insert_index, row_child)
+                        row_insert_index += 1
+                else:
+                    controls.insert(row_insert_index, child)
+                    row_insert_index += 1
         # Cinematic hero: give artwork room to breathe and fade it cleanly into the catalogue.
         for control in controls.findall("control"):
             if control.get("type") == "image" and control.findtext("texture", "").startswith("$INFO[Container("):
@@ -169,7 +178,8 @@ def update_xml(data, path):
             set_child_text(hero_group, "visible",
                            f"Control.HasFocus({container_id}) | Control.HasFocus({play_id}) | Control.HasFocus({play_id + 1})")
         # Keep the cinematic hero pinned while the four Home rails scroll as one catalogue.
-        # A grouplist owns the vertical movement; each child remains a normal horizontal fixedlist.
+        # Each row is a single grouplist child so its non-focusable heading cannot
+        # intercept Up from the nested fixedlist before the shelf's explicit route.
         rail_list = ET.Element("control", {"type": "grouplist", "id": "9050"})
         for tag, value in (("left", 72), ("top", 370), ("width", 1776), ("height", 680)):
             set_child_text(rail_list, tag, value)
@@ -189,18 +199,24 @@ def update_xml(data, path):
                 first_row_index = list(controls).index(heading)
             controls.remove(heading)
             controls.remove(shelf)
-            # The grouplist places each child in sequence; local coordinates start at zero.
+            row_group = ET.Element("control", {"type": "group", "id": str(9060 + index)})
+            for tag, value in (("left", 0), ("top", 0), ("width", 1776), ("height", 292)):
+                set_child_text(row_group, tag, value)
+            play_id = 9111 + (index - 1) * 2
+            next_target = 9000 + index + 1 if index < 4 else 1001
+            set_child_text(row_group, "onup", f"SetFocus({play_id})")
+            set_child_text(row_group, "ondown", f"SetFocus({next_target})")
+            # The grouplist places each row group in sequence; children use local coordinates.
             set_child_text(heading, "left", 0)
             set_child_text(heading, "top", 0)
             set_child_text(heading, "width", 1100)
             set_child_text(heading, "height", 32)
             set_child_text(heading, "font", "font16")
             set_child_text(shelf, "left", 0)
-            set_child_text(shelf, "top", 0)
+            set_child_text(shelf, "top", 32)
             set_child_text(shelf, "width", 1776)
             set_child_text(shelf, "height", 260)
-            set_child_text(shelf, "onup", f"SetFocus({9111 + (index - 1) * 2})")
-            next_target = 9000 + index + 1 if index < 4 else 1001
+            set_child_text(shelf, "onup", f"SetFocus({play_id})")
             set_child_text(shelf, "ondown", f"SetFocus({next_target})")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
                 layout.set("width", "222")
@@ -209,8 +225,9 @@ def update_xml(data, path):
             focused_include = focused_layout.find("include") if focused_layout is not None else None
             if focused_include is not None:
                 focused_include.text = f"CinevaFocusedPosterItem{9000 + index}"
-            rail_list.append(heading)
-            rail_list.append(shelf)
+            row_group.append(heading)
+            row_group.append(shelf)
+            rail_list.append(row_group)
         if first_row_index is None:
             raise SystemExit("Home.xml has no widget rows to place in the scrolling rail list")
         controls.insert(first_row_index, rail_list)
@@ -255,7 +272,7 @@ def update_xml(data, path):
             focused_label = ET.fromstring(ET.tostring(normal_label, encoding="unicode"))
         for tag, value in (("left", 33), ("top", 0), ("width", 156), ("height", 234)):
             set_child_text(normal_image, tag, value)
-        for tag, value in (("left", 0), ("top", 236), ("width", 222), ("height", 20), ("align", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
+        for tag, value in (("left", 0), ("top", 236), ("width", 222), ("height", 20), ("align", "center"), ("font", "font9"), ("textcolor", "lightgrey")):
             set_child_text(normal_label, tag, value)
         stale_visibility = normal_label.find("visible")
         if stale_visibility is not None:
@@ -290,8 +307,9 @@ def update_xml(data, path):
             set_child_text(fallback_image, "visible", f"!Control.HasFocus({container_id})")
             set_child_text(active_image, "visible", f"Control.HasFocus({container_id})")
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
-            for tag, value in (("left", 0), ("top", 236), ("width", 222), ("height", 20), ("align", "center"), ("font", "font10"), ("textcolor", "white")):
+            for tag, value in (("left", 0), ("top", 236), ("width", 222), ("height", 20), ("align", "center"), ("font", "font9"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
+            set_child_text(active_label, "scroll", "true")
             set_child_text(active_label, "visible", f"Control.HasFocus({container_id})")
             set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
             focus_accent = ET.Element("control", {"type": "image"})

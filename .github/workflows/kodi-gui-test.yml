@@ -77,8 +77,8 @@ jobs:
           if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("72", "370", "1776", "680") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "4", "220"):
             raise SystemExit("Home rails are missing their vertical scrolling viewport")
           rail_children = [child for child in rail_list if child.tag == "control"] if rail_list is not None else []
-          if len(rail_children) != 8:
-            raise SystemExit("Home scrolling viewport must contain four heading/shelf pairs")
+          if len(rail_children) != 4:
+            raise SystemExit("Home scrolling viewport must contain four grouped heading/shelf rows")
           for container_id, play_id, nav_target in ((9001, 9111, 1001), (9002, 9113, 1001), (9003, 9115, 1002), (9004, 9117, 1003)):
             action_group = controls.find(f"./control[@id='{9100 + container_id - 9000}']")
             buttons = action_group.findall("./control[@type='button']") if action_group is not None else []
@@ -88,18 +88,23 @@ jobs:
               raise SystemExit(f"Home row {container_id} hero actions are not wired to its selected item")
             if [button.findtext("texturenofocus") for button in buttons] != ["white.png", "black.png"] or [button.findtext("textcolor") for button in buttons] != ["black", "white"]:
               raise SystemExit(f"Home row {container_id} hero actions do not have contrasting Play/Info surfaces")
-            shelf = rail_list.find(f"./control[@type='fixedlist'][@id='{container_id}']") if rail_list is not None else None
-            if shelf is None or shelf.findtext("onup") != f"SetFocus({play_id})":
+            row_group = rail_list.find(f"./control[@type='group'][@id='{9060 + container_id - 9000}']") if rail_list is not None else None
+            shelf = row_group.find(f"./control[@type='fixedlist'][@id='{container_id}']") if row_group is not None else None
+            if shelf is None or shelf.findtext("onup") != f"SetFocus({play_id})" or row_group.findtext("onup") != f"SetFocus({play_id})":
               raise SystemExit(f"Home row {container_id} cannot navigate up to its hero actions")
           for index in range(1, 5):
-            heading = rail_children[(index - 1) * 2] if len(rail_children) == 8 else None
-            shelf = rail_children[(index - 1) * 2 + 1] if len(rail_children) == 8 else None
-            if heading is None or heading.get("type") != "label" or heading.findtext("label") != f"$INFO[Skin.String(Cineva.Widget{index}.Name)]" or heading.findtext("height") != "32":
-              raise SystemExit(f"Home widget {index} heading is missing from the scrolling viewport")
-            if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or shelf.findtext("height") != "260" or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
+            row_group = rail_children[index - 1] if len(rail_children) == 4 else None
+            row_controls = [child for child in row_group if child.tag == "control"] if row_group is not None else []
+            heading = row_controls[0] if len(row_controls) == 2 else None
+            shelf = row_controls[1] if len(row_controls) == 2 else None
+            if row_group is None or row_group.get("type") != "group" or row_group.get("id") != str(9060 + index) or row_group.findtext("height") != "292":
+              raise SystemExit(f"Home widget {index} is not a single scrollable row group")
+            if heading is None or heading.get("type") != "label" or heading.findtext("label") != f"$INFO[Skin.String(Cineva.Widget{index}.Name)]" or (heading.findtext("top"), heading.findtext("height")) != ("0", "32"):
+              raise SystemExit(f"Home widget {index} heading is missing from its row group")
+            if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("32", "260") or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
               raise SystemExit(f"Home widget {index} shelf geometry or upward focus route is incorrect")
             expected_down = f"SetFocus({9000 + index + 1})" if index < 4 else "SetFocus(1001)"
-            if shelf.findtext("ondown") != expected_down:
+            if shelf.findtext("ondown") != expected_down or row_group.findtext("ondown") != expected_down:
               raise SystemExit(f"Home widget {index} cannot navigate down to the next rail")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
               if (layout.get("width"), layout.get("height")) != ("222", "260"):
@@ -108,8 +113,12 @@ jobs:
             raise SystemExit("Obstructive floating More Widgets button is still present")
           includes = ET.parse("skin.cineva/xml/Includes.xml").getroot()
           poster = includes.find("./include[@name='CinevaPosterItem']")
-          if poster is None or poster.findtext("./control[@type='image']/height") != "234" or poster.findtext("./control[@type='label']/width") != "222" or poster.findtext("./control[@type='label']/top") != "236" or poster.findtext("./control[@type='label']/height") != "20":
-            raise SystemExit("Home poster and title layout is missing its redesigned large-card geometry")
+          if poster is None or poster.findtext("./control[@type='image']/height") != "234" or poster.findtext("./control[@type='label']/width") != "222" or poster.findtext("./control[@type='label']/top") != "236" or poster.findtext("./control[@type='label']/height") != "20" or poster.findtext("./control[@type='label']/font") != "font9":
+            raise SystemExit("Home poster and title layout is missing its redesigned large-card geometry or readable title font")
+          focused_poster = includes.find("./include[@name='CinevaFocusedPosterItem9001']")
+          focused_title = focused_poster.find("./control[@type='label'][@textcolor='white']") if focused_poster is not None else None
+          if focused_title is None or focused_title.findtext("font") != "font9" or focused_title.findtext("scroll") != "true":
+            raise SystemExit("Focused poster titles must use the compact font and scroll when their full title exceeds the card width")
           catalogue = ET.parse("skin.cineva/xml/MyVideoNav.xml").getroot()
           panel = catalogue.find("./controls/control[@type='panel']")
           layout = panel.find("itemlayout") if panel is not None else None
