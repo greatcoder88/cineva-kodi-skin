@@ -75,7 +75,7 @@ jobs:
           hero_title = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Label]" in c.findtext("label", "")), None) if hero_group is not None else None
           hero_plot = hero_group.find("./control[@type='textbox']") if hero_group is not None else None
           hero_meta = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Year]" in c.findtext("label", "")), None) if hero_group is not None else None
-          if hero_group is None or hero_group.findtext("top") != "124" or hero_title is None or hero_title.findtext("top") != "30" or hero_meta is None or hero_meta.findtext("top") != "8" or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height")) != ("96", "58"):
+          if hero_group is None or hero_group.findtext("top") != "124" or hero_title is None or hero_title.findtext("top") != "30" or hero_meta is None or hero_meta.findtext("top") != "8" or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height")) != ("112", "58"):
               errors.append("Home hero title, metadata and synopsis do not have the compact action-ready composition")
           topbar_index = next((i for i, node in enumerate(list(controls))
                                if node.tag == "include" and (node.text or "").strip() == "CinevaTopBar"), -1)
@@ -97,8 +97,8 @@ jobs:
                   errors.append(f"Home row {container_id} PLAY action is not bound to its selected item")
               if [node.text for node in buttons[1].findall("onclick")] != [f"SetFocus({container_id})", "Action(Info)"]:
                   errors.append(f"Home row {container_id} MORE INFO action is not bound to its selected item")
-              if any(button.findtext("texturefocus") != "focus-bar.png" or button.findtext("texturenofocus") != "-" for button in buttons):
-                  errors.append(f"Home row {container_id} hero actions are missing the unified focus treatment")
+              if any(button.findtext("texturefocus") != "focus-bar.png" for button in buttons) or [button.findtext("texturenofocus") for button in buttons] != ["white.png", "black.png"] or [button.findtext("textcolor") for button in buttons] != ["black", "white"]:
+                  errors.append(f"Home row {container_id} hero actions are missing their contrasting surfaces and focus treatment")
               shelf = controls.find(f"./control[@type='fixedlist'][@id='{container_id}']")
               if shelf is None or shelf.findtext("onup") != f"SetFocus({play_id})":
                   errors.append(f"Home row {container_id} cannot navigate up to its hero actions")

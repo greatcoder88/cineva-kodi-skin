@@ -85,7 +85,7 @@ def update_xml(data, path):
                     set_child_text(labels[1], "height", 30)
                 for child in group.findall("control"):
                     if child.get("type") == "textbox":
-                        set_child_text(child, "top", 96)
+                        set_child_text(child, "top", 112)
                         set_child_text(child, "height", 58)
             if group.get("type") == "group" and group.findtext("control/label", "").startswith("$INFO[Container("):
                 set_child_text(group, "width", 1200)
@@ -103,7 +103,7 @@ def update_xml(data, path):
             info_id = play_id + 1
             group_id = 9100 + container_id - 9000
             action_group = ET.Element("control", {"type": "group", "id": str(group_id)})
-            for tag, value in (("left", 72), ("top", 292), ("width", 500), ("height", 48)):
+            for tag, value in (("left", 72), ("top", 310), ("width", 500), ("height", 48)):
                 set_child_text(action_group, tag, value)
             visible_terms = [f"Control.HasFocus({container_id})",
                              f"Control.HasFocus({play_id})", f"Control.HasFocus({info_id})"]
@@ -122,8 +122,9 @@ def update_xml(data, path):
                     ("ondown", f"SetFocus({container_id})"),
                     ("onleft", f"SetFocus({play_id})" if button_id == play_id else f"SetFocus({play_id})"),
                     ("onright", f"SetFocus({info_id})"),
-                    ("texturefocus", "focus-bar.png"), ("texturenofocus", "-"),
-                    ("textcolor", "lightgrey"), ("focusedcolor", "white"),
+                    ("texturefocus", "focus-bar.png"),
+                    ("texturenofocus", "white.png" if button_id == play_id else "black.png"),
+                    ("textcolor", "black" if button_id == play_id else "white"), ("focusedcolor", "white"),
                     ("align", "center"), ("aligny", "center")
                 ):
                     set_child_text(button, tag, value)
