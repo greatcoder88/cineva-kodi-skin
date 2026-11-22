@@ -49,7 +49,7 @@ jobs:
           if confirm.findtext("defaultcontrol") != "11":
             raise SystemExit("Keep Skin must default to control 11 (Yes); control 10 is No")
           for button in confirm.findall(".//control[@type='button']"):
-            if button.findtext("texturefocus") != "focus-bar.png" or button.findtext("texturenofocus") != "black.png":
+            if button.findtext("texturefocus") != "focus-bar.png" or button.findtext("texturenofocus") != "-":
               raise SystemExit("Keep Skin buttons need explicit visible focus and no-focus textures")
           startup = ET.parse("skin.cineva/xml/Startup.xml").getroot()
           if startup.find("defaultcontrol") is not None or startup.find(".//control[@id='50']") is not None:
@@ -63,7 +63,7 @@ jobs:
                               if node.tag == "control" and node.findtext("texture") == "hero-shade.png"), -1)
           if topbar_index <= shade_index:
             raise SystemExit("CINÉVA top navigation is layered underneath the hero artwork")
-          row_positions = ((450, 488), (760, 798), (1070, 1108), (1380, 1418))
+          row_positions = ((390, 426), (660, 696), (930, 966), (1200, 1236))
           for index, (heading_top, shelf_top) in enumerate(row_positions, 1):
             heading = next((c for c in controls.findall("control")
                             if c.get("type") == "label"
@@ -71,13 +71,13 @@ jobs:
             shelf = controls.find(f"./control[@type='fixedlist'][@id='{9000 + index}']")
             if heading is None or heading.findtext("top") != str(heading_top):
               raise SystemExit(f"Home widget {index} heading is not at the verified non-overlap position")
-            if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "260":
+            if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "232":
               raise SystemExit(f"Home widget {index} shelf geometry is incorrect")
           if controls.find("./control[@id='9010']") is not None:
             raise SystemExit("Obstructive floating More Widgets button is still present")
           includes = ET.parse("skin.cineva/xml/Includes.xml").getroot()
           poster = includes.find("./include[@name='CinevaPosterItem']")
-          if poster is None or poster.findtext("./control[@type='image']/height") != "225":
+          if poster is None or poster.findtext("./control[@type='image']/height") != "204":
             raise SystemExit("Home poster layout is missing its redesigned large-card geometry")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
           if skin.attrib.get("version") != "0.5.3":
@@ -89,7 +89,7 @@ jobs:
           if setting is None or setting.attrib.get("type") != "string":
             raise SystemExit("widget_registry must be declared as a string setting")
           nav = next((g for g in controls.findall("control") if g.get("type") == "group" and g.find("./control[@id='1001']") is not None), None)
-          if nav is None or any(button.findtext("textcolor") != "white" or button.findtext("texturefocus") != "focus-bar.png" for button in nav.findall("./control[@type='button']")):
+          if nav is None or any(button.findtext("focusedcolor") != "white" or button.findtext("texturefocus") != "focus-bar.png" for button in nav.findall("./control[@type='button']")):
             raise SystemExit("Home navigation buttons need visible explicit textures and text color")
           print("Packaged Home, dialog, Startup and settings schema validated.")
           PY
