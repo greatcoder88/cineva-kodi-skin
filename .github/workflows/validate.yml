@@ -67,7 +67,7 @@ jobs:
               errors.append("Startup.xml still focuses the empty panel")
           if (startup.findtext("onload") or "").strip() != "ActivateWindow(Home)":
               errors.append("Startup.xml must hand off to Home")
-          row_positions = ((430, 465), (690, 725), (950, 985), (1210, 1245))
+          row_positions = ((450, 488), (760, 798), (1070, 1108), (1380, 1418))
           controls = home.find("controls")
           topbar_index = next((i for i, node in enumerate(list(controls))
                                if node.tag == "include" and (node.text or "").strip() == "CinevaTopBar"), -1)
@@ -82,13 +82,16 @@ jobs:
               shelf = controls.find(f"./control[@type='fixedlist'][@id='{9000 + index}']")
               if heading is None or heading.findtext("top") != str(heading_top):
                   errors.append(f"Home widget {index} heading overlaps the shelf above")
-              if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "250":
+              if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "260":
                   errors.append(f"Home widget {index} shelf geometry is incorrect")
+          nav = next((g for g in controls.findall("control") if g.get("type") == "group" and g.find("./control[@id='1001']") is not None), None)
+          if nav is None or any(button.findtext("textcolor") != "white" or button.findtext("texturefocus") != "focus-bar.png" for button in nav.findall("./control[@type='button']")):
+              errors.append("Home navigation buttons need visible explicit textures and text color")
           if controls.find("./control[@id='9010']") is not None:
               errors.append("Floating More Widgets button still obscures the fourth shelf")
           includes = ET.parse(root / "xml/Includes.xml").getroot()
           poster = includes.find("./include[@name='CinevaPosterItem']")
-          if poster is None or poster.findtext("./control[@type='image']/height") != "225":
+          if poster is None or poster.findtext("./control[@type='image']/height") != "225" or poster.findtext("./control[@type='label']/width") != "220":
               errors.append("Poster image geometry is not the redesigned large-card layout")
           skin = ET.parse(root / "addon.xml").getroot()
           if skin.attrib.get("version") != "0.5.3":
