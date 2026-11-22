@@ -67,7 +67,7 @@ jobs:
               errors.append("Startup.xml still focuses the empty panel")
           if (startup.findtext("onload") or "").strip() != "ActivateWindow(Home)":
               errors.append("Startup.xml must hand off to Home")
-          row_positions = ((370, 406), (625, 661), (880, 916), (1135, 1171))
+          row_positions = ((370, 406), (715, 751), (1060, 1096), (1405, 1441))
           controls = home.find("controls")
           topbar_index = next((i for i, node in enumerate(list(controls))
                                if node.tag == "include" and (node.text or "").strip() == "CinevaTopBar"), -1)
@@ -82,7 +82,7 @@ jobs:
               shelf = controls.find(f"./control[@type='fixedlist'][@id='{9000 + index}']")
               if heading is None or heading.findtext("top") != str(heading_top):
                   errors.append(f"Home widget {index} heading overlaps the shelf above")
-              if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "245":
+              if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "300":
                   errors.append(f"Home widget {index} shelf geometry is incorrect")
           nav = next((g for g in controls.findall("control") if g.get("type") == "group" and g.find("./control[@id='1001']") is not None), None)
           if nav is None or any(button.findtext("focusedcolor") != "white" or button.findtext("texturefocus") != "focus-bar.png" for button in nav.findall("./control[@type='button']")):
@@ -91,8 +91,29 @@ jobs:
               errors.append("Floating More Widgets button still obscures the fourth shelf")
           includes = ET.parse(root / "xml/Includes.xml").getroot()
           poster = includes.find("./include[@name='CinevaPosterItem']")
-          if poster is None or poster.findtext("./control[@type='image']/height") != "204" or poster.findtext("./control[@type='label']/width") != "230":
+          if poster is None or poster.findtext("./control[@type='image']/height") != "276" or poster.findtext("./control[@type='label']/width") != "270":
               errors.append("Poster image geometry is not the redesigned large-card layout")
+          catalogue = ET.parse(root / "xml/MyVideoNav.xml").getroot()
+          panel = catalogue.find("./controls/control[@type='panel']")
+          layout = panel.find("itemlayout") if panel is not None else None
+          if panel is None or (panel.findtext("left"), panel.findtext("top"), panel.findtext("width"), panel.findtext("height")) != ("54", "252", "1812", "790"):
+              errors.append("Catalogue panel is not using the full-width cinematic grid")
+          if layout is None or (layout.get("width"), layout.get("height")) != ("300", "350"):
+              errors.append("Catalogue poster cards are missing the redesigned grid geometry")
+          details = ET.parse(root / "xml/DialogVideoInfo.xml").getroot()
+          detail_poster = next((c for c in details.findall("./controls/control") if c.get("type") == "image" and c.findtext("texture") == "$INFO[ListItem.Art(poster)]"), None)
+          detail_plot = details.find("./controls/control[@type='textbox']")
+          if detail_poster is None or (detail_poster.findtext("left"), detail_poster.findtext("top"), detail_poster.findtext("width"), detail_poster.findtext("height")) != ("1260", "116", "430", "650"):
+              errors.append("Video details poster is not in the redesigned right-side composition")
+          if detail_plot is None or (detail_plot.findtext("left"), detail_plot.findtext("top"), detail_plot.findtext("width"), detail_plot.findtext("height")) != ("104", "350", "1000", "300"):
+              errors.append("Video details synopsis is not using the redesigned text column")
+          osd = ET.parse(root / "xml/VideoOSD.xml").getroot()
+          osd_progress = osd.find("./controls/control[@type='progress']")
+          if osd_progress is None or (osd_progress.findtext("left"), osd_progress.findtext("top"), osd_progress.findtext("width")) != ("80", "880", "1760"):
+              errors.append("Player OSD seek bar is not using the full-width layout")
+          search = ET.parse(root / "xml/custom11112.xml").getroot()
+          if any(button.findtext("texturefocus") != "focus-bar.png" for button in search.findall(".//control[@type='button']")):
+              errors.append("Search hub buttons are missing the unified focus treatment")
           skin = ET.parse(root / "addon.xml").getroot()
           if skin.attrib.get("version") != "0.5.3":
               errors.append("Skin ZIP version is not 0.5.3")

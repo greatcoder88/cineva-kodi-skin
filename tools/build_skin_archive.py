@@ -88,7 +88,7 @@ def update_xml(data, path):
             set_child_text(heading, "height", 32)
             set_child_text(heading, "font", "font16")
             set_child_text(shelf, "top", shelf_top)
-            set_child_text(shelf, "height", 245)
+            set_child_text(shelf, "height", 300)
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
                 layout.set("width", "270")
                 layout.set("height", "300")

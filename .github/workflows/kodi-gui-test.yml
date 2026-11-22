@@ -63,7 +63,7 @@ jobs:
                               if node.tag == "control" and node.findtext("texture") == "hero-shade.png"), -1)
           if topbar_index <= shade_index:
             raise SystemExit("CINÉVA top navigation is layered underneath the hero artwork")
-          row_positions = ((370, 406), (625, 661), (880, 916), (1135, 1171))
+          row_positions = ((370, 406), (715, 751), (1060, 1096), (1405, 1441))
           for index, (heading_top, shelf_top) in enumerate(row_positions, 1):
             heading = next((c for c in controls.findall("control")
                             if c.get("type") == "label"
@@ -71,14 +71,35 @@ jobs:
             shelf = controls.find(f"./control[@type='fixedlist'][@id='{9000 + index}']")
             if heading is None or heading.findtext("top") != str(heading_top):
               raise SystemExit(f"Home widget {index} heading is not at the verified non-overlap position")
-            if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "245":
+            if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "300":
               raise SystemExit(f"Home widget {index} shelf geometry is incorrect")
           if controls.find("./control[@id='9010']") is not None:
             raise SystemExit("Obstructive floating More Widgets button is still present")
           includes = ET.parse("skin.cineva/xml/Includes.xml").getroot()
           poster = includes.find("./include[@name='CinevaPosterItem']")
-          if poster is None or poster.findtext("./control[@type='image']/height") != "204" or poster.findtext("./control[@type='label']/width") != "230":
+          if poster is None or poster.findtext("./control[@type='image']/height") != "276" or poster.findtext("./control[@type='label']/width") != "270":
             raise SystemExit("Home poster layout is missing its redesigned large-card geometry")
+          catalogue = ET.parse("skin.cineva/xml/MyVideoNav.xml").getroot()
+          panel = catalogue.find("./controls/control[@type='panel']")
+          layout = panel.find("itemlayout") if panel is not None else None
+          if panel is None or (panel.findtext("left"), panel.findtext("top"), panel.findtext("width"), panel.findtext("height")) != ("54", "252", "1812", "790"):
+            raise SystemExit("Catalogue panel is not using the full-width cinematic grid")
+          if layout is None or (layout.get("width"), layout.get("height")) != ("300", "350"):
+            raise SystemExit("Catalogue poster cards are missing the redesigned grid geometry")
+          details = ET.parse("skin.cineva/xml/DialogVideoInfo.xml").getroot()
+          detail_poster = next((c for c in details.findall("./controls/control") if c.get("type") == "image" and c.findtext("texture") == "$INFO[ListItem.Art(poster)]"), None)
+          detail_plot = details.find("./controls/control[@type='textbox']")
+          if detail_poster is None or (detail_poster.findtext("left"), detail_poster.findtext("top"), detail_poster.findtext("width"), detail_poster.findtext("height")) != ("1260", "116", "430", "650"):
+            raise SystemExit("Video details poster is not in the redesigned right-side composition")
+          if detail_plot is None or (detail_plot.findtext("left"), detail_plot.findtext("top"), detail_plot.findtext("width"), detail_plot.findtext("height")) != ("104", "350", "1000", "300"):
+            raise SystemExit("Video details synopsis is not using the redesigned text column")
+          osd = ET.parse("skin.cineva/xml/VideoOSD.xml").getroot()
+          osd_progress = osd.find("./controls/control[@type='progress']")
+          if osd_progress is None or (osd_progress.findtext("left"), osd_progress.findtext("top"), osd_progress.findtext("width")) != ("80", "880", "1760"):
+            raise SystemExit("Player OSD seek bar is not using the full-width layout")
+          search = ET.parse("skin.cineva/xml/custom11112.xml").getroot()
+          if any(button.findtext("texturefocus") != "focus-bar.png" for button in search.findall(".//control[@type='button']")):
+            raise SystemExit("Search hub buttons are missing the unified focus treatment")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
           if skin.attrib.get("version") != "0.5.3":
             raise SystemExit("Skin archive version must be 0.5.3")
