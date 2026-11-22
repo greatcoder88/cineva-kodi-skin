@@ -8,6 +8,7 @@ import json
 import xbmc
 import xbmcaddon
 import xbmcgui
+import xbmcvfs
 
 ADDON = xbmcaddon.Addon()
 SCREENS = ('home', 'movies', 'tvshows', 'search', 'mylist')
@@ -34,11 +35,24 @@ class WidgetManager:
     def __init__(self):
         self.dialog = xbmcgui.Dialog()
 
+    @staticmethod
+    def _registry_path():
+        return xbmcvfs.translatePath(
+            'special://profile/addon_data/script.cineva.widgets/widget_registry.json')
+
     def load(self):
+        data = {}
+        path = self._registry_path()
         try:
-            data = json.loads(ADDON.getSettingString('widget_registry') or '{}')
-        except (TypeError, ValueError):
-            data = {}
+            if xbmcvfs.exists(path):
+                handle = xbmcvfs.File(path, 'r')
+                try:
+                    data = json.loads(handle.read() or '{}')
+                finally:
+                    handle.close()
+        except (TypeError, ValueError, IOError):
+            xbmc.log('CINEVA_WIDGETS: registry file unreadable; using defaults',
+                     xbmc.LOGWARNING)
         if not isinstance(data, dict):
             data = {}
         registry = {screen: self._clean_list(data.get(screen, [])) for screen in SCREENS}
@@ -64,7 +78,18 @@ class WidgetManager:
         return cleaned
 
     def save(self, registry):
-        ADDON.setSettingString('widget_registry', json.dumps(registry, ensure_ascii=False, separators=(',', ':')))
+        # Addon settings must be declared in addon.xml. Keep the arbitrary JSON
+        # registry in addon_data instead of calling setSettingString on an
+        # undeclared setting (Kodi raises TypeError: Invalid setting type).
+        folder = 'special://profile/addon_data/script.cineva.widgets'
+        xbmcvfs.mkdirs(folder)
+        path = self._registry_path()
+        payload = json.dumps(registry, ensure_ascii=False, separators=(',', ':'))
+        handle = xbmcvfs.File(path, 'w')
+        try:
+            handle.write(payload)
+        finally:
+            handle.close()
         mappings = {'home': 'Cineva.Widget', 'movies': 'Cineva.MovieWidget', 'tvshows': 'Cineva.ShowWidget'}
         for screen, prefix in mappings.items():
             items = registry.get(screen, [])
