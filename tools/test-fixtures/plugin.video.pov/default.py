@@ -48,6 +48,13 @@ def main():
             "genre": genre,
             "mediatype": "tvshow" if is_tv else "movie",
             "rating": 8.4,
+            "plot": (
+                "Framed for a murder he did not commit, a banker finds hope and friendship while enduring a brutal prison sentence."
+                if title == "The Shawshank Redemption" else
+                "A high-school chemistry teacher enters the criminal underworld, changing his family and himself forever."
+                if title == "Breaking Bad" else
+                "A richly detailed story of impossible choices, loyalty, and the consequences that follow."
+            ),
         })
         # Keep portrait poster and landscape fanart as separate artwork types.
         fanart = os.path.join(poster_dir, "backdrop-{}.jpg".format(index))

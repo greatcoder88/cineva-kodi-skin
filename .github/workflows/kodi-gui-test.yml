@@ -290,7 +290,14 @@ jobs:
                 raise SystemExit(f"Cycle {cycle}: Estuary Keep Skin dialog did not open: {state}")
               estuary_label = state.get("currentcontrol",{}).get("label","").strip()
               if estuary_label.lower() != "yes":
-                raise SystemExit(f"Cycle {cycle}: Estuary Keep Skin did not default to Yes: {estuary_label!r}")
+                # Estuary's stock confirmation defaults to No; move left to
+                # the explicit Yes action so the test can continue the cycle.
+                subprocess.run(["xdotool","key","Left"],check=True)
+                time.sleep(0.3)
+                state = gui()
+                estuary_label = state.get("currentcontrol",{}).get("label","").strip()
+              if estuary_label.lower() != "yes":
+                raise SystemExit(f"Cycle {cycle}: could not focus Yes in Estuary Keep Skin: {estuary_label!r}")
               subprocess.run(["xdotool","key","Return"],check=True)
               deadline = time.time() + 20
               while time.time() < deadline:
