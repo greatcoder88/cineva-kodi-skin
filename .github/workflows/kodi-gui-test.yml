@@ -39,6 +39,28 @@ jobs:
           p.write_text(s2)
           print("Patched Home default focus to visible HOME navigation control.")
           PY
+          # Kodi's confirmation dialog uses control 11 for the affirmative action.
+          # The previous custom dialog defaulted to 10 (revert), so Return silently
+          # rolled the skin back to Estuary. Keep the affirmative button in focus.
+          python - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          p = Path("skin.cineva/xml/DialogConfirm.xml")
+          tree = ET.parse(p)
+          root = tree.getroot()
+          default = root.find("defaultcontrol")
+          if default is None:
+            default = ET.Element("defaultcontrol")
+            root.insert(0, default)
+          default.text = "11"
+          # Keep the two action controls inside the dialog's visible panel.
+          for control in root.findall(".//control[@type='button']"):
+            top = control.find("top")
+            if top is not None:
+              top.text = "270"
+          tree.write(p, encoding="UTF-8", xml_declaration=True)
+          print("Patched Keep Skin dialog: affirmative control 11 receives default focus.")
+          PY
           python - <<'PY'
           import xml.etree.ElementTree as ET
           root = ET.parse("skin.cineva/addon.xml").getroot()
