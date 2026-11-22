@@ -64,6 +64,9 @@ jobs:
           cat > "$HOME/.var/app/tv.kodi.Kodi/data/userdata/guisettings.xml" <<'XML'
           <settings>
             <setting id="lookandfeel.skin">skin.cineva</setting>
+            <setting id="services.esenabled">true</setting>
+            <setting id="services.esport">9090</setting>
+            <setting id="services.esallinterfaces">true</setting>
           </settings>
           XML
 
