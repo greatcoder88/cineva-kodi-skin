@@ -113,7 +113,7 @@ def main():
         raw.unlink(missing_ok=True)
         data = target.read_bytes()
         dimensions = subprocess.check_output(["identify", "-format", "%wx%h", str(target)], text=True).strip()
-        if len(data) < 5000 or not data.startswith(b"\\xff\\xd8\\xff") or dimensions != "1280x720":
+        if len(data) < 5000 or not data.startswith(b"\xff\xd8\xff") or dimensions != "1280x720":
             raise SystemExit("Invalid landscape fanart: " + filename)
         print("{} -> {} ({} bytes)".format(backdrop_path, filename, len(data)))
 
