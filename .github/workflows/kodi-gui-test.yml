@@ -112,6 +112,7 @@ jobs:
           python tools/download_test_posters.py "$POV/resources/posters"
           test -s "$POV/resources/posters/movie-1.jpg"
           test -s "$POV/resources/posters/tv-1.jpg"
+          for index in 1 2 3 4 5 6; do test -s "$POV/resources/posters/backdrop-$index.jpg"; done
           curl -fL --retry 3 -o /tmp/script.skinshortcuts.zip https://github.com/MikeSiLVO/script.skinshortcuts/archive/refs/tags/v3.0.1.zip
           mkdir -p "$HOME/.var/app/tv.kodi.Kodi/data/addons/script.skinshortcuts"
           unzip -q /tmp/script.skinshortcuts.zip -d /tmp/skinshortcuts
