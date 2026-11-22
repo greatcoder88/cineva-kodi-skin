@@ -200,7 +200,7 @@ def update_xml(data, path):
             controls.remove(heading)
             controls.remove(shelf)
             row_group = ET.Element("control", {"type": "group", "id": str(9060 + index)})
-            for tag, value in (("left", 0), ("top", 0), ("width", 1776), ("height", 304)):
+            for tag, value in (("left", 0), ("top", 0), ("width", 1776), ("height", 314)):
                 set_child_text(row_group, tag, value)
             play_id = 9111 + (index - 1) * 2
             next_target = 9000 + index + 1 if index < 4 else 1001
@@ -215,12 +215,12 @@ def update_xml(data, path):
             set_child_text(shelf, "left", 0)
             set_child_text(shelf, "top", 32)
             set_child_text(shelf, "width", 1776)
-            set_child_text(shelf, "height", 272)
+            set_child_text(shelf, "height", 282)
             set_child_text(shelf, "onup", f"SetFocus({play_id})")
             set_child_text(shelf, "ondown", f"SetFocus({next_target})")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
                 layout.set("width", "222")
-                layout.set("height", "272")
+                layout.set("height", "282")
             focused_layout = shelf.find("./focusedlayout")
             focused_include = focused_layout.find("include") if focused_layout is not None else None
             if focused_include is not None:
@@ -272,11 +272,14 @@ def update_xml(data, path):
             focused_label = ET.fromstring(ET.tostring(normal_label, encoding="unicode"))
         for tag, value in (("left", 33), ("top", 0), ("width", 156), ("height", 234)):
             set_child_text(normal_image, tag, value)
-        for tag, value in (("left", 0), ("top", 236), ("width", 222), ("height", 34), ("align", "center"), ("font", "font9"), ("textcolor", "lightgrey")):
+        for tag, value in (("left", 0), ("top", 236), ("width", 222), ("height", 44), ("align", "center"), ("font", "font9"), ("textcolor", "lightgrey")):
             set_child_text(normal_label, tag, value)
         stale_visibility = normal_label.find("visible")
         if stale_visibility is not None:
             normal_label.remove(stale_visibility)
+        stale_wrap = normal_label.find("wrap")
+        if stale_wrap is not None:
+            normal_label.remove(stale_wrap)
         set_child_text(normal_label, "wrapmultiline", "true")
         set_child_text(normal_label, "visible", "!ListItem.IsSelected")
         for tag, value in (("left", 29), ("top", -6), ("width", 164), ("height", 246)):
@@ -308,8 +311,11 @@ def update_xml(data, path):
             set_child_text(fallback_image, "visible", f"!Control.HasFocus({container_id})")
             set_child_text(active_image, "visible", f"Control.HasFocus({container_id})")
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
-            for tag, value in (("left", 0), ("top", 236), ("width", 222), ("height", 34), ("align", "center"), ("font", "font9"), ("textcolor", "white")):
+            for tag, value in (("left", 0), ("top", 236), ("width", 222), ("height", 44), ("align", "center"), ("font", "font9"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
+            stale_wrap = active_label.find("wrap")
+            if stale_wrap is not None:
+                active_label.remove(stale_wrap)
             set_child_text(active_label, "wrapmultiline", "true")
             set_child_text(active_label, "visible", f"Control.HasFocus({container_id})")
             set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
