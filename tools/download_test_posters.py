@@ -91,9 +91,26 @@ def main():
         hashes.add(digest)
         print("{} -> {} ({} bytes)".format(title, filename, size))
 
+    # Landscape fanart is a separate asset; never stretch portrait posters into the hero.
+    for filename, backdrop_path in BACKDROPS:
+        target = output / filename
+        raw = target.with_suffix(target.suffix + ".download")
+        raw.write_bytes(request_bytes(TMDB_BACKDROP.format(backdrop_path)))
+        subprocess.run([
+            "convert", str(raw), "-auto-orient", "-resize", "1280x720^",
+            "-gravity", "center", "-extent", "1280x720", "-strip",
+            "-quality", "88", str(target),
+        ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        raw.unlink(missing_ok=True)
+        data = target.read_bytes()
+        dimensions = subprocess.check_output(["identify", "-format", "%wx%h", str(target)], text=True).strip()
+        if len(data) < 5000 or not data.startswith(b"\\xff\\xd8\\xff") or dimensions != "1280x720":
+            raise SystemExit("Invalid landscape fanart: " + filename)
+        print("{} -> {} ({} bytes)".format(backdrop_path, filename, len(data)))
+
     if len(hashes) != len(MOVIES) + len(SHOWS):
         raise SystemExit("Expected 12 distinct poster images; got {}".format(len(hashes)))
-    print("Downloaded and verified 12 distinct real poster images.")
+    print("Downloaded and verified 12 distinct posters plus six landscape fanart images.")
 
 
 if __name__ == "__main__":
