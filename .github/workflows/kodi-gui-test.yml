@@ -182,7 +182,12 @@ jobs:
             print("Refreshed CINÉVA add-on files in place.")
             result = rpc("Settings.SetSettingValue", {"setting":"lookandfeel.skin","value":"skin.cineva"})
             print("Switched to CINÉVA:", result)
-            time.sleep(10)
+            # Kodi asks "Keep skin?" after a skin change. Accept it in the
+            # actual GUI or Kodi reverts to Estuary when the confirmation times out.
+            time.sleep(3)
+            subprocess.run(["xdotool","key","Return"],check=True)
+            print("Accepted Kodi Keep skin confirmation through GUI input.")
+            time.sleep(5)
             selected = rpc("Settings.GetSettingValue", {"setting":"lookandfeel.skin"})
             print("Selected skin after cycle:", selected)
             selected_value = selected.get("value") if isinstance(selected, dict) else selected
