@@ -26,6 +26,19 @@ jobs:
           test -d skin.cineva/xml
           test -f skin.cineva/xml/Home.xml
           test -f tools/script.cineva.widgets/addon.xml
+          # Home must initially focus an always-visible navigation control.
+          # Widget rows can be hidden until their onload skin strings are set.
+          python - <<'PY'
+          from pathlib import Path
+          p = Path("skin.cineva/xml/Home.xml")
+          s = p.read_text()
+          s2 = s.replace('<defaultcontrol always="true">9001</defaultcontrol>',
+                         '<defaultcontrol always="true">1001</defaultcontrol>')
+          if s2 == s:
+            raise SystemExit("Expected Home.xml default focus was not found")
+          p.write_text(s2)
+          print("Patched Home default focus to visible HOME navigation control.")
+          PY
           python - <<'PY'
           import xml.etree.ElementTree as ET
           root = ET.parse("skin.cineva/addon.xml").getroot()
@@ -182,17 +195,37 @@ jobs:
             print("Refreshed CINÉVA add-on files in place.")
             result = rpc("Settings.SetSettingValue", {"setting":"lookandfeel.skin","value":"skin.cineva"})
             print("Switched to CINÉVA:", result)
-            # Kodi asks "Keep skin?" after a skin change. Accept it in the
-            # actual GUI or Kodi reverts to Estuary when the confirmation times out.
-            time.sleep(3)
+            # Wait until Kodi has actually loaded CINÉVA before interacting
+            # with the skin confirmation dialog; a fixed short sleep races the reload.
+            log_path = Path.home()/".var/app/tv.kodi.Kodi/data/temp/kodi.log"
+            deadline = time.time() + 25
+            while time.time() < deadline:
+              log_text = log_path.read_text(errors="replace") if log_path.exists() else ""
+              if "load skin from:" in log_text and "skin.cineva/" in log_text:
+                break
+              time.sleep(1)
+            else:
+              raise SystemExit("Kodi never logged a CINÉVA skin load")
+            time.sleep(2)
+            subprocess.run(["import","-display",":99","-window","root",f"artifacts/cineva-confirmation-{cycle}.png"],check=True)
+            # Kodi's confirmation is a Yes/No dialog. Explicitly select Yes
+            # rather than blindly pressing Return on whatever control had focus.
+            subprocess.run(["xdotool","key","Left"],check=True)
+            time.sleep(0.5)
             subprocess.run(["xdotool","key","Return"],check=True)
-            print("Accepted Kodi Keep skin confirmation through GUI input.")
-            time.sleep(5)
+            print("Sent explicit Keep confirmation after CINÉVA load.")
+            time.sleep(3)
             selected = rpc("Settings.GetSettingValue", {"setting":"lookandfeel.skin"})
-            print("Selected skin after cycle:", selected)
             selected_value = selected.get("value") if isinstance(selected, dict) else selected
+            for _ in range(15):
+              if selected_value == "skin.cineva":
+                break
+              time.sleep(1)
+              selected = rpc("Settings.GetSettingValue", {"setting":"lookandfeel.skin"})
+              selected_value = selected.get("value") if isinstance(selected, dict) else selected
+            print("Selected skin after confirmation:", selected)
             if selected_value != "skin.cineva":
-              raise SystemExit(f"Cycle {cycle} failed: Kodi selected {selected_value!r}")
+              raise SystemExit(f"Cycle {cycle} failed after Keep confirmation: Kodi selected {selected_value!r}")
             # Retain a screenshot for every in-process reload attempt.
             import subprocess
             subprocess.run(["import","-display",":99","-window","root",f"artifacts/cineva-cycle-{cycle}.png"],check=True)
