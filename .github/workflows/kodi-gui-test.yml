@@ -113,12 +113,12 @@ jobs:
             raise SystemExit("Obstructive floating More Widgets button is still present")
           includes = ET.parse("skin.cineva/xml/Includes.xml").getroot()
           poster = includes.find("./include[@name='CinevaPosterItem']")
-          if poster is None or poster.findtext("./control[@type='image']/height") != "234" or poster.findtext("./control[@type='label']/width") != "222" or poster.findtext("./control[@type='label']/top") != "236" or poster.findtext("./control[@type='label']/height") != "34" or poster.findtext("./control[@type='label']/font") != "font9":
+          if poster is None or poster.findtext("./control[@type='image']/height") != "234" or poster.findtext("./control[@type='label']/width") != "222" or poster.findtext("./control[@type='label']/top") != "236" or poster.findtext("./control[@type='label']/height") != "34" or poster.findtext("./control[@type='label']/wrapmultiline") != "true" or poster.findtext("./control[@type='label']/font") != "font9":
             raise SystemExit("Home poster and title layout is missing its redesigned large-card geometry or readable title font")
           focused_poster = includes.find("./include[@name='CinevaFocusedPosterItem9001']")
           focused_title = next((label for label in focused_poster.findall("./control[@type='label']") if label.findtext("textcolor") == "white"), None) if focused_poster is not None else None
-          if focused_title is None or focused_title.findtext("font") != "font9" or focused_title.findtext("height") != "34" or focused_title.findtext("wrap") != "true":
-            raise SystemExit("Focused poster titles must use the compact font and scroll when their full title exceeds the card width")
+          if focused_title is None or focused_title.findtext("font") != "font9" or focused_title.findtext("height") != "34" or focused_title.findtext("wrapmultiline") != "true":
+            raise SystemExit("Focused poster titles must use the compact font and wrap inside the poster card")
           catalogue = ET.parse("skin.cineva/xml/MyVideoNav.xml").getroot()
           panel = catalogue.find("./controls/control[@type='panel']")
           layout = panel.find("itemlayout") if panel is not None else None

@@ -277,7 +277,7 @@ def update_xml(data, path):
         stale_visibility = normal_label.find("visible")
         if stale_visibility is not None:
             normal_label.remove(stale_visibility)
-        set_child_text(normal_label, "wrap", "true")
+        set_child_text(normal_label, "wrapmultiline", "true")
         set_child_text(normal_label, "visible", "!ListItem.IsSelected")
         for tag, value in (("left", 29), ("top", -6), ("width", 164), ("height", 246)):
             set_child_text(focused_image, tag, value)
@@ -310,7 +310,7 @@ def update_xml(data, path):
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
             for tag, value in (("left", 0), ("top", 236), ("width", 222), ("height", 34), ("align", "center"), ("font", "font9"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
-            set_child_text(active_label, "wrap", "true")
+            set_child_text(active_label, "wrapmultiline", "true")
             set_child_text(active_label, "visible", f"Control.HasFocus({container_id})")
             set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
             focus_accent = ET.Element("control", {"type": "image"})

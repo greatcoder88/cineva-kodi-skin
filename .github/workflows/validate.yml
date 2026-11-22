@@ -145,7 +145,7 @@ jobs:
           normal_title = poster.find("./control[@type='label']") if poster is not None else None
           focused_poster = includes.find("./include[@name='CinevaFocusedPosterItem']")
           focused_title = focused_poster.find("./control[@type='label']") if focused_poster is not None else None
-          if poster is None or poster.findtext("./control[@type='image']/height") != "234" or normal_title is None or (normal_title.findtext("width"), normal_title.findtext("top"), normal_title.findtext("height"), normal_title.findtext("font"), normal_title.findtext("wrap")) != ("222", "236", "34", "font9", "true"):
+          if poster is None or poster.findtext("./control[@type='image']/height") != "234" or normal_title is None or (normal_title.findtext("width"), normal_title.findtext("top"), normal_title.findtext("height"), normal_title.findtext("font"), normal_title.findtext("wrapmultiline")) != ("222", "236", "34", "font9", "true"):
               errors.append("Poster image and normal title geometry is not the redesigned large-card layout")
           if normal_title is None or normal_title.findtext("visible") != "!ListItem.IsSelected":
               errors.append("Normal poster title must yield to the row-aware selected-item title")
@@ -167,8 +167,8 @@ jobs:
                   errors.append(f"Home row {container_id} focused poster is missing its red selection accent")
               if len(focus_labels) != 2 or focus_labels[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_labels[1].findtext("visible") != f"Control.HasFocus({container_id})":
                   errors.append(f"Home row {container_id} must keep exactly one correctly styled title visible")
-              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width"), focus_labels[1].findtext("wrap")) != ("font9", "236", "34", "222", "true"):
-                  errors.append(f"Home row {container_id} focused title must use the compact, scrolling card-title treatment")
+              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width"), focus_labels[1].findtext("wrapmultiline")) != ("font9", "236", "34", "222", "true"):
+                  errors.append(f"Home row {container_id} focused title must use the compact, multiline card-title treatment")
               zoom = focus_images[1].find("./animation[@effect='zoom']") if len(focus_images) > 1 else None
               if zoom is None or (zoom.get("end"), zoom.get("time")) != ("108", "150"):
                   errors.append(f"Home row {container_id} focused poster needs the stronger, smooth selection zoom")
