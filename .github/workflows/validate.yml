@@ -151,7 +151,7 @@ jobs:
                   errors.append(f"Home row {container_id} focused poster is missing its red selection accent")
               if len(focus_labels) != 2 or focus_labels[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_labels[1].findtext("visible") != f"Control.HasFocus({container_id})":
                   errors.append(f"Home row {container_id} must keep exactly one correctly styled title visible")
-              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width")) != ("font12", "278", "24", "270"):
+              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width")) != ("font10", "278", "20", "270"):
                   errors.append(f"Home row {container_id} focused title must fit fully inside the poster card")
               zoom = focus_images[1].find("./animation[@effect='zoom']") if len(focus_images) > 1 else None
               if zoom is None or (zoom.get("end"), zoom.get("time")) != ("108", "150"):
