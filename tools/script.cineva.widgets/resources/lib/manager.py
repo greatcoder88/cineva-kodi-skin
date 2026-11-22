@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Generic per-screen widget registry and installed video add-on browser."""
+"""Kodi UI and persistence for CINÉVA's generic per-screen widget registry.
+
+This helper stores source plugin paths as data. It does not call POV, Umbrella,
+Trakt, TMDb, or Real-Debrid APIs and does not alter their settings.
+"""
 import json
 import xbmc
 import xbmcaddon
@@ -7,6 +11,12 @@ import xbmcgui
 
 ADDON = xbmcaddon.Addon()
 SCREENS = ('home', 'movies', 'tvshows', 'search', 'mylist')
+DEFAULT_HOME = [
+    {'id': 'pov:continue-movies', 'name': 'Continue Watching Movies', 'path': 'plugin://plugin.video.pov/?mode=build_movie_list&action=in_progress_movies&name=Continue%20Watching%20Movies', 'addon': 'plugin.video.pov', 'content': 'videos'},
+    {'id': 'pov:continue-tv', 'name': 'Continue Watching TV Shows', 'path': 'plugin://plugin.video.pov/?mode=build_tvshow_list&action=in_progress_tvshows&name=Continue%20Watching%20TV%20Shows', 'addon': 'plugin.video.pov', 'content': 'videos'},
+    {'id': 'pov:trending-movies', 'name': 'Trending Movies', 'path': 'plugin://plugin.video.pov/?mode=build_movie_list&action=tmdb_movies_trending&name=Trending%20Movies', 'addon': 'plugin.video.pov', 'content': 'videos'},
+    {'id': 'pov:trending-tv', 'name': 'Trending TV Shows', 'path': 'plugin://plugin.video.pov/?mode=build_tvshow_list&action=tmdb_tv_trending&name=Trending%20TV%20Shows', 'addon': 'plugin.video.pov', 'content': 'videos'}
+]
 
 class KodiRPC:
     @staticmethod
@@ -24,6 +34,19 @@ class WidgetManager:
     def __init__(self):
         self.dialog = xbmcgui.Dialog()
 
+    def load(self):
+        try:
+            data = json.loads(ADDON.getSettingString('widget_registry') or '{}')
+        except (TypeError, ValueError):
+            data = {}
+        if not isinstance(data, dict):
+            data = {}
+        registry = {screen: self._clean_list(data.get(screen, [])) for screen in SCREENS}
+        if not registry['home']:
+            registry['home'] = list(DEFAULT_HOME)
+            self.save(registry)
+        return registry
+
     @staticmethod
     def _clean_list(items):
         if not isinstance(items, list):
@@ -32,32 +55,33 @@ class WidgetManager:
         for item in items:
             if not isinstance(item, dict):
                 continue
-            name, path = str(item.get('name', '')).strip(), str(item.get('path', '')).strip()
+            name = str(item.get('name', '')).strip()
+            path = str(item.get('path', '')).strip()
             if name and path.startswith('plugin://'):
                 cleaned.append({'id': str(item.get('id') or path), 'name': name,
                                 'path': path, 'addon': str(item.get('addon', '')),
                                 'content': str(item.get('content', 'videos'))})
         return cleaned
 
-    def load(self):
-        try:
-            data = json.loads(ADDON.getSettingString('widget_registry') or '{}')
-        except (TypeError, ValueError):
-            data = {}
-        if not isinstance(data, dict):
-            data = {}
-        return {screen: self._clean_list(data.get(screen, [])) for screen in SCREENS}
-
-    @staticmethod
-    def save(registry):
+    def save(self, registry):
         ADDON.setSettingString('widget_registry', json.dumps(registry, ensure_ascii=False, separators=(',', ':')))
+        mappings = {'home': 'Cineva.Widget', 'movies': 'Cineva.MovieWidget', 'tvshows': 'Cineva.ShowWidget'}
+        for screen, prefix in mappings.items():
+            items = registry.get(screen, [])
+            for index in range(1, 5):
+                item = items[index - 1] if len(items) >= index else {}
+                values = {'Name': item.get('name', ''), 'Path': item.get('path', ''),
+                          'Target': 'video' if item else '', 'Type': 'video' if item else ''}
+                for suffix, value in values.items():
+                    safe = str(value).replace('\\', '').replace(')', '')
+                    xbmc.executebuiltin('Skin.SetString({}{}.{},{})'.format(prefix, index, suffix, safe))
 
     def installed_video_addons(self):
         result = KodiRPC.call('Addons.GetAddons', {
             'type': 'xbmc.python.pluginsource', 'content': 'video',
             'properties': ['name', 'enabled']}) or {}
         addons = result.get('addons', []) if isinstance(result, dict) else []
-        return [a for a in addons if a.get('enabled', True)]
+        return [a for a in addons if a.get('enabled', True) and a.get('addonid')]
 
     def browse_plugin(self, addon):
         return self._browse_directory('plugin://{}/'.format(addon['addonid']), addon['addonid'])
@@ -65,10 +89,12 @@ class WidgetManager:
     def _browse_directory(self, path, addon_id):
         result = KodiRPC.call('Files.GetDirectory', {
             'directory': path, 'media': 'video',
-            'properties': ['title', 'file', 'thumbnail', 'art', 'playcount', 'resume']}) or {}
-        files = result.get('files', []) if isinstance(result, dict) else []
+            'properties': ['title', 'file', 'thumbnail', 'art', 'playcount', 'resume']})
+        if not isinstance(result, dict):
+            self.dialog.ok('CINÉVA', 'Kodi could not read this add-on folder. Check that the add-on is enabled and its plugin is working.')
+            return None
         choices, mapping = ['✓  Use this folder as widget'], [('select', path, '')]
-        for item in files:
+        for item in result.get('files', []):
             target = item.get('file', '')
             if not target:
                 continue
