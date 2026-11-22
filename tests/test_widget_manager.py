@@ -34,6 +34,24 @@ class FakeVFS:
             FakeVFS.files[self.path] = self.buffer
         def close(self): pass
 
+class FakeVFS:
+    files = {}
+    @staticmethod
+    def translatePath(path): return path
+    @classmethod
+    def exists(cls, path): return path in cls.files
+    @staticmethod
+    def mkdirs(path): return True
+    class File:
+        def __init__(self, path, mode):
+            self.path, self.mode = path, mode
+            self.buffer = FakeVFS.files.get(path, "") if mode == "r" else ""
+        def read(self): return self.buffer
+        def write(self, value):
+            self.buffer += value
+            FakeVFS.files[self.path] = self.buffer
+        def close(self): pass
+
 class FakeDialog:
     def select(self, *args, **kwargs): return -1
     def ok(self, *args, **kwargs): pass
@@ -70,6 +88,7 @@ class KodiManagerTests(unittest.TestCase):
     def setUp(self):
         self.addon.settings.clear()
         self.builtins.clear()
+        FakeVFS.files.clear()
         FakeVFS.files.clear()
 
     def test_widget_registry_is_declared_as_a_string_setting(self):
