@@ -110,31 +110,37 @@ jobs:
           pgrep -a -x kodi.bin || pgrep -a -x kodi-x11 || (echo "Kodi process did not start"; exit 1)
           sleep 15
           python - <<'PY'
-          import json, time, urllib.request
-          url = "http://127.0.0.1:8080/jsonrpc"
+          import json, socket, time
           def rpc(method, params=None):
-            payload = json.dumps({"jsonrpc":"2.0","method":method,"params":params or {},"id":1}).encode()
-            request = urllib.request.Request(url, data=payload, headers={"Content-Type":"application/json"})
-            with urllib.request.urlopen(request, timeout=5) as response:
-              result = json.load(response)
-            if "error" in result: raise RuntimeError(result["error"])
-            return result.get("result")
+            request = {"jsonrpc":"2.0","method":method,"params":params or {},"id":1}
+            with socket.create_connection(("127.0.0.1", 9090), timeout=5) as sock:
+              sock.settimeout(5)
+              sock.sendall((json.dumps(request) + "\\n").encode())
+              data = b""
+              while b"\\n" not in data:
+                chunk = sock.recv(65536)
+                if not chunk: break
+                data += chunk
+            response = json.loads(data.decode("utf-8","replace").strip().splitlines()[-1])
+            if "error" in response: raise RuntimeError(response["error"])
+            return response.get("result")
           last = None
           for attempt in range(30):
             try:
-              print("Initial selected skin:", rpc("Settings.GetSettingValue", {"setting":"lookandfeel.skin"}))
-              switched = rpc("Settings.SetSettingValue", {"setting":"lookandfeel.skin","value":"skin.cineva"})
-              print("Kodi SetSettingValue result:", switched)
+              current = rpc("Settings.GetSettingValue", {"setting":"lookandfeel.skin"})
+              print("Kodi selected skin before switch:", current)
+              result = rpc("Settings.SetSettingValue", {"setting":"lookandfeel.skin","value":"skin.cineva"})
+              print("Kodi skin switch result:", result)
               time.sleep(8)
               selected = rpc("Settings.GetSettingValue", {"setting":"lookandfeel.skin"})
               print("Kodi selected skin after switch:", selected)
-              if selected != "skin.cineva": raise RuntimeError(f"Kodi rejected CINÉVA selection: {selected!r}")
+              if selected != "skin.cineva": raise RuntimeError(f"Kodi did not retain CINÉVA selection: {selected!r}")
               break
             except Exception as exc:
               last = exc
-              print("Waiting for Kodi JSON-RPC:", exc)
+              print("JSON-RPC TCP retry:", repr(exc))
               time.sleep(2)
-          else: raise SystemExit(f"GUI TEST FAILED: could not switch skin through Kodi JSON-RPC: {last}")
+          else: raise SystemExit(f"GUI TEST FAILED: Kodi JSON-RPC TCP 9090 switch failed: {last}")
           PY
           xdotool getdisplaygeometry
           import -display :99 -window root artifacts/kodi-startup.png
