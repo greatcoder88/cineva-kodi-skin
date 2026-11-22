@@ -45,6 +45,13 @@ jobs:
           cat > "$HOME/.var/app/tv.kodi.Kodi/data/userdata/advancedsettings.xml" <<'XML'
           <advancedsettings><loglevel hide="false">1</loglevel></advancedsettings>
           XML
+          cat > "$HOME/.var/app/tv.kodi.Kodi/data/userdata/guisettings.xml" <<'XML'
+          <settings>
+            <lookandfeel>
+              <skin>skin.cineva</skin>
+            </lookandfeel>
+          </settings>
+          XML
 
       - name: Launch Kodi in virtual display and capture GUI
         run: |
@@ -56,10 +63,11 @@ jobs:
           flatpak run --user tv.kodi.Kodi//beta --standalone > /tmp/kodi-stdout.log 2>&1 &
           echo $! > /tmp/kodi.pid
           for i in $(seq 1 60); do
-            if pgrep -f 'kodi.bin|kodi-x11|kodi-wayland' >/dev/null; then break; fi
+            if pgrep -x kodi.bin >/dev/null || pgrep -x kodi-x11 >/dev/null; then break; fi
             sleep 2
           done
           sleep 25
+          pgrep -a -x kodi.bin || pgrep -a -x kodi-x11 || (echo "Kodi process did not start"; exit 1)
           xdotool getdisplaygeometry
           import -display :99 -window root artifacts/kodi-startup.png
           xdotool key --clearmodifiers Escape
@@ -82,7 +90,8 @@ jobs:
       - name: Stop Kodi and Xvfb
         if: always()
         run: |
-          pkill -f 'kodi.bin|kodi-x11|kodi-wayland' || true
+          pkill -x kodi.bin 2>/dev/null || true
+          pkill -x kodi-x11 2>/dev/null || true
           kill "$(cat /tmp/xvfb.pid)" 2>/dev/null || true
 
       - uses: actions/upload-artifact@v4
