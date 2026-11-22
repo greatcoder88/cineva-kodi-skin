@@ -56,7 +56,13 @@ jobs:
             raise SystemExit("Startup.xml still focuses the empty panel 50")
           if (startup.findtext("onload") or "").strip() != "ActivateWindow(Home)":
             raise SystemExit("Startup.xml must hand off to Home after a skin switch")
-          row_positions = ((470, 505), (725, 760), (980, 1015), (1235, 1270))
+          topbar_index = next((i for i, node in enumerate(list(controls))
+                               if node.tag == "include" and (node.text or "").strip() == "CinevaTopBar"), -1)
+          shade_index = next((i for i, node in enumerate(list(controls))
+                              if node.tag == "control" and node.findtext("texture") == "hero-shade.png"), -1)
+          if topbar_index <= shade_index:
+            raise SystemExit("CINÉVA top navigation is layered underneath the hero artwork")
+          row_positions = ((430, 465), (690, 725), (950, 985), (1210, 1245))
           controls = home.find("controls")
           for index, (heading_top, shelf_top) in enumerate(row_positions, 1):
             heading = next((c for c in controls.findall("control")
@@ -65,13 +71,13 @@ jobs:
             shelf = controls.find(f"./control[@type='fixedlist'][@id='{9000 + index}']")
             if heading is None or heading.findtext("top") != str(heading_top):
               raise SystemExit(f"Home widget {index} heading is not at the verified non-overlap position")
-            if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "230":
+            if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "250":
               raise SystemExit(f"Home widget {index} shelf geometry is incorrect")
           if controls.find("./control[@id='9010']") is not None:
             raise SystemExit("Obstructive floating More Widgets button is still present")
           includes = ET.parse("skin.cineva/xml/Includes.xml").getroot()
           poster = includes.find("./include[@name='CinevaPosterItem']")
-          if poster is None or poster.findtext("./control[@type='image']/height") != "190":
+          if poster is None or poster.findtext("./control[@type='image']/height") != "225":
             raise SystemExit("Home poster layout is missing its redesigned large-card geometry")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
           if skin.attrib.get("version") != "0.5.3":
