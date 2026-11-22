@@ -49,8 +49,11 @@ def main():
             "mediatype": "tvshow" if is_tv else "movie",
             "rating": 8.4,
         })
-        # A portrait poster must not be stretched across the Home hero area.
-        item.setArt({"poster": poster, "thumb": poster})
+        # Keep portrait poster and landscape fanart as separate artwork types.
+        fanart = os.path.join(poster_dir, "backdrop-{}.jpg".format(index))
+        if not os.path.isfile(fanart):
+            raise RuntimeError("Missing landscape hero artwork: {}".format(fanart))
+        item.setArt({"poster": poster, "thumb": poster, "fanart": fanart, "landscape": fanart})
         item.setProperty("Cineva.TestFixture", "true")
         entries.append((play_url, item, False))
     xbmcplugin.addDirectoryItems(handle, entries, len(entries))
