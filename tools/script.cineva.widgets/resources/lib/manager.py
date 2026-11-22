@@ -73,8 +73,10 @@ class WidgetManager:
                 values = {'Name': item.get('name', ''), 'Path': item.get('path', ''),
                           'Target': 'video' if item else '', 'Type': 'video' if item else ''}
                 for suffix, value in values.items():
-                    safe = str(value).replace('\\', '').replace(')', '')
-                    xbmc.executebuiltin('Skin.SetString({}{}.{},{})'.format(prefix, index, suffix, safe))
+                    # Quote values so Kodi does not parse URL punctuation as syntax.
+                    encoded = json.dumps(str(value), ensure_ascii=False)
+                    xbmc.executebuiltin('Skin.SetString({}{}.{},{})'.format(prefix, index, suffix, encoded))
+        xbmc.executebuiltin('Skin.SetBool(Cineva.Initialized)')
 
     def installed_video_addons(self):
         result = KodiRPC.call('Addons.GetAddons', {
@@ -182,6 +184,12 @@ class WidgetManager:
 
     def run(self, action='manage', screen='home'):
         registry = self.load()
+        if action == 'init':
+            if not registry.get('home'):
+                registry['home'] = list(DEFAULT_HOME)
+            self.save(registry)
+            xbmc.log('CINEVA_WIDGETS_INITIALIZED=' + str(len(registry['home'])), xbmc.LOGINFO)
+            return
         if action == 'list':
             xbmc.log('CINEVA_WIDGET_REGISTRY=' + json.dumps(registry, ensure_ascii=False), xbmc.LOGINFO)
             return
