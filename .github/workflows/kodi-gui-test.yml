@@ -112,20 +112,29 @@ jobs:
           python - <<'PY'
           import json, time, urllib.request
           url = "http://127.0.0.1:8080/jsonrpc"
-          payload = json.dumps({"jsonrpc":"2.0","method":"Settings.GetSettingValue","params":{"setting":"lookandfeel.skin"},"id":1}).encode()
-          request = urllib.request.Request(url, data=payload, headers={"Content-Type":"application/json"})
+          def rpc(method, params=None):
+            payload = json.dumps({"jsonrpc":"2.0","method":method,"params":params or {},"id":1}).encode()
+            request = urllib.request.Request(url, data=payload, headers={"Content-Type":"application/json"})
+            with urllib.request.urlopen(request, timeout=5) as response:
+              result = json.load(response)
+            if "error" in result: raise RuntimeError(result["error"])
+            return result.get("result")
           last = None
           for attempt in range(30):
             try:
-              with urllib.request.urlopen(request, timeout=4) as response: result = json.load(response)
-              skin = result.get("result", {}).get("value")
-              print("Kodi JSON-RPC selected skin:", skin)
-              if skin != "skin.cineva": raise SystemExit(f"GUI TEST FAILED: Kodi reports selected skin {skin!r}")
+              print("Initial selected skin:", rpc("Settings.GetSettingValue", {"setting":"lookandfeel.skin"}))
+              switched = rpc("Settings.SetSettingValue", {"setting":"lookandfeel.skin","value":"skin.cineva"})
+              print("Kodi SetSettingValue result:", switched)
+              time.sleep(8)
+              selected = rpc("Settings.GetSettingValue", {"setting":"lookandfeel.skin"})
+              print("Kodi selected skin after switch:", selected)
+              if selected != "skin.cineva": raise RuntimeError(f"Kodi rejected CINÉVA selection: {selected!r}")
               break
             except Exception as exc:
               last = exc
+              print("Waiting for Kodi JSON-RPC:", exc)
               time.sleep(2)
-          else: raise SystemExit(f"GUI TEST FAILED: JSON-RPC HTTP did not respond: {last}")
+          else: raise SystemExit(f"GUI TEST FAILED: could not switch skin through Kodi JSON-RPC: {last}")
           PY
           xdotool getdisplaygeometry
           import -display :99 -window root artifacts/kodi-startup.png
@@ -135,7 +144,7 @@ jobs:
           test -s artifacts/kodi-startup.png
           test -s artifacts/kodi-after-input.png
           # A stored preference is not proof that Kodi loaded the skin.
-          LOG="$HOME/.var/app/tv.kodi.Kodi/data/userdata/kodi.log"
+          LOG="$HOME/.var/app/tv.kodi.Kodi/data/temp/kodi.log"
           if ! grep -F "load skin from:" "$LOG" | grep -F "skin.cineva/" >/dev/null; then
             echo "GUI TEST FAILED: Kodi did not actually load CINÉVA; screenshot/log are retained."
             grep -Ei "Failed to load skin|load skin from:|skin.cineva" "$LOG" || true
