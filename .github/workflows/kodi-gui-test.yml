@@ -156,12 +156,12 @@ jobs:
             raise SystemExit(f"GUI TEST FAILED: Kodi JSON-RPC unavailable: {last}")
 
           # Diagnose and explicitly enable the skin before attempting a switch.
-          details = rpc("Addons.GetAddonDetails", {"addonid":"skin.cineva","properties":["enabled","dependencies","version"]})
+          details = rpc("Addons.GetAddonDetails", {"addonid":"skin.cineva","properties":["enabled","version"]})
           print("CINÉVA add-on details before enable:", details)
           enabled = rpc("Addons.SetAddonEnabled", {"addonid":"skin.cineva","enabled":True})
           print("Addons.SetAddonEnabled result:", enabled)
           time.sleep(5)
-          details = rpc("Addons.GetAddonDetails", {"addonid":"skin.cineva","properties":["enabled","dependencies","version"]})
+          details = rpc("Addons.GetAddonDetails", {"addonid":"skin.cineva","properties":["enabled","version"]})
           print("CINÉVA add-on details after enable:", details)
 
           # Keep this single Kodi process alive. Reinstall/reload only the skin
