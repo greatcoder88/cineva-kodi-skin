@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<addon id="script.cineva.widgets" name="CINÉVA Widget Manager" version="0.1.0" provider-name="CINÉVA">
+  <requires><import addon="xbmc.python" version="3.0.0"/><import addon="xbmc.gui" version="5.18.0"/></requires>
+  <extension point="xbmc.python.script" library="default.py"><provides>executable</provides></extension>
+  <extension point="xbmc.addon.metadata"><summary lang="en_GB">Generic widget configuration helper for CINÉVA</summary><description lang="en_GB">Browse installed video add-ons and manage ordered widget definitions per screen.</description><platform>all</platform><license>GPL-2.0-or-later</license></extension>
+</addon>
