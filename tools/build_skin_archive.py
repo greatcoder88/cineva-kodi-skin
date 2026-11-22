@@ -42,11 +42,12 @@ def update_xml(data, path):
         controls = root.find("controls")
         if controls is None:
             raise SystemExit("Home.xml is missing its controls container")
+        # Cinematic hero: give artwork room to breathe and fade it cleanly into the catalogue.
         for control in controls.findall("control"):
             if control.get("type") == "image" and control.findtext("texture", "").startswith("$INFO[Container("):
-                set_child_text(control, "height", 420)
+                set_child_text(control, "height", 470)
             if control.get("type") == "image" and control.findtext("texture") == "hero-shade.png":
-                set_child_text(control, "height", 440)
+                set_child_text(control, "height", 500)
         # Keep navigation above full-bleed artwork; it was previously painted first
         # and then hidden beneath the hero image controls.
         topbar = next((node for node in list(controls)
@@ -58,23 +59,24 @@ def update_xml(data, path):
             controls.insert(hero_end + 1, topbar)
         for group in controls.findall("control"):
             if group.get("type") == "group" and group.findtext("control/label", "").startswith("$INFO[Container("):
-                set_child_text(group, "top", 128)
+                set_child_text(group, "top", 148)
                 labels = [child for child in group.findall("control") if child.get("type") == "label"]
                 if labels:
                     # Title first, metadata second: separate vertical baselines.
-                    set_child_text(labels[0], "top", 62)
+                    set_child_text(labels[0], "top", 68)
                     set_child_text(labels[0], "font", "font36")
-                    set_child_text(labels[0], "height", 58)
+                    set_child_text(labels[0], "height", 66)
                 if len(labels) > 1:
-                    set_child_text(labels[1], "top", 34)
-                    set_child_text(labels[1], "height", 28)
+                    set_child_text(labels[1], "top", 30)
+                    set_child_text(labels[1], "height", 30)
                 for child in group.findall("control"):
                     if child.get("type") == "textbox":
-                        set_child_text(child, "top", 130)
-                        set_child_text(child, "height", 100)
+                        set_child_text(child, "top", 148)
+                        set_child_text(child, "height", 92)
             if group.get("type") == "group" and group.findtext("control/label", "").startswith("$INFO[Container("):
                 set_child_text(group, "width", 1200)
-        row_positions = ((450, 488), (760, 798), (1070, 1108), (1380, 1418))
+        # Three compact, consistently spaced catalogue rails; no giant dead zone between rows.
+        row_positions = ((390, 426), (660, 696), (930, 966), (1200, 1236))
         for index, (heading_top, shelf_top) in enumerate(row_positions, 1):
             heading_label = f"$INFO[Skin.String(Cineva.Widget{index}.Name)]"
             heading = next((c for c in controls.findall("control")
@@ -86,25 +88,26 @@ def update_xml(data, path):
             set_child_text(heading, "height", 32)
             set_child_text(heading, "font", "font16")
             set_child_text(shelf, "top", shelf_top)
-            set_child_text(shelf, "height", 260)
+            set_child_text(shelf, "height", 232)
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
-                layout.set("width", "220")
-                layout.set("height", "260")
+                layout.set("width", "208")
+                layout.set("height", "232")
                 for child in layout.findall("control"):
                     if child.get("type") == "image":
-                        set_child_text(child, "left", 20)
-                        set_child_text(child, "width", 180)
-                        set_child_text(child, "height", 225)
+                        set_child_text(child, "left", 18)
+                        set_child_text(child, "width", 172)
+                        set_child_text(child, "height", 204)
                     elif child.get("type") == "label":
                         set_child_text(child, "left", 0)
-                        set_child_text(child, "top", 230)
-                        set_child_text(child, "width", 220)
-                        set_child_text(child, "height", 26)
+                        set_child_text(child, "top", 207)
+                        set_child_text(child, "width", 208)
+                        set_child_text(child, "height", 24)
                         set_child_text(child, "align", "center")
         nav_group = next((node for node in controls.findall("control") if node.get("type") == "group" and node.find("./control[@id='1001']") is not None), None)
         if nav_group is not None:
             for button in nav_group.findall("./control[@type='button']"):
-                for tag, value in (("texturefocus", "focus-bar.png"), ("texturenofocus", "black.png"), ("textcolor", "white"), ("focusedcolor", "white"), ("align", "center"), ("aligny", "center")):
+                # Text-first navigation: remove the heavy black button slabs.
+                for tag, value in (("texturefocus", "focus-bar.png"), ("texturenofocus", "-"), ("textcolor", "lightgrey"), ("focusedcolor", "white"), ("align", "center"), ("aligny", "center")):
                     set_child_text(button, tag, value)
         # The top navigation already has a My Widgets destination. The extra
         # floating button obscured the fourth shelf and is intentionally removed.
