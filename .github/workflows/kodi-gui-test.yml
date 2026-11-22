@@ -63,7 +63,7 @@ jobs:
                               if node.tag == "control" and node.findtext("texture") == "hero-shade.png"), -1)
           if topbar_index <= shade_index:
             raise SystemExit("CINÉVA top navigation is layered underneath the hero artwork")
-          row_positions = ((430, 465), (690, 725), (950, 985), (1210, 1245))
+          row_positions = ((450, 488), (760, 798), (1070, 1108), (1380, 1418))
           for index, (heading_top, shelf_top) in enumerate(row_positions, 1):
             heading = next((c for c in controls.findall("control")
                             if c.get("type") == "label"
@@ -71,7 +71,7 @@ jobs:
             shelf = controls.find(f"./control[@type='fixedlist'][@id='{9000 + index}']")
             if heading is None or heading.findtext("top") != str(heading_top):
               raise SystemExit(f"Home widget {index} heading is not at the verified non-overlap position")
-            if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "250":
+            if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "260":
               raise SystemExit(f"Home widget {index} shelf geometry is incorrect")
           if controls.find("./control[@id='9010']") is not None:
             raise SystemExit("Obstructive floating More Widgets button is still present")
@@ -88,6 +88,9 @@ jobs:
           setting = ET.parse("tools/script.cineva.widgets/resources/settings.xml").getroot().find(".//setting[@id='widget_registry']")
           if setting is None or setting.attrib.get("type") != "string":
             raise SystemExit("widget_registry must be declared as a string setting")
+          nav = next((g for g in controls.findall("control") if g.get("type") == "group" and g.find("./control[@id='1001']") is not None), None)
+          if nav is None or any(button.findtext("textcolor") != "white" or button.findtext("texturefocus") != "focus-bar.png" for button in nav.findall("./control[@type='button']")):
+            raise SystemExit("Home navigation buttons need visible explicit textures and text color")
           print("Packaged Home, dialog, Startup and settings schema validated.")
           PY
           zip -qr artifacts/cineva-expanded-source.zip skin.cineva tools/script.cineva.widgets tools/test-fixtures/plugin.video.pov tools/download_test_posters.py
