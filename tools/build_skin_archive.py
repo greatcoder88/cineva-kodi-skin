@@ -126,17 +126,17 @@ def update_xml(data, path):
         progress = focused.find("./control[@type='progress']")
         if any(node is None for node in (normal_image, normal_label, focused_image, focused_label, progress)):
             raise SystemExit("Includes.xml has an incomplete poster layout")
-        for tag, value in (("left", 20), ("width", 180), ("height", 225)):
+        for tag, value in (("left", 18), ("width", 172), ("height", 204)):
             set_child_text(normal_image, tag, value)
-        for tag, value in (("left", 0), ("top", 230), ("width", 220), ("height", 26), ("align", "center")):
+        for tag, value in (("left", 0), ("top", 207), ("width", 208), ("height", 24), ("align", "center")):
             set_child_text(normal_label, tag, value)
-        for tag, value in (("left", 22), ("top", -6), ("width", 196), ("height", 241)):
+        for tag, value in (("left", 14), ("top", -5), ("width", 180), ("height", 218)):
             set_child_text(focused_image, tag, value)
-        for tag, value in (("left", 0), ("top", 242), ("width", 220), ("height", 26), ("align", "center")):
+        for tag, value in (("left", 0), ("top", 214), ("width", 208), ("height", 24), ("align", "center")):
             set_child_text(focused_label, tag, value)
-        set_child_text(progress, "left", 20)
-        set_child_text(progress, "width", 180)
-        set_child_text(progress, "top", 214)
+        set_child_text(progress, "left", 18)
+        set_child_text(progress, "width", 172)
+        set_child_text(progress, "top", 194)
     elif path == "skin.cineva/xml/DialogConfirm.xml":
         default = root.find("defaultcontrol")
         if default is None:
