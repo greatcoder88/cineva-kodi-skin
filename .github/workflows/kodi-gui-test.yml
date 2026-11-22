@@ -17,13 +17,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Require real skin source
+      - name: Expand uploaded skin archive and prepare add-ons
         run: |
           mkdir -p artifacts
+          test -s skin.cineva-0.5.3.zip
+          unzip -q skin.cineva-0.5.3.zip -d .
           test -f skin.cineva/addon.xml
           test -d skin.cineva/xml
           test -f skin.cineva/xml/Home.xml
           test -f tools/script.cineva.widgets/addon.xml
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          root = ET.parse("skin.cineva/addon.xml").getroot()
+          print("CINÉVA add-on version:", root.attrib.get("version"))
+          print("Kodi GUI dependency:", next(x.attrib["version"] for x in root.findall("./requires/import") if x.attrib.get("addon") == "xbmc.gui"))
+          PY
 
       - name: Install GUI runtime
         run: |
