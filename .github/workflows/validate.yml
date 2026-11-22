@@ -15,8 +15,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Build release ZIP from runtime source fixes
-        run: python tools/build_skin_archive.py
+      - name: Build release ZIP from runtime source fixes (idempotence check)
+        run: |
+          python tools/build_skin_archive.py
+          python tools/build_skin_archive.py
       - name: Expand uploaded CINÉVA archive
         run: |
           test -s skin.cineva-0.5.3.zip
