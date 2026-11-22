@@ -329,6 +329,16 @@ def update_xml(data, path):
             for child in (fallback_image, active_image, fallback_label, active_label, clone_progress, focus_accent):
                 clone.append(child)
             root.append(clone)
+    elif path == "skin.cineva/xml/Font.xml":
+        fontset = root.find("./fontset[@id='Default']")
+        if fontset is None:
+            raise SystemExit("Font.xml is missing its Default fontset")
+        compact = next((node for node in fontset.findall("font") if node.findtext("name") == "font9"), None)
+        if compact is None:
+            compact = ET.SubElement(fontset, "font")
+        set_child_text(compact, "name", "font9")
+        set_child_text(compact, "filename", "Roboto-Regular.ttf")
+        set_child_text(compact, "size", 16)
     elif path == "skin.cineva/xml/DialogConfirm.xml":
         default = root.find("defaultcontrol")
         if default is None:
@@ -470,6 +480,7 @@ def main():
                 "skin.cineva/xml/Home.xml",
                 "skin.cineva/xml/DialogConfirm.xml",
                 "skin.cineva/xml/Includes.xml",
+                "skin.cineva/xml/Font.xml",
                 "skin.cineva/xml/MyVideoNav.xml",
                 "skin.cineva/xml/DialogVideoInfo.xml",
                 "skin.cineva/xml/VideoOSD.xml",
