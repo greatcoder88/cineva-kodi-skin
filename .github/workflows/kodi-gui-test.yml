@@ -19,6 +19,7 @@ jobs:
 
       - name: Require real skin source
         run: |
+          mkdir -p artifacts
           test -f skin.cineva/addon.xml
           test -d skin.cineva/xml
           test -f skin.cineva/xml/Home.xml
