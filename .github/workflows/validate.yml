@@ -103,8 +103,8 @@ jobs:
           focused_title = focused_poster.find("./control[@type='label']") if focused_poster is not None else None
           if poster is None or poster.findtext("./control[@type='image']/height") != "276" or normal_title is None or (normal_title.findtext("width"), normal_title.findtext("top"), normal_title.findtext("height")) != ("270", "278", "20"):
               errors.append("Poster image and normal title geometry is not the redesigned large-card layout")
-          if normal_title is None or normal_title.find("visible") is not None:
-              errors.append("Normal poster title must remain the single title layer for each card")
+          if normal_title is None or normal_title.findtext("visible") != "!ListItem.IsSelected":
+              errors.append("Normal poster title must yield to the row-aware selected-item title")
           if focused_title is not None:
               errors.append("Base focused poster template must not retain an unused title layer")
           for container_id in (9001, 9002, 9003, 9004):
