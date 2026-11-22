@@ -103,6 +103,10 @@ def update_xml(data, path):
                         set_child_text(child, "width", 270)
                         set_child_text(child, "height", 20)
                         set_child_text(child, "align", "center")
+            focused_layout = shelf.find("./focusedlayout")
+            focused_include = focused_layout.find("include") if focused_layout is not None else None
+            if focused_include is not None:
+                focused_include.text = f"CinevaFocusedPosterItem{9000 + index}"
         nav_group = next((node for node in controls.findall("control") if node.get("type") == "group" and node.find("./control[@id='1001']") is not None), None)
         if nav_group is not None:
             for button in nav_group.findall("./control[@type='button']"):
@@ -130,16 +134,28 @@ def update_xml(data, path):
             set_child_text(normal_image, tag, value)
         for tag, value in (("left", 0), ("top", 278), ("width", 270), ("height", 20), ("align", "center")):
             set_child_text(normal_label, tag, value)
-        # Kodi paints the focusedlayout over itemlayout; hide the normal title
-        # for the selected item so its brighter focused title is never doubled.
-        set_child_text(normal_label, "visible", "!ListItem.IsSelected")
+        # ListItem.IsSelected also matches remembered selections in inactive
+        # rails. Keep one title layer and scope focus art to its own container.
+        stale_visibility = normal_label.find("visible")
+        if stale_visibility is not None:
+            normal_label.remove(stale_visibility)
         for tag, value in (("left", 25), ("top", -7), ("width", 200), ("height", 290)):
             set_child_text(focused_image, tag, value)
-        for tag, value in (("left", 0), ("top", 278), ("width", 270), ("height", 24), ("align", "center"), ("font", "font12")):
-            set_child_text(focused_label, tag, value)
-        set_child_text(progress, "left", 30)
-        set_child_text(progress, "width", 190)
-        set_child_text(progress, "top", 266)
+        for tag, value in (("left", 30), ("width", 190), ("top", 266)):
+            set_child_text(progress, tag, value)
+        focused.remove(focused_label)
+        for container_id in (9001, 9002, 9003, 9004):
+            include_name = f"CinevaFocusedPosterItem{container_id}"
+            previous = root.find(f"./include[@name='{include_name}']")
+            if previous is not None:
+                root.remove(previous)
+            clone = ET.fromstring(ET.tostring(focused, encoding="unicode"))
+            clone.set("name", include_name)
+            clone_image = clone.find("./control[@type='image']")
+            clone_progress = clone.find("./control[@type='progress']")
+            set_child_text(clone_image, "visible", f"Control.HasFocus({container_id})")
+            set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
+            root.append(clone)
     elif path == "skin.cineva/xml/DialogConfirm.xml":
         default = root.find("defaultcontrol")
         if default is None:
