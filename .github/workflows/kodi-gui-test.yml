@@ -113,17 +113,34 @@ jobs:
           import json, socket, time
           def rpc(method, params=None):
             request = {"jsonrpc":"2.0","method":method,"params":params or {},"id":1}
+            decoder = json.JSONDecoder()
             with socket.create_connection(("127.0.0.1", 9090), timeout=5) as sock:
               sock.settimeout(5)
-              sock.sendall((json.dumps(request) + "\n").encode())
-              data = b""
-              while b"\n" not in data:
-                chunk = sock.recv(65536)
+              # Kodi raw TCP JSON-RPC has no newline or other frame delimiter.
+              sock.sendall(json.dumps(request).encode("utf-8"))
+              data = ""
+              deadline = time.time() + 10
+              while time.time() < deadline:
+                try:
+                  chunk = sock.recv(65536)
+                except socket.timeout:
+                  continue
                 if not chunk: break
-                data += chunk
-            response = json.loads(data.decode("utf-8","replace").strip().splitlines()[-1])
-            if "error" in response: raise RuntimeError(response["error"])
-            return response.get("result")
+                data += chunk.decode("utf-8", "replace")
+                pos = 0
+                while pos < len(data):
+                  while pos < len(data) and data[pos].isspace(): pos += 1
+                  if pos >= len(data): break
+                  try:
+                    obj, endpos = decoder.raw_decode(data, pos)
+                  except json.JSONDecodeError:
+                    break
+                  pos = endpos
+                  if isinstance(obj, dict) and obj.get("id") == 1:
+                    if "error" in obj: raise RuntimeError(obj["error"])
+                    return obj.get("result")
+                data = data[pos:] if pos else data
+            raise RuntimeError(f"No JSON-RPC response for {method}; received: {data[:500]!r}")
           last = None
           for attempt in range(30):
             try:
