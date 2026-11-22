@@ -13,6 +13,24 @@ class FakeAddon:
     def getSettingString(self, key): return self.settings.get(key, "")
     def setSettingString(self, key, value): self.settings[key] = value
 
+class FakeVFS:
+    files = {}
+    @staticmethod
+    def translatePath(path): return path
+    @classmethod
+    def exists(cls, path): return path in cls.files
+    @staticmethod
+    def mkdirs(path): return True
+    class File:
+        def __init__(self, path, mode):
+            self.path, self.mode, self.buffer = path, mode, ""
+            if mode == "r": self.buffer = FakeVFS.files.get(path, "")
+        def read(self): return self.buffer
+        def write(self, value):
+            self.buffer += value
+            FakeVFS.files[self.path] = self.buffer
+        def close(self): pass
+
 class FakeDialog:
     def select(self, *args, **kwargs): return -1
     def ok(self, *args, **kwargs): pass
@@ -32,12 +50,20 @@ class KodiManagerTests(unittest.TestCase):
         addon_mod.Addon = lambda: cls.addon
         gui = types.ModuleType("xbmcgui")
         gui.Dialog = FakeDialog
-        sys.modules.update({"xbmc": xbmc, "xbmcaddon": addon_mod, "xbmcgui": gui})
+        vfs = types.ModuleType("xbmcvfs")
+        vfs.translatePath = FakeVFS.translatePath
+        vfs.exists = FakeVFS.exists
+        vfs.mkdirs = FakeVFS.mkdirs
+        vfs.File = FakeVFS.File
+        sys.modules.update({"xbmc": xbmc, "xbmcaddon": addon_mod,
+                            "xbmcgui": gui, "xbmcvfs": vfs})
         spec = importlib.util.spec_from_file_location("cineva_manager", MANAGER)
         cls.module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.module)
 
-    def setUp(self): self.addon.settings.clear()
+    def setUp(self):
+        self.addon.settings.clear()
+        FakeVFS.files.clear()
 
     def test_default_home_has_four_pov_widgets(self):
         registry = self.module.WidgetManager().load()
@@ -54,7 +80,7 @@ class KodiManagerTests(unittest.TestCase):
         self.assertEqual(len(again["tvshows"]), 0)
 
     def test_invalid_entries_are_filtered(self):
-        self.addon.settings["widget_registry"] = json.dumps({"home":[
+        FakeVFS.files["special://profile/addon_data/script.cineva.widgets/widget_registry.json"] = json.dumps({"home":[
             {"name":"Good","path":"plugin://plugin.video.good/","id":"g"},
             {"name":"Bad","path":"https://example.com","id":"b"},
             "not-a-dict"
@@ -72,5 +98,7 @@ class KodiManagerTests(unittest.TestCase):
         manager.save(registry)
         again = manager.load()
         self.assertEqual(len(again["home"]), 12)
+        stored = json.loads(FakeVFS.files["special://profile/addon_data/script.cineva.widgets/widget_registry.json"])
+        self.assertEqual(len(stored["home"]), 12)
 
 if __name__ == "__main__": unittest.main(verbosity=2)
