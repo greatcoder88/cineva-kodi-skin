@@ -88,20 +88,20 @@ def update_xml(data, path):
             set_child_text(heading, "height", 32)
             set_child_text(heading, "font", "font16")
             set_child_text(shelf, "top", shelf_top)
-            set_child_text(shelf, "height", 220)
+            set_child_text(shelf, "height", 245)
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
-                layout.set("width", "198")
-                layout.set("height", "220")
+                layout.set("width", "230")
+                layout.set("height", "245")
                 for child in layout.findall("control"):
                     if child.get("type") == "image":
-                        set_child_text(child, "left", 14)
-                        set_child_text(child, "width", 170)
-                        set_child_text(child, "height", 190)
+                        set_child_text(child, "left", 18)
+                        set_child_text(child, "width", 194)
+                        set_child_text(child, "height", 204)
                     elif child.get("type") == "label":
                         set_child_text(child, "left", 0)
-                        set_child_text(child, "top", 193)
-                        set_child_text(child, "width", 198)
-                        set_child_text(child, "height", 23)
+                        set_child_text(child, "top", 211)
+                        set_child_text(child, "width", 230)
+                        set_child_text(child, "height", 24)
                         set_child_text(child, "align", "center")
         nav_group = next((node for node in controls.findall("control") if node.get("type") == "group" and node.find("./control[@id='1001']") is not None), None)
         if nav_group is not None:
@@ -126,16 +126,16 @@ def update_xml(data, path):
         progress = focused.find("./control[@type='progress']")
         if any(node is None for node in (normal_image, normal_label, focused_image, focused_label, progress)):
             raise SystemExit("Includes.xml has an incomplete poster layout")
-        for tag, value in (("left", 18), ("width", 172), ("height", 204)):
+        for tag, value in (("left", 18), ("width", 194), ("height", 204)):
             set_child_text(normal_image, tag, value)
-        for tag, value in (("left", 0), ("top", 207), ("width", 208), ("height", 24), ("align", "center")):
+        for tag, value in (("left", 0), ("top", 211), ("width", 230), ("height", 24), ("align", "center")):
             set_child_text(normal_label, tag, value)
-        for tag, value in (("left", 14), ("top", -5), ("width", 180), ("height", 218)):
+        for tag, value in (("left", 14), ("top", -5), ("width", 202), ("height", 218)):
             set_child_text(focused_image, tag, value)
-        for tag, value in (("left", 0), ("top", 214), ("width", 208), ("height", 24), ("align", "center")):
+        for tag, value in (("left", 0), ("top", 220), ("width", 230), ("height", 22), ("align", "center")):
             set_child_text(focused_label, tag, value)
         set_child_text(progress, "left", 18)
-        set_child_text(progress, "width", 172)
+        set_child_text(progress, "width", 194)
         set_child_text(progress, "top", 194)
     elif path == "skin.cineva/xml/DialogConfirm.xml":
         default = root.find("defaultcontrol")
