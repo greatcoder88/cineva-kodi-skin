@@ -35,6 +35,7 @@ def update_xml(data, path):
             default = ET.Element("defaultcontrol")
             root.insert(0, default)
         # Runtime JSON-RPC confirms control 11 is Yes and control 10 is No.
+        default.set("always", "true")
         default.text = "11"
         # The skin has no bundled default button textures. Supply explicit
         # textures and colors so Yes/No are actually visible in the modal.
