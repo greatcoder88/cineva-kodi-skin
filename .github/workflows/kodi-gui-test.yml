@@ -32,6 +32,7 @@ jobs:
           print("CINÉVA add-on version:", root.attrib.get("version"))
           print("Kodi GUI dependency:", next(x.attrib["version"] for x in root.findall("./requires/import") if x.attrib.get("addon") == "xbmc.gui"))
           PY
+          zip -qr artifacts/cineva-expanded-source.zip skin.cineva tools/script.cineva.widgets
 
       - name: Install GUI runtime
         run: |
@@ -66,7 +67,7 @@ jobs:
           </settings>
           XML
 
-      - name: Launch Kodi in virtual display and capture GUI
+      - name: Launch Kodi, verify active skin through JSON-RPC, and capture GUI
         run: |
           mkdir -p artifacts
           export DISPLAY=:99
@@ -79,8 +80,32 @@ jobs:
             if pgrep -x kodi.bin >/dev/null || pgrep -x kodi-x11 >/dev/null; then break; fi
             sleep 2
           done
-          sleep 25
           pgrep -a -x kodi.bin || pgrep -a -x kodi-x11 || (echo "Kodi process did not start"; exit 1)
+          sleep 30
+          python - <<'PY'
+          import json, socket, time
+          request = {"jsonrpc":"2.0","method":"Settings.GetSettingValue","params":{"setting":"lookandfeel.skin"},"id":1}
+          last = None
+          for attempt in range(20):
+              try:
+                  with socket.create_connection(("127.0.0.1", 9090), timeout=3) as sock:
+                      sock.settimeout(3)
+                      sock.sendall((json.dumps(request) + "\n").encode())
+                      data = sock.recv(65536).decode("utf-8", "replace")
+                  response = json.loads(data.strip().splitlines()[-1])
+                  if "error" in response:
+                      raise RuntimeError(response["error"])
+                  skin = response.get("result", {}).get("value")
+                  print("Kodi JSON-RPC active skin:", skin)
+                  if skin != "skin.cineva":
+                      raise SystemExit(f"GUI TEST FAILED: expected skin.cineva, Kodi reports {skin!r}")
+                  break
+              except Exception as exc:
+                  last = exc
+                  time.sleep(2)
+          else:
+              raise SystemExit(f"GUI TEST FAILED: could not verify active skin over Kodi JSON-RPC: {last}")
+          PY
           xdotool getdisplaygeometry
           import -display :99 -window root artifacts/kodi-startup.png
           xdotool key --clearmodifiers Escape
@@ -94,11 +119,16 @@ jobs:
         run: |
           cp /tmp/kodi-stdout.log artifacts/ 2>/dev/null || true
           cp /tmp/xvfb.log artifacts/ 2>/dev/null || true
-          cp "$HOME/.var/app/tv.kodi.Kodi/data/kodi.log" artifacts/ 2>/dev/null || true
-          flatpak info --user tv.kodi.Kodi//beta > artifacts/kodi-flatpak-version.txt 2>&1 || true
-          if [ -f artifacts/kodi.log ]; then
-            grep -Ei 'ERROR|CRITICAL|failed|Traceback|skin.cineva' artifacts/kodi.log > artifacts/kodi-errors.txt || true
+          LOG="$(find "$HOME/.var/app/tv.kodi.Kodi" -type f -name kodi.log -print -quit 2>/dev/null || true)"
+          if [ -n "$LOG" ]; then
+            echo "Kodi log found at: $LOG"
+            cp "$LOG" artifacts/kodi.log
+            grep -Ei 'ERROR|CRITICAL|failed|Traceback|skin.cineva' "$LOG" > artifacts/kodi-errors.txt || true
+          else
+            echo "Kodi log not found under Flatpak app data" > artifacts/kodi-log-missing.txt
+            find "$HOME/.var/app/tv.kodi.Kodi" -maxdepth 6 -type f -print > artifacts/kodi-profile-files.txt 2>/dev/null || true
           fi
+          flatpak info --user tv.kodi.Kodi//beta > artifacts/kodi-flatpak-version.txt 2>&1 || true
 
       - name: Stop Kodi and Xvfb
         if: always()
