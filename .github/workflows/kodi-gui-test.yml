@@ -166,7 +166,6 @@ jobs:
 
           # Keep this single Kodi process alive. Reinstall/reload only the skin
           # add-on files and switch skins in-process for repeatable GUI checks.
-          from pathlib import importlib
           import shutil
           source = Path.cwd() / "skin.cineva"
           target = Path.home() / ".var/app/tv.kodi.Kodi/data/addons/skin.cineva"
