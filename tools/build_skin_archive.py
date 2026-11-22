@@ -50,19 +50,22 @@ def update_xml(data, path):
         for group in controls.findall("control"):
             if group.get("type") == "group" and group.findtext("control/label", "").startswith("$INFO[Container("):
                 set_child_text(group, "top", 145)
+                labels = [child for child in group.findall("control") if child.get("type") == "label"]
+                if labels:
+                    # Title first, metadata second: separate vertical baselines.
+                    set_child_text(labels[0], "top", 62)
+                    set_child_text(labels[0], "font", "font36")
+                    set_child_text(labels[0], "height", 58)
+                if len(labels) > 1:
+                    set_child_text(labels[1], "top", 34)
+                    set_child_text(labels[1], "height", 28)
                 for child in group.findall("control"):
-                    if child.get("type") == "label" and child.findtext("font") == "font30":
-                        set_child_text(child, "font", "font36")
-                        set_child_text(child, "height", 72)
-                    elif child.get("type") == "label":
-                        set_child_text(child, "top", 78)
-                        set_child_text(child, "height", 34)
-                    elif child.get("type") == "textbox":
-                        set_child_text(child, "top", 120)
-                        set_child_text(child, "height", 92)
+                    if child.get("type") == "textbox":
+                        set_child_text(child, "top", 130)
+                        set_child_text(child, "height", 100)
             if group.get("type") == "group" and group.findtext("control/label", "").startswith("$INFO[Container("):
                 set_child_text(group, "width", 1120)
-        row_positions = ((500, 535), (705, 740), (910, 945), (1115, 1150))
+        row_positions = ((470, 505), (725, 760), (980, 1015), (1235, 1270))
         for index, (heading_top, shelf_top) in enumerate(row_positions, 1):
             heading_label = f"$INFO[Skin.String(Cineva.Widget{index}.Name)]"
             heading = next((c for c in controls.findall("control")
@@ -78,6 +81,13 @@ def update_xml(data, path):
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
                 layout.set("width", "190")
                 layout.set("height", "230")
+                for child in layout.findall("control"):
+                    if child.get("type") == "image":
+                        set_child_text(child, "width", 160)
+                        set_child_text(child, "height", 190)
+                    elif child.get("type") == "label":
+                        set_child_text(child, "top", 194)
+                        set_child_text(child, "height", 28)
         # The top navigation already has a My Widgets destination. The extra
         # floating button obscured the fourth shelf and is intentionally removed.
         for control in list(controls):
