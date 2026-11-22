@@ -120,6 +120,8 @@ jobs:
                   errors.append(f"Home row {container_id} must show a normal poster when inactive and focus artwork only when active")
               if len(focus_labels) != 2 or focus_labels[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_labels[1].findtext("visible") != f"Control.HasFocus({container_id})":
                   errors.append(f"Home row {container_id} must keep exactly one correctly styled title visible")
+              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width")) != ("font10", "278", "20", "270"):
+                  errors.append(f"Home row {container_id} focused title must fit fully inside the poster card")
               if focus_progress is None or focus_progress.findtext("visible") != f"Control.HasFocus({container_id}) + ListItem.IsResumable":
                   errors.append(f"Home row {container_id} progress overlay is not scoped to the active row")
           catalogue = ET.parse(root / "xml/MyVideoNav.xml").getroot()
