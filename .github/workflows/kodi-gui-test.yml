@@ -1,0 +1,94 @@
+name: CINÉVA Kodi GUI smoke test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  kodi-gui:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require real skin source
+        run: |
+          test -f skin.cineva/addon.xml
+          test -d skin.cineva/xml
+          test -f skin.cineva/xml/Home.xml
+          test -f tools/script.cineva.widgets/addon.xml
+
+      - name: Install GUI runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak xvfb xdotool imagemagick jq
+
+      - name: Install Kodi Piers beta from Flathub beta
+        run: |
+          flatpak remote-add --user --if-not-exists flathub-beta https://dl.flathub.org/beta-repo/flathub-beta.flatpakrepo
+          flatpak install --user --noninteractive -y flathub-beta tv.kodi.Kodi//beta
+          flatpak info --user tv.kodi.Kodi//beta
+
+      - name: Install CINÉVA into isolated Kodi profile
+        run: |
+          mkdir -p "$HOME/.var/app/tv.kodi.Kodi/data/addons/skin.cineva"
+          mkdir -p "$HOME/.var/app/tv.kodi.Kodi/data/addons/script.cineva.widgets"
+          cp -a skin.cineva/. "$HOME/.var/app/tv.kodi.Kodi/data/addons/skin.cineva/"
+          cp -a tools/script.cineva.widgets/. "$HOME/.var/app/tv.kodi.Kodi/data/addons/script.cineva.widgets/"
+          mkdir -p "$HOME/.var/app/tv.kodi.Kodi/data/userdata"
+          cat > "$HOME/.var/app/tv.kodi.Kodi/data/userdata/advancedsettings.xml" <<'XML'
+          <advancedsettings><loglevel hide="false">1</loglevel></advancedsettings>
+          XML
+
+      - name: Launch Kodi in virtual display and capture GUI
+        run: |
+          mkdir -p artifacts
+          export DISPLAY=:99
+          Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset > /tmp/xvfb.log 2>&1 &
+          echo $! > /tmp/xvfb.pid
+          sleep 2
+          flatpak run --user tv.kodi.Kodi//beta --standalone > /tmp/kodi-stdout.log 2>&1 &
+          echo $! > /tmp/kodi.pid
+          for i in $(seq 1 60); do
+            if pgrep -f 'kodi.bin|kodi-x11|kodi-wayland' >/dev/null; then break; fi
+            sleep 2
+          done
+          sleep 25
+          xdotool getdisplaygeometry
+          import -display :99 -window root artifacts/kodi-startup.png
+          xdotool key --clearmodifiers Escape
+          sleep 2
+          import -display :99 -window root artifacts/kodi-after-input.png
+          test -s artifacts/kodi-startup.png
+          test -s artifacts/kodi-after-input.png
+
+      - name: Collect Kodi logs and runtime details
+        if: always()
+        run: |
+          cp /tmp/kodi-stdout.log artifacts/ 2>/dev/null || true
+          cp /tmp/xvfb.log artifacts/ 2>/dev/null || true
+          cp "$HOME/.var/app/tv.kodi.Kodi/data/kodi.log" artifacts/ 2>/dev/null || true
+          flatpak info --user tv.kodi.Kodi//beta > artifacts/kodi-flatpak-version.txt 2>&1 || true
+          if [ -f artifacts/kodi.log ]; then
+            grep -Ei 'ERROR|CRITICAL|failed|Traceback|skin.cineva' artifacts/kodi.log > artifacts/kodi-errors.txt || true
+          fi
+
+      - name: Stop Kodi and Xvfb
+        if: always()
+        run: |
+          pkill -f 'kodi.bin|kodi-x11|kodi-wayland' || true
+          kill "$(cat /tmp/xvfb.pid)" 2>/dev/null || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cineva-kodi-gui-test
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 14
