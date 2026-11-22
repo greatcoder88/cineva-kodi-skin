@@ -56,7 +56,7 @@ jobs:
             raise SystemExit("Startup.xml still focuses the empty panel 50")
           if (startup.findtext("onload") or "").strip() != "ActivateWindow(Home)":
             raise SystemExit("Startup.xml must hand off to Home after a skin switch")
-          row_positions = ((500, 535), (705, 740), (910, 945), (1115, 1150))
+          row_positions = ((470, 505), (725, 760), (980, 1015), (1235, 1270))
           controls = home.find("controls")
           for index, (heading_top, shelf_top) in enumerate(row_positions, 1):
             heading = next((c for c in controls.findall("control")
