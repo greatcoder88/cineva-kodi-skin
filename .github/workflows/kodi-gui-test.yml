@@ -110,7 +110,7 @@ jobs:
           pgrep -a -x kodi.bin || pgrep -a -x kodi-x11 || (echo "Kodi process did not start"; exit 1)
           sleep 15
           python - <<'PY'
-          import json, socket, time
+          import json, socket, time, subprocess
           def rpc(method, params=None):
             request = {"jsonrpc":"2.0","method":method,"params":params or {},"id":1}
             decoder = json.JSONDecoder()
