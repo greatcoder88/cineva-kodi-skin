@@ -134,6 +134,14 @@ jobs:
           import -display :99 -window root artifacts/kodi-after-input.png
           test -s artifacts/kodi-startup.png
           test -s artifacts/kodi-after-input.png
+          # A stored preference is not proof that Kodi loaded the skin.
+          LOG="$HOME/.var/app/tv.kodi.Kodi/data/userdata/kodi.log"
+          if ! grep -F "load skin from:" "$LOG" | grep -F "skin.cineva/" >/dev/null; then
+            echo "GUI TEST FAILED: Kodi did not actually load CINÉVA; screenshot/log are retained."
+            grep -Ei "Failed to load skin|load skin from:|skin.cineva" "$LOG" || true
+            exit 1
+          fi
+          echo "Verified: Kodi actually loaded CINÉVA from its add-on directory."
 
       - name: Collect Kodi logs and runtime details
         if: always()
