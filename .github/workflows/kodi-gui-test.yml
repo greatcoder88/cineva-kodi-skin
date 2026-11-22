@@ -55,6 +55,8 @@ jobs:
           if startup.find("defaultcontrol") is not None or startup.find(".//control[@id='50']") is not None:
             raise SystemExit("Startup.xml still focuses the empty panel 50")
           if (startup.findtext("onload") or "").strip() != "ActivateWindow(Home)":
+            raise SystemExit("Startup.xml must explicitly transition from Kodi Startup to Home")
+          if (startup.findtext("onload") or "").strip() != "ActivateWindow(Home)":
             raise SystemExit("Startup.xml must hand off to Home after a skin switch")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
           if skin.attrib.get("version") != "0.5.3":
