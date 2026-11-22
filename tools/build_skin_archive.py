@@ -41,7 +41,7 @@ def update_xml(data, path):
         controls = root.find("controls")
         if controls is None:
             raise SystemExit("Home.xml is missing its controls container")
-        row_positions = ((324, 354), (510, 540), (696, 726), (882, 912))
+        row_positions = ((324, 354), (504, 534), (684, 714), (864, 894))
         for index, (heading_top, shelf_top) in enumerate(row_positions, 1):
             heading_label = f"$INFO[Skin.String(Cineva.Widget{index}.Name)]"
             heading = next((c for c in controls.findall("control")
@@ -51,9 +51,9 @@ def update_xml(data, path):
                 raise SystemExit(f"Home.xml is missing widget row {index}")
             set_child_text(heading, "top", heading_top)
             set_child_text(shelf, "top", shelf_top)
-            set_child_text(shelf, "height", 160)
+            set_child_text(shelf, "height", 144)
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
-                layout.set("height", "160")
+                layout.set("height", "144")
         # The top navigation already has a My Widgets destination. The extra
         # floating button obscured the fourth shelf and is intentionally removed.
         for control in list(controls):
@@ -71,15 +71,15 @@ def update_xml(data, path):
         progress = focused.find("./control[@type='progress']")
         if any(node is None for node in (normal_image, normal_label, focused_image, focused_label, progress)):
             raise SystemExit("Includes.xml has an incomplete poster layout")
-        for tag, value in (("width", 104), ("height", 134)):
+        for tag, value in (("width", 104), ("height", 120)):
             set_child_text(normal_image, tag, value)
-        for tag, value in (("top", 136), ("height", 18)):
+        for tag, value in (("top", 122), ("height", 18)):
             set_child_text(normal_label, tag, value)
-        for tag, value in (("left", -4), ("top", -4), ("width", 112), ("height", 142)):
+        for tag, value in (("left", -4), ("top", -4), ("width", 112), ("height", 128)):
             set_child_text(focused_image, tag, value)
-        for tag, value in (("left", -2), ("top", 138), ("width", 110), ("height", 18)):
+        for tag, value in (("left", -2), ("top", 124), ("width", 110), ("height", 18)):
             set_child_text(focused_label, tag, value)
-        set_child_text(progress, "top", 126)
+        set_child_text(progress, "top", 112)
     elif path == "skin.cineva/xml/DialogConfirm.xml":
         default = root.find("defaultcontrol")
         if default is None:
