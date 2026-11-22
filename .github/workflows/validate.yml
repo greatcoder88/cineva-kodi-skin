@@ -57,6 +57,8 @@ jobs:
           startup = ET.parse(root / "xml/Startup.xml").getroot()
           if startup.find("defaultcontrol") is not None or startup.find(".//control[@id='50']") is not None:
               errors.append("Startup.xml still focuses the empty panel")
+          if (startup.findtext("onload") or "").strip() != "ActivateWindow(Home)":
+              errors.append("Startup.xml must hand off to Home")
           skin = ET.parse(root / "addon.xml").getroot()
           if skin.attrib.get("version") != "0.5.3":
               errors.append("Skin ZIP version is not 0.5.3")

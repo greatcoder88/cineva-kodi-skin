@@ -54,6 +54,8 @@ jobs:
           startup = ET.parse("skin.cineva/xml/Startup.xml").getroot()
           if startup.find("defaultcontrol") is not None or startup.find(".//control[@id='50']") is not None:
             raise SystemExit("Startup.xml still focuses the empty panel 50")
+          if (startup.findtext("onload") or "").strip() != "ActivateWindow(Home)":
+            raise SystemExit("Startup.xml must hand off to Home after a skin switch")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
           if skin.attrib.get("version") != "0.5.3":
             raise SystemExit("Skin archive version must be 0.5.3")
@@ -279,6 +281,18 @@ jobs:
             if selected_value != "skin.cineva" or state.get("skin",{}).get("id") != "skin.cineva":
               raise SystemExit(f"Cycle {cycle}: CINÉVA not retained after confirmation: {selected}; GUI={state}")
             print("Keep Skin dialog closed; active skin:", state.get("skin"), "window:", state.get("currentwindow"))
+            # Startup.xml must hand off to the real Home window; the background
+            # can look like Home while currentwindow is still Startup (12999).
+            deadline = time.time() + 12
+            while time.time() < deadline:
+              state = gui()
+              current_window = state.get("currentwindow",{})
+              if current_window.get("id") == 10000 or current_window.get("label","").strip().lower() == "home":
+                break
+              time.sleep(0.5)
+            else:
+              raise SystemExit(f"Cycle {cycle}: skin stayed on Startup instead of Home: {state}")
+            print("Home window active:", state.get("currentwindow"))
             paths = [
               "plugin://plugin.video.pov/?mode=build_movie_list&action=in_progress_movies&name=Continue%20Watching%20Movies",
               "plugin://plugin.video.pov/?mode=build_tvshow_list&action=in_progress_tvshows&name=Continue%20Watching%20TV%20Shows",

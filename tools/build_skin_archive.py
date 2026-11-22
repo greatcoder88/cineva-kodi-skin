@@ -57,6 +57,10 @@ def update_xml(data, path):
         # The old startup panel had no content but was the default focus target.
         root.clear()
         root.set("id", "12999")
+        # Startup remains the topmost window after a skin switch unless it
+        # explicitly hands off to Home. This leaves the Home UI underneath but
+        # keeps currentwindow=Startup and prevents Home navigation focus.
+        ET.SubElement(root, "onload").text = "ActivateWindow(Home)"
         controls = ET.SubElement(root, "controls")
         ET.SubElement(controls, "include").text = "CinevaBackground"
         ET.SubElement(controls, "include").text = "CinevaTopBar"
