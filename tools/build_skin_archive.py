@@ -41,6 +41,16 @@ def update_xml(data, path):
         controls = root.find("controls")
         if controls is None:
             raise SystemExit("Home.xml is missing its controls container")
+        # The archive builder runs twice in CI. Unwrap an existing rail grouplist
+        # before rebuilding it so the transformation remains idempotent.
+        previous_rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
+        if previous_rail_list is not None:
+            row_insert_index = list(controls).index(previous_rail_list)
+            controls.remove(previous_rail_list)
+            for child in list(previous_rail_list.findall("control")):
+                previous_rail_list.remove(child)
+                controls.insert(row_insert_index, child)
+                row_insert_index += 1
         # Cinematic hero: give artwork room to breathe and fade it cleanly into the catalogue.
         for control in controls.findall("control"):
             if control.get("type") == "image" and control.findtext("texture", "").startswith("$INFO[Container("):
