@@ -34,8 +34,24 @@ def update_xml(data, path):
         if default is None:
             default = ET.Element("defaultcontrol")
             root.insert(0, default)
-        # Kodi DialogConfirm: control 10 is Yes ($LOCALIZE[186]); 11 is No.
-        default.text = "10"
+        # Runtime JSON-RPC confirms control 11 is Yes and control 10 is No.
+        default.text = "11"
+        # The skin has no bundled default button textures. Supply explicit
+        # textures and colors so Yes/No are actually visible in the modal.
+        for button in root.findall(".//control[@type='button']"):
+            values = {
+                "texturefocus": "focus-bar.png",
+                "texturenofocus": "black.png",
+                "textcolor": "white",
+                "focusedcolor": "white",
+                "align": "center",
+                "aligny": "center",
+            }
+            for tag, value in values.items():
+                node = button.find(tag)
+                if node is None:
+                    node = ET.SubElement(button, tag)
+                node.text = value
     elif path == "skin.cineva/xml/Startup.xml":
         # The old startup panel had no content but was the default focus target.
         root.clear()

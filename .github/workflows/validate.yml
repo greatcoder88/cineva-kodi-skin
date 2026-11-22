@@ -49,8 +49,11 @@ jobs:
           if (home.findtext("onload") or "").strip() != "RunScript(script.cineva.widgets,action=init)":
               errors.append("Home must initialize widgets through the Python manager")
           confirm = ET.parse(root / "xml/DialogConfirm.xml").getroot()
-          if confirm.findtext("defaultcontrol") != "10":
-              errors.append("Keep Skin must default to Yes (control 10)")
+          if confirm.findtext("defaultcontrol") != "11":
+              errors.append("Keep Skin must default to Yes (control 11)")
+          for button in confirm.findall(".//control[@type='button']"):
+              if button.findtext("texturefocus") != "focus-bar.png" or button.findtext("texturenofocus") != "black.png":
+                  errors.append("Keep Skin buttons need explicit visible textures")
           startup = ET.parse(root / "xml/Startup.xml").getroot()
           if startup.find("defaultcontrol") is not None or startup.find(".//control[@id='50']") is not None:
               errors.append("Startup.xml still focuses the empty panel")
