@@ -50,15 +50,17 @@ jobs:
           mkdir -p "$HOME/.var/app/tv.kodi.Kodi/data/addons/script.cineva.widgets"
           cp -a skin.cineva/. "$HOME/.var/app/tv.kodi.Kodi/data/addons/skin.cineva/"
           cp -a tools/script.cineva.widgets/. "$HOME/.var/app/tv.kodi.Kodi/data/addons/script.cineva.widgets/"
+          curl -fL --retry 3 -o /tmp/script.skinshortcuts.zip https://github.com/MikeSiLVO/script.skinshortcuts/archive/refs/tags/v3.0.1.zip
+          mkdir -p "$HOME/.var/app/tv.kodi.Kodi/data/addons/script.skinshortcuts"
+          unzip -q /tmp/script.skinshortcuts.zip -d /tmp/skinshortcuts
+          cp -a /tmp/skinshortcuts/script.skinshortcuts-3.0.1/. "$HOME/.var/app/tv.kodi.Kodi/data/addons/script.skinshortcuts/"
           mkdir -p "$HOME/.var/app/tv.kodi.Kodi/data/userdata"
           cat > "$HOME/.var/app/tv.kodi.Kodi/data/userdata/advancedsettings.xml" <<'XML'
           <advancedsettings><loglevel hide="false">1</loglevel></advancedsettings>
           XML
           cat > "$HOME/.var/app/tv.kodi.Kodi/data/userdata/guisettings.xml" <<'XML'
           <settings>
-            <lookandfeel>
-              <skin>skin.cineva</skin>
-            </lookandfeel>
+            <setting id="lookandfeel.skin">skin.cineva</setting>
           </settings>
           XML
 
