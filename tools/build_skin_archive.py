@@ -128,7 +128,7 @@ def update_xml(data, path):
         focused_image = focused.find("./control[@type='image']")
         focused_label = focused.find("./control[@type='label']")
         progress = focused.find("./control[@type='progress']")
-        if any(node is None for node in (normal_image, normal_label, focused_image, focused_label, progress)):
+        if any(node is None for node in (normal_image, normal_label, focused_image, progress)):
             raise SystemExit("Includes.xml has an incomplete poster layout")
         for tag, value in (("left", 30), ("width", 190), ("height", 276)):
             set_child_text(normal_image, tag, value)
@@ -143,7 +143,8 @@ def update_xml(data, path):
             set_child_text(focused_image, tag, value)
         for tag, value in (("left", 30), ("width", 190), ("top", 266)):
             set_child_text(progress, tag, value)
-        focused.remove(focused_label)
+        if focused_label is not None:
+            focused.remove(focused_label)
         for container_id in (9001, 9002, 9003, 9004):
             include_name = f"CinevaFocusedPosterItem{container_id}"
             previous = root.find(f"./include[@name='{include_name}']")
