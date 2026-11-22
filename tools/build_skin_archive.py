@@ -76,7 +76,7 @@ def update_xml(data, path):
             if group.get("type") == "group" and group.findtext("control/label", "").startswith("$INFO[Container("):
                 set_child_text(group, "width", 1200)
         # Three compact, consistently spaced catalogue rails; no giant dead zone between rows.
-        row_positions = ((370, 406), (625, 661), (880, 916), (1135, 1171))
+        row_positions = ((370, 406), (715, 751), (1060, 1096), (1405, 1441))
         for index, (heading_top, shelf_top) in enumerate(row_positions, 1):
             heading_label = f"$INFO[Skin.String(Cineva.Widget{index}.Name)]"
             heading = next((c for c in controls.findall("control")
@@ -90,17 +90,17 @@ def update_xml(data, path):
             set_child_text(shelf, "top", shelf_top)
             set_child_text(shelf, "height", 245)
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
-                layout.set("width", "230")
-                layout.set("height", "245")
+                layout.set("width", "270")
+                layout.set("height", "300")
                 for child in layout.findall("control"):
                     if child.get("type") == "image":
-                        set_child_text(child, "left", 18)
-                        set_child_text(child, "width", 194)
-                        set_child_text(child, "height", 204)
+                        set_child_text(child, "left", 30)
+                        set_child_text(child, "width", 190)
+                        set_child_text(child, "height", 276)
                     elif child.get("type") == "label":
                         set_child_text(child, "left", 0)
-                        set_child_text(child, "top", 211)
-                        set_child_text(child, "width", 230)
+                        set_child_text(child, "top", 280)
+                        set_child_text(child, "width", 270)
                         set_child_text(child, "height", 24)
                         set_child_text(child, "align", "center")
         nav_group = next((node for node in controls.findall("control") if node.get("type") == "group" and node.find("./control[@id='1001']") is not None), None)
@@ -126,17 +126,17 @@ def update_xml(data, path):
         progress = focused.find("./control[@type='progress']")
         if any(node is None for node in (normal_image, normal_label, focused_image, focused_label, progress)):
             raise SystemExit("Includes.xml has an incomplete poster layout")
-        for tag, value in (("left", 18), ("width", 194), ("height", 204)):
+        for tag, value in (("left", 30), ("width", 190), ("height", 276)):
             set_child_text(normal_image, tag, value)
-        for tag, value in (("left", 0), ("top", 211), ("width", 230), ("height", 24), ("align", "center")):
+        for tag, value in (("left", 0), ("top", 280), ("width", 270), ("height", 24), ("align", "center")):
             set_child_text(normal_label, tag, value)
-        for tag, value in (("left", 14), ("top", -5), ("width", 202), ("height", 218)):
+        for tag, value in (("left", 25), ("top", -7), ("width", 200), ("height", 290)):
             set_child_text(focused_image, tag, value)
-        for tag, value in (("left", 0), ("top", 220), ("width", 230), ("height", 22), ("align", "center")):
+        for tag, value in (("left", 0), ("top", 292), ("width", 270), ("height", 22), ("align", "center")):
             set_child_text(focused_label, tag, value)
-        set_child_text(progress, "left", 18)
-        set_child_text(progress, "width", 194)
-        set_child_text(progress, "top", 194)
+        set_child_text(progress, "left", 30)
+        set_child_text(progress, "width", 190)
+        set_child_text(progress, "top", 266)
     elif path == "skin.cineva/xml/DialogConfirm.xml":
         default = root.find("defaultcontrol")
         if default is None:
@@ -172,6 +172,94 @@ def update_xml(data, path):
         controls = ET.SubElement(root, "controls")
         ET.SubElement(controls, "include").text = "CinevaBackground"
         ET.SubElement(controls, "include").text = "CinevaTopBar"
+    elif path == "skin.cineva/xml/MyVideoNav.xml":
+        # Unified cinematic catalogue: larger portrait cards, generous gutters,
+        # restrained metadata and a full-width grid that uses the screen.
+        panel = root.find("./controls/control[@type='panel']")
+        if panel is not None:
+            set_child_text(panel, "left", 54)
+            set_child_text(panel, "top", 252)
+            set_child_text(panel, "width", 1812)
+            set_child_text(panel, "height", 790)
+            for layout in panel.findall("./itemlayout") + panel.findall("./focusedlayout"):
+                layout.set("width", "300")
+                layout.set("height", "350")
+                for child in layout.findall("control"):
+                    if child.get("type") == "image":
+                        set_child_text(child, "left", 34)
+                        set_child_text(child, "top", 0)
+                        set_child_text(child, "width", 220)
+                        set_child_text(child, "height", 318)
+                    elif child.get("type") == "label":
+                        set_child_text(child, "left", 12)
+                        set_child_text(child, "top", 320)
+                        set_child_text(child, "width", 276)
+                        set_child_text(child, "height", 28)
+                        set_child_text(child, "align", "center")
+        title = root.find("./controls/control[@type='label']")
+        if title is not None:
+            set_child_text(title, "left", 72)
+            set_child_text(title, "top", 126)
+            set_child_text(title, "font", "font30")
+    elif path == "skin.cineva/xml/DialogVideoInfo.xml":
+        # Full-bleed detail composition with readable copy and a clear primary action.
+        for node in root.findall("./controls/control"):
+            kind = node.get("type")
+            if kind == "image":
+                if node.findtext("texture", "").startswith("$INFO[ListItem.Art(poster)]"):
+                    for tag, value in (("left", 1260), ("top", 116), ("width", 430), ("height", 650)):
+                        set_child_text(node, tag, value)
+            elif kind == "label":
+                label = node.findtext("label", "")
+                if "$INFO[ListItem.Label]" in label:
+                    for tag, value in (("left", 100), ("top", 150), ("width", 1060), ("height", 100)):
+                        set_child_text(node, tag, value)
+                    set_child_text(node, "font", "font36")
+                elif "$INFO[ListItem.Year]" in label:
+                    for tag, value in (("left", 104), ("top", 270), ("width", 1040), ("height", 44)):
+                        set_child_text(node, tag, value)
+            elif kind == "textbox":
+                for tag, value in (("left", 104), ("top", 350), ("width", 1000), ("height", 300)):
+                    set_child_text(node, tag, value)
+            elif kind == "button":
+                for tag, value in (("left", 104), ("top", 760), ("width", 300), ("height", 70)):
+                    set_child_text(node, tag, value)
+                set_child_text(node, "font", "font16")
+                set_child_text(node, "texturefocus", "focus-bar.png")
+                set_child_text(node, "texturenofocus", "black.png")
+                set_child_text(node, "textcolor", "white")
+    elif path == "skin.cineva/xml/VideoOSD.xml":
+        # Premium, low-profile playback overlay with a long seek bar and legible controls.
+        for node in root.findall("./controls/control"):
+            if node.get("type") == "image":
+                set_child_text(node, "top", 720)
+                set_child_text(node, "height", 360)
+            elif node.get("type") == "label":
+                set_child_text(node, "left", 80)
+                if "$INFO[VideoPlayer.Title]" in node.findtext("label", ""):
+                    set_child_text(node, "top", 770)
+                    set_child_text(node, "font", "font20")
+                else:
+                    set_child_text(node, "top", 826)
+            elif node.get("type") == "progress":
+                set_child_text(node, "left", 80)
+                set_child_text(node, "top", 880)
+                set_child_text(node, "width", 1760)
+            elif node.get("type") == "group":
+                set_child_text(node, "left", 80)
+                set_child_text(node, "top", 920)
+                for button in node.findall("./control[@type='button']"):
+                    set_child_text(button, "height", 64)
+                    set_child_text(button, "texturefocus", "focus-bar.png")
+                    set_child_text(button, "texturenofocus", "black.png")
+                    set_child_text(button, "textcolor", "white")
+    elif path == "skin.cineva/xml/custom11112.xml":
+        # Search hub: keep the search action prominent and align results to the catalogue grid.
+        for node in root.findall(".//control[@type='button']"):
+            set_child_text(node, "texturefocus", "focus-bar.png")
+            set_child_text(node, "texturenofocus", "black.png")
+            set_child_text(node, "textcolor", "white")
+            set_child_text(node, "focusedcolor", "white")
     return ET.tostring(root, encoding="UTF-8", xml_declaration=True)
 
 
@@ -189,7 +277,7 @@ def main():
                 "skin.cineva/addon.xml",
                 "skin.cineva/xml/Home.xml",
                 "skin.cineva/xml/DialogConfirm.xml",
-                "skin.cineva/xml/Includes.xml",
+                "skin.cineva/xml/Includes.xml",\n                "skin.cineva/xml/MyVideoNav.xml",\n                "skin.cineva/xml/DialogVideoInfo.xml",\n                "skin.cineva/xml/VideoOSD.xml",\n                "skin.cineva/xml/custom11112.xml",
                 "skin.cineva/xml/Startup.xml",
             }
             missing = sorted(required - names)
