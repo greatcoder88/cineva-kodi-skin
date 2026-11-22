@@ -25,9 +25,6 @@ jobs:
           test -f skin.cineva/addon.xml
           test -d skin.cineva/xml
           test -f skin.cineva/xml/Home.xml
-          sed -i 's/debugging="false"/debugging="true"/' skin.cineva/addon.xml
-          echo "Skin loader diagnostics enabled:"
-          grep -n "xbmc.gui.skin" skin.cineva/addon.xml
           test -f tools/script.cineva.widgets/addon.xml
           python - <<'PY'
           import xml.etree.ElementTree as ET
@@ -62,7 +59,7 @@ jobs:
           cp -a /tmp/skinshortcuts/script.skinshortcuts-3.0.1/. "$HOME/.var/app/tv.kodi.Kodi/data/addons/script.skinshortcuts/"
           mkdir -p "$HOME/.var/app/tv.kodi.Kodi/data/userdata"
           cat > "$HOME/.var/app/tv.kodi.Kodi/data/userdata/advancedsettings.xml" <<'XML'
-          <advancedsettings><loglevel hide="false">1</loglevel></advancedsettings>
+          <advancedsettings><loglevel hide="false">2</loglevel></advancedsettings>
           XML
           cat > "$HOME/.var/app/tv.kodi.Kodi/data/userdata/guisettings.xml" <<'XML'
           <settings>
