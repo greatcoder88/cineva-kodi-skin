@@ -59,11 +59,11 @@ def update_xml(data, path):
             controls.insert(hero_end + 1, topbar)
         for group in controls.findall("control"):
             if group.get("type") == "group" and group.findtext("control/label", "").startswith("$INFO[Container("):
-                set_child_text(group, "top", 136)
+                set_child_text(group, "top", 124)
                 labels = [child for child in group.findall("control") if child.get("type") == "label"]
                 if labels:
                     # Title first, metadata second: separate vertical baselines.
-                    set_child_text(labels[0], "top", 62)
+                    set_child_text(labels[0], "top", 54)
                     set_child_text(labels[0], "font", "font36")
                     set_child_text(labels[0], "height", 64)
                 if len(labels) > 1:
@@ -71,8 +71,8 @@ def update_xml(data, path):
                     set_child_text(labels[1], "height", 30)
                 for child in group.findall("control"):
                     if child.get("type") == "textbox":
-                        set_child_text(child, "top", 132)
-                        set_child_text(child, "height", 92)
+                        set_child_text(child, "top", 142)
+                        set_child_text(child, "height", 84)
             if group.get("type") == "group" and group.findtext("control/label", "").startswith("$INFO[Container("):
                 set_child_text(group, "width", 1200)
         # Three compact, consistently spaced catalogue rails; no giant dead zone between rows.

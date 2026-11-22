@@ -69,6 +69,11 @@ jobs:
               errors.append("Startup.xml must hand off to Home")
           row_positions = ((370, 406), (715, 751), (1060, 1096), (1405, 1441))
           controls = home.find("controls")
+          hero_group = next((g for g in controls.findall("control") if g.get("type") == "group" and g.findtext("control/label", "").startswith("$INFO[Container(")), None)
+          hero_title = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Label]" in c.findtext("label", "")), None) if hero_group is not None else None
+          hero_plot = hero_group.find("./control[@type='textbox']") if hero_group is not None else None
+          if hero_group is None or hero_group.findtext("top") != "124" or hero_title is None or hero_title.findtext("top") != "54" or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height")) != ("142", "84"):
+              errors.append("Home hero title and synopsis do not have the required breathing room")
           topbar_index = next((i for i, node in enumerate(list(controls))
                                if node.tag == "include" and (node.text or "").strip() == "CinevaTopBar"), -1)
           shade_index = next((i for i, node in enumerate(list(controls))
