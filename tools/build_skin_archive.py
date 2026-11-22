@@ -130,12 +130,12 @@ def update_xml(data, path):
         progress = focused.find("./control[@type='progress']")
         if any(node is None for node in (normal_image, normal_label, focused_image, progress)):
             raise SystemExit("Includes.xml has an incomplete poster layout")
-        for tag, value in (("left", 30), ("width", 190), ("height", 276)):
+        if focused_label is None:
+            focused_label = ET.fromstring(ET.tostring(normal_label, encoding="unicode"))
+        for tag, value in (("left", 30), ("top", 0), ("width", 190), ("height", 276)):
             set_child_text(normal_image, tag, value)
-        for tag, value in (("left", 0), ("top", 278), ("width", 270), ("height", 20), ("align", "center")):
+        for tag, value in (("left", 0), ("top", 278), ("width", 270), ("height", 20), ("align", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
             set_child_text(normal_label, tag, value)
-        # ListItem.IsSelected also matches remembered selections in inactive
-        # rails. Keep one title layer and scope focus art to its own container.
         stale_visibility = normal_label.find("visible")
         if stale_visibility is not None:
             normal_label.remove(stale_visibility)
@@ -143,8 +143,6 @@ def update_xml(data, path):
             set_child_text(focused_image, tag, value)
         for tag, value in (("left", 30), ("width", 190), ("top", 266)):
             set_child_text(progress, tag, value)
-        if focused_label is not None:
-            focused.remove(focused_label)
         for container_id in (9001, 9002, 9003, 9004):
             include_name = f"CinevaFocusedPosterItem{container_id}"
             previous = root.find(f"./include[@name='{include_name}']")
@@ -152,10 +150,25 @@ def update_xml(data, path):
                 root.remove(previous)
             clone = ET.fromstring(ET.tostring(focused, encoding="unicode"))
             clone.set("name", include_name)
-            clone_image = clone.find("./control[@type='image']")
-            clone_progress = clone.find("./control[@type='progress']")
-            set_child_text(clone_image, "visible", f"Control.HasFocus({container_id})")
+            # A fixed list remembers a selected item even while another rail has
+            # focus. Give that inactive selection its normal poster/title, and
+            # show the zoom/border/bright title only in the actively focused rail.
+            fallback_image = ET.fromstring(ET.tostring(normal_image, encoding="unicode"))
+            active_image = ET.fromstring(ET.tostring(focused_image, encoding="unicode"))
+            fallback_label = ET.fromstring(ET.tostring(normal_label, encoding="unicode"))
+            active_label = ET.fromstring(ET.tostring(focused_label, encoding="unicode"))
+            clone_progress = ET.fromstring(ET.tostring(progress, encoding="unicode"))
+            set_child_text(fallback_image, "visible", f"!Control.HasFocus({container_id})")
+            set_child_text(active_image, "visible", f"Control.HasFocus({container_id})")
+            set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
+            for tag, value in (("left", 0), ("top", 270), ("width", 270), ("height", 24), ("align", "center"), ("font", "font12"), ("textcolor", "white")):
+                set_child_text(active_label, tag, value)
+            set_child_text(active_label, "visible", f"Control.HasFocus({container_id})")
             set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
+            for child in list(clone.findall("control")):
+                clone.remove(child)
+            for child in (fallback_image, active_image, fallback_label, active_label, clone_progress):
+                clone.append(child)
             root.append(clone)
     elif path == "skin.cineva/xml/DialogConfirm.xml":
         default = root.find("defaultcontrol")
