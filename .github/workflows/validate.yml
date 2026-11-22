@@ -82,7 +82,7 @@ jobs:
               shelf = controls.find(f"./control[@type='fixedlist'][@id='{9000 + index}']")
               if heading is None or heading.findtext("top") != str(heading_top):
                   errors.append(f"Home widget {index} heading overlaps the shelf above")
-              if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "220":
+              if shelf is None or shelf.findtext("top") != str(shelf_top) or shelf.findtext("height") != "245":
                   errors.append(f"Home widget {index} shelf geometry is incorrect")
           nav = next((g for g in controls.findall("control") if g.get("type") == "group" and g.find("./control[@id='1001']") is not None), None)
           if nav is None or any(button.findtext("focusedcolor") != "white" or button.findtext("texturefocus") != "focus-bar.png" for button in nav.findall("./control[@type='button']")):
@@ -91,7 +91,7 @@ jobs:
               errors.append("Floating More Widgets button still obscures the fourth shelf")
           includes = ET.parse(root / "xml/Includes.xml").getroot()
           poster = includes.find("./include[@name='CinevaPosterItem']")
-          if poster is None or poster.findtext("./control[@type='image']/height") != "204" or poster.findtext("./control[@type='label']/width") != "208":
+          if poster is None or poster.findtext("./control[@type='image']/height") != "204" or poster.findtext("./control[@type='label']/width") != "230":
               errors.append("Poster image geometry is not the redesigned large-card layout")
           skin = ET.parse(root / "addon.xml").getroot()
           if skin.attrib.get("version") != "0.5.3":
