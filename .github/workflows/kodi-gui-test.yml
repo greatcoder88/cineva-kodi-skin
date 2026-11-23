@@ -133,6 +133,12 @@ jobs:
           focused_title = next((label for label in focused_poster.findall("./control[@type='label']") if label.findtext("textcolor") == "white"), None) if focused_poster is not None else None
           if focused_title is None or focused_title.findtext("font") != "font9" or focused_title.findtext("height") != "28" or focused_title.find("wrap") is not None or focused_title.findtext("wrapmultiline") != "true":
             raise SystemExit("Focused poster titles must use the compact font and wrap inside the poster card")
+          normal_progress = poster.find("./control[@type='progress']") if poster is not None else None
+          if normal_progress is None or normal_progress.findtext("visible") != "ListItem.IsResumable" or normal_progress.findtext("info") != "ListItem.PercentPlayed":
+            raise SystemExit("Normal poster cards must show progress on every resumable item")
+          focus_progresses = focused_poster.findall("./control[@type='progress']") if focused_poster is not None else []
+          if len(focus_progresses) != 2 or {node.findtext("visible") for node in focus_progresses} != {"!Control.HasFocus(9001) + ListItem.IsResumable", "Control.HasFocus(9001) + ListItem.IsResumable"}:
+            raise SystemExit("Focused poster template must retain exactly one progress strip in both focus states")
           catalogue = ET.parse("skin.cineva/xml/MyVideoNav.xml").getroot()
           panel = catalogue.find("./controls/control[@type='panel']")
           layout = panel.find("itemlayout") if panel is not None else None
@@ -196,7 +202,10 @@ jobs:
           python tools/download_test_posters.py "$POV/resources/posters"
           test -s "$POV/resources/posters/movie-1.jpg"
           test -s "$POV/resources/posters/tv-1.jpg"
-          for index in 1 2 3 4 5 6 7 8; do test -s "$POV/resources/posters/backdrop-$index.jpg"; done
+          for index in 1 2 3 4 5 6 7 8; do
+            test -s "$POV/resources/posters/backdrop-$index.jpg"
+            test -s "$POV/resources/posters/tv-backdrop-$index.jpg"
+          done
           curl -fL --retry 3 -o /tmp/script.skinshortcuts.zip https://github.com/MikeSiLVO/script.skinshortcuts/archive/refs/tags/v3.0.1.zip
           mkdir -p "$HOME/.var/app/tv.kodi.Kodi/data/addons/script.skinshortcuts"
           unzip -q /tmp/script.skinshortcuts.zip -d /tmp/skinshortcuts
@@ -426,15 +435,28 @@ jobs:
               "plugin://plugin.video.pov/?mode=build_movie_list&action=tmdb_movies_trending&name=Trending%20Movies",
               "plugin://plugin.video.pov/?mode=build_tvshow_list&action=tmdb_tv_trending&name=Trending%20TV%20Shows",
             ]
+            hero_fanart_by_row = {}
             for row, path in enumerate(paths, 1):
-              directory = rpc("Files.GetDirectory", {"directory":path,"media":"video","properties":["title","file","thumbnail","art"]})
+              directory = rpc("Files.GetDirectory", {"directory":path,"media":"video","properties":["title","file","thumbnail","art","resume"]})
               items = directory.get("files",[]) if isinstance(directory,dict) else []
               posters = [item.get("thumbnail") or (item.get("art") or {}).get("poster") or (item.get("art") or {}).get("thumb") for item in items]
+              fanarts = [(item.get("art") or {}).get("fanart") for item in items]
               poster_count = sum(1 for poster in posters if poster)
               unique_posters = len(set(poster for poster in posters if poster))
-              print(f"Widget row {row}: items={len(items)}, poster_art={poster_count}, unique_posters={unique_posters}, first={items[0] if items else None}")
-              if len(items) < 8 or poster_count < 8 or unique_posters < 8:
-                raise SystemExit(f"Widget row {row} did not return eight distinct poster-backed items")
+              unique_fanarts = len(set(fanart for fanart in fanarts if fanart))
+              resume_positions = [float((item.get("resume") or {}).get("position", 0) or 0) for item in items]
+              resumable_count = sum(position > 0 for position in resume_positions)
+              if fanarts:
+                hero_fanart_by_row[row] = fanarts[0]
+              print(f"Widget row {row}: items={len(items)}, poster_art={poster_count}, unique_posters={unique_posters}, unique_fanarts={unique_fanarts}, resumable={resumable_count}, first={items[0] if items else None}")
+              if len(items) < 8 or poster_count < 8 or unique_posters < 8 or unique_fanarts < 8:
+                raise SystemExit(f"Widget row {row} did not return eight distinct poster-backed and fanart-backed items")
+              if row in (1, 2) and resumable_count != 8:
+                raise SystemExit(f"Continue Watching row {row} must expose resume metadata for all eight items; got {resumable_count}")
+              if row in (3, 4) and resumable_count != 0:
+                raise SystemExit(f"Trending row {row} must not expose artificial resume metadata")
+            if hero_fanart_by_row.get(1) == hero_fanart_by_row.get(2):
+              raise SystemExit("Movie and TV Home rows share the same hero fanart; dynamic hero switching cannot be visually verified")
             rpc("Input.Down")  # Home navigation -> PLAY action
             rpc("Input.Down")  # PLAY action -> first poster
             deadline = time.time() + 12
@@ -448,6 +470,7 @@ jobs:
             if focused_label != "The Shawshank Redemption":
               raise SystemExit(f"Home shelf 9001 did not focus its first item: {state}")
             print("Home poster shelf focused on:", focused_label)
+            time.sleep(0.8)
             subprocess.run(["import","-display",":99","-window","root",f"artifacts/cineva-home-cycle-{cycle}.png"],check=True)
             subprocess.run(["xdotool","key","Up"],check=True)
             deadline = time.time() + 8
@@ -492,9 +515,27 @@ jobs:
               else:
                 raise SystemExit(f"D-pad Down did not reach Home row {row_number} ({expected_label}): {state}")
               print(f"Scrolled Home to row {row_number}; focused item:", state.get("currentcontrol"))
+              if row_number == 2:
+                time.sleep(0.8)
+                subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row2-focus.png"],check=True)
               if row_number == 4:
                 time.sleep(0.8)
                 subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row4-scroll.png"],check=True)
+            if cycle == 1:
+              # Compare only the unobstructed right side of the hero, excluding
+              # the title, buttons and date. This proves the actual fanart layer
+              # changes when focus moves from a movie rail to a TV rail.
+              subprocess.run(["convert","artifacts/cineva-home-cycle-1.png","-crop","760x230+1100+110","+repage","/tmp/cineva-hero-movie.png"],check=True)
+              subprocess.run(["convert","artifacts/cineva-home-row2-focus.png","-crop","760x230+1100+110","+repage","/tmp/cineva-hero-tv.png"],check=True)
+              comparison = subprocess.run(["compare","-metric","AE","/tmp/cineva-hero-movie.png","/tmp/cineva-hero-tv.png","null:"],text=True,capture_output=True,check=False)
+              metric_text = (comparison.stderr or comparison.stdout).strip().split()
+              try:
+                changed_pixels = int(metric_text[0])
+              except (IndexError, ValueError):
+                raise SystemExit(f"Could not measure Home hero artwork change: {comparison.stderr} {comparison.stdout}")
+              if changed_pixels < 5000:
+                raise SystemExit(f"Home hero fanart did not visibly change between movie and TV rails (changed pixels={changed_pixels})")
+              print(f"Verified dynamic Home hero artwork changed across movie/TV rails: {changed_pixels} pixels differ.")
           logs = log_text()
           if "EXCEPTION: Invalid setting type" in logs:
             raise SystemExit("GUI test found a widget settings type error")

@@ -45,8 +45,19 @@ MOVIE_BACKDROPS = [
     ("backdrop-7.jpg", "Oppenheimer", 872585),
     ("backdrop-8.jpg", "Barbie", 346698),
 ]
+SHOW_BACKDROPS = [
+    ("tv-backdrop-1.jpg", "Breaking Bad", 1396),
+    ("tv-backdrop-2.jpg", "Dark", 70523),
+    ("tv-backdrop-3.jpg", "Severance", 95396),
+    ("tv-backdrop-4.jpg", "The Last of Us", 100088),
+    ("tv-backdrop-5.jpg", "The Bear", 136315),
+    ("tv-backdrop-6.jpg", "Sherlock", 19885),
+    ("tv-backdrop-7.jpg", "Game of Thrones", 1399),
+    ("tv-backdrop-8.jpg", "Succession", 76331),
+]
 TMDB_API_KEY = "9d2bff12ed955c7f1f74b83187f188ae"
 TMDB_DETAILS = "https://api.themoviedb.org/3/movie/{}?api_key=" + TMDB_API_KEY
+TMDB_TV_DETAILS = "https://api.themoviedb.org/3/tv/{}?api_key=" + TMDB_API_KEY
 TMDB_IMAGE = "https://image.tmdb.org/t/p/w500/{}"
 TMDB_BACKDROP = "https://image.tmdb.org/t/p/w1280{}"
 TVMAZE_SEARCH = "https://api.tvmaze.com/singlesearch/shows?q={}"
@@ -145,13 +156,32 @@ def main():
         backdrop_hashes.add(digest)
         print("{} -> {} ({} bytes)".format(title, filename, size))
 
+    tv_backdrop_hashes = set()
+    for filename, title, show_id in SHOW_BACKDROPS:
+        details = request_json(TMDB_TV_DETAILS.format(show_id))
+        if details.get("name", "").casefold() != title.casefold():
+            raise SystemExit("TMDB returned the wrong show for {}: {}".format(
+                title, details.get("name")
+            ))
+        backdrop_path = details.get("backdrop_path")
+        if not backdrop_path:
+            raise SystemExit("TMDB returned no landscape backdrop for: " + title)
+        target = output / filename
+        digest, size = save_artwork(
+            TMDB_BACKDROP.format(backdrop_path), target, 1280, 720
+        )
+        if digest in tv_backdrop_hashes or digest in backdrop_hashes:
+            raise SystemExit("Duplicate landscape fanart returned for: " + title)
+        tv_backdrop_hashes.add(digest)
+        print("{} -> {} ({} bytes)".format(title, filename, size))
+
     if len(poster_hashes) != len(MOVIES) + len(SHOWS):
         raise SystemExit("Expected 16 distinct poster images; got {}".format(len(poster_hashes)))
     if len(backdrop_hashes) != len(MOVIE_BACKDROPS):
-        raise SystemExit("Expected eight distinct landscape backdrops; got {}".format(
-            len(backdrop_hashes)
-        ))
-    print("Downloaded and verified 16 distinct posters and eight landscape backdrops.")
+        raise SystemExit("Expected eight distinct movie backdrops; got {}".format(len(backdrop_hashes)))
+    if len(tv_backdrop_hashes) != len(SHOW_BACKDROPS):
+        raise SystemExit("Expected eight distinct TV backdrops; got {}".format(len(tv_backdrop_hashes)))
+    print("Downloaded and verified 16 distinct posters plus 16 distinct movie/TV hero backdrops.")
 
 
 if __name__ == "__main__":

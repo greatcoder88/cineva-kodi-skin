@@ -320,6 +320,19 @@ def update_xml(data, path):
             normal_label.remove(stale_wrap)
         set_child_text(normal_label, "wrapmultiline", "true")
         set_child_text(normal_label, "visible", "!ListItem.IsSelected")
+        # Netflix-style resume progress belongs to every in-progress card, not
+        # only the currently focused poster.
+        normal_progress = normal.find("./control[@type='progress']")
+        if normal_progress is None:
+            normal_progress = ET.fromstring(ET.tostring(progress, encoding="unicode"))
+            normal.append(normal_progress)
+        for tag, value in (("left", 13), ("top", 250), ("width", 196), ("height", 4)):
+            set_child_text(normal_progress, tag, value)
+        set_child_text(normal_progress, "info", "ListItem.PercentPlayed")
+        set_child_text(normal_progress, "visible", "ListItem.IsResumable")
+        set_child_text(normal_progress, "texturebg", "white.png")
+        set_child_text(normal_progress, "midtexture", "focus-bar.png")
+        set_child_text(normal_progress, "overlaytexture", "-")
         for tag, value in (("left", 9), ("top", -6), ("width", 204), ("height", 270)):
             set_child_text(focused_image, tag, value)
         focus_animation = focused_image.find("./animation[@effect='zoom']")
@@ -345,10 +358,12 @@ def update_xml(data, path):
             active_image = ET.fromstring(ET.tostring(focused_image, encoding="unicode"))
             fallback_label = ET.fromstring(ET.tostring(normal_label, encoding="unicode"))
             active_label = ET.fromstring(ET.tostring(focused_label, encoding="unicode"))
+            fallback_progress = ET.fromstring(ET.tostring(normal_progress, encoding="unicode"))
             clone_progress = ET.fromstring(ET.tostring(progress, encoding="unicode"))
             set_child_text(fallback_image, "visible", f"!Control.HasFocus({container_id})")
             set_child_text(active_image, "visible", f"Control.HasFocus({container_id})")
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
+            set_child_text(fallback_progress, "visible", f"!Control.HasFocus({container_id}) + ListItem.IsResumable")
             for tag, value in (("left", 0), ("top", 258), ("width", 222), ("height", 28), ("align", "center"), ("font", "font9"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
             stale_wrap = active_label.find("wrap")
@@ -364,7 +379,7 @@ def update_xml(data, path):
             set_child_text(focus_accent, "visible", f"Control.HasFocus({container_id})")
             for child in list(clone.findall("control")):
                 clone.remove(child)
-            for child in (fallback_image, active_image, fallback_label, active_label, clone_progress, focus_accent):
+            for child in (fallback_image, active_image, fallback_label, active_label, fallback_progress, clone_progress, focus_accent):
                 clone.append(child)
             root.append(clone)
     elif path == "skin.cineva/xml/Font.xml":
