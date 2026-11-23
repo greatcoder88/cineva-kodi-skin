@@ -143,7 +143,8 @@ def update_xml(data, path):
                             if node.tag == "control" and node.get("type") == "image"), default=-1)
             controls.insert(hero_end + 1, topbar)
         for group in controls.findall("control"):
-            if group.get("type") == "group" and group.findtext("control/label", "").startswith("$INFO[Container("):
+            source_label = group.findtext("control/label", "")
+            if group.get("type") == "group" and source_label.startswith("$INFO[Container("):
                 set_child_text(group, "top", 124)
                 labels = [child for child in group.findall("control") if child.get("type") == "label"]
                 if labels:
