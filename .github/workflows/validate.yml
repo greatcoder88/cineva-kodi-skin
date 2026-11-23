@@ -83,8 +83,8 @@ jobs:
           hero_title = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Label]" in c.findtext("label", "")), None) if hero_group is not None else None
           hero_plot = hero_group.find("./control[@type='textbox']") if hero_group is not None else None
           hero_meta = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Year]" in c.findtext("label", "")), None) if hero_group is not None else None
-          hero_eyebrow = hero_group.find("./control[@id='9190']") if hero_group is not None else None
-          if hero_group is None or hero_group.findtext("top") != "118" or hero_group.findtext("height") != "330" or hero_title is None or hero_title.findtext("top") != "24" or hero_title.findtext("height") != "84" or hero_meta is None or hero_meta.findtext("top") != "112" or hero_meta.findtext("font") != "font10" or hero_meta.findtext("textcolor") != "silver" or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("166", "72", "font13") or hero_eyebrow is None or (hero_eyebrow.findtext("top"), hero_eyebrow.findtext("height"), hero_eyebrow.findtext("label"), hero_eyebrow.findtext("font"), hero_eyebrow.findtext("textcolor")) != ("0", "24", "FEATURED", "font9", "FFE50914"):
+          hero_eyebrow = hero_group.find("./control[@id='9300']") if hero_group is not None else None
+          if hero_group is None or hero_group.findtext("top") != "118" or hero_group.findtext("height") != "330" or hero_title is None or hero_title.findtext("top") != "24" or hero_title.findtext("height") != "84" or hero_meta is None or hero_meta.findtext("top") != "112" or hero_meta.findtext("font") != "font10" or hero_meta.findtext("textcolor") != "silver" or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("166", "72", "font13") or hero_eyebrow is None or (hero_eyebrow.findtext("top"), hero_eyebrow.findtext("height"), hero_eyebrow.findtext("label"), hero_eyebrow.findtext("visible"), hero_eyebrow.findtext("font"), hero_eyebrow.findtext("textcolor")) != ("0", "24", "CONTINUE WATCHING", "String.Contains(Skin.String(Cineva.Widget1.Path),in_progress)", "font9", "FFE50914"):
               errors.append("Home hero must present title first, metadata second and synopsis third with distinct baselines")
           for group in (g for g in controls.findall("control") if g.get("type") == "group" and g.findtext("control/label", "").startswith("$INFO[Container(")):
               source_label = group.findtext("control/label", "")
@@ -94,10 +94,19 @@ jobs:
                           f"$INFO[Container({container_id}).ListItem.Duration,  •  ]"
                           f"$INFO[Container({container_id}).ListItem.Genre,  •  ]"
                           f"$INFO[Container({container_id}).ListItem.Rating,  •  ]")
-              eyebrow = group.find(f"./control[@id='{9190 + container_id - 9001}']")
+              row_index = container_id - 9000
+              eyebrow_base_id = 9300 + (row_index - 1) * 3
+              source_path = f"Skin.String(Cineva.Widget{row_index}.Path)"
+              eyebrow_specs = (
+                  ("CONTINUE WATCHING", f"String.Contains({source_path},in_progress)"),
+                  ("TRENDING NOW", f"String.Contains({source_path},trending)"),
+                  ("YOUR COLLECTION", f"!String.Contains({source_path},in_progress) + !String.Contains({source_path},trending)")
+              )
+              for offset, (expected_label, expected_visibility) in enumerate(eyebrow_specs):
+                  eyebrow = group.find(f"./control[@id='{eyebrow_base_id + offset}']")
+                  if eyebrow is None or (eyebrow.findtext("top"), eyebrow.findtext("height"), eyebrow.findtext("label"), eyebrow.findtext("visible"), eyebrow.findtext("font"), eyebrow.findtext("textcolor")) != ("0", "24", expected_label, expected_visibility, "font9", "FFE50914"):
+                      errors.append(f"Home hero {container_id} is missing its source-aware {expected_label} eyebrow")
               buttons = group.findall("./control[@type='button']")
-              if eyebrow is None or (eyebrow.findtext("top"), eyebrow.findtext("label")) != ("0", "FEATURED"):
-                  errors.append(f"Home hero {container_id} is missing its visible editorial eyebrow")
               if len(buttons) != 2 or any(button.findtext("top") != "262" for button in buttons):
                   errors.append(f"Home hero {container_id} actions are not aligned beneath the synopsis")
               if metadata is None or metadata.findtext("label") != expected:
