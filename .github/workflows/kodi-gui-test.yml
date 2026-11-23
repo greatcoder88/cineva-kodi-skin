@@ -120,8 +120,8 @@ jobs:
           expected_scroll_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118))
           if scroll_mask is None or (scroll_mask.findtext("left"), scroll_mask.findtext("top"), scroll_mask.findtext("width"), scroll_mask.findtext("height")) != ("0", "320", "1920", "430") or scroll_mask.findtext("texture") != "rail-scroll-mask.png" or scroll_mask.findtext("visible") != expected_scroll_focus:
             raise SystemExit("Home lower-row focus is missing its conditional hero-to-rail scroll mask")
-          if list(controls).index(scroll_mask) <= list(controls).index(rail_list):
-            raise SystemExit("Home scroll mask must render above the scrolling poster rails")
+          if list(controls).index(scroll_mask) >= list(controls).index(rail_list):
+            raise SystemExit("Home scroll mask must render behind the scrolling poster rails")
           home_hero_groups = [group for group in controls.findall("control")
                               if group.get("type") == "group"
                               and group.findtext("control/label", "").startswith("$INFO[Container(")]

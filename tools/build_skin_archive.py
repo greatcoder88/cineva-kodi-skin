@@ -437,10 +437,12 @@ def update_xml(data, path):
         set_child_text(scroll_mask, "visible", " | ".join(
             f"Control.HasFocus({control_id})" for control_id in lower_focus_ids
         ))
-        controls.append(scroll_mask)
-        # Keep the selected item's hero title and PLAY / MORE INFO surfaces above
-        # the mask. The mask belongs between the scrolling rail and hero overlay:
-        # it hides stale posters without dimming the active hero controls.
+        # Draw the fade over the hero background but underneath the scrolling
+        # shelves. This keeps the pinned backdrop blended while poster artwork,
+        # progress bars and the active-rail underline retain their full contrast.
+        controls.insert(list(controls).index(rail_list), scroll_mask)
+        # Hero titles and PLAY / MORE INFO controls remain above both the fade
+        # and the shelves, preserving the selected row's cinematic composition.
         home_hero_groups = [
             node for node in controls.findall("control")
             if node.get("type") == "group"
