@@ -141,6 +141,11 @@ jobs:
                   errors.append(f"Home row {container_id} MORE INFO action is not bound to its selected item")
               if any(button.findtext("texturefocus") != "focus-bar.png" for button in buttons) or [button.findtext("texturenofocus") for button in buttons] != ["white.png", "black.png"] or [button.findtext("textcolor") for button in buttons] != ["black", "white"]:
                   errors.append(f"Home row {container_id} hero actions are missing their contrasting surfaces and focus treatment")
+              if container_id == 9001:
+                  visibility = hero_group.findtext("visible", "")
+                  excluded_focus = (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118)
+                  if len(hero_groups) != 1 or any(f"!Control.HasFocus({control_id})" not in visibility for control_id in excluded_focus):
+                      errors.append("Home row 1 must use one consolidated hero group that stays visible for its poster/actions and yields to rows 2–4")
               row_group = rail_list.find(f"./control[@type='group'][@id='{9060 + container_id - 9000}']") if rail_list is not None else None
               shelf = row_group.find(f"./control[@type='fixedlist'][@id='{container_id}']") if row_group is not None else None
               if shelf is None or shelf.findtext("onup") != f"SetFocus({play_id})" or row_group.findtext("onup") != f"SetFocus({play_id})":
