@@ -223,35 +223,42 @@ def update_xml(data, path):
                 controls.remove(control)
         action_specs = ((9001, 9111, 1001), (9002, 9113, 1001),
                         (9003, 9115, 1002), (9004, 9117, 1003))
-        nav_focus = " | ".join(f"Control.HasFocus({button_id})" for button_id in range(1001, 1007))
-        action_groups = []
+        # Keep each action pair inside the matching hero group. Separate sibling
+        # groups were intermittently hidden while the vertical Home rail scrolled;
+        # nesting them with the title/synopsis makes their visibility and focus
+        # lifecycle identical for all four rows.
         for container_id, play_id, nav_target in action_specs:
             info_id = play_id + 1
-            group_id = 9100 + container_id - 9000
-            action_group = ET.Element("control", {"type": "group", "id": str(group_id)})
-            for tag, value in (("left", 72), ("top", 350), ("width", 500), ("height", 48)):
-                set_child_text(action_group, tag, value)
-            visible_terms = [f"Control.HasFocus({container_id})",
-                             f"Control.HasFocus({play_id})", f"Control.HasFocus({info_id})"]
-            if container_id == 9001:
-                visible_terms.insert(0, nav_focus)
-            set_child_text(action_group, "visible", " | ".join(visible_terms))
+            hero_groups = [
+                group for group in controls.findall("control")
+                if group.get("type") == "group"
+                and group.findtext("control/label", "").startswith(
+                    f"$INFO[Container({container_id}).ListItem.Label]")
+            ]
+            if not hero_groups:
+                raise SystemExit(f"Home.xml is missing the hero group for row {container_id}")
+            hero_group = next(
+                (group for group in hero_groups
+                 if container_id == 9001 and "Control.HasFocus(1001)" in group.findtext("visible", "")),
+                hero_groups[0]
+            )
+            set_child_text(hero_group, "height", 300)
             for button_id, label, left, width in (
                 (play_id, "PLAY", 0, 180), (info_id, "MORE INFO", 204, 230)
             ):
-                button = ET.SubElement(action_group, "control",
+                button = ET.SubElement(hero_group, "control",
                                        {"type": "button", "id": str(button_id)})
                 for tag, value in (
-                    ("left", left), ("top", 0), ("width", width), ("height", 44),
+                    ("left", left), ("top", 226), ("width", width), ("height", 44),
                     ("label", label), ("font", "font12"),
                     ("onup", f"SetFocus({nav_target})"),
                     ("ondown", f"SetFocus({container_id})"),
-                    ("onleft", f"SetFocus({play_id})" if button_id == play_id else f"SetFocus({play_id})"),
+                    ("onleft", f"SetFocus({play_id})"),
                     ("onright", f"SetFocus({info_id})"),
                     ("texturefocus", "focus-bar.png"),
                     ("texturenofocus", "white.png" if button_id == play_id else "black.png"),
-                    ("textcolor", "black" if button_id == play_id else "white"), ("focusedcolor", "white"),
-                    ("align", "center"), ("aligny", "center")
+                    ("textcolor", "black" if button_id == play_id else "white"),
+                    ("focusedcolor", "white"), ("align", "center"), ("aligny", "center")
                 ):
                     set_child_text(button, tag, value)
                 if button_id == play_id:
@@ -260,16 +267,6 @@ def update_xml(data, path):
                 else:
                     set_child_text(button, "onclick", f"SetFocus({container_id})")
                     ET.SubElement(button, "onclick").text = "Action(Info)"
-            action_groups.append(action_group)
-        first_heading = next((node for node in controls.findall("control")
-                              if node.get("type") == "label"
-                              and node.findtext("label") == "$INFO[Skin.String(Cineva.Widget1.Name)]"), None)
-        if first_heading is None:
-            raise SystemExit("Home.xml is missing the first widget heading")
-        insert_at = list(controls).index(first_heading)
-        for action_group in action_groups:
-            controls.insert(insert_at, action_group)
-            insert_at += 1
         # Keep hero metadata visible while either action button in its row is focused.
         for hero_group in controls.findall("control"):
             if hero_group.get("type") != "group":
