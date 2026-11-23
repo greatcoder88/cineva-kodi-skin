@@ -40,6 +40,7 @@ jobs:
           # Validate the packaged runtime fixes; never silently patch the test copy.
           python - <<'PY'
           import xml.etree.ElementTree as ET
+          from pathlib import Path
           home = ET.parse("skin.cineva/xml/Home.xml").getroot()
           if home.findtext("defaultcontrol") != "1001":
             raise SystemExit("Home must default to HOME navigation control 1001")
@@ -73,6 +74,15 @@ jobs:
           top_texture = top_shade.find("texture") if top_shade is not None else None
           if top_shade is None or top_shade.findtext("height") != "320" or top_texture is None or top_texture.attrib.get("flipy") != "true":
             raise SystemExit("Home hero is missing the mirrored top fade for readable navigation")
+          left_shade = controls.find("./control[@id='9105']")
+          if left_shade is None or (left_shade.findtext("left"), left_shade.findtext("top"), left_shade.findtext("width"), left_shade.findtext("height")) != ("0", "0", "1920", "440") or left_shade.findtext("texture") != "hero-left-shade.png":
+            raise SystemExit("Home hero is missing its cinematic left-side contrast overlay")
+          left_shade_index = next((i for i, node in enumerate(list(controls)) if node is left_shade), -1)
+          if left_shade_index < 0 or topbar_index <= left_shade_index:
+            raise SystemExit("CINÉVA top navigation must be layered above the hero contrast overlay")
+          overlay_data = Path("skin.cineva/media/hero-left-shade.png").read_bytes()
+          if overlay_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(overlay_data[16:20], "big"), int.from_bytes(overlay_data[20:24], "big")) != (1920, 440):
+            raise SystemExit("Packaged hero contrast texture is missing or has the wrong dimensions")
           rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
           if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("48", "404", "1824", "676") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "220"):
             raise SystemExit("Home rails are missing their vertical scrolling viewport")
