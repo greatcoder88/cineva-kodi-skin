@@ -70,7 +70,7 @@ def main():
         # Continue Watching fixtures need real resume metadata so the skin's
         # progress strips are exercised in both normal and focused card states.
         if "in_progress" in action:
-            item.setResumePoint(90 + index * 80, 900)
+            item.getVideoInfoTag().setResumePoint(90 + index * 80, 900)
         item.setProperty("Cineva.TestFixture", "true")
         entries.append((play_url, item, False))
     xbmcplugin.addDirectoryItems(handle, entries, len(entries))
