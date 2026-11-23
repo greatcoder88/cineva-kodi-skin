@@ -144,7 +144,7 @@ jobs:
               raise SystemExit(f"Home row {container_id} is missing its two nested hero actions")
             if buttons[0].findtext("onclick") != f"PlayMedia($INFO[Container({container_id}).ListItem.File])" or buttons[1].findtext("onclick") != f"SetFocus({container_id})" or [node.text for node in buttons[1].findall("onclick")] != [f"SetFocus({container_id})", "Action(Info)"]:
               raise SystemExit(f"Home row {container_id} hero actions are not wired to its selected item")
-            if [button.findtext("texturenofocus") for button in buttons] != ["white.png", "black.png"] or [button.findtext("textcolor") for button in buttons] != ["black", "white"]:
+            if [button.findtext("texturenofocus") for button in buttons] != ["white.png", "black.png"] or [button.findtext("textcolor") for button in buttons] != ["black", "gainsboro"]:
               raise SystemExit(f"Home row {container_id} hero actions do not have contrasting Play/Info surfaces")
             row_group = rail_list.find(f"./control[@type='group'][@id='{9060 + container_id - 9000}']") if rail_list is not None else None
             shelf = row_group.find(f"./control[@type='fixedlist'][@id='{container_id}']") if row_group is not None else None
@@ -182,7 +182,7 @@ jobs:
           if controls.find("./control[@id='9010']") is not None:
             raise SystemExit("Obstructive floating More Widgets button is still present")
           fonts = ET.parse("skin.cineva/xml/Font.xml").getroot()
-          for font_file in ("Lato-Regular.ttf", "Lato-Semibold.ttf", "Lato-Black.ttf"):
+          for font_file in ("Lato-Regular.ttf", "Lato-SemiBold.ttf", "Lato-Black.ttf"):
             if not (Path("skin.cineva/fonts") / font_file).is_file():
               raise SystemExit(f"Bundled Lato font is missing: {font_file}")
           compact_font = next((node for node in fonts.findall("./fontset[@id='Default']/font") if node.findtext("name") == "font9"), None)
@@ -198,7 +198,7 @@ jobs:
             raise SystemExit("Focused poster titles must sit below the focused artwork without overlap")
           focused_image = next((node for node in focused_poster.findall("./control[@type='image']") if node.findtext("visible") == "Control.HasFocus(9001)"), None) if focused_poster is not None else None
           focused_zoom = focused_image.find("./animation[@effect='zoom']") if focused_image is not None else None
-          if focused_image is None or (focused_image.findtext("left"), focused_image.findtext("top"), focused_image.findtext("width"), focused_image.findtext("height")) != ("13", "-7", "260", "347") or focused_zoom is None or (focused_zoom.get("end"), focused_zoom.get("time")) != ("105", "150"):
+          if focused_image is None or (focused_image.findtext("left"), focused_image.findtext("top"), focused_image.findtext("width"), focused_image.findtext("height")) != ("13", "-7", "260", "347") or focused_zoom is None or (focused_zoom.get("end"), focused_zoom.get("time")) != ("108", "180"):
             raise SystemExit("Focused poster artwork must use the title-safe 106% selection zoom")
           normal_progress = poster.find("./control[@type='progress']") if poster is not None else None
           if normal_progress is None or normal_progress.findtext("visible") != "ListItem.IsResumable" or normal_progress.findtext("info") != "ListItem.PercentPlayed" or normal_progress.findtext("texturebg") != "resume-track.png":
