@@ -128,7 +128,7 @@ jobs:
               raise SystemExit(f"Home widget {index} cannot navigate down to the next rail")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
               if (layout.get("width"), layout.get("height")) != ("270", "352"):
-                raise SystemExit(f"Home widget {index} poster card geometry is not the 8-up layout")
+                raise SystemExit(f"Home widget {index} poster card geometry is not the 6-up layout")
           if controls.find("./control[@id='9010']") is not None:
             raise SystemExit("Obstructive floating More Widgets button is still present")
           fonts = ET.parse("skin.cineva/xml/Font.xml").getroot()
@@ -203,7 +203,7 @@ jobs:
       - name: Install GUI runtime
         run: |
           sudo apt-get update
-          sudo apt-get install -y flatpak xvfb xdotool imagemagick jq fonts-dejavu-core
+          sudo apt-get install -y flatpak xvfb xdotool imagemagick jq fonts-dejavu-core psmisc
 
       - name: Install Kodi Piers beta from Flathub beta
         run: |
@@ -257,9 +257,34 @@ jobs:
           done
           test -s "$HOME/.var/app/tv.kodi.Kodi/data/userdata/guisettings.xml" || (echo "Kodi did not create guisettings.xml"; exit 1)
           kill "$FIRST_PID" 2>/dev/null || true
+          # Flatpak's launcher can exit while its app process remains alive.
+          # Stop the whole app, then wait for Kodi and its JSON-RPC listener to release.
+          flatpak kill --user tv.kodi.Kodi 2>/dev/null || true
           pkill -x kodi.bin 2>/dev/null || true
           pkill -x kodi-x11 2>/dev/null || true
-          sleep 3
+          for attempt in $(seq 1 30); do
+            if ! pgrep -x kodi.bin >/dev/null && ! pgrep -x kodi-x11 >/dev/null; then break; fi
+            sleep 1
+          done
+          if pgrep -x kodi.bin >/dev/null || pgrep -x kodi-x11 >/dev/null; then
+            echo "A first-boot Kodi process survived shutdown:"
+            ps -ef | grep -E '[k]odi.bin|[k]odi-x11'
+            exit 1
+          fi
+          # Port 9090 is Kodi's raw TCP JSON-RPC endpoint. A stale listener
+          # prevents the new instance from exposing the API used by GUI tests.
+          if ss -ltnp | grep -q ':9090'; then
+            echo "Releasing stale JSON-RPC listener before the test launch:"
+            ss -ltnp | grep ':9090' || true
+            sudo fuser -k 9090/tcp || true
+            sleep 2
+          fi
+          if ss -ltnp | grep -q ':9090'; then
+            echo "Port 9090 is still occupied after cleanup:"
+            ss -ltnp | grep ':9090' || true
+            exit 1
+          fi
+          sleep 2
           python - <<'PY'
           import xml.etree.ElementTree as ET
           from pathlib import Path
@@ -286,6 +311,9 @@ jobs:
           done
           pgrep -a -x kodi.bin || pgrep -a -x kodi-x11 || (echo "Kodi process did not start"; exit 1)
           sleep 15
+          # Preserve a real Kodi framebuffer even if JSON-RPC fails before UI assertions.
+          import -display :99 -window root artifacts/kodi-before-jsonrpc.png
+          ss -ltnp > artifacts/listeners-before-jsonrpc.txt || true
           python - <<'PY'
           import json, socket, time, subprocess
           def rpc(method, params=None):
