@@ -130,14 +130,14 @@ jobs:
               errors.append("Packaged lower-row scroll mask is missing")
           else:
               scroll_mask_data = scroll_mask_path.read_bytes()
-              if scroll_mask_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(scroll_mask_data[16:20], "big"), int.from_bytes(scroll_mask_data[20:24], "big")) != (1920, 190):
-                  errors.append("Packaged lower-row scroll mask must be a 1920x190 PNG")
+              if scroll_mask_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(scroll_mask_data[16:20], "big"), int.from_bytes(scroll_mask_data[20:24], "big")) != (1920, 80):
+                  errors.append("Packaged lower-row scroll mask must be a 1920x80 PNG")
           rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
           if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("105", "410", "1710", "670") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "220"):
               errors.append("Home rails must use the pinned-hero vertical scrolling viewport")
           scroll_mask = controls.find("./control[@id='9107']")
           expected_scroll_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118))
-          if scroll_mask is None or (scroll_mask.findtext("left"), scroll_mask.findtext("top"), scroll_mask.findtext("width"), scroll_mask.findtext("height")) != ("0", "350", "1920", "190") or scroll_mask.findtext("texture") != "rail-scroll-mask.png" or scroll_mask.findtext("visible") != expected_scroll_focus:
+          if scroll_mask is None or (scroll_mask.findtext("left"), scroll_mask.findtext("top"), scroll_mask.findtext("width"), scroll_mask.findtext("height")) != ("0", "350", "1920", "80") or scroll_mask.findtext("texture") != "rail-scroll-mask.png" or scroll_mask.findtext("visible") != expected_scroll_focus:
               errors.append("Home lower-row focus must fade the previous rail beneath the pinned hero")
           if rail_list is not None and scroll_mask is not None and list(controls).index(scroll_mask) <= list(controls).index(rail_list):
               errors.append("Home lower-row scroll mask must render above the scrolling poster rails")
@@ -188,6 +188,15 @@ jobs:
                   errors.append(f"Home widget {index} is missing its active-rail accent")
               if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("38", "390") or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
                   errors.append(f"Home widget {index} shelf geometry or upward focus route is incorrect")
+              later_focus_ids = [control_id for later_index in range(index + 1, 5)
+                                 for control_id in (9000 + later_index, 9111 + (later_index - 1) * 2, 9112 + (later_index - 1) * 2)]
+              if later_focus_ids:
+                  hide_previous_row = " + ".join(f"!Control.HasFocus({control_id})" for control_id in later_focus_ids)
+                  expected_visibility = f"!String.IsEmpty(Skin.String(Cineva.Widget{index}.Path)) + {hide_previous_row}"
+                  if heading is None or heading.findtext("visible") != expected_visibility or shelf is None or shelf.findtext("visible") != expected_visibility:
+                      errors.append(f"Home widget {index} must stop painting passed shelves while preserving its grouplist row")
+              elif heading is None or heading.findtext("visible") != f"!String.IsEmpty(Skin.String(Cineva.Widget{index}.Path))" or shelf is None or shelf.findtext("visible") != f"!String.IsEmpty(Skin.String(Cineva.Widget{index}.Path))":
+                  errors.append("Final Home shelf must remain visible without a later-row focus gate")
               if shelf is not None:
                   expected_down = f"SetFocus({9000 + index + 1})" if index < 4 else "SetFocus(1001)"
                   if shelf.findtext("ondown") != expected_down or row_group.findtext("ondown") != expected_down:

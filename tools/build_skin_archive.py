@@ -57,8 +57,8 @@ def hero_bottom_fade_png():
 
 def rail_scroll_mask_png():
     """Create a compact fade that hides the previous rail beneath the pinned hero."""
-    width, height = 1920, 190
-    fade_height = 12
+    width, height = 1920, 80
+    fade_height = 16
     pixels = bytearray()
     for y in range(height):
         position = min(1.0, y / fade_height)
@@ -370,6 +370,22 @@ def update_xml(data, path):
             focused_include = focused_layout.find("include") if focused_layout is not None else None
             if focused_include is not None:
                 focused_include.text = f"CinevaFocusedPosterItem{9000 + index}"
+            # Keep already-passed shelves in the grouplist's geometry, but stop
+            # painting their posters/titles behind the pinned hero when a later
+            # rail becomes active. This preserves the preview on initial Home.
+            later_focus_ids = []
+            for later_index in range(index + 1, 5):
+                later_container = 9000 + later_index
+                later_play = 9111 + (later_index - 1) * 2
+                later_focus_ids.extend((later_container, later_play, later_play + 1))
+            if later_focus_ids:
+                hide_previous_row = " + ".join(
+                    f"!Control.HasFocus({control_id})" for control_id in later_focus_ids
+                )
+                heading_visibility = heading.findtext("visible", "")
+                shelf_visibility = shelf.findtext("visible", "")
+                set_child_text(heading, "visible", f"{heading_visibility} + {hide_previous_row}")
+                set_child_text(shelf, "visible", f"{shelf_visibility} + {hide_previous_row}")
             # A restrained red underline makes the active Home rail legible
             # even when the selected poster is several cards into the row.
             row_accent = ET.Element("control", {"type": "image"})
@@ -387,11 +403,11 @@ def update_xml(data, path):
         if previous_scroll_mask is not None:
             controls.remove(previous_scroll_mask)
         controls.insert(first_row_index, rail_list)
-        # When a lower rail is focused, the vertical grouplist scrolls the first
-        # row behind the pinned hero. Fade it fully away instead of leaving a
-        # clipped strip of posters and titles between the hero and active shelf.
+        # When a lower rail is focused, hide the already-passed shelf contents
+        # while retaining their row-group geometry. A short seam fade then keeps
+        # the pinned hero connected to the active shelf without a blank black band.
         scroll_mask = ET.Element("control", {"type": "image", "id": "9107"})
-        for tag, value in (("left", 0), ("top", 350), ("width", 1920), ("height", 190)):
+        for tag, value in (("left", 0), ("top", 350), ("width", 1920), ("height", 80)):
             set_child_text(scroll_mask, tag, value)
         ET.SubElement(scroll_mask, "texture").text = "rail-scroll-mask.png"
         set_child_text(scroll_mask, "aspectratio", "scale")

@@ -110,7 +110,7 @@ jobs:
             raise SystemExit("Home rails are missing their vertical scrolling viewport")
           scroll_mask = controls.find("./control[@id='9107']")
           expected_scroll_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118))
-          if scroll_mask is None or (scroll_mask.findtext("left"), scroll_mask.findtext("top"), scroll_mask.findtext("width"), scroll_mask.findtext("height")) != ("0", "350", "1920", "190") or scroll_mask.findtext("texture") != "rail-scroll-mask.png" or scroll_mask.findtext("visible") != expected_scroll_focus:
+          if scroll_mask is None or (scroll_mask.findtext("left"), scroll_mask.findtext("top"), scroll_mask.findtext("width"), scroll_mask.findtext("height")) != ("0", "350", "1920", "80") or scroll_mask.findtext("texture") != "rail-scroll-mask.png" or scroll_mask.findtext("visible") != expected_scroll_focus:
             raise SystemExit("Home lower-row focus is missing its conditional hero-to-rail scroll mask")
           if list(controls).index(scroll_mask) <= list(controls).index(rail_list):
             raise SystemExit("Home scroll mask must render above the scrolling poster rails")
@@ -120,7 +120,7 @@ jobs:
           if not home_hero_groups or any(list(controls).index(group) <= list(controls).index(scroll_mask) for group in home_hero_groups):
             raise SystemExit("Home hero titles and actions must render above the lower-row scroll mask")
           scroll_mask_data = Path("skin.cineva/media/rail-scroll-mask.png").read_bytes()
-          if scroll_mask_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(scroll_mask_data[16:20], "big"), int.from_bytes(scroll_mask_data[20:24], "big")) != (1920, 190):
+          if scroll_mask_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(scroll_mask_data[16:20], "big"), int.from_bytes(scroll_mask_data[20:24], "big")) != (1920, 80):
             raise SystemExit("Packaged lower-row scroll mask is missing or has the wrong dimensions")
           rail_children = [child for child in rail_list if child.tag == "control"] if rail_list is not None else []
           if len(rail_children) != 4:
@@ -156,6 +156,15 @@ jobs:
               raise SystemExit(f"Home widget {index} is missing its active-rail accent")
             if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("38", "390") or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
               raise SystemExit(f"Home widget {index} shelf geometry or upward focus route is incorrect")
+            later_focus_ids = [control_id for later_index in range(index + 1, 5)
+                               for control_id in (9000 + later_index, 9111 + (later_index - 1) * 2, 9112 + (later_index - 1) * 2)]
+            if later_focus_ids:
+              hide_previous_row = " + ".join(f"!Control.HasFocus({control_id})" for control_id in later_focus_ids)
+              expected_visibility = f"!String.IsEmpty(Skin.String(Cineva.Widget{index}.Path)) + {hide_previous_row}"
+              if heading is None or heading.findtext("visible") != expected_visibility or shelf is None or shelf.findtext("visible") != expected_visibility:
+                raise SystemExit(f"Home widget {index} still paints a passed shelf behind the pinned hero")
+            elif heading is None or heading.findtext("visible") != f"!String.IsEmpty(Skin.String(Cineva.Widget{index}.Path))" or shelf is None or shelf.findtext("visible") != f"!String.IsEmpty(Skin.String(Cineva.Widget{index}.Path))":
+              raise SystemExit("Final Home shelf must remain visible without a later-row focus gate")
             expected_down = f"SetFocus({9000 + index + 1})" if index < 4 else "SetFocus(1001)"
             if shelf.findtext("ondown") != expected_down or row_group.findtext("ondown") != expected_down:
               raise SystemExit(f"Home widget {index} cannot navigate down to the next rail")
@@ -678,7 +687,7 @@ jobs:
                 # The scrolled-away first rail must disappear completely beneath
                 # the pinned hero, rather than leaving a clipped poster strip.
                 scroll_mask_signal = subprocess.run(
-                  ["convert","artifacts/cineva-home-row2-focus.png","-crop","1920x146+0+394","-colorspace","gray","-format","%[fx:mean]","info:"],
+                  ["convert","artifacts/cineva-home-row2-focus.png","-crop","1920x36+0+394","-colorspace","gray","-format","%[fx:mean]","info:"],
                   text=True,capture_output=True,check=True
                 )
                 try:
@@ -750,7 +759,7 @@ jobs:
                 time.sleep(0.8)
                 subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row4-scroll.png"],check=True)
                 row4_mask_signal = subprocess.run(
-                  ["convert","artifacts/cineva-home-row4-scroll.png","-crop","1920x146+0+394","-colorspace","gray","-format","%[fx:mean]","info:"],
+                  ["convert","artifacts/cineva-home-row4-scroll.png","-crop","1920x36+0+394","-colorspace","gray","-format","%[fx:mean]","info:"],
                   text=True,capture_output=True,check=True
                 )
                 try:
