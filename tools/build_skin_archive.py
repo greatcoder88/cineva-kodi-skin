@@ -3,10 +3,38 @@
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 import os
+import struct
 import tempfile
+import zlib
+import binascii
 import xml.etree.ElementTree as ET
 
 ARCHIVE = Path(__file__).resolve().parents[1] / "skin.cineva-0.5.3.zip"
+
+
+def png_chunk(kind, payload):
+    return (struct.pack(">I", len(payload)) + kind + payload
+            + struct.pack(">I", binascii.crc32(kind + payload) & 0xFFFFFFFF))
+
+
+def hero_left_shade_png():
+    """Create a deterministic left-to-right hero overlay with a soft bottom fade."""
+    width, height = 1920, 440
+    horizontal_alpha = [
+        int(224 * max(0.0, 1.0 - x / (width * 0.82)) ** 1.55)
+        for x in range(width)
+    ]
+    pixels = bytearray()
+    for y in range(height):
+        vertical = max(0.0, 1.0 - y / (height - 1)) ** 0.8
+        pixels.append(0)  # PNG filter: None
+        for base_alpha in horizontal_alpha:
+            pixels.extend((5, 7, 12, int(base_alpha * vertical)))
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return (b"\\x89PNG\\r\\n\\x1a\\n"
+            + png_chunk(b"IHDR", header)
+            + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
+            + png_chunk(b"IEND", b""))
 
 
 def set_child_text(parent, tag, value):
@@ -81,6 +109,15 @@ def update_xml(data, path):
         top_texture.text = "hero-shade.png"
         set_child_text(top_shade, "aspectratio", "scale")
         controls.insert(list(controls).index(hero_shade) + 1, top_shade)
+        previous_left_shade = controls.find("./control[@id='9105']")
+        if previous_left_shade is not None:
+            controls.remove(previous_left_shade)
+        left_shade = ET.Element("control", {"type": "image", "id": "9105"})
+        for tag, value in (("left", 0), ("top", 0), ("width", 1920), ("height", 440)):
+            set_child_text(left_shade, tag, value)
+        ET.SubElement(left_shade, "texture").text = "hero-left-shade.png"
+        set_child_text(left_shade, "aspectratio", "scale")
+        controls.insert(list(controls).index(top_shade) + 1, left_shade)
         # Keep navigation above full-bleed artwork; it was previously painted first
         # and then hidden beneath the hero image controls.
         topbar = next((node for node in list(controls)
@@ -491,14 +528,23 @@ def main():
             missing = sorted(required - names)
             if missing:
                 raise SystemExit("Skin archive is missing: " + ", ".join(missing))
+            generated_overlay = "skin.cineva/media/hero-left-shade.png"
+            overlay_written = False
+            overlay_data = hero_left_shade_png()
             for info in source.infolist():
                 data = source.read(info.filename)
+                if info.filename == generated_overlay:
+                    data = overlay_data
+                    overlay_written = True
                 if info.filename in required:
                     updated = update_xml(data, info.filename)
                     if updated != data:
                         changed.append(info.filename)
                     data = updated
                 target.writestr(info, data)
+            if not overlay_written:
+                target.writestr(generated_overlay, overlay_data, compress_type=ZIP_DEFLATED)
+                changed.append(generated_overlay)
         if changed:
             os.replace(tmp, ARCHIVE)
             print("Updated release ZIP entries:", ", ".join(changed))
