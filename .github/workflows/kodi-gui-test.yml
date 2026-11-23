@@ -141,11 +141,11 @@ jobs:
             raise SystemExit("Home poster and title layout is missing its redesigned large-card geometry or readable title font")
           focused_poster = includes.find("./include[@name='CinevaFocusedPosterItem9001']")
           focused_title = next((label for label in focused_poster.findall("./control[@type='label']") if label.findtext("textcolor") == "white"), None) if focused_poster is not None else None
-          if focused_title is None or focused_title.findtext("font") != "font9" or focused_title.findtext("top") != "252" or focused_title.findtext("height") != "26" or focused_title.find("wrap") is not None or focused_title.findtext("wrapmultiline") != "true":
+          if focused_title is None or focused_title.findtext("font") != "font9" or focused_title.findtext("top") != "310" or focused_title.findtext("height") != "34" or focused_title.find("wrap") is not None or focused_title.findtext("wrapmultiline") != "true":
             raise SystemExit("Focused poster titles must sit below the focused artwork without overlap")
           focused_image = next((node for node in focused_poster.findall("./control[@type='image']") if node.findtext("visible") == "Control.HasFocus(9001)"), None) if focused_poster is not None else None
           focused_zoom = focused_image.find("./animation[@effect='zoom']") if focused_image is not None else None
-          if focused_image is None or (focused_image.findtext("left"), focused_image.findtext("top"), focused_image.findtext("width"), focused_image.findtext("height")) != ("9", "-6", "204", "248") or focused_zoom is None or (focused_zoom.get("end"), focused_zoom.get("time")) != ("106", "150"):
+          if focused_image is None or (focused_image.findtext("left"), focused_image.findtext("top"), focused_image.findtext("width"), focused_image.findtext("height")) != ("14", "-7", "242", "314") or focused_zoom is None or (focused_zoom.get("end"), focused_zoom.get("time")) != ("106", "150"):
             raise SystemExit("Focused poster artwork must use the title-safe 106% selection zoom")
           normal_progress = poster.find("./control[@type='progress']") if poster is not None else None
           if normal_progress is None or normal_progress.findtext("visible") != "ListItem.IsResumable" or normal_progress.findtext("info") != "ListItem.PercentPlayed" or normal_progress.findtext("texturebg") != "resume-track.png":
@@ -155,7 +155,7 @@ jobs:
             raise SystemExit("Focused poster template must retain one charcoal-track progress strip in both focus states")
           row_focus = ET.parse("skin.cineva/xml/Includes.xml").getroot().find("./include[@name='CinevaFocusedPosterItem9001']")
           focus_accent = next((node for node in row_focus.findall("./control[@type='image']") if node.findtext("texture") == "focus-bar.png"), None) if row_focus is not None else None
-          if focus_accent is None or (focus_accent.findtext("left"), focus_accent.findtext("top"), focus_accent.findtext("width"), focus_accent.findtext("height")) != ("75", "280", "72", "4"):
+          if focus_accent is None or (focus_accent.findtext("left"), focus_accent.findtext("top"), focus_accent.findtext("width"), focus_accent.findtext("height")) != ("99", "346", "72", "4"):
             raise SystemExit("Focused poster selection accent must be a short centered underline")
           focus_border = Path("skin.cineva/media/poster-focus.png").read_bytes()
           if focus_border[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(focus_border[16:20], "big"), int.from_bytes(focus_border[20:24], "big")) != (8, 8):
