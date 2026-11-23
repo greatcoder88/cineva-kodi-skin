@@ -63,7 +63,7 @@ def rail_scroll_mask_png():
     for y in range(height):
         position = min(1.0, y / fade_height)
         smooth = position * position * (3.0 - 2.0 * position)
-        alpha = int(242 * smooth)
+        alpha = int(255 * smooth)
         pixels.append(0)  # PNG filter: None
         for _ in range(width):
             pixels.extend((5, 7, 12, alpha))
@@ -400,6 +400,18 @@ def update_xml(data, path):
             f"Control.HasFocus({control_id})" for control_id in lower_focus_ids
         ))
         controls.append(scroll_mask)
+        # Keep the selected item's hero title and PLAY / MORE INFO surfaces above
+        # the mask. The mask belongs between the scrolling rail and hero overlay:
+        # it hides stale posters without dimming the active hero controls.
+        home_hero_groups = [
+            node for node in controls.findall("control")
+            if node.get("type") == "group"
+            and node.findtext("control/label", "").startswith("$INFO[Container(")
+        ]
+        for hero_group in home_hero_groups:
+            controls.remove(hero_group)
+        for hero_group in home_hero_groups:
+            controls.append(hero_group)
         nav_group = next((node for node in controls.findall("control") if node.get("type") == "group" and node.find("./control[@id='1001']") is not None), None)
         if nav_group is not None:
             for button in nav_group.findall("./control[@type='button']"):

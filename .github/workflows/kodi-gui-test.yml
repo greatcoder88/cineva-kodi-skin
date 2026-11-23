@@ -114,6 +114,11 @@ jobs:
             raise SystemExit("Home lower-row focus is missing its conditional hero-to-rail scroll mask")
           if list(controls).index(scroll_mask) <= list(controls).index(rail_list):
             raise SystemExit("Home scroll mask must render above the scrolling poster rails")
+          home_hero_groups = [group for group in controls.findall("control")
+                              if group.get("type") == "group"
+                              and group.findtext("control/label", "").startswith("$INFO[Container(")]
+          if not home_hero_groups or any(list(controls).index(group) <= list(controls).index(scroll_mask) for group in home_hero_groups):
+            raise SystemExit("Home hero titles and actions must render above the lower-row scroll mask")
           scroll_mask_data = Path("skin.cineva/media/rail-scroll-mask.png").read_bytes()
           if scroll_mask_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(scroll_mask_data[16:20], "big"), int.from_bytes(scroll_mask_data[20:24], "big")) != (1920, 190):
             raise SystemExit("Packaged lower-row scroll mask is missing or has the wrong dimensions")
@@ -673,7 +678,7 @@ jobs:
                 # The scrolled-away first rail must disappear completely beneath
                 # the pinned hero, rather than leaving a clipped poster strip.
                 scroll_mask_signal = subprocess.run(
-                  ["convert","artifacts/cineva-home-row2-focus.png","-crop","1920x190+0+350","-colorspace","gray","-format","%[fx:mean]","info:"],
+                  ["convert","artifacts/cineva-home-row2-focus.png","-crop","1920x146+0+394","-colorspace","gray","-format","%[fx:mean]","info:"],
                   text=True,capture_output=True,check=True
                 )
                 try:
@@ -745,7 +750,7 @@ jobs:
                 time.sleep(0.8)
                 subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row4-scroll.png"],check=True)
                 row4_mask_signal = subprocess.run(
-                  ["convert","artifacts/cineva-home-row4-scroll.png","-crop","1920x190+0+350","-colorspace","gray","-format","%[fx:mean]","info:"],
+                  ["convert","artifacts/cineva-home-row4-scroll.png","-crop","1920x146+0+394","-colorspace","gray","-format","%[fx:mean]","info:"],
                   text=True,capture_output=True,check=True
                 )
                 try:

@@ -141,6 +141,11 @@ jobs:
               errors.append("Home lower-row focus must fade the previous rail beneath the pinned hero")
           if rail_list is not None and scroll_mask is not None and list(controls).index(scroll_mask) <= list(controls).index(rail_list):
               errors.append("Home lower-row scroll mask must render above the scrolling poster rails")
+          home_hero_groups = [group for group in controls.findall("control")
+                              if group.get("type") == "group"
+                              and group.findtext("control/label", "").startswith("$INFO[Container(")]
+          if scroll_mask is not None and (not home_hero_groups or any(list(controls).index(group) <= list(controls).index(scroll_mask) for group in home_hero_groups)):
+              errors.append("Home hero titles and actions must render above the lower-row scroll mask")
           rail_children = [child for child in rail_list if child.tag == "control"] if rail_list is not None else []
           if len(rail_children) != 4:
               errors.append("Home scrolling viewport must contain four grouped heading/shelf rows")
