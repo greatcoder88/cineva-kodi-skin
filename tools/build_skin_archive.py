@@ -39,7 +39,7 @@ def hero_left_shade_png():
 
 def hero_bottom_fade_png():
     """Create a full-width fade that cleanly separates hero artwork from the shelves."""
-    width, height = 1920, 320
+    width, height = 1920, 430
     pixels = bytearray()
     for y in range(height):
         position = y / (height - 1)
@@ -57,13 +57,13 @@ def hero_bottom_fade_png():
 
 def rail_scroll_mask_png():
     """Create a compact fade that hides the previous rail beneath the pinned hero."""
-    width, height = 1920, 220
-    fade_height = 30
+    width, height = 1920, 190
+    fade_height = 12
     pixels = bytearray()
     for y in range(height):
         position = min(1.0, y / fade_height)
         smooth = position * position * (3.0 - 2.0 * position)
-        alpha = int(255 * smooth)
+        alpha = int(242 * smooth)
         pixels.append(0)  # PNG filter: None
         for _ in range(width):
             pixels.extend((5, 7, 12, alpha))
@@ -159,9 +159,9 @@ def update_xml(data, path):
         # Cinematic hero: give artwork room to breathe and fade it cleanly into the catalogue.
         for control in controls.findall("control"):
             if control.get("type") == "image" and control.findtext("texture", "").startswith("$INFO[Container("):
-                set_child_text(control, "height", 520)
+                set_child_text(control, "height", 660)
             if control.get("type") == "image" and control.findtext("texture") == "hero-shade.png":
-                set_child_text(control, "height", 570)
+                set_child_text(control, "height", 660)
         # Add a mirrored top fade so the logo/date remain legible over bright fanart.
         hero_shade = next((node for node in controls.findall("control")
                            if node.get("type") == "image" and node.findtext("texture") == "hero-shade.png"), None)
@@ -190,7 +190,7 @@ def update_xml(data, path):
         if previous_bottom_shade is not None:
             controls.remove(previous_bottom_shade)
         bottom_shade = ET.Element("control", {"type": "image", "id": "9106"})
-        for tag, value in (("left", 0), ("top", 270), ("width", 1920), ("height", 320)):
+        for tag, value in (("left", 0), ("top", 320), ("width", 1920), ("height", 430)):
             set_child_text(bottom_shade, tag, value)
         ET.SubElement(bottom_shade, "texture").text = "hero-bottom-fade.png"
         set_child_text(bottom_shade, "aspectratio", "scale")
@@ -391,7 +391,7 @@ def update_xml(data, path):
         # row behind the pinned hero. Fade it fully away instead of leaving a
         # clipped strip of posters and titles between the hero and active shelf.
         scroll_mask = ET.Element("control", {"type": "image", "id": "9107"})
-        for tag, value in (("left", 0), ("top", 398), ("width", 1920), ("height", 220)):
+        for tag, value in (("left", 0), ("top", 350), ("width", 1920), ("height", 190)):
             set_child_text(scroll_mask, tag, value)
         ET.SubElement(scroll_mask, "texture").text = "rail-scroll-mask.png"
         set_child_text(scroll_mask, "aspectratio", "scale")
