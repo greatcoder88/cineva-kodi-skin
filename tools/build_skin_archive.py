@@ -312,7 +312,7 @@ def update_xml(data, path):
                     ("focusedcolor", "white"), ("align", "center"), ("aligny", "center")
                 ):
                     set_child_text(button, tag, value)
-                set_child_text(button, "textcolor", "white" if button_id == play_id else "gainsboro")
+                set_child_text(button, "textcolor", "black" if button_id == play_id else "gainsboro")
                 if button_id == play_id:
                     set_child_text(button, "onclick",
                                    f"PlayMedia($INFO[Container({container_id}).ListItem.File])")
