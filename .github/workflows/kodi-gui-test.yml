@@ -106,10 +106,14 @@ jobs:
           if len(rail_children) != 4:
             raise SystemExit("Home scrolling viewport must contain four grouped heading/shelf rows")
           for container_id, play_id, nav_target in ((9001, 9111, 1001), (9002, 9113, 1001), (9003, 9115, 1002), (9004, 9117, 1003)):
-            action_group = controls.find(f"./control[@id='{9100 + container_id - 9000}']")
-            buttons = action_group.findall("./control[@type='button']") if action_group is not None else []
-            if len(buttons) != 2 or [button.findtext("label") for button in buttons] != ["PLAY", "MORE INFO"]:
-              raise SystemExit(f"Home row {container_id} is missing its two hero actions")
+            hero_groups = [group for group in controls.findall("control")
+                           if group.get("type") == "group"
+                           and group.findtext("control/label", "").startswith(f"$INFO[Container({container_id}).ListItem.Label]")]
+            hero_group = next((group for group in hero_groups
+                               if group.find(f"./control[@id='{play_id}']") is not None), None)
+            buttons = hero_group.findall("./control[@type='button']") if hero_group is not None else []
+            if hero_group is None or len(buttons) != 2 or [button.findtext("label") for button in buttons] != ["PLAY", "MORE INFO"]:
+              raise SystemExit(f"Home row {container_id} is missing its two nested hero actions")
             if buttons[0].findtext("onclick") != f"PlayMedia($INFO[Container({container_id}).ListItem.File])" or buttons[1].findtext("onclick") != f"SetFocus({container_id})" or [node.text for node in buttons[1].findall("onclick")] != [f"SetFocus({container_id})", "Action(Info)"]:
               raise SystemExit(f"Home row {container_id} hero actions are not wired to its selected item")
             if [button.findtext("texturenofocus") for button in buttons] != ["white.png", "black.png"] or [button.findtext("textcolor") for button in buttons] != ["black", "white"]:
