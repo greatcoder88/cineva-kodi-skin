@@ -519,17 +519,18 @@ jobs:
             time.sleep(0.8)
             subprocess.run(["import","-display",":99","-window","root",f"artifacts/cineva-home-cycle-{cycle}.png"],check=True)
             if cycle == 1:
-              # The progress bars sit at the bottom edge of the first poster row.
-              # Measure the rendered red signal in that exact 4px strip, rather
-              # than assuming that valid XML means the controls are visible.
-              signal = subprocess.run(["convert",f"artifacts/cineva-home-cycle-{cycle}.png","-crop","1824x4+48+692","-fx","r-g","-format","%[fx:mean]","info:"],text=True,capture_output=True,check=True)
+              # The poster progress indicators are rendered immediately below
+              # the artwork at y=656..663 in the 1920x1080 GUI capture. Measure
+              # saturated-red pixels in that narrow strip; the previous y=692
+              # crop sampled the title/empty area and produced a false failure.
+              signal = subprocess.run(["convert",f"artifacts/cineva-home-cycle-{cycle}.png","-crop","1824x8+48+656","-fx","((r>0.4)&&(r>g*1.6)&&(r>b*1.4))?1:0","-format","%[fx:mean]","info:"],text=True,capture_output=True,check=True)
               try:
                 progress_signal = float(signal.stdout.strip())
               except ValueError:
                 raise SystemExit(f"Could not measure rendered Continue Watching progress bars: {signal.stdout!r}")
-              if progress_signal < 0.10:
-                raise SystemExit(f"Continue Watching progress bars are not visibly rendered in the Home screenshot (red signal={progress_signal:.4f})")
-              print(f"Verified live Continue Watching progress bars in the Home screenshot (red signal={progress_signal:.4f}).")
+              if progress_signal < 0.04:
+                raise SystemExit(f"Continue Watching progress bars are not visibly rendered in the Home screenshot (red pixel coverage={progress_signal:.4f})")
+              print(f"Verified live Continue Watching progress bars in the Home screenshot (red pixel coverage={progress_signal:.4f}).")
             subprocess.run(["xdotool","key","Up"],check=True)
             deadline = time.time() + 8
             while time.time() < deadline:
