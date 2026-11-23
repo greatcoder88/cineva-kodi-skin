@@ -270,9 +270,9 @@ def update_xml(data, path):
             raise SystemExit("Includes.xml has an incomplete poster layout")
         if focused_label is None:
             focused_label = ET.fromstring(ET.tostring(normal_label, encoding="unicode"))
-        for tag, value in (("left", 33), ("top", 0), ("width", 156), ("height", 234)):
+        for tag, value in (("left", 21), ("top", 0), ("width", 180), ("height", 260)):
             set_child_text(normal_image, tag, value)
-        for tag, value in (("left", 0), ("top", 236), ("width", 222), ("height", 44), ("align", "center"), ("font", "font9"), ("textcolor", "lightgrey")):
+        for tag, value in (("left", 0), ("top", 263), ("width", 222), ("height", 19), ("align", "center"), ("font", "font9"), ("textcolor", "lightgrey")):
             set_child_text(normal_label, tag, value)
         stale_visibility = normal_label.find("visible")
         if stale_visibility is not None:
@@ -282,14 +282,14 @@ def update_xml(data, path):
             normal_label.remove(stale_wrap)
         set_child_text(normal_label, "wrapmultiline", "true")
         set_child_text(normal_label, "visible", "!ListItem.IsSelected")
-        for tag, value in (("left", 29), ("top", -6), ("width", 164), ("height", 246)):
+        for tag, value in (("left", 17), ("top", -6), ("width", 188), ("height", 272)):
             set_child_text(focused_image, tag, value)
         focus_animation = focused_image.find("./animation[@effect='zoom']")
         if focus_animation is None:
             raise SystemExit("Includes.xml focused poster is missing its zoom animation")
-        focus_animation.set("end", "108")
+        focus_animation.set("end", "110")
         focus_animation.set("time", "150")
-        for tag, value in (("left", 33), ("width", 156), ("top", 225)):
+        for tag, value in (("left", 21), ("width", 180), ("top", 245)):
             set_child_text(progress, tag, value)
         if focused_label is not None and focused_label in list(focused):
             focused.remove(focused_label)
@@ -311,7 +311,7 @@ def update_xml(data, path):
             set_child_text(fallback_image, "visible", f"!Control.HasFocus({container_id})")
             set_child_text(active_image, "visible", f"Control.HasFocus({container_id})")
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
-            for tag, value in (("left", 0), ("top", 236), ("width", 222), ("height", 44), ("align", "center"), ("font", "font9"), ("textcolor", "white")):
+            for tag, value in (("left", 0), ("top", 263), ("width", 222), ("height", 19), ("align", "center"), ("font", "font9"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
             stale_wrap = active_label.find("wrap")
             if stale_wrap is not None:
@@ -320,7 +320,7 @@ def update_xml(data, path):
             set_child_text(active_label, "visible", f"Control.HasFocus({container_id})")
             set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
             focus_accent = ET.Element("control", {"type": "image"})
-            for tag, value in (("left", 33), ("top", 230), ("width", 156), ("height", 4)):
+            for tag, value in (("left", 21), ("top", 250), ("width", 180), ("height", 4)):
                 set_child_text(focus_accent, tag, value)
             set_child_text(focus_accent, "texture", "focus-bar.png")
             set_child_text(focus_accent, "visible", f"Control.HasFocus({container_id})")
