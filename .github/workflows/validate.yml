@@ -244,6 +244,8 @@ jobs:
                       if (layout.get("width"), layout.get("height")) != ("285", "390"):
                           errors.append(f"Home widget {index} poster cards do not use the 6-up rail geometry")
           nav = next((g for g in controls.findall("control") if g.get("type") == "group" and g.find("./control[@id='1001']") is not None), None)
+          if nav is None or (nav.findtext("left"), nav.findtext("top"), nav.findtext("width"), nav.findtext("height")) != ("280", "32", "1080", "48"):
+              errors.append("Home navigation must share the horizontal brand/date baseline")
           if nav is None or any(button.findtext("focusedcolor") != "white" or button.findtext("texturefocus") != "focus-bar.png" for button in nav.findall("./control[@type='button']")):
               errors.append("Home navigation buttons need visible explicit textures and text color")
           if nav is not None:
