@@ -261,7 +261,7 @@ def update_xml(data, path):
         # Each row is a single grouplist child so its non-focusable heading cannot
         # intercept Up from the nested fixedlist before the shelf's explicit route.
         rail_list = ET.Element("control", {"type": "grouplist", "id": "9050"})
-        for tag, value in (("left", 48), ("top", 404), ("width", 1824), ("height", 676)):
+        for tag, value in (("left", 48), ("top", 430), ("width", 1824), ("height", 650)):
             set_child_text(rail_list, tag, value)
         set_child_text(rail_list, "orientation", "vertical")
         set_child_text(rail_list, "itemgap", 12)
@@ -291,7 +291,7 @@ def update_xml(data, path):
             set_child_text(heading, "top", 0)
             set_child_text(heading, "width", 1100)
             set_child_text(heading, "height", 40)
-            set_child_text(heading, "font", "font18")
+            set_child_text(heading, "font", "font16")
             set_child_text(shelf, "left", 0)
             set_child_text(shelf, "top", 46)
             set_child_text(shelf, "width", 1824)
