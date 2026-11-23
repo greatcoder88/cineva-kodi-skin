@@ -8,6 +8,7 @@ import tempfile
 import zlib
 import binascii
 import xml.etree.ElementTree as ET
+import urllib.request
 
 ARCHIVE = Path(__file__).resolve().parents[1] / "skin.cineva-0.5.3.zip"
 
@@ -225,6 +226,7 @@ def update_xml(data, path):
                     set_child_text(labels[0], "top", 0)
                     set_child_text(labels[0], "font", "font36")
                     set_child_text(labels[0], "height", 84)
+                    set_child_text(labels[0], "textcolor", "white")
                     set_child_text(labels[0], "width", 1220)
                 if len(labels) > 1:
                     # Kodi's INFO prefix is emitted only when that field has a value.
@@ -241,12 +243,14 @@ def update_xml(data, path):
                     set_child_text(labels[1], "top", 88)
                     set_child_text(labels[1], "height", 34)
                     set_child_text(labels[1], "font", "font10")
-                    set_child_text(labels[1], "textcolor", "lightgrey")
+                    set_child_text(labels[1], "textcolor", "silver")
                 for child in group.findall("control"):
                     if child.get("type") == "textbox":
-                        set_child_text(child, "top", 132)
-                        set_child_text(child, "height", 66)
+                        set_child_text(child, "top", 142)
+                        set_child_text(child, "height", 72)
+                        set_child_text(child, "width", 900)
                         set_child_text(child, "font", "font13")
+                        set_child_text(child, "textcolor", "white")
             if group.get("type") == "group" and group.findtext("control/label", "").startswith("$INFO[Container("):
                 set_child_text(group, "width", 1200)
         # Hero actions follow whichever Home rail supplies the current hero item.
@@ -291,12 +295,12 @@ def update_xml(data, path):
                 if old_button.get("id") in {str(play_id), str(info_id)}:
                     hero_group.remove(old_button)
             for button_id, label, left, width in (
-                (play_id, "PLAY", 0, 180), (info_id, "MORE INFO", 204, 230)
+                (play_id, "PLAY", 0, 190), (info_id, "MORE INFO", 214, 236)
             ):
                 button = ET.SubElement(hero_group, "control",
                                        {"type": "button", "id": str(button_id)})
                 for tag, value in (
-                    ("left", left), ("top", 226), ("width", width), ("height", 48),
+                    ("left", left), ("top", 238), ("width", width), ("height", 54),
                     ("label", label), ("font", "font10"),
                     ("onup", f"SetFocus({nav_target})"),
                     ("ondown", f"SetFocus({container_id})"),
@@ -308,6 +312,7 @@ def update_xml(data, path):
                     ("focusedcolor", "white"), ("align", "center"), ("aligny", "center")
                 ):
                     set_child_text(button, tag, value)
+                set_child_text(button, "textcolor", "white" if button_id == play_id else "gainsboro")
                 if button_id == play_id:
                     set_child_text(button, "onclick",
                                    f"PlayMedia($INFO[Container({container_id}).ListItem.File])")
@@ -574,29 +579,23 @@ def update_xml(data, path):
         if compact is None:
             compact = ET.SubElement(fontset, "font")
         set_child_text(compact, "name", "font9")
-        set_child_text(compact, "filename", "Roboto-Regular.ttf")
-        set_child_text(compact, "size", 16)
-        poster_title = next((node for node in fontset.findall("font") if node.findtext("name") == "font10"), None)
-        if poster_title is None:
-            poster_title = ET.SubElement(fontset, "font")
-        set_child_text(poster_title, "name", "font10")
-        set_child_text(poster_title, "filename", "Roboto-Medium.ttf")
-        # Slightly larger card titles improve ten-foot readability without changing
-        # the six-poster rail geometry or focus/navigation behavior.
-        set_child_text(poster_title, "size", 20)
-        # A deliberate ten-foot hierarchy: compact labels, quiet metadata,
-        # clear shelf headings and a commanding cinematic title.
+        set_child_text(compact, "filename", "Lato-Regular.ttf")
+        set_child_text(compact, "size", 17)
+        # Replace the generic Roboto stack with a consistent Lato family:
+        # Black for cinematic headlines, Semibold for navigation/shelves,
+        # and Regular for long-form synopsis and supporting copy.
         scale = {
-            "font10": ("Roboto-Medium.ttf", 20),
-            "font12": ("Roboto-Regular.ttf", 21),
-            "font13": ("Roboto-Regular.ttf", 24),
-            "font14": ("Roboto-Regular.ttf", 27),
-            "font16": ("Roboto-Medium.ttf", 30),
-            "font18": ("Roboto-Medium.ttf", 36),
-            "font20": ("Roboto-Medium.ttf", 40),
-            "font24": ("Roboto-Bold.ttf", 48),
-            "font30": ("Roboto-Bold.ttf", 60),
-            "font36": ("Roboto-Bold.ttf", 74),
+            "font9": ("Lato-Regular.ttf", 17),
+            "font10": ("Lato-Semibold.ttf", 20),
+            "font12": ("Lato-Semibold.ttf", 19),
+            "font13": ("Lato-Regular.ttf", 24),
+            "font14": ("Lato-Regular.ttf", 27),
+            "font16": ("Lato-Semibold.ttf", 29),
+            "font18": ("Lato-Semibold.ttf", 34),
+            "font20": ("Lato-Semibold.ttf", 40),
+            "font24": ("Lato-Black.ttf", 48),
+            "font30": ("Lato-Black.ttf", 60),
+            "font36": ("Lato-Black.ttf", 70),
         }
         for name, (filename, size) in scale.items():
             node = next((item for item in fontset.findall("font")
@@ -757,7 +756,18 @@ def main():
             missing = sorted(required - names)
             if missing:
                 raise SystemExit("Skin archive is missing: " + ", ".join(missing))
+            # Bundle the licensed Lato typeface into the installable skin. Fetch
+            # pinned static files from the Google Fonts repository during build.
+            font_base = "https://raw.githubusercontent.com/google/fonts/main/ofl/lato/"
+            font_assets = {
+                "skin.cineva/fonts/Lato-Regular.ttf": "Lato-Regular.ttf",
+                "skin.cineva/fonts/Lato-Semibold.ttf": "Lato-Semibold.ttf",
+                "skin.cineva/fonts/Lato-Black.ttf": "Lato-Black.ttf",
+                "skin.cineva/fonts/OFL.txt": "OFL.txt",
+            }
             generated_assets = {
+                **{path: urllib.request.urlopen(font_base + filename, timeout=30).read()
+                   for path, filename in font_assets.items()},
                 "skin.cineva/media/hero-left-shade.png": hero_left_shade_png(),
                 "skin.cineva/media/hero-bottom-fade.png": hero_bottom_fade_png(),
                 "skin.cineva/media/rail-scroll-mask.png": rail_scroll_mask_png(),
