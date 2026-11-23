@@ -182,7 +182,7 @@ jobs:
               shelf = row_controls[2] if len(row_controls) == 3 else None
               if row_group is None or row_group.get("type") != "group" or row_group.get("id") != str(9060 + index) or row_group.findtext("height") != "430":
                   errors.append(f"Home widget {index} must be one grouped row inside the scrolling viewport")
-              if heading is None or heading.get("type") != "label" or heading.findtext("label") != f"$INFO[Skin.String(Cineva.Widget{index}.Name)]" or (heading.findtext("top"), heading.findtext("height")) != ("0", "32") or heading.findtext("font") != "font16":
+              if heading is None or heading.get("type") != "label" or heading.findtext("label") != f"$INFO[Skin.String(Cineva.Widget{index}.Name)]" or (heading.findtext("top"), heading.findtext("height")) != ("0", "32") or heading.findtext("font") != "font18":
                   errors.append(f"Home widget {index} heading is missing from its row group")
               if row_accent is None or row_accent.get("type") != "image" or (row_accent.findtext("left"), row_accent.findtext("top"), row_accent.findtext("width"), row_accent.findtext("height")) != ("0", "34", "58", "3") or row_accent.findtext("texture") != "focus-bar.png" or row_accent.findtext("visible") != f"Control.HasFocus({9000 + index})":
                   errors.append(f"Home widget {index} is missing its active-rail accent")
