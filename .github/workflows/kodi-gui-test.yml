@@ -590,6 +590,7 @@ jobs:
       - name: Collect Kodi logs and runtime details
         if: always()
         run: |
+          mkdir -p artifacts
           cp /tmp/kodi-stdout.log artifacts/ 2>/dev/null || true
           cp /tmp/xvfb.log artifacts/ 2>/dev/null || true
           LOG="$(find "$HOME/.var/app/tv.kodi.Kodi" -type f -name kodi.log -print -quit 2>/dev/null || true)"
