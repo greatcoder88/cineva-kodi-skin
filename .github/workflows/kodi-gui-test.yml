@@ -598,6 +598,49 @@ jobs:
               if row_number == 2:
                 time.sleep(0.8)
                 subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row2-focus.png"],check=True)
+                # The PLAY surface must remain visible when row 2, rather than
+                # row 1, supplies the hero. A white unselected button occupies
+                # this exact 180x44 region in the 1920x1080 Home layout.
+                signal = subprocess.run([
+                  "convert", "artifacts/cineva-home-row2-focus.png",
+                  "-crop", "180x44+72+350", "-colorspace", "gray",
+                  "-threshold", "82%", "-format", "%[fx:mean]", "info:"
+                ], text=True, capture_output=True, check=True)
+                try:
+                  white_coverage = float(signal.stdout.strip())
+                except ValueError:
+                  raise SystemExit(f"Could not measure row-2 hero PLAY surface: {signal.stdout!r}")
+                if white_coverage < 0.55:
+                  raise SystemExit(f"Row-2 hero PLAY surface is not visibly rendered (white coverage={white_coverage:.3f})")
+                print(f"Verified row-2 hero PLAY surface in rendered screenshot (white coverage={white_coverage:.3f}).")
+                subprocess.run(["xdotool","key","Up"],check=True)
+                deadline = time.time() + 8
+                while time.time() < deadline:
+                  state = gui()
+                  if state.get("currentcontrol",{}).get("label","").strip().upper() == "PLAY":
+                    break
+                  time.sleep(0.25)
+                else:
+                  raise SystemExit(f"Row-2 Up did not focus its PLAY action: {state}")
+                subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row2-actions.png"],check=True)
+                subprocess.run(["xdotool","key","Right"],check=True)
+                deadline = time.time() + 8
+                while time.time() < deadline:
+                  state = gui()
+                  if state.get("currentcontrol",{}).get("label","").strip().upper() == "MORE INFO":
+                    break
+                  time.sleep(0.25)
+                else:
+                  raise SystemExit(f"Row-2 Right did not focus MORE INFO: {state}")
+                subprocess.run(["xdotool","key","Down"],check=True)
+                deadline = time.time() + 8
+                while time.time() < deadline:
+                  state = gui()
+                  if state.get("currentcontrol",{}).get("label","").strip() == "Breaking Bad":
+                    break
+                  time.sleep(0.25)
+                else:
+                  raise SystemExit(f"Row-2 More Info Down did not return to its poster: {state}")
               if row_number == 4:
                 time.sleep(0.8)
                 subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row4-scroll.png"],check=True)
