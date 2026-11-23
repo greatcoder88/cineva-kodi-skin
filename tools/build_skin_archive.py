@@ -378,14 +378,17 @@ def update_xml(data, path):
                 later_container = 9000 + later_index
                 later_play = 9111 + (later_index - 1) * 2
                 later_focus_ids.extend((later_container, later_play, later_play + 1))
+            base_row_visibility = f"!String.IsEmpty(Skin.String(Cineva.Widget{index}.Path))"
+            # Reset source visibility first so repeated archive builds do not
+            # append duplicate Kodi boolean conditions to the same control.
+            set_child_text(heading, "visible", base_row_visibility)
+            set_child_text(shelf, "visible", base_row_visibility)
             if later_focus_ids:
                 hide_previous_row = " + ".join(
                     f"!Control.HasFocus({control_id})" for control_id in later_focus_ids
                 )
-                heading_visibility = heading.findtext("visible", "")
-                shelf_visibility = shelf.findtext("visible", "")
-                set_child_text(heading, "visible", f"{heading_visibility} + {hide_previous_row}")
-                set_child_text(shelf, "visible", f"{shelf_visibility} + {hide_previous_row}")
+                set_child_text(heading, "visible", f"{base_row_visibility} + {hide_previous_row}")
+                set_child_text(shelf, "visible", f"{base_row_visibility} + {hide_previous_row}")
             # A restrained red underline makes the active Home rail legible
             # even when the selected poster is several cards into the row.
             row_accent = ET.Element("control", {"type": "image"})
