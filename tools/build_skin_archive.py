@@ -52,6 +52,22 @@ def resume_track_png():
             + png_chunk(b"IEND", b""))
 
 
+def poster_focus_png():
+    """Create a restrained crimson focus frame instead of a stark white poster box."""
+    width, height = 8, 8
+    pixels = bytearray()
+    for y in range(height):
+        pixels.append(0)  # PNG filter: None
+        for x in range(width):
+            edge = 1 <= x <= 6 and 1 <= y <= 6 and (x <= 2 or x >= 5 or y <= 2 or y >= 5)
+            pixels.extend((229, 9, 20, 188) if edge else (0, 0, 0, 0))
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return (b"\\x89PNG\\r\\n\\x1a\\n"
+            + png_chunk(b"IHDR", header)
+            + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
+            + png_chunk(b"IEND", b""))
+
+
 def set_child_text(parent, tag, value):
     node = parent.find(tag)
     if node is None:
@@ -576,6 +592,7 @@ def main():
             generated_assets = {
                 "skin.cineva/media/hero-left-shade.png": hero_left_shade_png(),
                 "skin.cineva/media/resume-track.png": resume_track_png(),
+                "skin.cineva/media/poster-focus.png": poster_focus_png(),
             }
             written_assets = set()
             for info in source.infolist():

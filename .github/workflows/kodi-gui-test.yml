@@ -157,6 +157,9 @@ jobs:
           focus_accent = next((node for node in row_focus.findall("./control[@type='image']") if node.findtext("texture") == "focus-bar.png"), None) if row_focus is not None else None
           if focus_accent is None or (focus_accent.findtext("left"), focus_accent.findtext("top"), focus_accent.findtext("width"), focus_accent.findtext("height")) != ("75", "288", "72", "4"):
             raise SystemExit("Focused poster selection accent must be a short centered underline")
+          focus_border = Path("skin.cineva/media/poster-focus.png").read_bytes()
+          if focus_border[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(focus_border[16:20], "big"), int.from_bytes(focus_border[20:24], "big")) != (8, 8):
+            raise SystemExit("Packaged crimson poster-focus texture is missing or has the wrong dimensions")
           resume_track = Path("skin.cineva/media/resume-track.png").read_bytes()
           if resume_track[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(resume_track[16:20], "big"), int.from_bytes(resume_track[20:24], "big")) != (8, 8):
             raise SystemExit("Packaged charcoal resume-track texture is missing or has the wrong dimensions")

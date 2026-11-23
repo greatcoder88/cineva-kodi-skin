@@ -167,6 +167,9 @@ jobs:
           compact_font = next((node for node in fonts.findall("./fontset[@id='Default']/font") if node.findtext("name") == "font9"), None)
           if compact_font is None or (compact_font.findtext("filename"), compact_font.findtext("size")) != ("Roboto-Regular.ttf", "16"):
               errors.append("Home poster font9 must be defined at a readable 16px size")
+          focus_border = pathlib.Path("skin.cineva/media/poster-focus.png").read_bytes()
+          if focus_border[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(focus_border[16:20], "big"), int.from_bytes(focus_border[20:24], "big")) != (8, 8):
+              errors.append("Packaged crimson poster-focus texture is missing or has the wrong dimensions")
           resume_track = pathlib.Path("skin.cineva/media/resume-track.png").read_bytes()
           if resume_track[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(resume_track[16:20], "big"), int.from_bytes(resume_track[20:24], "big")) != (8, 8):
               errors.append("Packaged charcoal resume-track texture is missing or has the wrong dimensions")
