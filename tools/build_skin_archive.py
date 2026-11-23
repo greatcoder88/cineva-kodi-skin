@@ -243,6 +243,9 @@ def update_xml(data, path):
                 hero_groups[0]
             )
             set_child_text(hero_group, "height", 300)
+            for old_button in list(hero_group.findall("control")):
+                if old_button.get("id") in {str(play_id), str(info_id)}:
+                    hero_group.remove(old_button)
             for button_id, label, left, width in (
                 (play_id, "PLAY", 0, 180), (info_id, "MORE INFO", 204, 230)
             ):
