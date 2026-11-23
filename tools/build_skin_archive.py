@@ -227,6 +227,7 @@ def update_xml(data, path):
         # groups were intermittently hidden while the vertical Home rail scrolled;
         # nesting them with the title/synopsis makes their visibility and focus
         # lifecycle identical for all four rows.
+        home_default_hero_group = None
         for container_id, play_id, nav_target in action_specs:
             info_id = play_id + 1
             hero_groups = [
@@ -242,6 +243,15 @@ def update_xml(data, path):
                  if container_id == 9001 and "Control.HasFocus(1001)" in group.findtext("visible", "")),
                 hero_groups[0]
             )
+            if container_id == 9001:
+                # Row 1 originally had separate navigation-focused and poster-focused
+                # hero groups. The buttons lived only in the former, so Up from the
+                # first shelf focused invisible controls. Consolidate both states into
+                # one group and remove the duplicate title/synopsis group.
+                home_default_hero_group = hero_group
+                for duplicate in hero_groups:
+                    if duplicate is not hero_group:
+                        controls.remove(duplicate)
             set_child_text(hero_group, "height", 300)
             for old_button in list(hero_group.findall("control")):
                 if old_button.get("id") in {str(play_id), str(info_id)}:
@@ -284,6 +294,14 @@ def update_xml(data, path):
             play_id = 9111 + (container_id - 9001) * 2
             set_child_text(hero_group, "visible",
                            f"Control.HasFocus({container_id}) | Control.HasFocus({play_id}) | Control.HasFocus({play_id + 1})")
+        if home_default_hero_group is None:
+            raise SystemExit("Home row 1 lost its consolidated hero/action group")
+        # Keep the first hero active on initial Home/navigation focus and while
+        # row 1 or its two actions are focused. Switch cleanly to rows 2–4 without
+        # leaving two hero groups visible or hiding row 1's PLAY/MORE INFO controls.
+        row1_exclusions = (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118)
+        set_child_text(home_default_hero_group, "visible",
+                       " + ".join(f"!Control.HasFocus({control_id})" for control_id in row1_exclusions))
         # Keep the cinematic hero pinned while the four Home rails scroll as one catalogue.
         # Each row is a single grouplist child so its non-focusable heading cannot
         # intercept Up from the nested fixedlist before the shelf's explicit route.
