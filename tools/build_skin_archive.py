@@ -351,12 +351,12 @@ def update_xml(data, path):
         set_child_text(normal_progress, "texturebg", "resume-track.png")
         set_child_text(normal_progress, "midtexture", "focus-bar.png")
         set_child_text(normal_progress, "overlaytexture", "-")
-        for tag, value in (("left", 9), ("top", -6), ("width", 204), ("height", 270)):
+        for tag, value in (("left", 9), ("top", -6), ("width", 204), ("height", 256)):
             set_child_text(focused_image, tag, value)
         focus_animation = focused_image.find("./animation[@effect='zoom']")
         if focus_animation is None:
             raise SystemExit("Includes.xml focused poster is missing its zoom animation")
-        focus_animation.set("end", "110")
+        focus_animation.set("end", "106")
         focus_animation.set("time", "150")
         for tag, value in (("left", 13), ("width", 196), ("top", 250)):
             set_child_text(progress, tag, value)
@@ -382,7 +382,7 @@ def update_xml(data, path):
             set_child_text(active_image, "visible", f"Control.HasFocus({container_id})")
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
             set_child_text(fallback_progress, "visible", f"!Control.HasFocus({container_id}) + ListItem.IsResumable")
-            for tag, value in (("left", 0), ("top", 258), ("width", 222), ("height", 28), ("align", "center"), ("font", "font9"), ("textcolor", "white")):
+            for tag, value in (("left", 0), ("top", 260), ("width", 222), ("height", 26), ("align", "center"), ("font", "font9"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
             stale_wrap = active_label.find("wrap")
             if stale_wrap is not None:

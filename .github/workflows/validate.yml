@@ -190,11 +190,13 @@ jobs:
                   errors.append(f"Home row {container_id} focused poster is missing its red selection accent")
               if len(focus_labels) != 2 or focus_labels[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_labels[1].findtext("visible") != f"Control.HasFocus({container_id})":
                   errors.append(f"Home row {container_id} must keep exactly one correctly styled title visible")
-              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width"), focus_labels[1].findtext("wrapmultiline")) != ("font9", "258", "28", "222", "true") or focus_labels[1].find("wrap") is not None:
+              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width"), focus_labels[1].findtext("wrapmultiline")) != ("font9", "260", "26", "222", "true") or focus_labels[1].find("wrap") is not None:
                   errors.append(f"Home row {container_id} focused title must use the compact, multiline card-title treatment")
               zoom = focus_images[1].find("./animation[@effect='zoom']") if len(focus_images) > 1 else None
-              if zoom is None or (zoom.get("end"), zoom.get("time")) != ("110", "150"):
-                  errors.append(f"Home row {container_id} focused poster needs the stronger, smooth selection zoom")
+              if len(focus_images) > 1 and (focus_images[1].findtext("left"), focus_images[1].findtext("top"), focus_images[1].findtext("width"), focus_images[1].findtext("height")) != ("9", "-6", "204", "256"):
+                  errors.append(f"Home row {container_id} focused artwork must stop above its title baseline")
+              if zoom is None or (zoom.get("end"), zoom.get("time")) != ("106", "150"):
+                  errors.append(f"Home row {container_id} focused poster needs the restrained, title-safe selection zoom")
               expected_progress_visibility = {
                   f"!Control.HasFocus({container_id}) + ListItem.IsResumable",
                   f"Control.HasFocus({container_id}) + ListItem.IsResumable",
