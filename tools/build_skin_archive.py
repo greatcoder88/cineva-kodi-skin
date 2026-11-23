@@ -483,6 +483,11 @@ def update_xml(data, path):
             controls.append(hero_group)
         nav_group = next((node for node in controls.findall("control") if node.get("type") == "group" and node.find("./control[@id='1001']") is not None), None)
         if nav_group is not None:
+            # Put the menu on the same horizontal baseline as the CINÉVA wordmark
+            # instead of stacking it underneath. The right-aligned date remains
+            # anchored at the far edge of the same 1080p-safe header row.
+            for tag, value in (("left", 280), ("top", 32), ("width", 1080), ("height", 48)):
+                set_child_text(nav_group, tag, value)
             for button in nav_group.findall("./control[@type='button']"):
                 # Text-first navigation: remove the heavy black button slabs.
                 action_targets = {"1001": "9111", "1002": "9115", "1003": "9117"}
