@@ -159,7 +159,7 @@ jobs:
                           if node.get("type") == "image" and node.findtext("texture", "").startswith("$INFO[Container(")]
           hero_shade = next((node for node in controls.findall("control")
                              if node.get("type") == "image" and node.findtext("texture") == "hero-shade.png"), None)
-          if len(hero_artwork) != 4 or any(node.findtext("height") != "660" for node in hero_artwork) or hero_shade is None or hero_shade.findtext("height") != "660":
+          if len(hero_artwork) != 4 or any(node.findtext("height") != "750" for node in hero_artwork) or hero_shade is None or hero_shade.findtext("height") != "750":
               errors.append("Home hero fanart and shade must extend through the lower-row transition")
           for container_id, play_id in ((9002, 9113), (9003, 9115), (9004, 9117)):
               artwork = next((node for node in hero_artwork if f"Container({container_id})" in node.findtext("texture", "")), None)
