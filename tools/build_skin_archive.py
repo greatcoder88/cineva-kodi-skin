@@ -75,7 +75,7 @@ def update_xml(data, path):
         if previous_top_shade is not None:
             controls.remove(previous_top_shade)
         top_shade = ET.Element("control", {"type": "image", "id": "9100"})
-        for tag, value in (("left", 0), ("top", 0), ("width", 1920), ("height", 260)):
+        for tag, value in (("left", 0), ("top", 0), ("width", 1920), ("height", 320)):
             set_child_text(top_shade, tag, value)
         top_texture = ET.SubElement(top_shade, "texture", {"flipy": "true"})
         top_texture.text = "hero-shade.png"
@@ -122,7 +122,7 @@ def update_xml(data, path):
             info_id = play_id + 1
             group_id = 9100 + container_id - 9000
             action_group = ET.Element("control", {"type": "group", "id": str(group_id)})
-            for tag, value in (("left", 72), ("top", 310), ("width", 500), ("height", 48)):
+            for tag, value in (("left", 72), ("top", 350), ("width", 500), ("height", 48)):
                 set_child_text(action_group, tag, value)
             visible_terms = [f"Control.HasFocus({container_id})",
                              f"Control.HasFocus({play_id})", f"Control.HasFocus({info_id})"]
@@ -181,10 +181,10 @@ def update_xml(data, path):
         # Each row is a single grouplist child so its non-focusable heading cannot
         # intercept Up from the nested fixedlist before the shelf's explicit route.
         rail_list = ET.Element("control", {"type": "grouplist", "id": "9050"})
-        for tag, value in (("left", 72), ("top", 410), ("width", 1776), ("height", 636)):
+        for tag, value in (("left", 72), ("top", 470), ("width", 1776), ("height", 610)):
             set_child_text(rail_list, tag, value)
         set_child_text(rail_list, "orientation", "vertical")
-        set_child_text(rail_list, "itemgap", 4)
+        set_child_text(rail_list, "itemgap", 12)
         set_child_text(rail_list, "scrolltime", 220)
         set_child_text(rail_list, "usecontrolcoords", "false")
         first_row_index = None
@@ -200,7 +200,7 @@ def update_xml(data, path):
             controls.remove(heading)
             controls.remove(shelf)
             row_group = ET.Element("control", {"type": "group", "id": str(9060 + index)})
-            for tag, value in (("left", 0), ("top", 0), ("width", 1776), ("height", 314)):
+            for tag, value in (("left", 0), ("top", 0), ("width", 1776), ("height", 350)):
                 set_child_text(row_group, tag, value)
             play_id = 9111 + (index - 1) * 2
             next_target = 9000 + index + 1 if index < 4 else 1001
@@ -210,12 +210,12 @@ def update_xml(data, path):
             set_child_text(heading, "left", 0)
             set_child_text(heading, "top", 0)
             set_child_text(heading, "width", 1100)
-            set_child_text(heading, "height", 32)
-            set_child_text(heading, "font", "font16")
+            set_child_text(heading, "height", 36)
+            set_child_text(heading, "font", "font20")
             set_child_text(shelf, "left", 0)
-            set_child_text(shelf, "top", 32)
+            set_child_text(shelf, "top", 40)
             set_child_text(shelf, "width", 1776)
-            set_child_text(shelf, "height", 310)
+            set_child_text(shelf, "height", 330)
             set_child_text(shelf, "onup", f"SetFocus({play_id})")
             set_child_text(shelf, "ondown", f"SetFocus({next_target})")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
@@ -270,7 +270,7 @@ def update_xml(data, path):
             raise SystemExit("Includes.xml has an incomplete poster layout")
         if focused_label is None:
             focused_label = ET.fromstring(ET.tostring(normal_label, encoding="unicode"))
-        for tag, value in (("left", 21), ("top", 0), ("width", 180), ("height", 260)):
+        for tag, value in (("left", 21), ("top", 0), ("width", 180), ("height", 320)):
             set_child_text(normal_image, tag, value)
         for tag, value in (("left", 0), ("top", 263), ("width", 222), ("height", 19), ("align", "center"), ("font", "font9"), ("textcolor", "lightgrey")):
             set_child_text(normal_label, tag, value)
@@ -384,24 +384,24 @@ def update_xml(data, path):
             set_child_text(panel, "width", 1812)
             set_child_text(panel, "height", 790)
             for layout in panel.findall("./itemlayout") + panel.findall("./focusedlayout"):
-                layout.set("width", "300")
-                layout.set("height", "350")
+                layout.set("width", "330")
+                layout.set("height", "390")
                 for child in layout.findall("control"):
                     if child.get("type") == "image":
-                        set_child_text(child, "left", 34)
+                        set_child_text(child, "left", 38)
                         set_child_text(child, "top", 0)
-                        set_child_text(child, "width", 220)
-                        set_child_text(child, "height", 318)
+                        set_child_text(child, "width", 244)
+                        set_child_text(child, "height", 354)
                     elif child.get("type") == "label":
                         set_child_text(child, "left", 12)
-                        set_child_text(child, "top", 320)
-                        set_child_text(child, "width", 276)
-                        set_child_text(child, "height", 28)
+                        set_child_text(child, "top", 356)
+                        set_child_text(child, "width", 306)
+                        set_child_text(child, "height", 30)
                         set_child_text(child, "align", "center")
         title = root.find("./controls/control[@type='label']")
         if title is not None:
             set_child_text(title, "left", 72)
-            set_child_text(title, "top", 126)
+            set_child_text(title, "top", 138)
             set_child_text(title, "font", "font30")
     elif path == "skin.cineva/xml/DialogVideoInfo.xml":
         # Full-bleed detail composition with readable copy and a clear primary action.
@@ -414,9 +414,9 @@ def update_xml(data, path):
             elif kind == "label":
                 label = node.findtext("label", "")
                 if "$INFO[ListItem.Label]" in label:
-                    for tag, value in (("left", 100), ("top", 150), ("width", 1060), ("height", 100)):
+                    for tag, value in (("left", 100), ("top", 150), ("width", 1040), ("height", 112)):
                         set_child_text(node, tag, value)
-                    set_child_text(node, "font", "font36")
+                    set_child_text(node, "font", "font40")
                 elif "$INFO[ListItem.Year]" in label:
                     for tag, value in (("left", 104), ("top", 270), ("width", 1040), ("height", 44)):
                         set_child_text(node, tag, value)
