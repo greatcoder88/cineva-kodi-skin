@@ -117,7 +117,7 @@ jobs:
                   errors.append(f"Home widget {index} must be one grouped row inside the scrolling viewport")
               if heading is None or heading.get("type") != "label" or heading.findtext("label") != f"$INFO[Skin.String(Cineva.Widget{index}.Name)]" or (heading.findtext("top"), heading.findtext("height")) != ("0", "36"):
                   errors.append(f"Home widget {index} heading is missing from its row group")
-              if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("40", "330") or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
+              if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("38", "294") or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
                   errors.append(f"Home widget {index} shelf geometry or upward focus route is incorrect")
               if shelf is not None:
                   expected_down = f"SetFocus({9000 + index + 1})" if index < 4 else "SetFocus(1001)"
@@ -167,7 +167,7 @@ jobs:
                   errors.append(f"Home row {container_id} does not use its own focus layout")
               if len(focus_images) != 3 or focus_images[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_images[1].findtext("visible") != f"Control.HasFocus({container_id})":
                   errors.append(f"Home row {container_id} must show a normal poster when inactive and focus artwork only when active")
-              elif (focus_images[2].findtext("texture"), focus_images[2].findtext("visible"), focus_images[2].findtext("top"), focus_images[2].findtext("width"), focus_images[2].findtext("height")) != ("focus-bar.png", f"Control.HasFocus({container_id})", "272", "196", "4"):
+              elif (focus_images[2].findtext("texture"), focus_images[2].findtext("visible"), focus_images[2].findtext("top"), focus_images[2].findtext("width"), focus_images[2].findtext("height")) != ("focus-bar.png", f"Control.HasFocus({container_id})", "288", "196", "4"):
                   errors.append(f"Home row {container_id} focused poster is missing its red selection accent")
               if len(focus_labels) != 2 or focus_labels[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_labels[1].findtext("visible") != f"Control.HasFocus({container_id})":
                   errors.append(f"Home row {container_id} must keep exactly one correctly styled title visible")
