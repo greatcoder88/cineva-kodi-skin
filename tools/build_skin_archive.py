@@ -313,16 +313,35 @@ def update_xml(data, path):
             # Add a restrained editorial eyebrow above the dynamic title. It
             # gives every selected shelf item a clear hierarchy without
             # hard-coding a movie/show name or implying platform exclusivity.
+            row_index = container_id - 9000
+            # The eyebrow describes the active widget source instead of saying
+            # FEATURED for every rail. Defaults resolve to CONTINUE WATCHING
+            # or TRENDING NOW; user-added/replaced paths receive a neutral label.
+            eyebrow_base_id = 9300 + (row_index - 1) * 3
             for old_control in list(hero_group.findall("control")):
-                if old_control.get("id") in {str(9190 + (container_id - 9001)), str(play_id), str(info_id)}:
+                if old_control.get("id") in {
+                    *(str(eyebrow_base_id + offset) for offset in range(3)),
+                    str(9190 + (container_id - 9001)), str(play_id), str(info_id)
+                }:
                     hero_group.remove(old_control)
-            eyebrow = ET.SubElement(hero_group, "control", {"type": "label", "id": str(9190 + (container_id - 9001))})
-            for tag, value in (
-                ("left", 0), ("top", 0), ("width", 420), ("height", 24),
-                ("label", "FEATURED"), ("font", "font9"),
-                ("textcolor", "FFE50914"), ("align", "left"), ("aligny", "center")
-            ):
-                set_child_text(eyebrow, tag, value)
+            source_path = f"Skin.String(Cineva.Widget{row_index}.Path)"
+            eyebrow_specs = (
+                ("CONTINUE WATCHING", f"String.Contains({source_path},in_progress)"),
+                ("TRENDING NOW", f"String.Contains({source_path},trending)"),
+                ("YOUR COLLECTION",
+                 f"!String.Contains({source_path},in_progress) + !String.Contains({source_path},trending)")
+            )
+            for offset, (label, visible) in enumerate(eyebrow_specs):
+                eyebrow = ET.SubElement(
+                    hero_group, "control",
+                    {"type": "label", "id": str(eyebrow_base_id + offset)}
+                )
+                for tag, value in (
+                    ("left", 0), ("top", 0), ("width", 420), ("height", 24),
+                    ("label", label), ("visible", visible), ("font", "font9"),
+                    ("textcolor", "FFE50914"), ("align", "left"), ("aligny", "center")
+                ):
+                    set_child_text(eyebrow, tag, value)
             for button_id, label, left, width in (
                 (play_id, "PLAY", 0, 190), (info_id, "MORE INFO", 214, 236)
             ):
