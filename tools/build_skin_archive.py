@@ -63,9 +63,9 @@ def update_xml(data, path):
         # Cinematic hero: give artwork room to breathe and fade it cleanly into the catalogue.
         for control in controls.findall("control"):
             if control.get("type") == "image" and control.findtext("texture", "").startswith("$INFO[Container("):
-                set_child_text(control, "height", 440)
+                set_child_text(control, "height", 520)
             if control.get("type") == "image" and control.findtext("texture") == "hero-shade.png":
-                set_child_text(control, "height", 490)
+                set_child_text(control, "height", 570)
         # Add a mirrored top fade so the logo/date remain legible over bright fanart.
         hero_shade = next((node for node in controls.findall("control")
                            if node.get("type") == "image" and node.findtext("texture") == "hero-shade.png"), None)
@@ -215,7 +215,7 @@ def update_xml(data, path):
             set_child_text(shelf, "left", 0)
             set_child_text(shelf, "top", 32)
             set_child_text(shelf, "width", 1776)
-            set_child_text(shelf, "height", 282)
+            set_child_text(shelf, "height", 310)
             set_child_text(shelf, "onup", f"SetFocus({play_id})")
             set_child_text(shelf, "ondown", f"SetFocus({next_target})")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
@@ -282,14 +282,14 @@ def update_xml(data, path):
             normal_label.remove(stale_wrap)
         set_child_text(normal_label, "wrapmultiline", "true")
         set_child_text(normal_label, "visible", "!ListItem.IsSelected")
-        for tag, value in (("left", 17), ("top", -6), ("width", 188), ("height", 272)):
+        for tag, value in (("left", 19), ("top", -7), ("width", 204), ("height", 296)):
             set_child_text(focused_image, tag, value)
         focus_animation = focused_image.find("./animation[@effect='zoom']")
         if focus_animation is None:
             raise SystemExit("Includes.xml focused poster is missing its zoom animation")
         focus_animation.set("end", "110")
         focus_animation.set("time", "150")
-        for tag, value in (("left", 21), ("width", 180), ("top", 245)):
+        for tag, value in (("left", 23), ("width", 196), ("top", 268)):
             set_child_text(progress, tag, value)
         if focused_label is not None and focused_label in list(focused):
             focused.remove(focused_label)
@@ -320,7 +320,7 @@ def update_xml(data, path):
             set_child_text(active_label, "visible", f"Control.HasFocus({container_id})")
             set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
             focus_accent = ET.Element("control", {"type": "image"})
-            for tag, value in (("left", 21), ("top", 250), ("width", 180), ("height", 4)):
+            for tag, value in (("left", 23), ("top", 272), ("width", 196), ("height", 4)):
                 set_child_text(focus_accent, tag, value)
             set_child_text(focus_accent, "texture", "focus-bar.png")
             set_child_text(focus_accent, "visible", f"Control.HasFocus({container_id})")
@@ -409,7 +409,7 @@ def update_xml(data, path):
             kind = node.get("type")
             if kind == "image":
                 if node.findtext("texture", "").startswith("$INFO[ListItem.Art(poster)]"):
-                    for tag, value in (("left", 1260), ("top", 116), ("width", 430), ("height", 650)):
+                    for tag, value in (("left", 1240), ("top", 100), ("width", 470), ("height", 710)):
                         set_child_text(node, tag, value)
             elif kind == "label":
                 label = node.findtext("label", "")
