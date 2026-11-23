@@ -457,8 +457,10 @@ def update_xml(data, path):
                 action_targets = {"1001": "9111", "1002": "9115", "1003": "9117"}
                 if button.get("id") in action_targets:
                     set_child_text(button, "ondown", f"SetFocus({action_targets[button.get('id')]})")
-                for tag, value in (("texturefocus", "focus-bar.png"), ("texturenofocus", "-"), ("textcolor", "lightgrey"), ("focusedcolor", "white"), ("align", "center"), ("aligny", "center")):
+                for tag, value in (("texturefocus", "focus-bar.png"), ("texturenofocus", "-"), ("textcolor", "silver"), ("focusedcolor", "white"), ("align", "center"), ("aligny", "center")):
                     set_child_text(button, tag, value)
+                set_child_text(button, "font", "font12")
+                set_child_text(button, "height", 48)
             # Keep a persistent red section marker under HOME even after focus
             # moves into the catalogue, so users never lose their location.
             old_marker = nav_group.find("./control[@id='9201']")
@@ -476,6 +478,17 @@ def update_xml(data, path):
             if control.get("id") == "9010" or control.findtext("label") == "MORE WIDGETS  ›":
                 controls.remove(control)
     elif path == "skin.cineva/xml/Includes.xml":
+        # Brand typography and date treatment are shared across all windows.
+        topbar = root.find("./include[@name='CinevaTopBar']")
+        if topbar is not None:
+            for label in topbar.findall(".//control[@type='label']"):
+                text_value = label.findtext("label", "")
+                if text_value == "CINÉVA":
+                    set_child_text(label, "font", "font24")
+                    set_child_text(label, "height", 62)
+                elif "$INFO[System.Date]" in text_value:
+                    set_child_text(label, "font", "font12")
+                    set_child_text(label, "textcolor", "silver")
         normal = root.find("./include[@name='CinevaPosterItem']")
         focused = root.find("./include[@name='CinevaFocusedPosterItem']")
         if normal is None or focused is None:
@@ -504,6 +517,7 @@ def update_xml(data, path):
         if stale_wrap is not None:
             normal_label.remove(stale_wrap)
         set_child_text(normal_label, "wrapmultiline", "true")
+        set_child_text(normal_label, "textcolor", "gainsboro")
         set_child_text(normal_label, "visible", "!ListItem.IsSelected")
         # Netflix-style resume progress belongs to every in-progress card, not
         # only the currently focused poster. Use a charcoal track beneath the
@@ -527,8 +541,8 @@ def update_xml(data, path):
         focus_animation = focused_image.find("./animation[@effect='zoom']")
         if focus_animation is None:
             raise SystemExit("Includes.xml focused poster is missing its zoom animation")
-        focus_animation.set("end", "105")
-        focus_animation.set("time", "150")
+        focus_animation.set("end", "108")
+        focus_animation.set("time", "180")
         for tag, value in (("left", 27), ("width", 231), ("top", 308), ("height", 5)):
             set_child_text(progress, tag, value)
         if focused_label is not None and focused_label in list(focused):
