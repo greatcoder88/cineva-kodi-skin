@@ -152,6 +152,17 @@ def update_xml(data, path):
                     set_child_text(labels[0], "font", "font36")
                     set_child_text(labels[0], "height", 64)
                 if len(labels) > 1:
+                    # Kodi's INFO prefix is emitted only when that field has a value.
+                    # This prevents empty duration metadata from leaving doubled bullets
+                    # (and keeps the same compact format for all four dynamic hero rows).
+                    container_id = int(source_label.split("Container(", 1)[1].split(")", 1)[0])
+                    metadata = (
+                        f"$INFO[Container({container_id}).ListItem.Year]"
+                        f"$INFO[Container({container_id}).ListItem.Duration,  •  ]"
+                        f"$INFO[Container({container_id}).ListItem.Genre,  •  ]"
+                        f"$INFO[Container({container_id}).ListItem.Rating,  •  ]"
+                    )
+                    set_child_text(labels[1], "label", metadata)
                     set_child_text(labels[1], "top", 8)
                     set_child_text(labels[1], "height", 30)
                 for child in group.findall("control"):
