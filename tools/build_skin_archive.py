@@ -207,13 +207,14 @@ def update_xml(data, path):
         for group in controls.findall("control"):
             source_label = group.findtext("control/label", "")
             if group.get("type") == "group" and source_label.startswith("$INFO[Container("):
-                set_child_text(group, "top", 124)
+                set_child_text(group, "top", 118)
                 labels = [child for child in group.findall("control") if child.get("type") == "label"]
                 if labels:
                     # Title first, metadata second: separate vertical baselines.
-                    set_child_text(labels[0], "top", 30)
+                    set_child_text(labels[0], "top", 38)
                     set_child_text(labels[0], "font", "font36")
-                    set_child_text(labels[0], "height", 64)
+                    set_child_text(labels[0], "height", 78)
+                    set_child_text(labels[0], "width", 1220)
                 if len(labels) > 1:
                     # Kodi's INFO prefix is emitted only when that field has a value.
                     # This prevents empty duration metadata from leaving doubled bullets
@@ -226,12 +227,14 @@ def update_xml(data, path):
                         f"$INFO[Container({container_id}).ListItem.Rating,  •  ]"
                     )
                     set_child_text(labels[1], "label", metadata)
-                    set_child_text(labels[1], "top", 8)
-                    set_child_text(labels[1], "height", 30)
+                    set_child_text(labels[1], "top", 0)
+                    set_child_text(labels[1], "height", 34)
+                    set_child_text(labels[1], "font", "font10")
                 for child in group.findall("control"):
                     if child.get("type") == "textbox":
-                        set_child_text(child, "top", 112)
-                        set_child_text(child, "height", 58)
+                        set_child_text(child, "top", 122)
+                        set_child_text(child, "height", 66)
+                        set_child_text(child, "font", "font13")
             if group.get("type") == "group" and group.findtext("control/label", "").startswith("$INFO[Container("):
                 set_child_text(group, "width", 1200)
         # Hero actions follow whichever Home rail supplies the current hero item.
@@ -281,8 +284,8 @@ def update_xml(data, path):
                 button = ET.SubElement(hero_group, "control",
                                        {"type": "button", "id": str(button_id)})
                 for tag, value in (
-                    ("left", left), ("top", 226), ("width", width), ("height", 44),
-                    ("label", label), ("font", "font12"),
+                    ("left", left), ("top", 226), ("width", width), ("height", 48),
+                    ("label", label), ("font", "font10"),
                     ("onup", f"SetFocus({nav_target})"),
                     ("ondown", f"SetFocus({container_id})"),
                     ("onleft", f"SetFocus({play_id})"),
@@ -355,7 +358,7 @@ def update_xml(data, path):
             set_child_text(heading, "top", 0)
             set_child_text(heading, "width", 1100)
             set_child_text(heading, "height", 32)
-            set_child_text(heading, "font", "font16")
+            set_child_text(heading, "font", "font18")
             set_child_text(shelf, "left", 0)
             set_child_text(shelf, "top", 38)
             set_child_text(shelf, "width", 1710)
@@ -569,7 +572,29 @@ def update_xml(data, path):
         set_child_text(poster_title, "filename", "Roboto-Medium.ttf")
         # Slightly larger card titles improve ten-foot readability without changing
         # the six-poster rail geometry or focus/navigation behavior.
-        set_child_text(poster_title, "size", 21)
+        set_child_text(poster_title, "size", 20)
+        # A deliberate ten-foot hierarchy: compact labels, quiet metadata,
+        # clear shelf headings and a commanding cinematic title.
+        scale = {
+            "font10": ("Roboto-Medium.ttf", 20),
+            "font12": ("Roboto-Regular.ttf", 21),
+            "font13": ("Roboto-Regular.ttf", 24),
+            "font14": ("Roboto-Regular.ttf", 27),
+            "font16": ("Roboto-Medium.ttf", 30),
+            "font18": ("Roboto-Medium.ttf", 36),
+            "font20": ("Roboto-Medium.ttf", 40),
+            "font24": ("Roboto-Bold.ttf", 48),
+            "font30": ("Roboto-Bold.ttf", 60),
+            "font36": ("Roboto-Bold.ttf", 74),
+        }
+        for name, (filename, size) in scale.items():
+            node = next((item for item in fontset.findall("font")
+                         if item.findtext("name") == name), None)
+            if node is None:
+                node = ET.SubElement(fontset, "font")
+            set_child_text(node, "name", name)
+            set_child_text(node, "filename", filename)
+            set_child_text(node, "size", size)
     elif path == "skin.cineva/xml/DialogConfirm.xml":
         default = root.find("defaultcontrol")
         if default is None:
