@@ -56,14 +56,13 @@ def hero_bottom_fade_png():
 
 
 def rail_scroll_mask_png():
-    """Create a compact fade that hides the previous rail beneath the pinned hero."""
-    width, height = 1920, 80
-    fade_height = 16
+    """Create a long, low-contrast fade that avoids a hard black seam over the hero."""
+    width, height = 1920, 220
     pixels = bytearray()
     for y in range(height):
-        position = min(1.0, y / fade_height)
+        position = y / (height - 1)
         smooth = position * position * (3.0 - 2.0 * position)
-        alpha = int(255 * smooth)
+        alpha = int(200 * smooth)
         pixels.append(0)  # PNG filter: None
         for _ in range(width):
             pixels.extend((5, 7, 12, alpha))
@@ -158,9 +157,21 @@ def update_xml(data, path):
                     row_insert_index += 1
         # Cinematic hero: give artwork room to breathe and fade it cleanly into the catalogue.
         for control in controls.findall("control"):
-            if control.get("type") == "image" and control.findtext("texture", "").startswith("$INFO[Container("):
+            texture = control.findtext("texture", "")
+            if control.get("type") == "image" and texture.startswith("$INFO[Container("):
                 set_child_text(control, "height", 660)
-            if control.get("type") == "image" and control.findtext("texture") == "hero-shade.png":
+                container_id = int(texture.split("Container(", 1)[1].split(")", 1)[0])
+                if container_id in (9002, 9003, 9004):
+                    play_id = 9111 + (container_id - 9001) * 2
+                    action_focus = " | ".join(
+                        f"Control.HasFocus({focus_id})"
+                        for focus_id in (container_id, play_id, play_id + 1)
+                    )
+                    set_child_text(
+                        control, "visible",
+                        f"({action_focus}) + !String.IsEmpty(Container({container_id}).ListItem.Art(fanart))"
+                    )
+            if control.get("type") == "image" and texture == "hero-shade.png":
                 set_child_text(control, "height", 660)
         # Add a mirrored top fade so the logo/date remain legible over bright fanart.
         hero_shade = next((node for node in controls.findall("control")
@@ -409,11 +420,10 @@ def update_xml(data, path):
         if previous_scroll_mask is not None:
             controls.remove(previous_scroll_mask)
         controls.insert(first_row_index, rail_list)
-        # When a lower rail is focused, hide the already-passed shelf contents
-        # while retaining their row-group geometry. A short seam fade then keeps
-        # the pinned hero connected to the active shelf without a blank black band.
+        # When a lower rail is focused, blend the scrolled-away shelf contents
+        # into the pinned hero's own bottom fade instead of painting a hard black stripe.
         scroll_mask = ET.Element("control", {"type": "image", "id": "9107"})
-        for tag, value in (("left", 0), ("top", 350), ("width", 1920), ("height", 80)):
+        for tag, value in (("left", 0), ("top", 350), ("width", 1920), ("height", 220)):
             set_child_text(scroll_mask, tag, value)
         ET.SubElement(scroll_mask, "texture").text = "rail-scroll-mask.png"
         set_child_text(scroll_mask, "aspectratio", "scale")
