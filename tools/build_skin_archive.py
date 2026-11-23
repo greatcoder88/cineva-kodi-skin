@@ -31,7 +31,7 @@ def hero_left_shade_png():
         for base_alpha in horizontal_alpha:
             pixels.extend((5, 7, 12, int(base_alpha * vertical)))
     header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
-    return (b"\\x89PNG\\r\\n\\x1a\\n"
+    return (b"\x89PNG\r\n\x1a\n"
             + png_chunk(b"IHDR", header)
             + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
             + png_chunk(b"IEND", b""))
