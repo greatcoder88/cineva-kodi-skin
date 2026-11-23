@@ -635,6 +635,18 @@ jobs:
             else:
               raise SystemExit(f"Hero action Down did not return to the selected poster: {state}")
             # Move through every row; the grouplist must scroll the lower shelves into view.
+            def active_rail_indicator_position(row_number):
+              import xml.etree.ElementTree as ET
+              home_root = ET.parse("skin.cineva/xml/Home.xml").getroot()
+              rail = home_root.find("./controls/control[@type='grouplist'][@id='9050']")
+              row_group = rail.find(f"./control[@type='group'][@id='{9060 + row_number}']") if rail is not None else None
+              row_accent = row_group.find("./control[@type='image']") if row_group is not None else None
+              if any(node is None for node in (rail, row_group, row_accent)):
+                raise SystemExit(f"Could not locate row {row_number} active-rail underline geometry")
+              # The active group is docked to the viewport's bottom edge when scrolled into view.
+              x = int(rail.findtext("left", "0")) + int(row_accent.findtext("left", "0"))
+              y = int(rail.findtext("top", "0")) + int(rail.findtext("height", "0")) - int(row_group.findtext("height", "0")) + int(row_accent.findtext("top", "0"))
+              return x, y
             expected_row_labels = {2: "Breaking Bad", 3: "The Shawshank Redemption", 4: "Breaking Bad"}
             for row_number in (2, 3, 4):
               subprocess.run(["xdotool","key","Down"],check=True)
@@ -665,10 +677,11 @@ jobs:
                 if masked_region_luma > 0.05:
                   raise SystemExit(f"Previous Home rail still bleeds through the pinned hero (region luma={masked_region_luma:.3f})")
                 print(f"Verified the previous rail is fully masked below the pinned hero (region luma={masked_region_luma:.3f}).")
-                # The compact viewport should dock row 2 just below the hero.
-                # Its active-rail underline must be visible at the new heading position.
+                # The active-rail underline follows the docked row position; derive its
+                # pixel coordinate from the packaged viewport instead of hard-coding 574.
+                indicator_x, indicator_y = active_rail_indicator_position(2)
                 indicator_signal = subprocess.run(
-                  ["convert","artifacts/cineva-home-row2-focus.png","-crop","58x3+105+574",
+                  ["convert","artifacts/cineva-home-row2-focus.png","-crop",f"58x3+{indicator_x}+{indicator_y}",
                    "-fx","((r>0.6)&&(g<0.25)&&(b<0.25))?1:0","-format","%[fx:mean]","info:"],
                   text=True,capture_output=True,check=True
                 )
@@ -678,7 +691,7 @@ jobs:
                   raise SystemExit(f"Could not measure row-2 active-rail underline: {indicator_signal.stdout!r}")
                 if indicator_coverage < 0.8:
                   raise SystemExit(f"Row-2 heading indicator is not visible at the compact rail position (coverage={indicator_coverage:.3f})")
-                print(f"Verified row-2 active-rail underline at y=574 (coverage={indicator_coverage:.3f}).")
+                print(f"Verified row-2 active-rail underline at y={indicator_y} (coverage={indicator_coverage:.3f}).")
                 # The PLAY surface must remain visible when row 2, rather than
                 # row 1, supplies the hero. A white unselected button occupies
                 # this exact 180x44 region in the 1920x1080 Home layout.
@@ -736,8 +749,9 @@ jobs:
                 if row4_region_luma > 0.05:
                   raise SystemExit(f"Previous Home rail still bleeds through while row 4 is focused (region luma={row4_region_luma:.3f})")
                 print(f"Verified the previous rail is fully masked while row 4 is focused (region luma={row4_region_luma:.3f}).")
+                indicator_x, indicator_y = active_rail_indicator_position(4)
                 indicator_signal = subprocess.run(
-                  ["convert","artifacts/cineva-home-row4-scroll.png","-crop","58x3+105+574",
+                  ["convert","artifacts/cineva-home-row4-scroll.png","-crop",f"58x3+{indicator_x}+{indicator_y}",
                    "-fx","((r>0.6)&&(g<0.25)&&(b<0.25))?1:0","-format","%[fx:mean]","info:"],
                   text=True,capture_output=True,check=True
                 )
@@ -747,7 +761,7 @@ jobs:
                   raise SystemExit(f"Could not measure row-4 active-rail underline: {indicator_signal.stdout!r}")
                 if indicator_coverage < 0.8:
                   raise SystemExit(f"Row-4 heading indicator is not visible at the compact rail position (coverage={indicator_coverage:.3f})")
-                print(f"Verified row-4 active-rail underline at y=574 (coverage={indicator_coverage:.3f}).")
+                print(f"Verified row-4 active-rail underline at y={indicator_y} (coverage={indicator_coverage:.3f}).")
             if cycle == 1:
               # Compare only the unobstructed right side of the hero, excluding
               # the title, buttons and date. This proves the actual fanart layer
