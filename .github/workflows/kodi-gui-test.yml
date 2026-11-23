@@ -58,11 +58,20 @@ jobs:
           if (startup.findtext("onload") or "").strip() != "ActivateWindow(Home)":
             raise SystemExit("Startup.xml must hand off to Home after a skin switch")
           controls = home.find("controls")
+          row_focus_conditions = {f"Control.HasFocus({focus_id})" for focus_id in (9001, 9002, 9003, 9004)}
+          orphan_row_accents = [node for node in controls.findall("control")
+                                if node.get("type") == "image"
+                                and node.findtext("texture") == "focus-bar.png"
+                                and node.findtext("visible", "") in row_focus_conditions
+                                and (node.findtext("left"), node.findtext("width"), node.findtext("height")) == ("0", "58", "3")]
+          if orphan_row_accents:
+              raise SystemExit("Home row focus accents must remain inside their scrolling shelf groups")
           hero_group = next((g for g in controls.findall("control") if g.get("type") == "group" and g.findtext("control/label", "").startswith("$INFO[Container(")), None)
           hero_title = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Label]" in c.findtext("label", "")), None) if hero_group is not None else None
           hero_plot = hero_group.find("./control[@type='textbox']") if hero_group is not None else None
           hero_meta = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Year]" in c.findtext("label", "")), None) if hero_group is not None else None
-          if hero_group is None or hero_group.findtext("top") != "118" or hero_title is None or hero_title.findtext("top") != "0" or hero_title.findtext("height") != "84" or hero_meta is None or hero_meta.findtext("top") != "88" or hero_meta.findtext("font") != "font10" or hero_meta.findtext("textcolor") != "silver" or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("142", "72", "font13"):
+          hero_eyebrow = hero_group.find("./control[@id='9190']") if hero_group is not None else None
+          if hero_group is None or hero_group.findtext("top") != "118" or hero_group.findtext("height") != "330" or hero_title is None or hero_title.findtext("top") != "24" or hero_title.findtext("height") != "84" or hero_meta is None or hero_meta.findtext("top") != "112" or hero_meta.findtext("font") != "font10" or hero_meta.findtext("textcolor") != "silver" or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("166", "72", "font13") or hero_eyebrow is None or (hero_eyebrow.findtext("top"), hero_eyebrow.findtext("height"), hero_eyebrow.findtext("label"), hero_eyebrow.findtext("font"), hero_eyebrow.findtext("textcolor")) != ("0", "24", "FEATURED", "font9", "E50914"):
             raise SystemExit("Home hero must present title first, metadata second and synopsis third with distinct baselines")
           for group in (g for g in controls.findall("control") if g.get("type") == "group" and g.findtext("control/label", "").startswith("$INFO[Container(")):
             source_label = group.findtext("control/label", "")
@@ -72,6 +81,12 @@ jobs:
                         f"$INFO[Container({container_id}).ListItem.Duration,  •  ]"
                         f"$INFO[Container({container_id}).ListItem.Genre,  •  ]"
                         f"$INFO[Container({container_id}).ListItem.Rating,  •  ]")
+            eyebrow = group.find(f"./control[@id='{9190 + container_id - 9001}']")
+            buttons = group.findall("./control[@type='button']")
+            if eyebrow is None or (eyebrow.findtext("top"), eyebrow.findtext("label")) != ("0", "FEATURED"):
+              raise SystemExit(f"Home hero {container_id} is missing its visible editorial eyebrow")
+            if len(buttons) != 2 or any(button.findtext("top") != "262" for button in buttons):
+              raise SystemExit(f"Home hero {container_id} actions are not aligned beneath the synopsis")
             if metadata is None or metadata.findtext("label") != expected:
               raise SystemExit(f"Home hero {container_id} metadata leaves separators for empty fields")
           topbar_index = next((i for i, node in enumerate(list(controls))
@@ -114,7 +129,7 @@ jobs:
           if overlay_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(overlay_data[16:20], "big"), int.from_bytes(overlay_data[20:24], "big")) != (1920, 440):
             raise SystemExit("Packaged hero contrast texture is missing or has the wrong dimensions")
           rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
-          if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("105", "430", "1710", "670") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "220"):
+          if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("105", "454", "1710", "670") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "220"):
             raise SystemExit("Home rails are missing their vertical scrolling viewport")
           scroll_mask = controls.find("./control[@id='9107']")
           expected_scroll_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118))
