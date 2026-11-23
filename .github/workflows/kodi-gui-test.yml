@@ -470,12 +470,12 @@ jobs:
               # The progress bars sit at the bottom edge of the first poster row.
               # Measure the rendered red signal in that exact 4px strip, rather
               # than assuming that valid XML means the controls are visible.
-              signal = subprocess.run(["convert",f"artifacts/cineva-home-cycle-{cycle}.png","-crop","1824x4+48+692","-format","%[fx:mean(r-g)]","info:"],text=True,capture_output=True,check=True)
+              signal = subprocess.run(["convert",f"artifacts/cineva-home-cycle-{cycle}.png","-crop","1824x4+48+692","-fx","r-g","-format","%[fx:mean]","info:"],text=True,capture_output=True,check=True)
               try:
                 progress_signal = float(signal.stdout.strip())
               except ValueError:
                 raise SystemExit(f"Could not measure rendered Continue Watching progress bars: {signal.stdout!r}")
-              if progress_signal < 0.02:
+              if progress_signal < 0.10:
                 raise SystemExit(f"Continue Watching progress bars are not visibly rendered in the Home screenshot (red signal={progress_signal:.4f})")
               print(f"Verified live Continue Watching progress bars in the Home screenshot (red signal={progress_signal:.4f}).")
             subprocess.run(["xdotool","key","Up"],check=True)
