@@ -57,7 +57,7 @@ def hero_bottom_fade_png():
 
 def rail_scroll_mask_png():
     """Create a compact fade that hides the previous rail beneath the pinned hero."""
-    width, height = 1920, 130
+    width, height = 1920, 220
     fade_height = 30
     pixels = bytearray()
     for y in range(height):
@@ -391,7 +391,7 @@ def update_xml(data, path):
         # row behind the pinned hero. Fade it fully away instead of leaving a
         # clipped strip of posters and titles between the hero and active shelf.
         scroll_mask = ET.Element("control", {"type": "image", "id": "9107"})
-        for tag, value in (("left", 0), ("top", 398), ("width", 1920), ("height", 130)):
+        for tag, value in (("left", 0), ("top", 398), ("width", 1920), ("height", 220)):
             set_child_text(scroll_mask, tag, value)
         ET.SubElement(scroll_mask, "texture").text = "rail-scroll-mask.png"
         set_child_text(scroll_mask, "aspectratio", "scale")
