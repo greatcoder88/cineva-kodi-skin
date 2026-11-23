@@ -157,6 +157,9 @@ jobs:
           compact_font = next((node for node in fonts.findall("./fontset[@id='Default']/font") if node.findtext("name") == "font9"), None)
           if compact_font is None or (compact_font.findtext("filename"), compact_font.findtext("size")) != ("Roboto-Regular.ttf", "16"):
               errors.append("Home poster font9 must be defined at a readable 16px size")
+          resume_track = pathlib.Path("skin.cineva/media/resume-track.png").read_bytes()
+          if resume_track[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(resume_track[16:20], "big"), int.from_bytes(resume_track[20:24], "big")) != (8, 8):
+              errors.append("Packaged charcoal resume-track texture is missing or has the wrong dimensions")
           includes = ET.parse(root / "xml/Includes.xml").getroot()
           poster = includes.find("./include[@name='CinevaPosterItem']")
           normal_title = poster.find("./control[@type='label']") if poster is not None else None
@@ -167,7 +170,7 @@ jobs:
           if normal_title is None or normal_title.findtext("visible") != "!ListItem.IsSelected":
               errors.append("Normal poster title must yield to the row-aware selected-item title")
           normal_progress = poster.find("./control[@type='progress']") if poster is not None else None
-          if normal_progress is None or (normal_progress.findtext("left"), normal_progress.findtext("top"), normal_progress.findtext("width"), normal_progress.findtext("height"), normal_progress.findtext("info"), normal_progress.findtext("visible")) != ("13", "250", "196", "4", "ListItem.PercentPlayed", "ListItem.IsResumable"):
+          if normal_progress is None or (normal_progress.findtext("left"), normal_progress.findtext("top"), normal_progress.findtext("width"), normal_progress.findtext("height"), normal_progress.findtext("info"), normal_progress.findtext("visible"), normal_progress.findtext("texturebg")) != ("13", "250", "196", "4", "ListItem.PercentPlayed", "ListItem.IsResumable", "resume-track.png"):
               errors.append("Every resumable poster must show its thin red progress strip, even when not focused")
           if focused_title is not None:
               errors.append("Base focused poster template must not retain an unused title layer")
@@ -183,7 +186,7 @@ jobs:
                   errors.append(f"Home row {container_id} does not use its own focus layout")
               if len(focus_images) != 3 or focus_images[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_images[1].findtext("visible") != f"Control.HasFocus({container_id})":
                   errors.append(f"Home row {container_id} must show a normal poster when inactive and focus artwork only when active")
-              elif (focus_images[2].findtext("texture"), focus_images[2].findtext("visible"), focus_images[2].findtext("top"), focus_images[2].findtext("width"), focus_images[2].findtext("height")) != ("focus-bar.png", f"Control.HasFocus({container_id})", "288", "196", "4"):
+              elif (focus_images[2].findtext("texture"), focus_images[2].findtext("visible"), focus_images[2].findtext("left"), focus_images[2].findtext("top"), focus_images[2].findtext("width"), focus_images[2].findtext("height")) != ("focus-bar.png", f"Control.HasFocus({container_id})", "75", "288", "72", "4"):
                   errors.append(f"Home row {container_id} focused poster is missing its red selection accent")
               if len(focus_labels) != 2 or focus_labels[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_labels[1].findtext("visible") != f"Control.HasFocus({container_id})":
                   errors.append(f"Home row {container_id} must keep exactly one correctly styled title visible")
@@ -198,7 +201,7 @@ jobs:
               }
               if len(focus_progresses) != 2 or {p.findtext("visible") for p in focus_progresses} != expected_progress_visibility:
                   errors.append(f"Home row {container_id} must show one resumable progress strip in both inactive and active card states")
-              elif any((p.findtext("left"), p.findtext("top"), p.findtext("width"), p.findtext("height"), p.findtext("info")) != ("13", "250", "196", "4", "ListItem.PercentPlayed") for p in focus_progresses):
+              elif any((p.findtext("left"), p.findtext("top"), p.findtext("width"), p.findtext("height"), p.findtext("info"), p.findtext("texturebg")) != ("13", "250", "196", "4", "ListItem.PercentPlayed", "resume-track.png") for p in focus_progresses):
                   errors.append(f"Home row {container_id} resume progress geometry is inconsistent between focus states")
           catalogue = ET.parse(root / "xml/MyVideoNav.xml").getroot()
           panel = catalogue.find("./controls/control[@type='panel']")

@@ -134,11 +134,18 @@ jobs:
           if focused_title is None or focused_title.findtext("font") != "font9" or focused_title.findtext("height") != "28" or focused_title.find("wrap") is not None or focused_title.findtext("wrapmultiline") != "true":
             raise SystemExit("Focused poster titles must use the compact font and wrap inside the poster card")
           normal_progress = poster.find("./control[@type='progress']") if poster is not None else None
-          if normal_progress is None or normal_progress.findtext("visible") != "ListItem.IsResumable" or normal_progress.findtext("info") != "ListItem.PercentPlayed":
-            raise SystemExit("Normal poster cards must show progress on every resumable item")
+          if normal_progress is None or normal_progress.findtext("visible") != "ListItem.IsResumable" or normal_progress.findtext("info") != "ListItem.PercentPlayed" or normal_progress.findtext("texturebg") != "resume-track.png":
+            raise SystemExit("Normal poster cards must show resumable progress on a charcoal track")
           focus_progresses = focused_poster.findall("./control[@type='progress']") if focused_poster is not None else []
-          if len(focus_progresses) != 2 or {node.findtext("visible") for node in focus_progresses} != {"!Control.HasFocus(9001) + ListItem.IsResumable", "Control.HasFocus(9001) + ListItem.IsResumable"}:
-            raise SystemExit("Focused poster template must retain exactly one progress strip in both focus states")
+          if len(focus_progresses) != 2 or {node.findtext("visible") for node in focus_progresses} != {"!Control.HasFocus(9001) + ListItem.IsResumable", "Control.HasFocus(9001) + ListItem.IsResumable"} or any(node.findtext("texturebg") != "resume-track.png" for node in focus_progresses):
+            raise SystemExit("Focused poster template must retain one charcoal-track progress strip in both focus states")
+          row_focus = ET.parse("skin.cineva/xml/Includes.xml").getroot().find("./include[@name='CinevaFocusedPosterItem9001']")
+          focus_accent = next((node for node in row_focus.findall("./control[@type='image']") if node.findtext("texture") == "focus-bar.png"), None) if row_focus is not None else None
+          if focus_accent is None or (focus_accent.findtext("left"), focus_accent.findtext("top"), focus_accent.findtext("width"), focus_accent.findtext("height")) != ("75", "288", "72", "4"):
+            raise SystemExit("Focused poster selection accent must be a short centered underline")
+          resume_track = Path("skin.cineva/media/resume-track.png").read_bytes()
+          if resume_track[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(resume_track[16:20], "big"), int.from_bytes(resume_track[20:24], "big")) != (8, 8):
+            raise SystemExit("Packaged charcoal resume-track texture is missing or has the wrong dimensions")
           catalogue = ET.parse("skin.cineva/xml/MyVideoNav.xml").getroot()
           panel = catalogue.find("./controls/control[@type='panel']")
           layout = panel.find("itemlayout") if panel is not None else None

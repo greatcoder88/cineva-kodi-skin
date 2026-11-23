@@ -37,6 +37,21 @@ def hero_left_shade_png():
             + png_chunk(b"IEND", b""))
 
 
+def resume_track_png():
+    """Create a subtle charcoal progress track that blends into poster artwork."""
+    width, height = 8, 8
+    pixels = bytearray()
+    for _ in range(height):
+        pixels.append(0)  # PNG filter: None
+        for _ in range(width):
+            pixels.extend((39, 42, 48, 238))
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return (b"\x89PNG\r\n\x1a\n"
+            + png_chunk(b"IHDR", header)
+            + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
+            + png_chunk(b"IEND", b""))
+
+
 def set_child_text(parent, tag, value):
     node = parent.find(tag)
     if node is None:
@@ -321,7 +336,10 @@ def update_xml(data, path):
         set_child_text(normal_label, "wrapmultiline", "true")
         set_child_text(normal_label, "visible", "!ListItem.IsSelected")
         # Netflix-style resume progress belongs to every in-progress card, not
-        # only the currently focused poster.
+        # only the currently focused poster. Use a charcoal track beneath the
+        # familiar red played segment so it does not read as a white underline.
+        set_child_text(progress, "texturebg", "resume-track.png")
+        set_child_text(progress, "midtexture", "focus-bar.png")
         normal_progress = normal.find("./control[@type='progress']")
         if normal_progress is None:
             normal_progress = ET.fromstring(ET.tostring(progress, encoding="unicode"))
@@ -330,7 +348,7 @@ def update_xml(data, path):
             set_child_text(normal_progress, tag, value)
         set_child_text(normal_progress, "info", "ListItem.PercentPlayed")
         set_child_text(normal_progress, "visible", "ListItem.IsResumable")
-        set_child_text(normal_progress, "texturebg", "white.png")
+        set_child_text(normal_progress, "texturebg", "resume-track.png")
         set_child_text(normal_progress, "midtexture", "focus-bar.png")
         set_child_text(normal_progress, "overlaytexture", "-")
         for tag, value in (("left", 9), ("top", -6), ("width", 204), ("height", 270)):
@@ -373,7 +391,7 @@ def update_xml(data, path):
             set_child_text(active_label, "visible", f"Control.HasFocus({container_id})")
             set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
             focus_accent = ET.Element("control", {"type": "image"})
-            for tag, value in (("left", 13), ("top", 288), ("width", 196), ("height", 4)):
+            for tag, value in (("left", 75), ("top", 288), ("width", 72), ("height", 4)):
                 set_child_text(focus_accent, tag, value)
             set_child_text(focus_accent, "texture", "focus-bar.png")
             set_child_text(focus_accent, "visible", f"Control.HasFocus({container_id})")
@@ -543,25 +561,29 @@ def main():
             missing = sorted(required - names)
             if missing:
                 raise SystemExit("Skin archive is missing: " + ", ".join(missing))
-            generated_overlay = "skin.cineva/media/hero-left-shade.png"
-            overlay_written = False
-            overlay_data = hero_left_shade_png()
+            generated_assets = {
+                "skin.cineva/media/hero-left-shade.png": hero_left_shade_png(),
+                "skin.cineva/media/resume-track.png": resume_track_png(),
+            }
+            written_assets = set()
             for info in source.infolist():
                 data = source.read(info.filename)
-                if info.filename == generated_overlay:
-                    if data != overlay_data:
-                        changed.append(generated_overlay)
-                    data = overlay_data
-                    overlay_written = True
+                if info.filename in generated_assets:
+                    generated = generated_assets[info.filename]
+                    if data != generated:
+                        changed.append(info.filename)
+                    data = generated
+                    written_assets.add(info.filename)
                 if info.filename in required:
                     updated = update_xml(data, info.filename)
                     if updated != data:
                         changed.append(info.filename)
                     data = updated
                 target.writestr(info, data)
-            if not overlay_written:
-                target.writestr(generated_overlay, overlay_data, compress_type=ZIP_DEFLATED)
-                changed.append(generated_overlay)
+            for asset_name, asset_data in generated_assets.items():
+                if asset_name not in written_assets:
+                    target.writestr(asset_name, asset_data, compress_type=ZIP_DEFLATED)
+                    changed.append(asset_name)
         if changed:
             os.replace(tmp, ARCHIVE)
             print("Updated release ZIP entries:", ", ".join(changed))
