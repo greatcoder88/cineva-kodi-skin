@@ -37,6 +37,24 @@ def hero_left_shade_png():
             + png_chunk(b"IEND", b""))
 
 
+def hero_bottom_fade_png():
+    """Create a full-width fade that cleanly separates hero artwork from the shelves."""
+    width, height = 1920, 320
+    pixels = bytearray()
+    for y in range(height):
+        position = y / (height - 1)
+        ramp = min(1.0, max(0.0, (position - 0.05) / 0.72))
+        alpha = int(255 * ramp ** 1.2)
+        pixels.append(0)  # PNG filter: None
+        for _ in range(width):
+            pixels.extend((5, 7, 12, alpha))
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return (b"\\x89PNG\\r\\n\\x1a\\n"
+            + png_chunk(b"IHDR", header)
+            + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
+            + png_chunk(b"IEND", b""))
+
+
 def resume_track_png():
     """Create a subtle charcoal progress track that blends into poster artwork."""
     width, height = 8, 8
@@ -149,6 +167,15 @@ def update_xml(data, path):
         ET.SubElement(left_shade, "texture").text = "hero-left-shade.png"
         set_child_text(left_shade, "aspectratio", "scale")
         controls.insert(list(controls).index(top_shade) + 1, left_shade)
+        previous_bottom_shade = controls.find("./control[@id='9106']")
+        if previous_bottom_shade is not None:
+            controls.remove(previous_bottom_shade)
+        bottom_shade = ET.Element("control", {"type": "image", "id": "9106"})
+        for tag, value in (("left", 0), ("top", 270), ("width", 1920), ("height", 320)):
+            set_child_text(bottom_shade, tag, value)
+        ET.SubElement(bottom_shade, "texture").text = "hero-bottom-fade.png"
+        set_child_text(bottom_shade, "aspectratio", "scale")
+        controls.insert(list(controls).index(left_shade) + 1, bottom_shade)
         # Keep navigation above full-bleed artwork; it was previously painted first
         # and then hidden beneath the hero image controls.
         topbar = next((node for node in list(controls)
@@ -602,6 +629,7 @@ def main():
                 raise SystemExit("Skin archive is missing: " + ", ".join(missing))
             generated_assets = {
                 "skin.cineva/media/hero-left-shade.png": hero_left_shade_png(),
+                "skin.cineva/media/hero-bottom-fade.png": hero_bottom_fade_png(),
                 "skin.cineva/media/resume-track.png": resume_track_png(),
                 "skin.cineva/media/poster-focus.png": poster_focus_png(),
             }

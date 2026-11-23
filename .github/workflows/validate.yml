@@ -102,6 +102,16 @@ jobs:
           left_shade_index = next((i for i, node in enumerate(list(controls)) if node is left_shade), -1)
           if left_shade_index < 0 or topbar_index <= left_shade_index:
               errors.append("CINÉVA top navigation must render above the hero contrast overlay")
+          bottom_shade = controls.find("./control[@id='9106']")
+          if bottom_shade is None or (bottom_shade.findtext("left"), bottom_shade.findtext("top"), bottom_shade.findtext("width"), bottom_shade.findtext("height")) != ("0", "270", "1920", "320") or bottom_shade.findtext("texture") != "hero-bottom-fade.png":
+              errors.append("Home hero is missing the full-width fade into the poster shelves")
+          bottom_fade_path = root / "media/hero-bottom-fade.png"
+          if not bottom_fade_path.is_file():
+              errors.append("Packaged hero-to-shelf fade texture is missing")
+          else:
+              bottom_fade_data = bottom_fade_path.read_bytes()
+              if bottom_fade_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(bottom_fade_data[16:20], "big"), int.from_bytes(bottom_fade_data[20:24], "big")) != (1920, 320):
+                  errors.append("Packaged hero-to-shelf fade texture must be a 1920x320 PNG")
           overlay_path = root / "media/hero-left-shade.png"
           if not overlay_path.is_file():
               errors.append("Packaged hero contrast texture is missing")
