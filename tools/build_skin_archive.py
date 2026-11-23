@@ -475,7 +475,9 @@ def update_xml(data, path):
             poster_title = ET.SubElement(fontset, "font")
         set_child_text(poster_title, "name", "font10")
         set_child_text(poster_title, "filename", "Roboto-Medium.ttf")
-        set_child_text(poster_title, "size", 18)
+        # Slightly larger card titles improve ten-foot readability without changing
+        # the six-poster rail geometry or focus/navigation behavior.
+        set_child_text(poster_title, "size", 21)
     elif path == "skin.cineva/xml/DialogConfirm.xml":
         default = root.find("defaultcontrol")
         if default is None:
