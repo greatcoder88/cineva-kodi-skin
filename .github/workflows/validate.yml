@@ -95,12 +95,12 @@ jobs:
                           f"$INFO[Container({container_id}).ListItem.Genre,  •  ]"
                           f"$INFO[Container({container_id}).ListItem.Rating,  •  ]")
               eyebrow = group.find(f"./control[@id='{9190 + container_id - 9001}']")
-            buttons = group.findall("./control[@type='button']")
-            if eyebrow is None or (eyebrow.findtext("top"), eyebrow.findtext("label")) != ("0", "FEATURED"):
-              errors.append(f"Home hero {container_id} is missing its visible editorial eyebrow")
-            if len(buttons) != 2 or any(button.findtext("top") != "262" for button in buttons):
-              errors.append(f"Home hero {container_id} actions are not aligned beneath the synopsis")
-            if metadata is None or metadata.findtext("label") != expected:
+              buttons = group.findall("./control[@type='button']")
+              if eyebrow is None or (eyebrow.findtext("top"), eyebrow.findtext("label")) != ("0", "FEATURED"):
+                  errors.append(f"Home hero {container_id} is missing its visible editorial eyebrow")
+              if len(buttons) != 2 or any(button.findtext("top") != "262" for button in buttons):
+                  errors.append(f"Home hero {container_id} actions are not aligned beneath the synopsis")
+              if metadata is None or metadata.findtext("label") != expected:
                   errors.append(f"Home hero {container_id} metadata must omit separators for empty fields")
           topbar_index = next((i for i, node in enumerate(list(controls))
                                if node.tag == "include" and (node.text or "").strip() == "CinevaTopBar"), -1)
