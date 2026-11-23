@@ -295,9 +295,9 @@ def update_xml(data, path):
             # gives every selected shelf item a clear hierarchy without
             # hard-coding a movie/show name or implying platform exclusivity.
             for old_control in list(hero_group.findall("control")):
-                if old_control.get("id") in {"9190", str(play_id), str(info_id)}:
+                if old_control.get("id") in {str(9190 + (container_id - 9001)), str(play_id), str(info_id)}:
                     hero_group.remove(old_control)
-            eyebrow = ET.SubElement(hero_group, "control", {"type": "label", "id": "9190"})
+            eyebrow = ET.SubElement(hero_group, "control", {"type": "label", "id": str(9190 + (container_id - 9001))})
             for tag, value in (
                 ("left", 0), ("top", -34), ("width", 420), ("height", 24),
                 ("label", "FEATURED"), ("font", "font9"),
