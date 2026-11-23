@@ -196,7 +196,9 @@ def update_xml(data, path):
         for control in controls.findall("control"):
             texture = control.findtext("texture", "")
             if control.get("type") == "image" and texture.startswith("$INFO[Container("):
-                set_child_text(control, "height", 660)
+                # Carry the fanart through the full bottom-fade viewport. Ending
+                # at 660px exposed a hard horizontal edge above the 750px fade.
+                set_child_text(control, "height", 750)
                 container_id = int(texture.split("Container(", 1)[1].split(")", 1)[0])
                 if container_id in (9002, 9003, 9004):
                     play_id = 9111 + (container_id - 9001) * 2
@@ -209,7 +211,7 @@ def update_xml(data, path):
                     )
                     set_child_text(control, "visible", action_focus)
             if control.get("type") == "image" and texture == "hero-shade.png":
-                set_child_text(control, "height", 660)
+                set_child_text(control, "height", 750)
         # Add a mirrored top fade so the logo/date remain legible over bright fanart.
         hero_shade = next((node for node in controls.findall("control")
                            if node.get("type") == "image" and node.findtext("texture") == "hero-shade.png"), None)
