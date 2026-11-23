@@ -291,9 +291,19 @@ def update_xml(data, path):
                     if duplicate is not hero_group:
                         controls.remove(duplicate)
             set_child_text(hero_group, "height", 300)
-            for old_button in list(hero_group.findall("control")):
-                if old_button.get("id") in {str(play_id), str(info_id)}:
-                    hero_group.remove(old_button)
+            # Add a restrained editorial eyebrow above the dynamic title. It
+            # gives every selected shelf item a clear hierarchy without
+            # hard-coding a movie/show name or implying platform exclusivity.
+            for old_control in list(hero_group.findall("control")):
+                if old_control.get("id") in {"9190", str(play_id), str(info_id)}:
+                    hero_group.remove(old_control)
+            eyebrow = ET.SubElement(hero_group, "control", {"type": "label", "id": "9190"})
+            for tag, value in (
+                ("left", 0), ("top", -34), ("width", 420), ("height", 24),
+                ("label", "FEATURED"), ("font", "font9"),
+                ("textcolor", "E50914"), ("align", "left"), ("aligny", "center")
+            ):
+                set_child_text(eyebrow, tag, value)
             for button_id, label, left, width in (
                 (play_id, "PLAY", 0, 190), (info_id, "MORE INFO", 214, 236)
             ):
@@ -345,7 +355,7 @@ def update_xml(data, path):
         # Each row is a single grouplist child so its non-focusable heading cannot
         # intercept Up from the nested fixedlist before the shelf's explicit route.
         rail_list = ET.Element("control", {"type": "grouplist", "id": "9050"})
-        for tag, value in (("left", 105), ("top", 410), ("width", 1710), ("height", 670)):
+        for tag, value in (("left", 105), ("top", 430), ("width", 1710), ("height", 670)):
             set_child_text(rail_list, tag, value)
         set_child_text(rail_list, "orientation", "vertical")
         set_child_text(rail_list, "itemgap", 12)
@@ -364,7 +374,7 @@ def update_xml(data, path):
             controls.remove(heading)
             controls.remove(shelf)
             row_group = ET.Element("control", {"type": "group", "id": str(9060 + index)})
-            for tag, value in (("left", 0), ("top", 0), ("width", 1710), ("height", 440)):
+            for tag, value in (("left", 0), ("top", 0), ("width", 1710), ("height", 460)):
                 set_child_text(row_group, tag, value)
             play_id = 9111 + (index - 1) * 2
             next_target = 9000 + index + 1 if index < 4 else 1001
@@ -377,7 +387,7 @@ def update_xml(data, path):
             set_child_text(heading, "height", 38)
             set_child_text(heading, "font", "font18")
             set_child_text(shelf, "left", 0)
-            set_child_text(shelf, "top", 46)
+            set_child_text(shelf, "top", 52)
             set_child_text(shelf, "width", 1710)
             set_child_text(shelf, "height", 390)
             set_child_text(shelf, "itemgap", 14)
