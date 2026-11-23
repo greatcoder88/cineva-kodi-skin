@@ -180,6 +180,9 @@ jobs:
           focused_title = focused_poster.find("./control[@type='label']") if focused_poster is not None else None
           if poster is None or poster.findtext("./control[@type='image']/height") != "320" or normal_title is None or (normal_title.findtext("width"), normal_title.findtext("top"), normal_title.findtext("height"), normal_title.findtext("font"), normal_title.findtext("wrapmultiline")) != ("285", "322", "46", "font10", "true") or normal_title.find("wrap") is not None:
               errors.append("Poster image and normal title geometry is not the redesigned large-card layout")
+          normal_image = poster.find("./control[@type='image']") if poster is not None else None
+          if normal_image is None or normal_image.findtext("texture") != "$INFO[ListItem.Art(thumb)]":
+              errors.append("Home shelves must use provider thumbnail art so portrait posters do not fall back to landscape fanart")
           if normal_title is None or normal_title.findtext("visible") != "!ListItem.IsSelected":
               errors.append("Normal poster title must yield to the row-aware selected-item title")
           normal_progress = poster.find("./control[@type='progress']") if poster is not None else None
@@ -199,6 +202,8 @@ jobs:
                   errors.append(f"Home row {container_id} does not use its own focus layout")
               if len(focus_images) != 3 or focus_images[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_images[1].findtext("visible") != f"Control.HasFocus({container_id})":
                   errors.append(f"Home row {container_id} must show a normal poster when inactive and focus artwork only when active")
+              elif any(image.findtext("texture") != "$INFO[ListItem.Art(thumb)]" for image in focus_images[:2]):
+                  errors.append(f"Home row {container_id} must use portrait thumbnail art in both focus states")
               elif (focus_images[2].findtext("texture"), focus_images[2].findtext("visible"), focus_images[2].findtext("left"), focus_images[2].findtext("top"), focus_images[2].findtext("width"), focus_images[2].findtext("height")) != ("focus-bar.png", f"Control.HasFocus({container_id})", "104", "386", "78", "4"):
                   errors.append(f"Home row {container_id} focused poster is missing its red selection accent")
               if len(focus_labels) != 2 or focus_labels[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_labels[1].findtext("visible") != f"Control.HasFocus({container_id})":
