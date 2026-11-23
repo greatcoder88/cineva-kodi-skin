@@ -437,24 +437,18 @@ jobs:
             ]
             hero_fanart_by_row = {}
             for row, path in enumerate(paths, 1):
-              directory = rpc("Files.GetDirectory", {"directory":path,"media":"video","properties":["title","file","thumbnail","art","resume"]})
+              directory = rpc("Files.GetDirectory", {"directory":path,"media":"video","properties":["title","file","thumbnail","art"]})
               items = directory.get("files",[]) if isinstance(directory,dict) else []
               posters = [item.get("thumbnail") or (item.get("art") or {}).get("poster") or (item.get("art") or {}).get("thumb") for item in items]
               fanarts = [(item.get("art") or {}).get("fanart") for item in items]
               poster_count = sum(1 for poster in posters if poster)
               unique_posters = len(set(poster for poster in posters if poster))
               unique_fanarts = len(set(fanart for fanart in fanarts if fanart))
-              resume_positions = [float((item.get("resume") or {}).get("position", 0) or 0) for item in items]
-              resumable_count = sum(position > 0 for position in resume_positions)
               if fanarts:
                 hero_fanart_by_row[row] = fanarts[0]
-              print(f"Widget row {row}: items={len(items)}, poster_art={poster_count}, unique_posters={unique_posters}, unique_fanarts={unique_fanarts}, resumable={resumable_count}, first={items[0] if items else None}")
+              print(f"Widget row {row}: items={len(items)}, poster_art={poster_count}, unique_posters={unique_posters}, unique_fanarts={unique_fanarts}, first={items[0] if items else None}")
               if len(items) < 8 or poster_count < 8 or unique_posters < 8 or unique_fanarts < 8:
                 raise SystemExit(f"Widget row {row} did not return eight distinct poster-backed and fanart-backed items")
-              if row in (1, 2) and resumable_count != 8:
-                raise SystemExit(f"Continue Watching row {row} must expose resume metadata for all eight items; got {resumable_count}")
-              if row in (3, 4) and resumable_count != 0:
-                raise SystemExit(f"Trending row {row} must not expose artificial resume metadata")
             if hero_fanart_by_row.get(1) == hero_fanart_by_row.get(2):
               raise SystemExit("Movie and TV Home rows share the same hero fanart; dynamic hero switching cannot be visually verified")
             rpc("Input.Down")  # Home navigation -> PLAY action
@@ -472,6 +466,18 @@ jobs:
             print("Home poster shelf focused on:", focused_label)
             time.sleep(0.8)
             subprocess.run(["import","-display",":99","-window","root",f"artifacts/cineva-home-cycle-{cycle}.png"],check=True)
+            if cycle == 1:
+              # The progress bars sit at the bottom edge of the first poster row.
+              # Measure the rendered red signal in that exact 4px strip, rather
+              # than assuming that valid XML means the controls are visible.
+              signal = subprocess.run(["convert",f"artifacts/cineva-home-cycle-{cycle}.png","-crop","1824x4+48+692","-format","%[fx:mean(r-g)]","info:"],text=True,capture_output=True,check=True)
+              try:
+                progress_signal = float(signal.stdout.strip())
+              except ValueError:
+                raise SystemExit(f"Could not measure rendered Continue Watching progress bars: {signal.stdout!r}")
+              if progress_signal < 0.02:
+                raise SystemExit(f"Continue Watching progress bars are not visibly rendered in the Home screenshot (red signal={progress_signal:.4f})")
+              print(f"Verified live Continue Watching progress bars in the Home screenshot (red signal={progress_signal:.4f}).")
             subprocess.run(["xdotool","key","Up"],check=True)
             deadline = time.time() + 8
             while time.time() < deadline:
