@@ -111,8 +111,10 @@ jobs:
               errors.append("Home hero fanart and shade must extend through the lower-row transition")
           for container_id, play_id in ((9002, 9113), (9003, 9115), (9004, 9117)):
               artwork = next((node for node in hero_artwork if f"Container({container_id})" in node.findtext("texture", "")), None)
-              expected_art_visibility = (f"(Control.HasFocus({container_id}) | Control.HasFocus({play_id}) | Control.HasFocus({play_id + 1})) "
-                                         f"+ !String.IsEmpty(Container({container_id}).ListItem.Art(fanart))")
+              expected_art_visibility = " | ".join(
+                  f"Control.HasFocus({focus_id}) + !String.IsEmpty(Container({container_id}).ListItem.Art(fanart))"
+                  for focus_id in (container_id, play_id, play_id + 1)
+              )
               if artwork is None or artwork.findtext("visible") != expected_art_visibility:
                   errors.append(f"Home row {container_id} hero fanart must remain visible while its actions are focused")
           bottom_shade = controls.find("./control[@id='9106']")
