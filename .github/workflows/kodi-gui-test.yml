@@ -71,7 +71,7 @@ jobs:
           hero_plot = hero_group.find("./control[@type='textbox']") if hero_group is not None else None
           hero_meta = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Year]" in c.findtext("label", "")), None) if hero_group is not None else None
           hero_eyebrow = hero_group.find("./control[@id='9190']") if hero_group is not None else None
-          if hero_group is None or hero_group.findtext("top") != "118" or hero_group.findtext("height") != "330" or hero_title is None or hero_title.findtext("top") != "24" or hero_title.findtext("height") != "84" or hero_meta is None or hero_meta.findtext("top") != "112" or hero_meta.findtext("font") != "font10" or hero_meta.findtext("textcolor") != "silver" or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("166", "72", "font13") or hero_eyebrow is None or (hero_eyebrow.findtext("top"), hero_eyebrow.findtext("height"), hero_eyebrow.findtext("label"), hero_eyebrow.findtext("font"), hero_eyebrow.findtext("textcolor")) != ("0", "24", "FEATURED", "font9", "E50914"):
+          if hero_group is None or hero_group.findtext("top") != "118" or hero_group.findtext("height") != "330" or hero_title is None or hero_title.findtext("top") != "24" or hero_title.findtext("height") != "84" or hero_meta is None or hero_meta.findtext("top") != "112" or hero_meta.findtext("font") != "font10" or hero_meta.findtext("textcolor") != "silver" or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("166", "72", "font13") or hero_eyebrow is None or (hero_eyebrow.findtext("top"), hero_eyebrow.findtext("height"), hero_eyebrow.findtext("label"), hero_eyebrow.findtext("font"), hero_eyebrow.findtext("textcolor")) != ("0", "24", "FEATURED", "font9", "FFE50914"):
             raise SystemExit("Home hero must present title first, metadata second and synopsis third with distinct baselines")
           for group in (g for g in controls.findall("control") if g.get("type") == "group" and g.findtext("control/label", "").startswith("$INFO[Container(")):
             source_label = group.findtext("control/label", "")
@@ -630,6 +630,23 @@ jobs:
             else:
               raise SystemExit(f"Home shelf Up did not focus the PLAY hero action: {state}")
             subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-actions.png"],check=True)
+            eyebrow_signal = subprocess.run(
+              ["convert","artifacts/cineva-home-actions.png","-crop","420x30+60+110",
+               "-fx","((r>0.55)&&(g<0.35)&&(b<0.35))?1:0","-format","%[fx:mean]","info:"],
+              text=True,capture_output=True,check=True
+            )
+            eyebrow_coverage = float(eyebrow_signal.stdout.strip())
+            if eyebrow_coverage < 0.003:
+              raise SystemExit(f"Home FEATURED eyebrow is not visibly rendered (crimson coverage={eyebrow_coverage:.4f})")
+            top_left_red = subprocess.run(
+              ["convert","artifacts/cineva-home-actions.png","-crop","60x60+0+0",
+               "-fx","((r>0.55)&&(g<0.35)&&(b<0.35))?1:0","-format","%[fx:mean]","info:"],
+              text=True,capture_output=True,check=True
+            )
+            top_left_red_coverage = float(top_left_red.stdout.strip())
+            if top_left_red_coverage > 0.01:
+              raise SystemExit(f"Home has stray red focus accents at the top-left edge (coverage={top_left_red_coverage:.4f})")
+            print(f"Verified visible FEATURED eyebrow and clean top-left navigation margin (eyebrow={eyebrow_coverage:.4f}, stray-red={top_left_red_coverage:.4f}).")
             first_row_mask_off = subprocess.run(
               ["convert","artifacts/cineva-home-actions.png","-crop","1920x120+0+440","-colorspace","gray","-format","%[fx:mean]","info:"],
               text=True,capture_output=True,check=True
@@ -749,7 +766,7 @@ jobs:
                 # this exact 180x44 region in the 1920x1080 Home layout.
                 signal = subprocess.run([
                   "convert", "artifacts/cineva-home-row2-focus.png",
-                  "-crop", "180x44+72+350", "-colorspace", "gray",
+                  "-crop", "180x44+72+380", "-colorspace", "gray",
                   "-threshold", "82%", "-format", "%[fx:mean]", "info:"
                 ], text=True, capture_output=True, check=True)
                 try:
