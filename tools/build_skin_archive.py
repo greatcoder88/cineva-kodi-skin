@@ -167,7 +167,7 @@ def update_xml(data, path):
                     # around OR groups. Repeat the non-empty-art guard in each
                     # branch so the selected hero remains visible on both actions.
                     action_focus = " | ".join(
-                        f"Control.HasFocus({focus_id}) + !String.IsEmpty(Container(${container_id}).ListItem.Art(fanart))"
+                        f"Control.HasFocus({focus_id}) + !String.IsEmpty(Container({container_id}).ListItem.Art(fanart))"
                         for focus_id in (container_id, play_id, play_id + 1)
                     )
                     set_child_text(control, "visible", action_focus)
