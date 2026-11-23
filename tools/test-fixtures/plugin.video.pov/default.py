@@ -60,13 +60,13 @@ def main():
                 "A richly detailed story of impossible choices, loyalty, and the consequences that follow."
             ),
         })
-        # Keep portrait poster and landscape fanart separate, with distinct
-        # movie and TV backdrops so the Home hero can be visually regression-tested.
+        # Keep poster art portrait and thumb/fanart landscape, matching common
+        # provider metadata. This catches skins that accidentally use thumb as a poster.
         backdrop_name = "tv-backdrop-{}.jpg".format(index) if is_tv else "backdrop-{}.jpg".format(index)
         fanart = os.path.join(poster_dir, backdrop_name)
         if not os.path.isfile(fanart):
             raise RuntimeError("Missing landscape hero artwork: {}".format(fanart))
-        item.setArt({"poster": poster, "thumb": poster, "fanart": fanart, "landscape": fanart})
+        item.setArt({"poster": poster, "thumb": fanart, "fanart": fanart, "landscape": fanart})
         # Continue Watching fixtures need real resume metadata so the skin's
         # progress strips are exercised in both normal and focused card states.
         if "in_progress" in action:

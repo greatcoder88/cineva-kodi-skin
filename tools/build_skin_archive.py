@@ -380,10 +380,10 @@ def update_xml(data, path):
             focused_label = ET.fromstring(ET.tostring(normal_label, encoding="unicode"))
         for tag, value in (("left", 22), ("top", 0), ("width", 240), ("height", 320)):
             set_child_text(normal_image, tag, value)
-        # Kodi plugin directories expose thumbnail art most consistently for movies.
-        # The widget fixture sets thumb and poster to the same portrait source; using
-        # thumb here avoids movie shelves silently falling back to landscape fanart.
-        set_child_text(normal_image, "texture", "$INFO[ListItem.Art(thumb)]")
+        # Use the semantic poster key for every shelf state. Providers often map
+        # thumb to landscape fanart, which makes inactive cards turn into short,
+        # cropped strips while the selected row still appears portrait.
+        set_child_text(normal_image, "texture", "$INFO[ListItem.Art(poster)]")
         for tag, value in (("left", 0), ("top", 322), ("width", 285), ("height", 46), ("align", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
             set_child_text(normal_label, tag, value)
         stale_visibility = normal_label.find("visible")
@@ -412,7 +412,7 @@ def update_xml(data, path):
         set_child_text(normal_progress, "overlaytexture", "-")
         for tag, value in (("left", 13), ("top", -7), ("width", 260), ("height", 347)):
             set_child_text(focused_image, tag, value)
-        set_child_text(focused_image, "texture", "$INFO[ListItem.Art(thumb)]")
+        set_child_text(focused_image, "texture", "$INFO[ListItem.Art(poster)]")
         focus_animation = focused_image.find("./animation[@effect='zoom']")
         if focus_animation is None:
             raise SystemExit("Includes.xml focused poster is missing its zoom animation")
