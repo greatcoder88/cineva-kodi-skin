@@ -590,13 +590,17 @@ def update_xml(data, path):
         set_child_text(normal_progress, "texturebg", "resume-track.png")
         set_child_text(normal_progress, "midtexture", "focus-bar.png")
         set_child_text(normal_progress, "overlaytexture", "-")
-        for tag, value in (("left", 13), ("top", -7), ("width", 260), ("height", 347)):
+        # Keep the selected artwork prominent without letting its zoom cover
+        # the title below it. The 104% control geometry plus a 104% focus
+        # animation gives a balanced ~108% total scale instead of double-enlarging
+        # an already oversized 108% control.
+        for tag, value in (("left", 18), ("top", -6), ("width", 250), ("height", 333)):
             set_child_text(focused_image, tag, value)
         set_child_text(focused_image, "texture", "$INFO[ListItem.Art(poster)]")
         focus_animation = focused_image.find("./animation[@effect='zoom']")
         if focus_animation is None:
             raise SystemExit("Includes.xml focused poster is missing its zoom animation")
-        focus_animation.set("end", "108")
+        focus_animation.set("end", "104")
         focus_animation.set("time", "180")
         for tag, value in (("left", 27), ("width", 231), ("top", 308), ("height", 5)):
             set_child_text(progress, tag, value)
@@ -622,7 +626,8 @@ def update_xml(data, path):
             set_child_text(active_image, "visible", f"Control.HasFocus({container_id})")
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
             set_child_text(fallback_progress, "visible", f"!Control.HasFocus({container_id}) + ListItem.IsResumable")
-            for tag, value in (("left", 0), ("top", 350), ("width", 285), ("height", 36), ("align", "center"), ("font", "font10"), ("textcolor", "white")):
+            # Reserve enough vertical room for long titles that wrap to two lines.
+            for tag, value in (("left", 0), ("top", 344), ("width", 285), ("height", 42), ("align", "center"), ("font", "font10"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
             stale_wrap = active_label.find("wrap")
             if stale_wrap is not None:
