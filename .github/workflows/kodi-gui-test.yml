@@ -94,7 +94,7 @@ jobs:
           if overlay_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(overlay_data[16:20], "big"), int.from_bytes(overlay_data[20:24], "big")) != (1920, 440):
             raise SystemExit("Packaged hero contrast texture is missing or has the wrong dimensions")
           rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
-          if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("48", "404", "1824", "676") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "220"):
+          if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("48", "430", "1824", "650") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "220"):
             raise SystemExit("Home rails are missing their vertical scrolling viewport")
           rail_children = [child for child in rail_list if child.tag == "control"] if rail_list is not None else []
           if len(rail_children) != 4:
@@ -117,17 +117,17 @@ jobs:
             row_controls = [child for child in row_group if child.tag == "control"] if row_group is not None else []
             heading = row_controls[0] if len(row_controls) == 2 else None
             shelf = row_controls[1] if len(row_controls) == 2 else None
-            if row_group is None or row_group.get("type") != "group" or row_group.get("id") != str(9060 + index) or row_group.findtext("height") != "332":
+            if row_group is None or row_group.get("type") != "group" or row_group.get("id") != str(9060 + index) or row_group.findtext("height") != "390":
               raise SystemExit(f"Home widget {index} is not a single scrollable row group")
-            if heading is None or heading.get("type") != "label" or heading.findtext("label") != f"$INFO[Skin.String(Cineva.Widget{index}.Name)]" or (heading.findtext("top"), heading.findtext("height")) != ("0", "40") or heading.findtext("font") != "font18":
+            if heading is None or heading.get("type") != "label" or heading.findtext("label") != f"$INFO[Skin.String(Cineva.Widget{index}.Name)]" or (heading.findtext("top"), heading.findtext("height")) != ("0", "32") or heading.findtext("font") != "font16":
               raise SystemExit(f"Home widget {index} heading is missing from its row group")
-            if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("46", "286") or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
+            if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("38", "352") or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
               raise SystemExit(f"Home widget {index} shelf geometry or upward focus route is incorrect")
             expected_down = f"SetFocus({9000 + index + 1})" if index < 4 else "SetFocus(1001)"
             if shelf.findtext("ondown") != expected_down or row_group.findtext("ondown") != expected_down:
               raise SystemExit(f"Home widget {index} cannot navigate down to the next rail")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
-              if (layout.get("width"), layout.get("height")) != ("222", "286"):
+              if (layout.get("width"), layout.get("height")) != ("270", "352"):
                 raise SystemExit(f"Home widget {index} poster card geometry is not the 8-up layout")
           if controls.find("./control[@id='9010']") is not None:
             raise SystemExit("Obstructive floating More Widgets button is still present")
@@ -137,7 +137,7 @@ jobs:
             raise SystemExit("Packaged Home font9 is missing its 16px Roboto definition")
           includes = ET.parse("skin.cineva/xml/Includes.xml").getroot()
           poster = includes.find("./include[@name='CinevaPosterItem']")
-          if poster is None or poster.findtext("./control[@type='image']/height") != "248" or poster.findtext("./control[@type='label']/width") != "222" or poster.findtext("./control[@type='label']/top") != "250" or poster.findtext("./control[@type='label']/height") != "28" or poster.findtext("./control[@type='label']/wrapmultiline") != "true" or poster.find("./control[@type='label']/wrap") is not None or poster.findtext("./control[@type='label']/font") != "font9":
+          if poster is None or poster.findtext("./control[@type='image']/height") != "306" or poster.findtext("./control[@type='label']/width") != "270" or poster.findtext("./control[@type='label']/top") != "308" or poster.findtext("./control[@type='label']/height") != "38" or poster.findtext("./control[@type='label']/wrapmultiline") != "true" or poster.find("./control[@type='label']/wrap") is not None or poster.findtext("./control[@type='label']/font") != "font9":
             raise SystemExit("Home poster and title layout is missing its redesigned large-card geometry or readable title font")
           focused_poster = includes.find("./include[@name='CinevaFocusedPosterItem9001']")
           focused_title = next((label for label in focused_poster.findall("./control[@type='label']") if label.findtext("textcolor") == "white"), None) if focused_poster is not None else None
