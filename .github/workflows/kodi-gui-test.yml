@@ -137,11 +137,11 @@ jobs:
             raise SystemExit("Packaged Home font9 is missing its 16px Roboto definition")
           includes = ET.parse("skin.cineva/xml/Includes.xml").getroot()
           poster = includes.find("./include[@name='CinevaPosterItem']")
-          if poster is None or poster.findtext("./control[@type='image']/height") != "306" or poster.findtext("./control[@type='label']/width") != "270" or poster.findtext("./control[@type='label']/top") != "308" or poster.findtext("./control[@type='label']/height") != "38" or poster.findtext("./control[@type='label']/wrapmultiline") != "true" or poster.find("./control[@type='label']/wrap") is not None or poster.findtext("./control[@type='label']/font") != "font9":
+          if poster is None or poster.findtext("./control[@type='image']/height") != "306" or poster.findtext("./control[@type='label']/width") != "270" or poster.findtext("./control[@type='label']/top") != "308" or poster.findtext("./control[@type='label']/height") != "38" or poster.findtext("./control[@type='label']/wrapmultiline") != "true" or poster.find("./control[@type='label']/wrap") is not None or poster.findtext("./control[@type='label']/font") != "font10":
             raise SystemExit("Home poster and title layout is missing its redesigned large-card geometry or readable title font")
           focused_poster = includes.find("./include[@name='CinevaFocusedPosterItem9001']")
           focused_title = next((label for label in focused_poster.findall("./control[@type='label']") if label.findtext("textcolor") == "white"), None) if focused_poster is not None else None
-          if focused_title is None or focused_title.findtext("font") != "font9" or focused_title.findtext("top") != "310" or focused_title.findtext("height") != "34" or focused_title.find("wrap") is not None or focused_title.findtext("wrapmultiline") != "true":
+          if focused_title is None or focused_title.findtext("font") != "font10" or focused_title.findtext("top") != "310" or focused_title.findtext("height") != "34" or focused_title.find("wrap") is not None or focused_title.findtext("wrapmultiline") != "true":
             raise SystemExit("Focused poster titles must sit below the focused artwork without overlap")
           focused_image = next((node for node in focused_poster.findall("./control[@type='image']") if node.findtext("visible") == "Control.HasFocus(9001)"), None) if focused_poster is not None else None
           focused_zoom = focused_image.find("./animation[@effect='zoom']") if focused_image is not None else None
