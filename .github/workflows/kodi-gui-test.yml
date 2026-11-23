@@ -100,7 +100,7 @@ jobs:
           if overlay_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(overlay_data[16:20], "big"), int.from_bytes(overlay_data[20:24], "big")) != (1920, 440):
             raise SystemExit("Packaged hero contrast texture is missing or has the wrong dimensions")
           rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
-          if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("105", "410", "1710", "560") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "220"):
+          if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("105", "410", "1710", "670") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "220"):
             raise SystemExit("Home rails are missing their vertical scrolling viewport")
           scroll_mask = controls.find("./control[@id='9107']")
           expected_scroll_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118))
@@ -589,6 +589,19 @@ jobs:
             if first_row_region_luma < 0.12:
               raise SystemExit(f"Scroll mask incorrectly hides the first rail while it is active (luma={first_row_region_luma:.3f})")
             print(f"Verified the first rail remains fully visible while active (region luma={first_row_region_luma:.3f}).")
+            # Sample well below the old viewport edge: the next rail should be a
+            # substantial artwork preview, not a narrow strip clipped by the Home list.
+            second_row_preview = subprocess.run(
+              ["convert","artifacts/cineva-home-actions.png","-crop","1800x40+100+1000","-colorspace","gray","-format","%[fx:mean]","info:"],
+              text=True,capture_output=True,check=True
+            )
+            try:
+              second_row_preview_luma = float(second_row_preview.stdout.strip())
+            except ValueError:
+              raise SystemExit(f"Could not measure the second-row Home preview: {second_row_preview.stdout!r}")
+            if second_row_preview_luma < 0.12:
+              raise SystemExit(f"Second Home rail is clipped before a useful poster preview appears (luma={second_row_preview_luma:.3f})")
+            print(f"Verified the second Home rail remains visibly previewed below the first shelf (luma={second_row_preview_luma:.3f}).")
             # JSON-RPC can focus an invisible Kodi control. Verify the first-row
             # PLAY surface is actually painted in the framebuffer, as well as focused.
             first_play = subprocess.run(

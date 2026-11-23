@@ -133,7 +133,7 @@ def update_xml(data, path):
         onload.attrib.clear()
         onload.text = "RunScript(script.cineva.widgets,action=init)"
         # Rebuild Home as a cinematic hero plus large, breathable content rails.
-        # Two full large-poster rails fit above the fold; remaining shelves stay reachable by D-pad navigation.
+        # Keep the first rail fully visible and reveal a substantial preview of the next rail; remaining shelves stay reachable by D-pad navigation.
         controls = root.find("controls")
         if controls is None:
             raise SystemExit("Home.xml is missing its controls container")
@@ -325,7 +325,7 @@ def update_xml(data, path):
         # Each row is a single grouplist child so its non-focusable heading cannot
         # intercept Up from the nested fixedlist before the shelf's explicit route.
         rail_list = ET.Element("control", {"type": "grouplist", "id": "9050"})
-        for tag, value in (("left", 105), ("top", 410), ("width", 1710), ("height", 560)):
+        for tag, value in (("left", 105), ("top", 410), ("width", 1710), ("height", 670)):
             set_child_text(rail_list, tag, value)
         set_child_text(rail_list, "orientation", "vertical")
         set_child_text(rail_list, "itemgap", 12)
