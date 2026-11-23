@@ -163,14 +163,14 @@ def update_xml(data, path):
                 container_id = int(texture.split("Container(", 1)[1].split(")", 1)[0])
                 if container_id in (9002, 9003, 9004):
                     play_id = 9111 + (container_id - 9001) * 2
+                    # Kodi's skin condition parser does not accept parentheses
+                    # around OR groups. Repeat the non-empty-art guard in each
+                    # branch so the selected hero remains visible on both actions.
                     action_focus = " | ".join(
-                        f"Control.HasFocus({focus_id})"
+                        f"Control.HasFocus({focus_id}) + !String.IsEmpty(Container(${container_id}).ListItem.Art(fanart))"
                         for focus_id in (container_id, play_id, play_id + 1)
                     )
-                    set_child_text(
-                        control, "visible",
-                        f"({action_focus}) + !String.IsEmpty(Container({container_id}).ListItem.Art(fanart))"
-                    )
+                    set_child_text(control, "visible", action_focus)
             if control.get("type") == "image" and texture == "hero-shade.png":
                 set_child_text(control, "height", 660)
         # Add a mirrored top fade so the logo/date remain legible over bright fanart.
