@@ -96,6 +96,12 @@ jobs:
                              if node.get("type") == "image" and node.findtext("texture") == "hero-shade.png"), None)
           if len(hero_artwork) != 4 or any(node.findtext("height") != "660" for node in hero_artwork) or hero_shade is None or hero_shade.findtext("height") != "660":
             raise SystemExit("Home hero fanart and shade must extend through the lower-row transition")
+          for container_id, play_id in ((9002, 9113), (9003, 9115), (9004, 9117)):
+            artwork = next((node for node in hero_artwork if f"Container({container_id})" in node.findtext("texture", "")), None)
+            expected_art_visibility = (f"(Control.HasFocus({container_id}) | Control.HasFocus({play_id}) | Control.HasFocus({play_id + 1})) "
+                                       f"+ !String.IsEmpty(Container({container_id}).ListItem.Art(fanart))")
+            if artwork is None or artwork.findtext("visible") != expected_art_visibility:
+              raise SystemExit(f"Home row {container_id} hero fanart disappears when its action buttons receive focus")
           bottom_shade = controls.find("./control[@id='9106']")
           if bottom_shade is None or (bottom_shade.findtext("left"), bottom_shade.findtext("top"), bottom_shade.findtext("width"), bottom_shade.findtext("height")) != ("0", "320", "1920", "430") or bottom_shade.findtext("texture") != "hero-bottom-fade.png":
             raise SystemExit("Home hero is missing its extended full-width fade into the poster shelves")
@@ -110,7 +116,7 @@ jobs:
             raise SystemExit("Home rails are missing their vertical scrolling viewport")
           scroll_mask = controls.find("./control[@id='9107']")
           expected_scroll_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118))
-          if scroll_mask is None or (scroll_mask.findtext("left"), scroll_mask.findtext("top"), scroll_mask.findtext("width"), scroll_mask.findtext("height")) != ("0", "350", "1920", "80") or scroll_mask.findtext("texture") != "rail-scroll-mask.png" or scroll_mask.findtext("visible") != expected_scroll_focus:
+          if scroll_mask is None or (scroll_mask.findtext("left"), scroll_mask.findtext("top"), scroll_mask.findtext("width"), scroll_mask.findtext("height")) != ("0", "350", "1920", "220") or scroll_mask.findtext("texture") != "rail-scroll-mask.png" or scroll_mask.findtext("visible") != expected_scroll_focus:
             raise SystemExit("Home lower-row focus is missing its conditional hero-to-rail scroll mask")
           if list(controls).index(scroll_mask) <= list(controls).index(rail_list):
             raise SystemExit("Home scroll mask must render above the scrolling poster rails")
@@ -120,7 +126,7 @@ jobs:
           if not home_hero_groups or any(list(controls).index(group) <= list(controls).index(scroll_mask) for group in home_hero_groups):
             raise SystemExit("Home hero titles and actions must render above the lower-row scroll mask")
           scroll_mask_data = Path("skin.cineva/media/rail-scroll-mask.png").read_bytes()
-          if scroll_mask_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(scroll_mask_data[16:20], "big"), int.from_bytes(scroll_mask_data[20:24], "big")) != (1920, 80):
+          if scroll_mask_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(scroll_mask_data[16:20], "big"), int.from_bytes(scroll_mask_data[20:24], "big")) != (1920, 220):
             raise SystemExit("Packaged lower-row scroll mask is missing or has the wrong dimensions")
           rail_children = [child for child in rail_list if child.tag == "control"] if rail_list is not None else []
           if len(rail_children) != 4:
@@ -684,8 +690,8 @@ jobs:
               if row_number == 2:
                 time.sleep(0.8)
                 subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row2-focus.png"],check=True)
-                # The scrolled-away first rail must disappear completely beneath
-                # the pinned hero, rather than leaving a clipped poster strip.
+                # The previous rail should fade away beneath the pinned hero without
+                # creating an opaque black stripe across its artwork.
                 scroll_mask_signal = subprocess.run(
                   ["convert","artifacts/cineva-home-row2-focus.png","-crop","1920x36+0+394","-colorspace","gray","-format","%[fx:mean]","info:"],
                   text=True,capture_output=True,check=True
@@ -694,9 +700,9 @@ jobs:
                   masked_region_luma = float(scroll_mask_signal.stdout.strip())
                 except ValueError:
                   raise SystemExit(f"Could not measure the lower-row scroll mask: {scroll_mask_signal.stdout!r}")
-                if masked_region_luma > 0.05:
-                  raise SystemExit(f"Previous Home rail still bleeds through the pinned hero (region luma={masked_region_luma:.3f})")
-                print(f"Verified the previous rail is fully masked below the pinned hero (region luma={masked_region_luma:.3f}).")
+                if masked_region_luma < 0.04:
+                  raise SystemExit(f"Hero-to-rail transition is still an opaque black band (region luma={masked_region_luma:.3f})")
+                print(f"Verified the lower-row transition retains a soft hero fade (region luma={masked_region_luma:.3f}).")
                 # The active-rail underline follows the docked row position; derive its
                 # pixel coordinate from the packaged viewport instead of hard-coding 574.
                 indicator_x, indicator_y = active_rail_indicator_position(2)
@@ -737,6 +743,19 @@ jobs:
                 else:
                   raise SystemExit(f"Row-2 Up did not focus its PLAY action: {state}")
                 subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row2-actions.png"],check=True)
+                # The selected row's fanart must remain pinned while focus moves
+                # from the poster to PLAY; compare only the unobstructed right hero.
+                subprocess.run(["convert","artifacts/cineva-home-row2-focus.png","-crop","760x230+1100+110","+repage","/tmp/hero-row2-focused.png"],check=True)
+                subprocess.run(["convert","artifacts/cineva-home-row2-actions.png","-crop","760x230+1100+110","+repage","/tmp/hero-row2-action.png"],check=True)
+                hero_action_diff = subprocess.run(["compare","-metric","AE","/tmp/hero-row2-focused.png","/tmp/hero-row2-action.png","null:"],text=True,capture_output=True,check=False)
+                hero_action_metric = (hero_action_diff.stderr or hero_action_diff.stdout).strip().split()
+                try:
+                  hero_action_changed = int(hero_action_metric[0])
+                except (IndexError, ValueError):
+                  raise SystemExit(f"Could not compare hero art across row-2 action focus: {hero_action_diff.stderr} {hero_action_diff.stdout}")
+                if hero_action_changed > 5000:
+                  raise SystemExit(f"Row-2 hero fanart changed when PLAY received focus ({hero_action_changed} pixels differ)")
+                print(f"Verified row-2 hero fanart remains pinned through PLAY focus ({hero_action_changed} pixels differ).")
                 subprocess.run(["xdotool","key","Right"],check=True)
                 deadline = time.time() + 8
                 while time.time() < deadline:
@@ -766,9 +785,9 @@ jobs:
                   row4_region_luma = float(row4_mask_signal.stdout.strip())
                 except ValueError:
                   raise SystemExit(f"Could not measure the row-4 scroll mask: {row4_mask_signal.stdout!r}")
-                if row4_region_luma > 0.05:
-                  raise SystemExit(f"Previous Home rail still bleeds through while row 4 is focused (region luma={row4_region_luma:.3f})")
-                print(f"Verified the previous rail is fully masked while row 4 is focused (region luma={row4_region_luma:.3f}).")
+                if row4_region_luma < 0.04:
+                  raise SystemExit(f"Row-4 hero transition still shows an opaque black band (region luma={row4_region_luma:.3f})")
+                print(f"Verified the row-4 hero transition retains a soft fade (region luma={row4_region_luma:.3f}).")
                 indicator_x, indicator_y = active_rail_indicator_position(4)
                 indicator_signal = subprocess.run(
                   ["convert","artifacts/cineva-home-row4-scroll.png","-crop",f"58x3+{indicator_x}+{indicator_y}",
