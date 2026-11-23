@@ -110,7 +110,7 @@ jobs:
               if overlay_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(overlay_data[16:20], "big"), int.from_bytes(overlay_data[20:24], "big")) != (1920, 440):
                   errors.append("Packaged hero contrast texture must be a 1920x440 PNG")
           rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
-          if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("48", "404", "1824", "676") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "220"):
+          if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("48", "430", "1824", "650") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "220"):
               errors.append("Home rails must use the pinned-hero vertical scrolling viewport")
           rail_children = [child for child in rail_list if child.tag == "control"] if rail_list is not None else []
           if len(rail_children) != 4:
@@ -136,18 +136,18 @@ jobs:
               row_controls = [child for child in row_group if child.tag == "control"] if row_group is not None else []
               heading = row_controls[0] if len(row_controls) == 2 else None
               shelf = row_controls[1] if len(row_controls) == 2 else None
-              if row_group is None or row_group.get("type") != "group" or row_group.get("id") != str(9060 + index) or row_group.findtext("height") != "332":
+              if row_group is None or row_group.get("type") != "group" or row_group.get("id") != str(9060 + index) or row_group.findtext("height") != "390":
                   errors.append(f"Home widget {index} must be one grouped row inside the scrolling viewport")
-              if heading is None or heading.get("type") != "label" or heading.findtext("label") != f"$INFO[Skin.String(Cineva.Widget{index}.Name)]" or (heading.findtext("top"), heading.findtext("height")) != ("0", "40") or heading.findtext("font") != "font18":
+              if heading is None or heading.get("type") != "label" or heading.findtext("label") != f"$INFO[Skin.String(Cineva.Widget{index}.Name)]" or (heading.findtext("top"), heading.findtext("height")) != ("0", "32") or heading.findtext("font") != "font16":
                   errors.append(f"Home widget {index} heading is missing from its row group")
-              if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("46", "286") or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
+              if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("38", "352") or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
                   errors.append(f"Home widget {index} shelf geometry or upward focus route is incorrect")
               if shelf is not None:
                   expected_down = f"SetFocus({9000 + index + 1})" if index < 4 else "SetFocus(1001)"
                   if shelf.findtext("ondown") != expected_down or row_group.findtext("ondown") != expected_down:
                       errors.append(f"Home widget {index} shelf cannot move down to the next row")
                   for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
-                      if (layout.get("width"), layout.get("height")) != ("222", "286"):
+                      if (layout.get("width"), layout.get("height")) != ("270", "352"):
                           errors.append(f"Home widget {index} poster cards do not use the 8-up rail geometry")
           nav = next((g for g in controls.findall("control") if g.get("type") == "group" and g.find("./control[@id='1001']") is not None), None)
           if nav is None or any(button.findtext("focusedcolor") != "white" or button.findtext("texturefocus") != "focus-bar.png" for button in nav.findall("./control[@type='button']")):
@@ -178,12 +178,12 @@ jobs:
           normal_title = poster.find("./control[@type='label']") if poster is not None else None
           focused_poster = includes.find("./include[@name='CinevaFocusedPosterItem']")
           focused_title = focused_poster.find("./control[@type='label']") if focused_poster is not None else None
-          if poster is None or poster.findtext("./control[@type='image']/height") != "248" or normal_title is None or (normal_title.findtext("width"), normal_title.findtext("top"), normal_title.findtext("height"), normal_title.findtext("font"), normal_title.findtext("wrapmultiline")) != ("222", "250", "28", "font9", "true") or normal_title.find("wrap") is not None:
+          if poster is None or poster.findtext("./control[@type='image']/height") != "306" or normal_title is None or (normal_title.findtext("width"), normal_title.findtext("top"), normal_title.findtext("height"), normal_title.findtext("font"), normal_title.findtext("wrapmultiline")) != ("270", "308", "38", "font9", "true") or normal_title.find("wrap") is not None:
               errors.append("Poster image and normal title geometry is not the redesigned large-card layout")
           if normal_title is None or normal_title.findtext("visible") != "!ListItem.IsSelected":
               errors.append("Normal poster title must yield to the row-aware selected-item title")
           normal_progress = poster.find("./control[@type='progress']") if poster is not None else None
-          if normal_progress is None or (normal_progress.findtext("left"), normal_progress.findtext("top"), normal_progress.findtext("width"), normal_progress.findtext("height"), normal_progress.findtext("info"), normal_progress.findtext("visible"), normal_progress.findtext("texturebg")) != ("13", "242", "196", "4", "ListItem.PercentPlayed", "ListItem.IsResumable", "resume-track.png"):
+          if normal_progress is None or (normal_progress.findtext("left"), normal_progress.findtext("top"), normal_progress.findtext("width"), normal_progress.findtext("height"), normal_progress.findtext("info"), normal_progress.findtext("visible"), normal_progress.findtext("texturebg")) != ("26", "296", "218", "4", "ListItem.PercentPlayed", "ListItem.IsResumable", "resume-track.png"):
               errors.append("Every resumable poster must show its thin red progress strip, even when not focused")
           if focused_title is not None:
               errors.append("Base focused poster template must not retain an unused title layer")
@@ -203,10 +203,10 @@ jobs:
                   errors.append(f"Home row {container_id} focused poster is missing its red selection accent")
               if len(focus_labels) != 2 or focus_labels[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_labels[1].findtext("visible") != f"Control.HasFocus({container_id})":
                   errors.append(f"Home row {container_id} must keep exactly one correctly styled title visible")
-              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width"), focus_labels[1].findtext("wrapmultiline")) != ("font9", "252", "26", "222", "true") or focus_labels[1].find("wrap") is not None:
+              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width"), focus_labels[1].findtext("wrapmultiline")) != ("font9", "310", "34", "270", "true") or focus_labels[1].find("wrap") is not None:
                   errors.append(f"Home row {container_id} focused title must use the compact, multiline card-title treatment")
               zoom = focus_images[1].find("./animation[@effect='zoom']") if len(focus_images) > 1 else None
-              if len(focus_images) > 1 and (focus_images[1].findtext("left"), focus_images[1].findtext("top"), focus_images[1].findtext("width"), focus_images[1].findtext("height")) != ("9", "-6", "204", "248"):
+              if len(focus_images) > 1 and (focus_images[1].findtext("left"), focus_images[1].findtext("top"), focus_images[1].findtext("width"), focus_images[1].findtext("height")) != ("14", "-7", "242", "314"):
                   errors.append(f"Home row {container_id} focused artwork must stop above its title baseline")
               if zoom is None or (zoom.get("end"), zoom.get("time")) != ("106", "150"):
                   errors.append(f"Home row {container_id} focused poster needs the restrained, title-safe selection zoom")
@@ -216,7 +216,7 @@ jobs:
               }
               if len(focus_progresses) != 2 or {p.findtext("visible") for p in focus_progresses} != expected_progress_visibility:
                   errors.append(f"Home row {container_id} must show one resumable progress strip in both inactive and active card states")
-              elif any((p.findtext("left"), p.findtext("top"), p.findtext("width"), p.findtext("height"), p.findtext("info"), p.findtext("texturebg")) != ("13", "242", "196", "4", "ListItem.PercentPlayed", "resume-track.png") for p in focus_progresses):
+              elif any((p.findtext("left"), p.findtext("top"), p.findtext("width"), p.findtext("height"), p.findtext("info"), p.findtext("texturebg")) != ("26", "296", "218", "4", "ListItem.PercentPlayed", "resume-track.png") for p in focus_progresses):
                   errors.append(f"Home row {container_id} resume progress geometry is inconsistent between focus states")
           catalogue = ET.parse(root / "xml/MyVideoNav.xml").getroot()
           panel = catalogue.find("./controls/control[@type='panel']")
