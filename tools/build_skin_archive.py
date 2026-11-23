@@ -600,13 +600,13 @@ def update_xml(data, path):
         # and Regular for long-form synopsis and supporting copy.
         scale = {
             "font9": ("Lato-Regular.ttf", 17),
-            "font10": ("Lato-Semibold.ttf", 20),
-            "font12": ("Lato-Semibold.ttf", 19),
+            "font10": ("Lato-SemiBold.ttf", 20),
+            "font12": ("Lato-SemiBold.ttf", 19),
             "font13": ("Lato-Regular.ttf", 24),
             "font14": ("Lato-Regular.ttf", 27),
-            "font16": ("Lato-Semibold.ttf", 29),
-            "font18": ("Lato-Semibold.ttf", 34),
-            "font20": ("Lato-Semibold.ttf", 40),
+            "font16": ("Lato-SemiBold.ttf", 29),
+            "font18": ("Lato-SemiBold.ttf", 34),
+            "font20": ("Lato-SemiBold.ttf", 40),
             "font24": ("Lato-Black.ttf", 48),
             "font30": ("Lato-Black.ttf", 60),
             "font36": ("Lato-Black.ttf", 70),
@@ -775,7 +775,7 @@ def main():
             font_base = "https://raw.githubusercontent.com/google/fonts/main/ofl/lato/"
             font_assets = {
                 "skin.cineva/fonts/Lato-Regular.ttf": "Lato-Regular.ttf",
-                "skin.cineva/fonts/Lato-Semibold.ttf": "Lato-Semibold.ttf",
+                "skin.cineva/fonts/Lato-SemiBold.ttf": "Lato-SemiBold.ttf",
                 "skin.cineva/fonts/Lato-Black.ttf": "Lato-Black.ttf",
                 "skin.cineva/fonts/OFL.txt": "OFL.txt",
             }
