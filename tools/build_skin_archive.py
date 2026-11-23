@@ -38,6 +38,23 @@ def hero_left_shade_png():
             + png_chunk(b"IEND", b""))
 
 
+def hero_topbar_shade_png():
+    """Create a full-width top veil so navigation stays legible over bright fanart."""
+    width, height = 1920, 180
+    pixels = bytearray()
+    for y in range(height):
+        position = y / (height - 1)
+        alpha = int(164 * max(0.0, 1.0 - position) ** 2.1)
+        pixels.append(0)  # PNG filter: None
+        for _ in range(width):
+            pixels.extend((5, 7, 12, alpha))
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return (b"\\x89PNG\\r\\n\\x1a\\n"
+            + png_chunk(b"IHDR", header)
+            + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
+            + png_chunk(b"IEND", b""))
+
+
 def hero_bottom_fade_png():
     """Create a full-width fade that cleanly separates hero artwork from the shelves."""
     width, height = 1920, 430
@@ -226,6 +243,17 @@ def update_xml(data, path):
         ET.SubElement(bottom_shade, "texture").text = "hero-bottom-fade.png"
         set_child_text(bottom_shade, "aspectratio", "scale")
         controls.insert(list(controls).index(left_shade) + 1, bottom_shade)
+        # A restrained full-width top veil keeps the logo, navigation and date
+        # readable over bright fanart without dimming the cinematic title area.
+        previous_topbar_shade = controls.find("./control[@id='9108']")
+        if previous_topbar_shade is not None:
+            controls.remove(previous_topbar_shade)
+        topbar_shade = ET.Element("control", {"type": "image", "id": "9108"})
+        for tag, value in (("left", 0), ("top", 0), ("width", 1920), ("height", 180)):
+            set_child_text(topbar_shade, tag, value)
+        ET.SubElement(topbar_shade, "texture").text = "hero-topbar-shade.png"
+        set_child_text(topbar_shade, "aspectratio", "scale")
+        controls.insert(list(controls).index(bottom_shade) + 1, topbar_shade)
         # Keep navigation above full-bleed artwork; it was previously painted first
         # and then hidden beneath the hero image controls.
         topbar = next((node for node in list(controls)
@@ -854,6 +882,7 @@ def main():
                 **{path: urllib.request.urlopen(poppins_base + filename, timeout=30).read()
                    for path, filename in poppins_assets.items()},
                 "skin.cineva/media/hero-left-shade.png": hero_left_shade_png(),
+                "skin.cineva/media/hero-topbar-shade.png": hero_topbar_shade_png(),
                 "skin.cineva/media/hero-bottom-fade.png": hero_bottom_fade_png(),
                 "skin.cineva/media/rail-scroll-mask.png": rail_scroll_mask_png(),
                 "skin.cineva/media/resume-track.png": resume_track_png(),
