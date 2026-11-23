@@ -127,6 +127,34 @@ jobs:
           left_shade_index = next((i for i, node in enumerate(list(controls)) if node is left_shade), -1)
           if left_shade_index < 0 or topbar_index <= left_shade_index:
               errors.append("CINÉVA top navigation must render above the hero contrast overlay")
+          topbar_shade = controls.find("./control[@id='9108']")
+          topbar_shade_index = next((i for i, node in enumerate(list(controls)) if node is topbar_shade), -1)
+          nav_group_index = next((i for i, node in enumerate(list(controls))
+                                  if node.get("type") == "group" and node.find("./control[@id='1001']") is not None), -1)
+          if topbar_shade is None or (topbar_shade.findtext("left"), topbar_shade.findtext("top"), topbar_shade.findtext("width"), topbar_shade.findtext("height"), topbar_shade.findtext("texture")) != ("0", "0", "1920", "180", "hero-topbar-shade.png") or nav_group_index <= topbar_shade_index or topbar_index <= topbar_shade_index:
+              errors.append("Home topbar must sit above a full-width contrast veil")
+          topbar_fade_path = root / "media/hero-topbar-shade.png"
+          if not topbar_fade_path.is_file():
+              errors.append("Packaged topbar contrast texture is missing")
+          else:
+              topbar_fade_data = topbar_fade_path.read_bytes()
+              if topbar_fade_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(topbar_fade_data[16:20], "big"), int.from_bytes(topbar_fade_data[20:24], "big")) != (1920, 180):
+                  errors.append("Topbar contrast texture must be a 1920x180 PNG")
+              else:
+                  offset = 8
+                  idat = bytearray()
+                  while offset < len(topbar_fade_data):
+                      chunk_length = int.from_bytes(topbar_fade_data[offset:offset + 4], "big")
+                      chunk_type = topbar_fade_data[offset + 4:offset + 8]
+                      chunk_data = topbar_fade_data[offset + 8:offset + 8 + chunk_length]
+                      if chunk_type == b"IDAT":
+                          idat.extend(chunk_data)
+                      offset += chunk_length + 12
+                  decoded = zlib.decompress(bytes(idat))
+                  stride = 1 + 1920 * 4
+                  alpha_at = lambda row: decoded[row * stride + 1 + 3]
+                  if len(decoded) != stride * 180 or not (150 <= alpha_at(0) <= 170) or not (20 <= alpha_at(90) <= 50) or alpha_at(179) != 0 or not (alpha_at(0) > alpha_at(90) > alpha_at(179)):
+                      errors.append("Topbar contrast veil must fade smoothly from strong top opacity to transparent")
           hero_artwork = [node for node in controls.findall("control")
                           if node.get("type") == "image" and node.findtext("texture", "").startswith("$INFO[Container(")]
           hero_shade = next((node for node in controls.findall("control")
