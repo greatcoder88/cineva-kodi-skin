@@ -519,18 +519,33 @@ jobs:
             time.sleep(0.8)
             subprocess.run(["import","-display",":99","-window","root",f"artifacts/cineva-home-cycle-{cycle}.png"],check=True)
             if cycle == 1:
-              # The poster progress indicators are rendered immediately below
-              # the artwork at y=656..663 in the 1920x1080 GUI capture. Measure
-              # saturated-red pixels in that narrow strip; the previous y=692
-              # crop sampled the title/empty area and produced a false failure.
-              signal = subprocess.run(["convert",f"artifacts/cineva-home-cycle-{cycle}.png","-crop","1824x8+48+656","-fx","((r>0.4)&&(r>g*1.6)&&(r>b*1.4))?1:0","-format","%[fx:mean]","info:"],text=True,capture_output=True,check=True)
+              # Derive the progress strip from the packaged Home rail and poster
+              # layout. Its actual screen row is rail.top + row.top + shelf.top
+              # + progress.top (currently y=764), not the artwork/title area.
+              import xml.etree.ElementTree as ET
+              home_root = ET.parse("skin.cineva/xml/Home.xml").getroot()
+              includes_root = ET.parse("skin.cineva/xml/Includes.xml").getroot()
+              rail = home_root.find("./controls/control[@type='grouplist'][@id='9050']")
+              first_row = rail.find("./control[@id='9061']") if rail is not None else None
+              shelf = first_row.find("./control[@id='9001']") if first_row is not None else None
+              poster = includes_root.find("./include[@name='CinevaFocusedPosterItem9001']")
+              progress = poster.find("./control[@type='progress']") if poster is not None else None
+              if any(node is None for node in (rail, first_row, shelf, progress)):
+                raise SystemExit("Could not locate the packaged Continue Watching progress geometry")
+              progress_y = sum(int(node.findtext("top", "0")) for node in (rail, first_row, shelf, progress))
+              progress_x = int(rail.findtext("left", "0"))
+              progress_width = int(rail.findtext("width", "0"))
+              progress_height = int(progress.findtext("height", "0"))
+              crop = f"{progress_width}x{progress_height}+{progress_x}+{progress_y}"
+              # Count CINÉVA crimson, not general red/orange poster artwork.
+              signal = subprocess.run(["convert",f"artifacts/cineva-home-cycle-{cycle}.png","-crop",crop,"-fx","((r>0.7)&&(g<0.12)&&(b<0.12))?1:0","-format","%[fx:mean]","info:"],text=True,capture_output=True,check=True)
               try:
                 progress_signal = float(signal.stdout.strip())
               except ValueError:
                 raise SystemExit(f"Could not measure rendered Continue Watching progress bars: {signal.stdout!r}")
-              if progress_signal < 0.04:
-                raise SystemExit(f"Continue Watching progress bars are not visibly rendered in the Home screenshot (red pixel coverage={progress_signal:.4f})")
-              print(f"Verified live Continue Watching progress bars in the Home screenshot (red pixel coverage={progress_signal:.4f}).")
+              if progress_signal < 0.20:
+                raise SystemExit(f"Continue Watching progress bars are not visibly rendered in the Home screenshot (crimson coverage={progress_signal:.4f})")
+              print(f"Verified live Continue Watching progress bars in the Home screenshot (crimson coverage={progress_signal:.4f}, y={progress_y}).")
             subprocess.run(["xdotool","key","Up"],check=True)
             deadline = time.time() + 8
             while time.time() < deadline:
