@@ -386,7 +386,7 @@ def update_xml(data, path):
             raise SystemExit("Includes.xml focused poster is missing its zoom animation")
         focus_animation.set("end", "106")
         focus_animation.set("time", "150")
-        for tag, value in (("left", 25), ("width", 220), ("top", 295)):
+        for tag, value in (("left", 25), ("width", 220), ("top", 295), ("height", 5)):
             set_child_text(progress, tag, value)
         if focused_label is not None and focused_label in list(focused):
             focused.remove(focused_label)
