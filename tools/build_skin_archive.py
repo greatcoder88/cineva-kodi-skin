@@ -55,6 +55,25 @@ def hero_bottom_fade_png():
             + png_chunk(b"IEND", b""))
 
 
+def rail_scroll_mask_png():
+    """Create a short fade that hides a previous rail scrolled beneath the pinned hero."""
+    width, height = 1920, 192
+    fade_height = 30
+    pixels = bytearray()
+    for y in range(height):
+        position = min(1.0, y / fade_height)
+        smooth = position * position * (3.0 - 2.0 * position)
+        alpha = int(255 * smooth)
+        pixels.append(0)  # PNG filter: None
+        for _ in range(width):
+            pixels.extend((5, 7, 12, alpha))
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return (b"\x89PNG\r\n\x1a\n"
+            + png_chunk(b"IHDR", header)
+            + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
+            + png_chunk(b"IEND", b""))
+
+
 def resume_track_png():
     """Create a subtle charcoal progress track that blends into poster artwork."""
     width, height = 8, 8
@@ -364,7 +383,23 @@ def update_xml(data, path):
             rail_list.append(row_group)
         if first_row_index is None:
             raise SystemExit("Home.xml has no widget rows to place in the scrolling rail list")
+        previous_scroll_mask = controls.find("./control[@id='9107']")
+        if previous_scroll_mask is not None:
+            controls.remove(previous_scroll_mask)
         controls.insert(first_row_index, rail_list)
+        # When a lower rail is focused, the vertical grouplist scrolls the first
+        # row behind the pinned hero. Fade it fully away instead of leaving a
+        # clipped strip of posters and titles between the hero and active shelf.
+        scroll_mask = ET.Element("control", {"type": "image", "id": "9107"})
+        for tag, value in (("left", 0), ("top", 398), ("width", 1920), ("height", 192)):
+            set_child_text(scroll_mask, tag, value)
+        ET.SubElement(scroll_mask, "texture").text = "rail-scroll-mask.png"
+        set_child_text(scroll_mask, "aspectratio", "scale")
+        lower_focus_ids = (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118)
+        set_child_text(scroll_mask, "visible", " | ".join(
+            f"Control.HasFocus({control_id})" for control_id in lower_focus_ids
+        ))
+        controls.append(scroll_mask)
         nav_group = next((node for node in controls.findall("control") if node.get("type") == "group" and node.find("./control[@id='1001']") is not None), None)
         if nav_group is not None:
             for button in nav_group.findall("./control[@type='button']"):
@@ -658,6 +693,7 @@ def main():
             generated_assets = {
                 "skin.cineva/media/hero-left-shade.png": hero_left_shade_png(),
                 "skin.cineva/media/hero-bottom-fade.png": hero_bottom_fade_png(),
+                "skin.cineva/media/rail-scroll-mask.png": rail_scroll_mask_png(),
                 "skin.cineva/media/resume-track.png": resume_track_png(),
                 "skin.cineva/media/poster-focus.png": poster_focus_png(),
             }
