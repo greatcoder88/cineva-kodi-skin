@@ -268,6 +268,8 @@ jobs:
           if setting is None or setting.attrib.get("type") != "string":
             raise SystemExit("widget_registry must be declared as a string setting")
           nav = next((g for g in controls.findall("control") if g.get("type") == "group" and g.find("./control[@id='1001']") is not None), None)
+          if nav is None or (nav.findtext("left"), nav.findtext("top"), nav.findtext("width"), nav.findtext("height")) != ("280", "32", "1080", "48"):
+            raise SystemExit("Home navigation must share the horizontal brand/date baseline")
           if nav is None or any(button.findtext("focusedcolor") != "white" or button.findtext("texturefocus") != "focus-bar.png" for button in nav.findall("./control[@type='button']")):
             raise SystemExit("Home navigation buttons need visible explicit textures and text color")
           print("Packaged Home, dialog, Startup and settings schema validated.")
