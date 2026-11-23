@@ -566,6 +566,20 @@ jobs:
             else:
               raise SystemExit(f"Home shelf Up did not focus the PLAY hero action: {state}")
             subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-actions.png"],check=True)
+            # JSON-RPC can focus an invisible Kodi control. Verify the first-row
+            # PLAY surface is actually painted in the framebuffer, as well as focused.
+            first_play = subprocess.run(
+              ["convert","artifacts/cineva-home-actions.png","-crop","210x70+60+340",
+               "-fx","((r>0.7)&&(g<0.25)&&(b<0.25))?1:0","-format","%[fx:mean]","info:"],
+              text=True,capture_output=True,check=True
+            )
+            try:
+              first_play_signal = float(first_play.stdout.strip())
+            except ValueError:
+              raise SystemExit(f"Could not measure the first-row PLAY surface: {first_play.stdout!r}")
+            if first_play_signal < 0.35:
+              raise SystemExit(f"First-row PLAY is focusable but not visibly rendered (crimson coverage={first_play_signal:.4f})")
+            print(f"Verified visible first-row PLAY action (crimson coverage={first_play_signal:.4f}).")
             subprocess.run(["xdotool","key","Right"],check=True)
             deadline = time.time() + 8
             while time.time() < deadline:
