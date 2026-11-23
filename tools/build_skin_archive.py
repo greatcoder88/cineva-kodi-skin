@@ -320,7 +320,7 @@ def update_xml(data, path):
             for tag, value in (
                 ("left", 0), ("top", 0), ("width", 420), ("height", 24),
                 ("label", "FEATURED"), ("font", "font9"),
-                ("textcolor", "E50914"), ("align", "left"), ("aligny", "center")
+                ("textcolor", "FFE50914"), ("align", "left"), ("aligny", "center")
             ):
                 set_child_text(eyebrow, tag, value)
             for button_id, label, left, width in (
