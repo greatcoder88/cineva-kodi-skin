@@ -58,12 +58,12 @@ def hero_bottom_fade_png():
 
 def rail_scroll_mask_png():
     """Create a long, low-contrast fade that avoids a hard black seam over the hero."""
-    width, height = 1920, 220
+    width, height = 1920, 430
     pixels = bytearray()
     for y in range(height):
         position = y / (height - 1)
         smooth = position * position * (3.0 - 2.0 * position)
-        alpha = int(200 * smooth)
+        alpha = int(128 * smooth)
         pixels.append(0)  # PNG filter: None
         for _ in range(width):
             pixels.extend((5, 7, 12, alpha))
@@ -364,7 +364,7 @@ def update_xml(data, path):
             controls.remove(heading)
             controls.remove(shelf)
             row_group = ET.Element("control", {"type": "group", "id": str(9060 + index)})
-            for tag, value in (("left", 0), ("top", 0), ("width", 1710), ("height", 430)):
+            for tag, value in (("left", 0), ("top", 0), ("width", 1710), ("height", 440)):
                 set_child_text(row_group, tag, value)
             play_id = 9111 + (index - 1) * 2
             next_target = 9000 + index + 1 if index < 4 else 1001
@@ -374,10 +374,10 @@ def update_xml(data, path):
             set_child_text(heading, "left", 0)
             set_child_text(heading, "top", 0)
             set_child_text(heading, "width", 1100)
-            set_child_text(heading, "height", 32)
+            set_child_text(heading, "height", 38)
             set_child_text(heading, "font", "font18")
             set_child_text(shelf, "left", 0)
-            set_child_text(shelf, "top", 38)
+            set_child_text(shelf, "top", 46)
             set_child_text(shelf, "width", 1710)
             set_child_text(shelf, "height", 390)
             set_child_text(shelf, "itemgap", 14)
@@ -412,7 +412,7 @@ def update_xml(data, path):
             # A restrained red underline makes the active Home rail legible
             # even when the selected poster is several cards into the row.
             row_accent = ET.Element("control", {"type": "image"})
-            for tag, value in (("left", 0), ("top", 34), ("width", 58), ("height", 3)):
+            for tag, value in (("left", 0), ("top", 40), ("width", 58), ("height", 3)):
                 set_child_text(row_accent, tag, value)
             set_child_text(row_accent, "texture", "focus-bar.png")
             set_child_text(row_accent, "visible", f"Control.HasFocus({9000 + index})")
@@ -429,7 +429,7 @@ def update_xml(data, path):
         # When a lower rail is focused, blend the scrolled-away shelf contents
         # into the pinned hero's own bottom fade instead of painting a hard black stripe.
         scroll_mask = ET.Element("control", {"type": "image", "id": "9107"})
-        for tag, value in (("left", 0), ("top", 350), ("width", 1920), ("height", 220)):
+        for tag, value in (("left", 0), ("top", 320), ("width", 1920), ("height", 430)):
             set_child_text(scroll_mask, tag, value)
         ET.SubElement(scroll_mask, "texture").text = "rail-scroll-mask.png"
         set_child_text(scroll_mask, "aspectratio", "scale")
@@ -600,16 +600,16 @@ def update_xml(data, path):
         # and Regular for long-form synopsis and supporting copy.
         scale = {
             "font9": ("Lato-Regular.ttf", 17),
-            "font10": ("Lato-SemiBold.ttf", 20),
-            "font12": ("Lato-SemiBold.ttf", 19),
+            "font10": ("Poppins-SemiBold.ttf", 19),
+            "font12": ("Poppins-Medium.ttf", 18),
             "font13": ("Lato-Regular.ttf", 24),
             "font14": ("Lato-Regular.ttf", 27),
-            "font16": ("Lato-SemiBold.ttf", 29),
-            "font18": ("Lato-SemiBold.ttf", 34),
-            "font20": ("Lato-SemiBold.ttf", 40),
-            "font24": ("Lato-Black.ttf", 48),
-            "font30": ("Lato-Black.ttf", 60),
-            "font36": ("Lato-Black.ttf", 70),
+            "font16": ("Poppins-SemiBold.ttf", 29),
+            "font18": ("Poppins-SemiBold.ttf", 34),
+            "font20": ("Poppins-SemiBold.ttf", 38),
+            "font24": ("Poppins-ExtraBold.ttf", 46),
+            "font30": ("Poppins-ExtraBold.ttf", 58),
+            "font36": ("Poppins-ExtraBold.ttf", 68),
         }
         for name, (filename, size) in scale.items():
             node = next((item for item in fontset.findall("font")
@@ -779,9 +779,20 @@ def main():
                 "skin.cineva/fonts/Lato-Black.ttf": "Lato-Black.ttf",
                 "skin.cineva/fonts/OFL.txt": "OFL.txt",
             }
+            # Poppins supplies the stronger display voice; Lato remains the
+            # quieter, highly legible reading face for synopsis and long copy.
+            poppins_base = "https://raw.githubusercontent.com/google/fonts/main/ofl/poppins/"
+            poppins_assets = {
+                "skin.cineva/fonts/Poppins-Medium.ttf": "Poppins-Medium.ttf",
+                "skin.cineva/fonts/Poppins-SemiBold.ttf": "Poppins-SemiBold.ttf",
+                "skin.cineva/fonts/Poppins-ExtraBold.ttf": "Poppins-ExtraBold.ttf",
+                "skin.cineva/fonts/Poppins-OFL.txt": "OFL.txt",
+            }
             generated_assets = {
                 **{path: urllib.request.urlopen(font_base + filename, timeout=30).read()
                    for path, filename in font_assets.items()},
+                **{path: urllib.request.urlopen(poppins_base + filename, timeout=30).read()
+                   for path, filename in poppins_assets.items()},
                 "skin.cineva/media/hero-left-shade.png": hero_left_shade_png(),
                 "skin.cineva/media/hero-bottom-fade.png": hero_bottom_fade_png(),
                 "skin.cineva/media/rail-scroll-mask.png": rail_scroll_mask_png(),

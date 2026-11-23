@@ -139,7 +139,7 @@ jobs:
               errors.append("Packaged lower-row scroll mask is missing")
           else:
               scroll_mask_data = scroll_mask_path.read_bytes()
-              if scroll_mask_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(scroll_mask_data[16:20], "big"), int.from_bytes(scroll_mask_data[20:24], "big")) != (1920, 220):
+              if scroll_mask_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(scroll_mask_data[16:20], "big"), int.from_bytes(scroll_mask_data[20:24], "big")) != (1920, 430):
                   errors.append("Packaged lower-row scroll mask must be a 1920x220 PNG")
               else:
                   offset = 8
@@ -161,7 +161,7 @@ jobs:
               errors.append("Home rails must use the pinned-hero vertical scrolling viewport")
           scroll_mask = controls.find("./control[@id='9107']")
           expected_scroll_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118))
-          if scroll_mask is None or (scroll_mask.findtext("left"), scroll_mask.findtext("top"), scroll_mask.findtext("width"), scroll_mask.findtext("height")) != ("0", "350", "1920", "220") or scroll_mask.findtext("texture") != "rail-scroll-mask.png" or scroll_mask.findtext("visible") != expected_scroll_focus:
+          if scroll_mask is None or (scroll_mask.findtext("left"), scroll_mask.findtext("top"), scroll_mask.findtext("width"), scroll_mask.findtext("height")) != ("0", "320", "1920", "430") or scroll_mask.findtext("texture") != "rail-scroll-mask.png" or scroll_mask.findtext("visible") != expected_scroll_focus:
               errors.append("Home lower-row focus must fade the previous rail beneath the pinned hero")
           if rail_list is not None and scroll_mask is not None and list(controls).index(scroll_mask) <= list(controls).index(rail_list):
               errors.append("Home lower-row scroll mask must render above the scrolling poster rails")
@@ -204,13 +204,13 @@ jobs:
               heading = row_controls[0] if len(row_controls) == 3 else None
               row_accent = row_controls[1] if len(row_controls) == 3 else None
               shelf = row_controls[2] if len(row_controls) == 3 else None
-              if row_group is None or row_group.get("type") != "group" or row_group.get("id") != str(9060 + index) or row_group.findtext("height") != "430":
+              if row_group is None or row_group.get("type") != "group" or row_group.get("id") != str(9060 + index) or row_group.findtext("height") != "440":
                   errors.append(f"Home widget {index} must be one grouped row inside the scrolling viewport")
-              if heading is None or heading.get("type") != "label" or heading.findtext("label") != f"$INFO[Skin.String(Cineva.Widget{index}.Name)]" or (heading.findtext("top"), heading.findtext("height")) != ("0", "32") or heading.findtext("font") != "font18":
+              if heading is None or heading.get("type") != "label" or heading.findtext("label") != f"$INFO[Skin.String(Cineva.Widget{index}.Name)]" or (heading.findtext("top"), heading.findtext("height")) != ("0", "38") or heading.findtext("font") != "font18":
                   errors.append(f"Home widget {index} heading is missing from its row group")
-              if row_accent is None or row_accent.get("type") != "image" or (row_accent.findtext("left"), row_accent.findtext("top"), row_accent.findtext("width"), row_accent.findtext("height")) != ("0", "34", "58", "3") or row_accent.findtext("texture") != "focus-bar.png" or row_accent.findtext("visible") != f"Control.HasFocus({9000 + index})":
+              if row_accent is None or row_accent.get("type") != "image" or (row_accent.findtext("left"), row_accent.findtext("top"), row_accent.findtext("width"), row_accent.findtext("height")) != ("0", "40", "58", "3") or row_accent.findtext("texture") != "focus-bar.png" or row_accent.findtext("visible") != f"Control.HasFocus({9000 + index})":
                   errors.append(f"Home widget {index} is missing its active-rail accent")
-              if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("38", "390") or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
+              if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("46", "390") or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
                   errors.append(f"Home widget {index} shelf geometry or upward focus route is incorrect")
               later_focus_ids = [control_id for later_index in range(index + 1, 5)
                                  for control_id in (9000 + later_index, 9111 + (later_index - 1) * 2, 9112 + (later_index - 1) * 2)]
@@ -243,12 +243,18 @@ jobs:
           if controls.find("./control[@id='9010']") is not None:
               errors.append("Floating More Widgets button still obscures the fourth shelf")
           fonts = ET.parse(root / "xml/Font.xml").getroot()
-          for font_file in ("Lato-Regular.ttf", "Lato-SemiBold.ttf", "Lato-Black.ttf"):
+          for font_file in ("Lato-Regular.ttf", "Lato-SemiBold.ttf", "Lato-Black.ttf", "Poppins-Medium.ttf", "Poppins-SemiBold.ttf", "Poppins-ExtraBold.ttf"):
               if not (root / "fonts" / font_file).is_file():
                   errors.append(f"Bundled Lato font is missing: {font_file}")
           compact_font = next((node for node in fonts.findall("./fontset[@id='Default']/font") if node.findtext("name") == "font9"), None)
           if compact_font is None or (compact_font.findtext("filename"), compact_font.findtext("size")) != ("Lato-Regular.ttf", "17"):
-              errors.append("Home poster font9 must be defined at a readable 16px size")
+              errors.append("Home poster font9 must be defined at a readable 17px size")
+          hero_font = next((node for node in fonts.findall("./fontset[@id='Default']/font") if node.findtext("name") == "font36"), None)
+          shelf_font = next((node for node in fonts.findall("./fontset[@id='Default']/font") if node.findtext("name") == "font18"), None)
+          if hero_font is None or (hero_font.findtext("filename"), hero_font.findtext("size")) != ("Poppins-ExtraBold.ttf", "68"):
+              errors.append("Home hero title must use the Poppins display face at 68px")
+          if shelf_font is None or (shelf_font.findtext("filename"), shelf_font.findtext("size")) != ("Poppins-SemiBold.ttf", "34"):
+              errors.append("Home shelf headings must use the Poppins semibold face at 34px")
           focus_border = pathlib.Path("skin.cineva/media/poster-focus.png").read_bytes()
           if focus_border[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(focus_border[16:20], "big"), int.from_bytes(focus_border[20:24], "big")) != (8, 8):
               errors.append("Packaged crimson poster-focus texture is missing or has the wrong dimensions")
