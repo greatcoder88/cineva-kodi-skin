@@ -351,7 +351,15 @@ def update_xml(data, path):
             focused_include = focused_layout.find("include") if focused_layout is not None else None
             if focused_include is not None:
                 focused_include.text = f"CinevaFocusedPosterItem{9000 + index}"
+            # A restrained red underline makes the active Home rail legible
+            # even when the selected poster is several cards into the row.
+            row_accent = ET.Element("control", {"type": "image"})
+            for tag, value in (("left", 0), ("top", 34), ("width", 58), ("height", 3)):
+                set_child_text(row_accent, tag, value)
+            set_child_text(row_accent, "texture", "focus-bar.png")
+            set_child_text(row_accent, "visible", f"Control.HasFocus({9000 + index})")
             row_group.append(heading)
+            row_group.append(row_accent)
             row_group.append(shelf)
             rail_list.append(row_group)
         if first_row_index is None:
