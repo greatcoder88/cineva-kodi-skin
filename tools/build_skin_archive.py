@@ -261,7 +261,7 @@ def update_xml(data, path):
         # Each row is a single grouplist child so its non-focusable heading cannot
         # intercept Up from the nested fixedlist before the shelf's explicit route.
         rail_list = ET.Element("control", {"type": "grouplist", "id": "9050"})
-        for tag, value in (("left", 48), ("top", 430), ("width", 1780), ("height", 650)):
+        for tag, value in (("left", 105), ("top", 430), ("width", 1710), ("height", 650)):
             set_child_text(rail_list, tag, value)
         set_child_text(rail_list, "orientation", "vertical")
         set_child_text(rail_list, "itemgap", 12)
@@ -280,7 +280,7 @@ def update_xml(data, path):
             controls.remove(heading)
             controls.remove(shelf)
             row_group = ET.Element("control", {"type": "group", "id": str(9060 + index)})
-            for tag, value in (("left", 0), ("top", 0), ("width", 1780), ("height", 430)):
+            for tag, value in (("left", 0), ("top", 0), ("width", 1710), ("height", 430)):
                 set_child_text(row_group, tag, value)
             play_id = 9111 + (index - 1) * 2
             next_target = 9000 + index + 1 if index < 4 else 1001
@@ -294,7 +294,7 @@ def update_xml(data, path):
             set_child_text(heading, "font", "font16")
             set_child_text(shelf, "left", 0)
             set_child_text(shelf, "top", 38)
-            set_child_text(shelf, "width", 1780)
+            set_child_text(shelf, "width", 1710)
             set_child_text(shelf, "height", 390)
             set_child_text(shelf, "itemgap", 14)
             set_child_text(shelf, "onup", f"SetFocus({play_id})")
