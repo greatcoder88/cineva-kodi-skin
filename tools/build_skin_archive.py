@@ -534,6 +534,8 @@ def main():
             for info in source.infolist():
                 data = source.read(info.filename)
                 if info.filename == generated_overlay:
+                    if data != overlay_data:
+                        changed.append(generated_overlay)
                     data = overlay_data
                     overlay_written = True
                 if info.filename in required:
