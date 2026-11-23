@@ -74,7 +74,7 @@ jobs:
           hero_title = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Label]" in c.findtext("label", "")), None) if hero_group is not None else None
           hero_plot = hero_group.find("./control[@type='textbox']") if hero_group is not None else None
           hero_meta = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Year]" in c.findtext("label", "")), None) if hero_group is not None else None
-          if hero_group is None or hero_group.findtext("top") != "124" or hero_title is None or hero_title.findtext("top") != "30" or hero_meta is None or hero_meta.findtext("top") != "8" or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height")) != ("112", "58"):
+          if hero_group is None or hero_group.findtext("top") != "118" or hero_title is None or hero_title.findtext("top") != "38" or hero_meta is None or hero_meta.findtext("top") != "0" or hero_meta.findtext("font") != "font10" or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("122", "66", "font13"):
               errors.append("Home hero title, metadata and synopsis do not have the compact action-ready composition")
           for group in (g for g in controls.findall("control") if g.get("type") == "group" and g.findtext("control/label", "").startswith("$INFO[Container(")):
               source_label = group.findtext("control/label", "")
