@@ -151,11 +151,30 @@ def update_xml(data, path):
                 if child.get("type") == "group" and child.get("id", "").startswith("906"):
                     for row_child in list(child.findall("control")):
                         child.remove(row_child)
+                        # Row accents belong inside their shelf group. Older
+                        # builds accidentally promoted them to screen-level
+                        # controls, leaving red bars pinned to the top-left.
+                        if (row_child.get("type") == "image"
+                                and row_child.findtext("texture") == "focus-bar.png"
+                                and row_child.findtext("visible", "") in {
+                                    f"Control.HasFocus({focus_id})" for focus_id in (9001, 9002, 9003, 9004)
+                                }):
+                            continue
                         controls.insert(row_insert_index, row_child)
                         row_insert_index += 1
                 else:
                     controls.insert(row_insert_index, child)
                     row_insert_index += 1
+        # Clean up accents orphaned by earlier non-idempotent archive builds.
+        # Only the 58x3 focus-bar controls tied to the four Home shelves match;
+        # the navigation marker and focused-poster frame remain untouched.
+        row_focus_conditions = {f"Control.HasFocus({focus_id})" for focus_id in (9001, 9002, 9003, 9004)}
+        for orphan in list(controls.findall("control")):
+            if (orphan.get("type") == "image"
+                    and orphan.findtext("texture") == "focus-bar.png"
+                    and orphan.findtext("visible", "") in row_focus_conditions
+                    and (orphan.findtext("left"), orphan.findtext("width"), orphan.findtext("height")) == ("0", "58", "3")):
+                controls.remove(orphan)
         # Cinematic hero: give artwork room to breathe and fade it cleanly into the catalogue.
         for control in controls.findall("control"):
             texture = control.findtext("texture", "")
@@ -223,7 +242,7 @@ def update_xml(data, path):
                 labels = [child for child in group.findall("control") if child.get("type") == "label"]
                 if labels:
                     # Title first, metadata second: separate vertical baselines.
-                    set_child_text(labels[0], "top", 0)
+                    set_child_text(labels[0], "top", 24)
                     set_child_text(labels[0], "font", "font36")
                     set_child_text(labels[0], "height", 84)
                     set_child_text(labels[0], "textcolor", "white")
@@ -240,13 +259,13 @@ def update_xml(data, path):
                         f"$INFO[Container({container_id}).ListItem.Rating,  •  ]"
                     )
                     set_child_text(labels[1], "label", metadata)
-                    set_child_text(labels[1], "top", 88)
+                    set_child_text(labels[1], "top", 112)
                     set_child_text(labels[1], "height", 34)
                     set_child_text(labels[1], "font", "font10")
                     set_child_text(labels[1], "textcolor", "silver")
                 for child in group.findall("control"):
                     if child.get("type") == "textbox":
-                        set_child_text(child, "top", 142)
+                        set_child_text(child, "top", 166)
                         set_child_text(child, "height", 72)
                         set_child_text(child, "width", 900)
                         set_child_text(child, "font", "font13")
@@ -290,7 +309,7 @@ def update_xml(data, path):
                 for duplicate in hero_groups:
                     if duplicate is not hero_group:
                         controls.remove(duplicate)
-            set_child_text(hero_group, "height", 300)
+            set_child_text(hero_group, "height", 330)
             # Add a restrained editorial eyebrow above the dynamic title. It
             # gives every selected shelf item a clear hierarchy without
             # hard-coding a movie/show name or implying platform exclusivity.
@@ -299,7 +318,7 @@ def update_xml(data, path):
                     hero_group.remove(old_control)
             eyebrow = ET.SubElement(hero_group, "control", {"type": "label", "id": str(9190 + (container_id - 9001))})
             for tag, value in (
-                ("left", 0), ("top", -34), ("width", 420), ("height", 24),
+                ("left", 0), ("top", 0), ("width", 420), ("height", 24),
                 ("label", "FEATURED"), ("font", "font9"),
                 ("textcolor", "E50914"), ("align", "left"), ("aligny", "center")
             ):
@@ -310,7 +329,7 @@ def update_xml(data, path):
                 button = ET.SubElement(hero_group, "control",
                                        {"type": "button", "id": str(button_id)})
                 for tag, value in (
-                    ("left", left), ("top", 238), ("width", width), ("height", 54),
+                    ("left", left), ("top", 262), ("width", width), ("height", 54),
                     ("label", label), ("font", "font10"),
                     ("onup", f"SetFocus({nav_target})"),
                     ("ondown", f"SetFocus({container_id})"),
@@ -355,7 +374,7 @@ def update_xml(data, path):
         # Each row is a single grouplist child so its non-focusable heading cannot
         # intercept Up from the nested fixedlist before the shelf's explicit route.
         rail_list = ET.Element("control", {"type": "grouplist", "id": "9050"})
-        for tag, value in (("left", 105), ("top", 430), ("width", 1710), ("height", 670)):
+        for tag, value in (("left", 105), ("top", 454), ("width", 1710), ("height", 670)):
             set_child_text(rail_list, tag, value)
         set_child_text(rail_list, "orientation", "vertical")
         set_child_text(rail_list, "itemgap", 12)
