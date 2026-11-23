@@ -325,12 +325,12 @@ jobs:
                   errors.append(f"Home row {container_id} focused poster is missing its red selection accent")
               if len(focus_labels) != 2 or focus_labels[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_labels[1].findtext("visible") != f"Control.HasFocus({container_id})":
                   errors.append(f"Home row {container_id} must keep exactly one correctly styled title visible")
-              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width"), focus_labels[1].findtext("wrapmultiline")) != ("font10", "350", "36", "285", "true") or focus_labels[1].find("wrap") is not None:
+              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width"), focus_labels[1].findtext("wrapmultiline")) != ("font10", "344", "42", "285", "true") or focus_labels[1].find("wrap") is not None:
                   errors.append(f"Home row {container_id} focused title must use the compact, multiline card-title treatment")
               zoom = focus_images[1].find("./animation[@effect='zoom']") if len(focus_images) > 1 else None
-              if len(focus_images) > 1 and (focus_images[1].findtext("left"), focus_images[1].findtext("top"), focus_images[1].findtext("width"), focus_images[1].findtext("height")) != ("13", "-7", "260", "347"):
+              if len(focus_images) > 1 and (focus_images[1].findtext("left"), focus_images[1].findtext("top"), focus_images[1].findtext("width"), focus_images[1].findtext("height")) != ("18", "-6", "250", "333"):
                   errors.append(f"Home row {container_id} focused artwork must stop above its title baseline")
-              if zoom is None or (zoom.get("end"), zoom.get("time")) != ("108", "180"):
+              if zoom is None or (zoom.get("end"), zoom.get("time")) != ("104", "180"):
                   errors.append(f"Home row {container_id} focused poster needs the restrained, title-safe selection zoom")
               expected_progress_visibility = {
                   f"!Control.HasFocus({container_id}) + ListItem.IsResumable",
