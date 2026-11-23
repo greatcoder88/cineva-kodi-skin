@@ -353,7 +353,7 @@ def update_xml(data, path):
             focused_label = ET.fromstring(ET.tostring(normal_label, encoding="unicode"))
         for tag, value in (("left", 20), ("top", 0), ("width", 230), ("height", 306)):
             set_child_text(normal_image, tag, value)
-        for tag, value in (("left", 0), ("top", 308), ("width", 270), ("height", 38), ("align", "center"), ("font", "font9"), ("textcolor", "lightgrey")):
+        for tag, value in (("left", 0), ("top", 308), ("width", 270), ("height", 38), ("align", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
             set_child_text(normal_label, tag, value)
         stale_visibility = normal_label.find("visible")
         if stale_visibility is not None:
@@ -372,7 +372,7 @@ def update_xml(data, path):
         if normal_progress is None:
             normal_progress = ET.fromstring(ET.tostring(progress, encoding="unicode"))
             normal.append(normal_progress)
-        for tag, value in (("left", 26), ("top", 296), ("width", 218), ("height", 4)):
+        for tag, value in (("left", 25), ("top", 295), ("width", 220), ("height", 5)):
             set_child_text(normal_progress, tag, value)
         set_child_text(normal_progress, "info", "ListItem.PercentPlayed")
         set_child_text(normal_progress, "visible", "ListItem.IsResumable")
@@ -386,7 +386,7 @@ def update_xml(data, path):
             raise SystemExit("Includes.xml focused poster is missing its zoom animation")
         focus_animation.set("end", "106")
         focus_animation.set("time", "150")
-        for tag, value in (("left", 26), ("width", 218), ("top", 296)):
+        for tag, value in (("left", 25), ("width", 220), ("top", 295)):
             set_child_text(progress, tag, value)
         if focused_label is not None and focused_label in list(focused):
             focused.remove(focused_label)
@@ -410,7 +410,7 @@ def update_xml(data, path):
             set_child_text(active_image, "visible", f"Control.HasFocus({container_id})")
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
             set_child_text(fallback_progress, "visible", f"!Control.HasFocus({container_id}) + ListItem.IsResumable")
-            for tag, value in (("left", 0), ("top", 310), ("width", 270), ("height", 34), ("align", "center"), ("font", "font9"), ("textcolor", "white")):
+            for tag, value in (("left", 0), ("top", 310), ("width", 270), ("height", 34), ("align", "center"), ("font", "font10"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
             stale_wrap = active_label.find("wrap")
             if stale_wrap is not None:
@@ -438,6 +438,12 @@ def update_xml(data, path):
         set_child_text(compact, "name", "font9")
         set_child_text(compact, "filename", "Roboto-Regular.ttf")
         set_child_text(compact, "size", 16)
+        poster_title = next((node for node in fontset.findall("font") if node.findtext("name") == "font10"), None)
+        if poster_title is None:
+            poster_title = ET.SubElement(fontset, "font")
+        set_child_text(poster_title, "name", "font10")
+        set_child_text(poster_title, "filename", "Roboto-Medium.ttf")
+        set_child_text(poster_title, "size", 18)
     elif path == "skin.cineva/xml/DialogConfirm.xml":
         default = root.find("defaultcontrol")
         if default is None:
