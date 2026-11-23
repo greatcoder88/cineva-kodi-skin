@@ -100,16 +100,16 @@ jobs:
           if overlay_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(overlay_data[16:20], "big"), int.from_bytes(overlay_data[20:24], "big")) != (1920, 440):
             raise SystemExit("Packaged hero contrast texture is missing or has the wrong dimensions")
           rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
-          if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("105", "430", "1710", "650") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "220"):
+          if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("105", "430", "1710", "580") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "220"):
             raise SystemExit("Home rails are missing their vertical scrolling viewport")
           scroll_mask = controls.find("./control[@id='9107']")
           expected_scroll_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118))
-          if scroll_mask is None or (scroll_mask.findtext("left"), scroll_mask.findtext("top"), scroll_mask.findtext("width"), scroll_mask.findtext("height")) != ("0", "398", "1920", "212") or scroll_mask.findtext("texture") != "rail-scroll-mask.png" or scroll_mask.findtext("visible") != expected_scroll_focus:
+          if scroll_mask is None or (scroll_mask.findtext("left"), scroll_mask.findtext("top"), scroll_mask.findtext("width"), scroll_mask.findtext("height")) != ("0", "398", "1920", "162") or scroll_mask.findtext("texture") != "rail-scroll-mask.png" or scroll_mask.findtext("visible") != expected_scroll_focus:
             raise SystemExit("Home lower-row focus is missing its conditional hero-to-rail scroll mask")
           if list(controls).index(scroll_mask) <= list(controls).index(rail_list):
             raise SystemExit("Home scroll mask must render above the scrolling poster rails")
           scroll_mask_data = Path("skin.cineva/media/rail-scroll-mask.png").read_bytes()
-          if scroll_mask_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(scroll_mask_data[16:20], "big"), int.from_bytes(scroll_mask_data[20:24], "big")) != (1920, 212):
+          if scroll_mask_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(scroll_mask_data[16:20], "big"), int.from_bytes(scroll_mask_data[20:24], "big")) != (1920, 162):
             raise SystemExit("Packaged lower-row scroll mask is missing or has the wrong dimensions")
           rail_children = [child for child in rail_list if child.tag == "control"] if rail_list is not None else []
           if len(rail_children) != 4:
@@ -579,7 +579,7 @@ jobs:
               raise SystemExit(f"Home shelf Up did not focus the PLAY hero action: {state}")
             subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-actions.png"],check=True)
             first_row_mask_off = subprocess.run(
-              ["convert","artifacts/cineva-home-actions.png","-crop","1920x170+0+440","-colorspace","gray","-format","%[fx:mean]","info:"],
+              ["convert","artifacts/cineva-home-actions.png","-crop","1920x120+0+440","-colorspace","gray","-format","%[fx:mean]","info:"],
               text=True,capture_output=True,check=True
             )
             try:
@@ -642,7 +642,7 @@ jobs:
                 # The scrolled-away first rail must disappear completely beneath
                 # the pinned hero, rather than leaving a clipped poster strip.
                 scroll_mask_signal = subprocess.run(
-                  ["convert","artifacts/cineva-home-row2-focus.png","-crop","1920x170+0+440","-colorspace","gray","-format","%[fx:mean]","info:"],
+                  ["convert","artifacts/cineva-home-row2-focus.png","-crop","1920x120+0+440","-colorspace","gray","-format","%[fx:mean]","info:"],
                   text=True,capture_output=True,check=True
                 )
                 try:
@@ -699,7 +699,7 @@ jobs:
                 time.sleep(0.8)
                 subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row4-scroll.png"],check=True)
                 row4_mask_signal = subprocess.run(
-                  ["convert","artifacts/cineva-home-row4-scroll.png","-crop","1920x170+0+440","-colorspace","gray","-format","%[fx:mean]","info:"],
+                  ["convert","artifacts/cineva-home-row4-scroll.png","-crop","1920x120+0+440","-colorspace","gray","-format","%[fx:mean]","info:"],
                   text=True,capture_output=True,check=True
                 )
                 try:

@@ -57,7 +57,7 @@ def hero_bottom_fade_png():
 
 def rail_scroll_mask_png():
     """Create a short fade that hides a previous rail scrolled beneath the pinned hero."""
-    width, height = 1920, 212
+    width, height = 1920, 162
     fade_height = 30
     pixels = bytearray()
     for y in range(height):
@@ -325,7 +325,7 @@ def update_xml(data, path):
         # Each row is a single grouplist child so its non-focusable heading cannot
         # intercept Up from the nested fixedlist before the shelf's explicit route.
         rail_list = ET.Element("control", {"type": "grouplist", "id": "9050"})
-        for tag, value in (("left", 105), ("top", 430), ("width", 1710), ("height", 650)):
+        for tag, value in (("left", 105), ("top", 430), ("width", 1710), ("height", 580)):
             set_child_text(rail_list, tag, value)
         set_child_text(rail_list, "orientation", "vertical")
         set_child_text(rail_list, "itemgap", 12)
@@ -391,7 +391,7 @@ def update_xml(data, path):
         # row behind the pinned hero. Fade it fully away instead of leaving a
         # clipped strip of posters and titles between the hero and active shelf.
         scroll_mask = ET.Element("control", {"type": "image", "id": "9107"})
-        for tag, value in (("left", 0), ("top", 398), ("width", 1920), ("height", 212)):
+        for tag, value in (("left", 0), ("top", 398), ("width", 1920), ("height", 162)):
             set_child_text(scroll_mask, tag, value)
         ET.SubElement(scroll_mask, "texture").text = "rail-scroll-mask.png"
         set_child_text(scroll_mask, "aspectratio", "scale")
