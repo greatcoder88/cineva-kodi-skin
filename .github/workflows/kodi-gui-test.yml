@@ -62,7 +62,7 @@ jobs:
           hero_title = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Label]" in c.findtext("label", "")), None) if hero_group is not None else None
           hero_plot = hero_group.find("./control[@type='textbox']") if hero_group is not None else None
           hero_meta = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Year]" in c.findtext("label", "")), None) if hero_group is not None else None
-          if hero_group is None or hero_group.findtext("top") != "118" or hero_title is None or hero_title.findtext("top") != "0" or hero_title.findtext("height") != "84" or hero_meta is None or hero_meta.findtext("top") != "88" or hero_meta.findtext("font") != "font10" or hero_meta.findtext("textcolor") != "lightgrey" or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("132", "66", "font13"):
+          if hero_group is None or hero_group.findtext("top") != "118" or hero_title is None or hero_title.findtext("top") != "0" or hero_title.findtext("height") != "84" or hero_meta is None or hero_meta.findtext("top") != "88" or hero_meta.findtext("font") != "font10" or hero_meta.findtext("textcolor") != "silver" or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("142", "72", "font13"):
             raise SystemExit("Home hero must present title first, metadata second and synopsis third with distinct baselines")
           for group in (g for g in controls.findall("control") if g.get("type") == "group" and g.findtext("control/label", "").startswith("$INFO[Container(")):
             source_label = group.findtext("control/label", "")
@@ -182,9 +182,12 @@ jobs:
           if controls.find("./control[@id='9010']") is not None:
             raise SystemExit("Obstructive floating More Widgets button is still present")
           fonts = ET.parse("skin.cineva/xml/Font.xml").getroot()
+          for font_file in ("Lato-Regular.ttf", "Lato-Semibold.ttf", "Lato-Black.ttf"):
+            if not (Path("skin.cineva/fonts") / font_file).is_file():
+              raise SystemExit(f"Bundled Lato font is missing: {font_file}")
           compact_font = next((node for node in fonts.findall("./fontset[@id='Default']/font") if node.findtext("name") == "font9"), None)
-          if compact_font is None or (compact_font.findtext("filename"), compact_font.findtext("size")) != ("Roboto-Regular.ttf", "16"):
-            raise SystemExit("Packaged Home font9 is missing its 16px Roboto definition")
+          if compact_font is None or (compact_font.findtext("filename"), compact_font.findtext("size")) != ("Lato-Regular.ttf", "17"):
+            raise SystemExit("Packaged Home font9 is missing its 17px Lato definition")
           includes = ET.parse("skin.cineva/xml/Includes.xml").getroot()
           poster = includes.find("./include[@name='CinevaPosterItem']")
           if poster is None or poster.findtext("./control[@type='image']/height") != "320" or poster.findtext("./control[@type='label']/width") != "285" or poster.findtext("./control[@type='label']/top") != "322" or poster.findtext("./control[@type='label']/height") != "46" or poster.findtext("./control[@type='label']/wrapmultiline") != "true" or poster.find("./control[@type='label']/wrap") is not None or poster.findtext("./control[@type='label']/font") != "font10":
