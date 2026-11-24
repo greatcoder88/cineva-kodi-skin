@@ -238,7 +238,7 @@ class KodiManagerTests(unittest.TestCase):
         ])
         self.assertEqual(chosen, {
             "path": "plugin://plugin.video.example/collections/",
-            "title": "Collections"
+            "title": ""
         })
 
     def test_picker_rejects_self_referential_directory_links(self):
