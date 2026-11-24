@@ -500,6 +500,7 @@ def update_xml(data, path):
         controls = root.find("controls")
         if controls is None:
             raise SystemExit("Home.xml is missing its controls container")
+        remove_missing_no_focus_textures(root)
         # The archive builder runs twice in CI. Unwrap an existing rail grouplist
         # before rebuilding it so the transformation remains idempotent.
         previous_rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
@@ -922,7 +923,7 @@ def update_xml(data, path):
             controls.remove(heading)
             controls.remove(shelf)
             row_group = ET.Element("control", {"type": "group", "id": str(9060 + index)})
-            for tag, value in (("left", 0), ("top", 0), ("width", 1710), ("height", 500)):
+            for tag, value in (("left", 0), ("top", 0), ("width", 1710), ("height", 516)):
                 set_child_text(row_group, tag, value)
             play_id = 9111 + (index - 1) * 2
             next_target = 9000 + index + 1 if index < 4 else 1001
@@ -937,13 +938,13 @@ def update_xml(data, path):
             set_child_text(shelf, "left", 0)
             set_child_text(shelf, "top", 44)
             set_child_text(shelf, "width", 1710)
-            set_child_text(shelf, "height", 448)
+            set_child_text(shelf, "height", 464)
             set_child_text(shelf, "itemgap", 14)
             set_child_text(shelf, "onup", f"SetFocus({play_id})")
             set_child_text(shelf, "ondown", f"SetFocus({next_target})")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
                 layout.set("width", "285")
-                layout.set("height", "448")
+                layout.set("height", "464")
             focused_layout = shelf.find("./focusedlayout")
             focused_include = focused_layout.find("include") if focused_layout is not None else None
             if focused_include is not None:
@@ -1382,26 +1383,6 @@ def update_xml(data, path):
             set_child_text(title, "left", 72)
             set_child_text(title, "top", 138)
             set_child_text(title, "font", "font30")
-    elif path == "skin.cineva/xml/Home.xml":
-        # Kodi treats '-' as a literal texture filename and logs a missing
-        # texture for every transparent navigation button. Omit the no-focus
-        # texture entirely; Kodi renders the button text without a background.
-        remove_missing_no_focus_textures(root)
-        # Give long Home shelf titles a complete two-line caption band. The
-        # larger item height also keeps the focus accent below the caption.
-        controls = root.find("controls")
-        rail = controls.find("./control[@type='grouplist'][@id='9050']") if controls is not None else None
-        if rail is None:
-            raise SystemExit("Home.xml is missing the four-row poster rail")
-        for row_index in range(1, 5):
-            row_group = rail.find(f"./control[@type='group'][@id='{9060 + row_index}']")
-            shelf = row_group.find(f"./control[@type='fixedlist'][@id='{9000 + row_index}']") if row_group is not None else None
-            if row_group is None or shelf is None:
-                raise SystemExit(f"Home.xml is missing poster shelf {row_index}")
-            set_child_text(row_group, "height", 516)
-            set_child_text(shelf, "height", 464)
-            for layout in shelf.findall("itemlayout") + shelf.findall("focusedlayout"):
-                layout.set("height", "464")
     elif path == "skin.cineva/xml/DialogVideoInfo.xml":
         # Full-bleed detail composition with readable copy and a clear primary action.
         for node in root.findall("./controls/control"):
