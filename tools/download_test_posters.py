@@ -103,6 +103,33 @@ def save_artwork(url, target, width, height):
     return convert_and_validate(raw, target, width, height)
 
 
+def create_clearlogo(output, filename, title, point_size):
+    """Create deterministic transparent title art for the GUI fixture."""
+    font = pathlib.Path("skin.cineva/fonts/Poppins-SemiBold.ttf")
+    if not font.is_file():
+        raise SystemExit("CINÉVA Poppins font is required to generate clearlogo fixtures")
+    target = output / filename
+    subprocess.run([
+        "convert", "-size", "1220x84", "xc:none",
+        "-font", str(font), "-pointsize", str(point_size), "-fill", "#f5f5f5",
+        "-gravity", "west", "-annotate", "+0+0", title,
+        "-trim", "+repage", str(target),
+    ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    data = target.read_bytes()
+    if not data.startswith(bytes.fromhex("89504e470d0a1a0a")):
+        raise SystemExit("Generated clearlogo is not a valid PNG: " + filename)
+    dimensions = subprocess.check_output(
+        ["identify", "-format", "%wx%h", str(target)], text=True
+    ).strip()
+    width, height = (int(value) for value in dimensions.split("x"))
+    channels = subprocess.check_output(
+        ["identify", "-format", "%[channels]", str(target)], text=True
+    ).strip().lower()
+    if width > 1220 or height > 84 or width < 100 or height < 20 or "a" not in channels:
+        raise SystemExit("Generated clearlogo must be a bounded transparent PNG: " + filename)
+    print("{} -> {} ({}x{}, transparent)".format(title, filename, width, height))
+
+
 def main():
     if len(sys.argv) != 2:
         raise SystemExit("usage: download_test_posters.py POSTER_DIRECTORY")
@@ -174,6 +201,9 @@ def main():
             raise SystemExit("Duplicate landscape fanart returned for: " + title)
         tv_backdrop_hashes.add(digest)
         print("{} -> {} ({} bytes)".format(title, filename, size))
+
+    create_clearlogo(output, "clearlogo-movie-1.png", "THE SHAWSHANK REDEMPTION", 76)
+    create_clearlogo(output, "clearlogo-tv-1.png", "BREAKING BAD", 120)
 
     if len(poster_hashes) != len(MOVIES) + len(SHOWS):
         raise SystemExit("Expected 16 distinct poster images; got {}".format(len(poster_hashes)))

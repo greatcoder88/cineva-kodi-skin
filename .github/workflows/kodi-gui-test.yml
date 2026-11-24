@@ -76,8 +76,11 @@ jobs:
           hero_plot = hero_group.find("./control[@type='textbox']") if hero_group is not None else None
           hero_meta = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Year]" in c.findtext("label", "")), None) if hero_group is not None else None
           hero_eyebrow = hero_group.find("./control[@id='9300']") if hero_group is not None else None
+          hero_logo = hero_group.find("./control[@id='9190']") if hero_group is not None else None
           if hero_group is None or hero_group.findtext("top") != "118" or hero_group.findtext("height") != "330" or hero_title is None or hero_title.findtext("top") != "24" or hero_title.findtext("height") != "84" or hero_meta is None or hero_meta.findtext("top") != "112" or hero_meta.findtext("font") != "font10" or hero_meta.findtext("textcolor") != "silver" or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("166", "72", "font13") or hero_eyebrow is None or (hero_eyebrow.findtext("top"), hero_eyebrow.findtext("height"), hero_eyebrow.findtext("label"), hero_eyebrow.findtext("visible"), hero_eyebrow.findtext("font"), hero_eyebrow.findtext("textcolor")) != ("0", "24", "CONTINUE WATCHING", "String.Contains(Skin.String(Cineva.Widget1.Path),in_progress)", "font9", "FFE50914"):
             raise SystemExit("Home hero must present title first, metadata second and synopsis third with distinct baselines")
+          if hero_title.findtext("visible") != "String.IsEmpty(Container(9001).ListItem.Art(clearlogo))" or hero_logo is None or (hero_logo.findtext("left"), hero_logo.findtext("top"), hero_logo.findtext("width"), hero_logo.findtext("height"), hero_logo.findtext("texture"), hero_logo.findtext("visible")) != ("0", "24", "1220", "84", "$INFO[Container(9001).ListItem.Art(clearlogo)]", "!String.IsEmpty(Container(9001).ListItem.Art(clearlogo))") or hero_logo.find("aspectratio") is None or hero_logo.find("aspectratio").attrib != {"align": "left", "aligny": "center"} or hero_logo.findtext("aspectratio") != "keep":
+            raise SystemExit("Home hero must prefer provider clearlogo artwork and retain a text-title fallback")
           for group in (g for g in controls.findall("control") if g.get("type") == "group" and g.findtext("control/label", "").startswith("$INFO[Container(")):
             source_label = group.findtext("control/label", "")
             container_id = int(source_label.split("Container(", 1)[1].split(")", 1)[0])
@@ -87,6 +90,14 @@ jobs:
                         f"$INFO[Container({container_id}).ListItem.Genre,  •  ]"
                         f"$INFO[Container({container_id}).ListItem.Rating,  •  ]")
             row_index = container_id - 9000
+            clearlogo_info = f"Container({container_id}).ListItem.Art(clearlogo)"
+            title_label = next((node for node in group.findall("control")
+                                if node.get("type") == "label"
+                                and f"$INFO[Container({container_id}).ListItem.Label]" in node.findtext("label", "")), None)
+            clearlogo = group.find(f"./control[@id='{9190 + container_id - 9001}']")
+            aspect = clearlogo.find("aspectratio") if clearlogo is not None else None
+            if title_label is None or title_label.findtext("visible") != f"String.IsEmpty({clearlogo_info})" or clearlogo is None or (clearlogo.findtext("texture"), clearlogo.findtext("visible")) != (f"$INFO[{clearlogo_info}]", f"!String.IsEmpty({clearlogo_info})") or aspect is None or aspect.text != "keep":
+              raise SystemExit(f"Home hero {container_id} does not switch between provider clearlogo and text-title fallback")
             eyebrow_base_id = 9300 + (row_index - 1) * 3
             source_path = f"Skin.String(Cineva.Widget{row_index}.Path)"
             eyebrow_specs = (
@@ -431,6 +442,8 @@ jobs:
           python tools/download_test_posters.py "$POV/resources/posters"
           test -s "$POV/resources/posters/movie-1.jpg"
           test -s "$POV/resources/posters/tv-1.jpg"
+          test -s "$POV/resources/posters/clearlogo-movie-1.png"
+          test -s "$POV/resources/posters/clearlogo-tv-1.png"
           for index in 1 2 3 4 5 6 7 8; do
             test -s "$POV/resources/posters/backdrop-$index.jpg"
             test -s "$POV/resources/posters/tv-backdrop-$index.jpg"
@@ -872,7 +885,7 @@ jobs:
             def verify_missing_fanart_hero(screenshot, row_name):
               signal = subprocess.run(
                 ["convert", screenshot, "-crop", "280x220+1600+200",
-                 "-fx", "((r>0.10)&&(r>g*1.6)&&(r>b*1.2))?1:0",
+                 "-fx", "((r>0.10)&&(r>g*1.6)&&(b>r*1.2))?1:0",
                  "-format", "%[fx:mean]", "info:"],
                 text=True, capture_output=True, check=True
               )
@@ -883,6 +896,20 @@ jobs:
               if red_glow_coverage < 0.30:
                 raise SystemExit(f"{row_name} did not render the branded missing-fanart hero fallback (red-glow coverage={red_glow_coverage:.3f})")
               print(f"Verified {row_name} renders the branded missing-fanart hero fallback (red-glow coverage={red_glow_coverage:.3f}).")
+            def verify_hero_clearlogo(screenshot, row_name):
+              signal = subprocess.run(
+                ["convert", screenshot, "-crop", "1220x84+72+142",
+                 "-fx", "((r>0.78)&&(g>0.78)&&(b>0.78))?1:0",
+                 "-format", "%[fx:mean]", "info:"],
+                text=True, capture_output=True, check=True
+              )
+              try:
+                white_coverage = float(signal.stdout.strip())
+              except ValueError:
+                raise SystemExit(f"Could not measure the provider clearlogo in {row_name}: {signal.stdout!r}")
+              if white_coverage < 0.012:
+                raise SystemExit(f"{row_name} did not visibly render provider clearlogo artwork in the hero title slot (white coverage={white_coverage:.3f})")
+              print(f"Verified {row_name} renders provider clearlogo artwork in the hero title slot (white coverage={white_coverage:.3f}).")
             def active_rail_indicator_position(row_number):
               import xml.etree.ElementTree as ET
               home_root = ET.parse("skin.cineva/xml/Home.xml").getroot()
@@ -918,6 +945,7 @@ jobs:
                 subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row2-focus.png"],check=True)
                 verify_lower_row_bottom_clear("artifacts/cineva-home-row2-focus.png", "row 2")
                 verify_missing_fanart_hero("artifacts/cineva-home-row2-focus.png", "row 2")
+                verify_hero_clearlogo("artifacts/cineva-home-row2-focus.png", "row 2")
                 # The previous rail should fade away beneath the pinned hero without
                 # creating an opaque black stripe across its artwork.
                 scroll_mask_signal = subprocess.run(

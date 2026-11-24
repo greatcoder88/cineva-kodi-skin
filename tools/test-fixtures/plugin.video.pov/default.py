@@ -79,6 +79,12 @@ def main():
                 artwork["poster"] = poster
             else:
                 item.setProperty("Cineva.TestMissingPoster", "true")
+        if index == 1:
+            clearlogo_name = "clearlogo-tv-1.png" if is_tv else "clearlogo-movie-1.png"
+            clearlogo = os.path.join(poster_dir, clearlogo_name)
+            if not os.path.isfile(clearlogo):
+                raise RuntimeError("Missing generated clearlogo artwork: {}".format(clearlogo))
+            artwork["clearlogo"] = clearlogo
         item.setArt(artwork)
         # Continue Watching fixtures need real resume metadata so the skin's
         # progress strips are exercised in both normal and focused card states.

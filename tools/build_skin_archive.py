@@ -522,6 +522,31 @@ def update_xml(data, path):
                     ("textcolor", "FFE50914"), ("align", "left"), ("aligny", "center")
                 ):
                     set_child_text(eyebrow, tag, value)
+            # Prefer provider-supplied clear logos in the title slot. Keep the
+            # readable text title as a per-item fallback when clearlogo art is absent.
+            title_label = next(
+                (node for node in hero_group.findall("control")
+                 if node.get("type") == "label"
+                 and f"$INFO[Container({container_id}).ListItem.Label]" in node.findtext("label", "")),
+                None,
+            )
+            if title_label is None:
+                raise SystemExit(f"Home hero {container_id} is missing its dynamic title label")
+            clearlogo_info = f"Container({container_id}).ListItem.Art(clearlogo)"
+            set_child_text(title_label, "visible", f"String.IsEmpty({clearlogo_info})")
+            clearlogo = ET.SubElement(
+                hero_group, "control",
+                {"type": "image", "id": str(9190 + (container_id - 9001))}
+            )
+            for tag, value in (
+                ("left", 0), ("top", 24), ("width", 1220), ("height", 84),
+                ("texture", f"$INFO[{clearlogo_info}]"),
+                ("visible", f"!String.IsEmpty({clearlogo_info})"),
+            ):
+                set_child_text(clearlogo, tag, value)
+            ET.SubElement(
+                clearlogo, "aspectratio", {"align": "left", "aligny": "center"}
+            ).text = "keep"
             for button_id, label, left, width in (
                 (play_id, f"$VAR[CinevaHeroAction{row_index}]", 0, 190),
                 (info_id, "MORE INFO", 214, 236)

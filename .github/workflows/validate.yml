@@ -317,6 +317,16 @@ jobs:
               if hero_group is None or int(hero_group.findtext("height", "0")) < 270 or len(buttons) != 2 or [button.findtext("label") for button in buttons] != [f"$VAR[CinevaHeroAction{container_id - 9000}]", "MORE INFO"]:
                   errors.append(f"Home row {container_id} is missing its two nested hero actions")
                   continue
+              clearlogo_info = f"Container({container_id}).ListItem.Art(clearlogo)"
+              title_label = next((node for node in hero_group.findall("control")
+                                  if node.get("type") == "label"
+                                  and f"$INFO[Container({container_id}).ListItem.Label]" in node.findtext("label", "")), None)
+              clearlogo = hero_group.find(f"./control[@id='{9190 + container_id - 9001}']")
+              aspect = clearlogo.find("aspectratio") if clearlogo is not None else None
+              if title_label is None or title_label.findtext("visible") != f"String.IsEmpty({clearlogo_info})":
+                  errors.append(f"Home row {container_id} must retain its text title only when clearlogo art is absent")
+              if clearlogo is None or clearlogo.get("type") != "image" or (clearlogo.findtext("left"), clearlogo.findtext("top"), clearlogo.findtext("width"), clearlogo.findtext("height"), clearlogo.findtext("texture"), clearlogo.findtext("visible")) != ("0", "24", "1220", "84", f"$INFO[{clearlogo_info}]", f"!String.IsEmpty({clearlogo_info})") or aspect is None or aspect.attrib != {"align": "left", "aligny": "center"} or aspect.text != "keep":
+                  errors.append(f"Home row {container_id} is missing its title-slot clearlogo image and proportional sizing")
               if buttons[0].findtext("onclick") != f"PlayMedia($INFO[Container({container_id}).ListItem.File])":
                   errors.append(f"Home row {container_id} PLAY action is not bound to its selected item")
               if [node.text for node in buttons[1].findall("onclick")] != [f"SetFocus({container_id})", "Action(Info)"]:
