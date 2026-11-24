@@ -194,10 +194,21 @@ jobs:
                   errors.append(f"Home hero {container_id} actions are not aligned beneath the synopsis")
               if metadata is None or metadata.findtext("label") != expected:
                   errors.append(f"Home hero {container_id} metadata must omit separators for empty fields")
-              rating_bg = group.find(f"./control[@id='{9340 + container_id - 9000}']")
-              rating_text = group.find(f"./control[@id='{9341 + container_id - 9000}']")
-              if rating_bg is None or rating_bg.findtext("texture") != "rating-badge.png" or rating_text is None or "ListItem.Rating" not in rating_text.findtext("label", ""):
-                  errors.append(f"Home hero {container_id} must render its rating in a dedicated gold badge")
+              rating_id = 9340 + (container_id - 9001) * 2
+              rating_bg = group.find(f"./control[@id='{rating_id}']")
+              rating_text = group.find(f"./control[@id='{rating_id + 1}']")
+              if (rating_bg is None or rating_bg.findtext("texture") != "rating-badge.png"
+                      or rating_text is None or "ListItem.Rating" not in rating_text.findtext("label", "")
+                      or "★" in rating_text.findtext("label", "")
+                      or (rating_text.findtext("left"), rating_text.findtext("width")) != ("802", "84")):
+                  errors.append(f"Home hero {container_id} must render a font-independent star badge with a separate rating value")
+          rating_control_ids = [node.get("id") for node in home.iter()
+                                if node.get("id") in {str(value) for value in range(9340, 9348)}]
+          if len(rating_control_ids) != 8 or len(set(rating_control_ids)) != 8:
+              errors.append("All four Home rating badges must use eight unique control IDs")
+          rating_badge = (root / "media/rating-badge.png").read_bytes()
+          if rating_badge[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(rating_badge[16:20], "big"), int.from_bytes(rating_badge[20:24], "big")) != (126, 32):
+              errors.append("Packaged rating badge must be a valid 126x32 PNG")
           topbar_index = next((i for i, node in enumerate(list(controls))
                                if node.tag == "include" and (node.text or "").strip() == "CinevaTopBar"), -1)
           shade_index = next((i for i, node in enumerate(list(controls))
