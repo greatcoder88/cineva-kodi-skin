@@ -24,7 +24,7 @@ class HomeHeroActionTests(unittest.TestCase):
                 self.assertEqual(
                     [(button.findtext("left"), button.findtext("top"),
                       button.findtext("width"), button.findtext("height")) for button in buttons],
-                    [("0", "250", "190", "54"), ("212", "250", "220", "54")],
+                    [("0", "268", "190", "54"), ("212", "268", "220", "54")],
                 )
                 self.assertEqual(
                     [button.findtext("texturefocus") for button in buttons],
@@ -81,7 +81,7 @@ class HomeHeroActionTests(unittest.TestCase):
                     )
 
 
-    def test_hero_metadata_and_imdb_chip_share_a_compact_row(self):
+    def test_hero_metadata_rating_and_synopsis_form_a_left_aligned_stack(self):
         with ZipFile(ARCHIVE) as archive:
             home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
             controls = home.find("controls")
@@ -101,17 +101,20 @@ class HomeHeroActionTests(unittest.TestCase):
                 logo = hero.find(f"./control[@id='{rating_id + 1}']")
                 score = hero.find(f"./control[@id='{rating_id + 2}']")
                 self.assertEqual(metadata.findtext("width"), "430")
+                self.assertEqual(metadata.findtext("top"), "136")
+                plot = hero.find("./control[@type='textbox']")
+                self.assertEqual((plot.findtext("top"), plot.findtext("height")), ("206", "52"))
                 self.assertEqual(
-                    (badge.findtext("left"), badge.findtext("width")),
-                    ("460", "148"),
+                    (badge.findtext("left"), badge.findtext("top"), badge.findtext("width"), badge.findtext("height")),
+                    ("0", "168", "148", "32"),
                 )
                 self.assertEqual(
                     (logo.findtext("left"), logo.findtext("top"), logo.findtext("width"), logo.findtext("height")),
-                    ("468", "138", "48", "24"),
+                    ("8", "172", "48", "24"),
                 )
                 self.assertEqual(
-                    (score.findtext("left"), score.findtext("width")),
-                    ("522", "84"),
+                    (score.findtext("left"), score.findtext("top"), score.findtext("width"), score.findtext("height")),
+                    ("62", "168", "84", "32"),
                 )
 
 

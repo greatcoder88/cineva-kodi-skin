@@ -712,18 +712,18 @@ def update_xml(data, path):
                                 or "ListItem.Rating" in old_rating.findtext("label", "")):
                             group.remove(old_rating)
                     rating_bg = ET.SubElement(group, "control", {"type": "image", "id": str(rating_id)})
-                    for tag, value in (("left", 460), ("top", 134), ("width", 148), ("height", 32),
+                    for tag, value in (("left", 0), ("top", 168), ("width", 148), ("height", 32),
                                        ("texture", "rating-badge.png")):
                         set_child_text(rating_bg, tag, value)
                     set_child_text(rating_bg, "visible",
                                    f"!String.IsEmpty(Container({9000 + row_index}).ListItem.Rating)")
                     rating_logo = ET.SubElement(group, "control", {"type": "image", "id": str(rating_id + 1)})
-                    for tag, value in (("left", 468), ("top", 138), ("width", 48), ("height", 24),
+                    for tag, value in (("left", 8), ("top", 172), ("width", 48), ("height", 24),
                                        ("texture", "imdb-logo.png"),
                                        ("visible", f"!String.IsEmpty(Container({9000 + row_index}).ListItem.Rating)")):
                         set_child_text(rating_logo, tag, value)
                     rating_text = ET.SubElement(group, "control", {"type": "label", "id": str(rating_id + 2)})
-                    for tag, value in (("left", 522), ("top", 134), ("width", 84), ("height", 32),
+                    for tag, value in (("left", 62), ("top", 168), ("width", 84), ("height", 32),
                                        ("font", "font10"), ("textcolor", "FFFFD36A"),
                                        ("label", f"$INFO[Container({9000 + row_index}).ListItem.Rating]"),
                                        ("align", "left"), ("aligny", "center"),
@@ -731,8 +731,8 @@ def update_xml(data, path):
                         set_child_text(rating_text, tag, value)
                 for child in group.findall("control"):
                     if child.get("type") == "textbox":
-                        set_child_text(child, "top", 174)
-                        set_child_text(child, "height", 60)
+                        set_child_text(child, "top", 206)
+                        set_child_text(child, "height", 52)
                         set_child_text(child, "width", 900)
                         set_child_text(child, "font", "font13")
                         set_child_text(child, "textcolor", "white")
@@ -842,7 +842,7 @@ def update_xml(data, path):
                 button = ET.SubElement(hero_group, "control",
                                        {"type": "button", "id": str(button_id)})
                 for tag, value in (
-                    ("left", left), ("top", 250), ("width", width), ("height", 54),
+                    ("left", left), ("top", 268), ("width", width), ("height", 54),
                     ("label", label), ("font", "font10"),
                     ("onup", f"SetFocus({nav_target})"),
                     ("ondown", f"SetFocus({container_id})"),
