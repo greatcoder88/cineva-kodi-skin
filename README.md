@@ -52,7 +52,7 @@ A Linux GUI pass is useful evidence, not a substitute for these checks. Do not p
 
 ## Repository layout
 
-- `skin.cineva-0.5.3.zip` — distributable skin package.
+- `skin.cineva-0.5.4.zip` — distributable skin package.
 - `tools/build_skin_archive.py` — deterministic package builder and source patcher.
 - `tools/script.cineva.widgets/` — per-screen widget source picker.
 - `tests/` and `.github/workflows/` — automated validation.
