@@ -127,10 +127,21 @@ jobs:
               raise SystemExit(f"Home hero {container_id} actions are not aligned beneath the synopsis")
             if metadata is None or metadata.findtext("label") != expected:
               raise SystemExit(f"Home hero {container_id} metadata leaves separators for empty fields")
-            rating_bg = group.find(f"./control[@id='{9340 + container_id - 9000}']")
-            rating_text = group.find(f"./control[@id='{9341 + container_id - 9000}']")
-            if rating_bg is None or rating_bg.findtext("texture") != "rating-badge.png" or rating_text is None or "ListItem.Rating" not in rating_text.findtext("label", ""):
-              raise SystemExit(f"Home hero {container_id} must render its rating in a dedicated gold badge")
+            rating_id = 9340 + (container_id - 9001) * 2
+            rating_bg = group.find(f"./control[@id='{rating_id}']")
+            rating_text = group.find(f"./control[@id='{rating_id + 1}']")
+            if (rating_bg is None or rating_bg.findtext("texture") != "rating-badge.png"
+                or rating_text is None or "ListItem.Rating" not in rating_text.findtext("label", "")
+                or "★" in rating_text.findtext("label", "")
+                or (rating_text.findtext("left"), rating_text.findtext("width")) != ("802", "84")):
+              raise SystemExit(f"Home hero {container_id} must render a font-independent star badge and separate rating value")
+          rating_control_ids = [node.get("id") for node in home.iter()
+                                if node.get("id") in {str(value) for value in range(9340, 9348)}]
+          if len(rating_control_ids) != 8 or len(set(rating_control_ids)) != 8:
+            raise SystemExit("All four Home rating badges must use eight unique control IDs")
+          rating_badge = Path("skin.cineva/media/rating-badge.png").read_bytes()
+          if rating_badge[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(rating_badge[16:20], "big"), int.from_bytes(rating_badge[20:24], "big")) != (126, 32):
+            raise SystemExit("Packaged rating badge must be a valid 126x32 PNG")
           topbar_index = next((i for i, node in enumerate(list(controls))
                                if node.tag == "include" and (node.text or "").strip() == "CinevaTopBar"), -1)
           shade_index = next((i for i, node in enumerate(list(controls))
@@ -340,7 +351,7 @@ jobs:
             raise SystemExit("Focused poster titles must sit below the focused artwork without overlap")
           focused_image = next((node for node in focused_poster.findall("./control[@type='image']") if node.findtext("visible") == "Control.HasFocus(9001)"), None) if focused_poster is not None else None
           focused_zoom = focused_image.find("./animation[@effect='zoom']") if focused_image is not None else None
-          if focused_image is None or (focused_image.findtext("left"), focused_image.findtext("top"), focused_image.findtext("width"), focused_image.findtext("height")) != ("9", "-3", "267", "355") or focused_zoom is None or (focused_zoom.get("start"), focused_zoom.get("end"), focused_zoom.get("time")) != ("100", "104", "160"):
+          if focused_image is None or (focused_image.findtext("left"), focused_image.findtext("top"), focused_image.findtext("width"), focused_image.findtext("height")) != ("9", "-3", "267", "355") or focused_zoom is None or (focused_zoom.get("start"), focused_zoom.get("end"), focused_zoom.get("time"), focused_zoom.get("tween"), focused_zoom.get("easing")) != ("100", "104", "160", "sine", "out"):
             raise SystemExit("Focused poster artwork must use the title-safe 106% selection zoom")
           normal_progress = poster.find("./control[@type='progress']") if poster is not None else None
           if normal_progress is None or (normal_progress.findtext("left"), normal_progress.findtext("top"), normal_progress.findtext("width"), normal_progress.findtext("height"), normal_progress.findtext("visible"), normal_progress.findtext("info"), normal_progress.findtext("texturebg")) != ("18", "337", "249", "5", "ListItem.IsResumable", "ListItem.PercentPlayed", "resume-track.png"):
@@ -1067,10 +1078,10 @@ jobs:
                 print(f"Verified row-2 active-rail underline at y={indicator_y} (coverage={indicator_coverage:.3f}).")
                 # The PLAY surface must remain visible when row 2, rather than
                 # row 1, supplies the hero. A white unselected button occupies
-                # this exact 180x44 region in the 1920x1080 Home layout.
+                # this exact 176x50 region in the 1920x1080 Home layout.
                 signal = subprocess.run([
                   "convert", "artifacts/cineva-home-row2-focus.png",
-                  "-crop", "180x44+72+380", "-colorspace", "gray",
+                  "-crop", "176x50+72+356", "-colorspace", "gray",
                   "-threshold", "82%", "-format", "%[fx:mean]", "info:"
                 ], text=True, capture_output=True, check=True)
                 try:
