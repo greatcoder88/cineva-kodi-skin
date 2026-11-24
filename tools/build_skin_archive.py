@@ -400,7 +400,8 @@ def update_xml(data, path):
                 ):
                     set_child_text(eyebrow, tag, value)
             for button_id, label, left, width in (
-                (play_id, "PLAY", 0, 190), (info_id, "MORE INFO", 214, 236)
+                (play_id, f"$VAR[CinevaHeroAction{row_index}]", 0, 190),
+                (info_id, "MORE INFO", 214, 236)
             ):
                 button = ET.SubElement(hero_group, "control",
                                        {"type": "button", "id": str(button_id)})
@@ -590,6 +591,23 @@ def update_xml(data, path):
             if control.get("id") == "9010" or control.findtext("label") == "MORE WIDGETS  ›":
                 controls.remove(control)
     elif path == "skin.cineva/xml/Includes.xml":
+        # Use RESUME for continue-watching sources and PLAY for other shelves.
+        # Keep the label in a skin variable so each row's action remains one
+        # focusable button with the same ID and D-pad route.
+        for row_index in range(1, 5):
+            variable_name = f"CinevaHeroAction{row_index}"
+            previous_variable = root.find(f"./variable[@name='{variable_name}']")
+            if previous_variable is not None:
+                root.remove(previous_variable)
+            variable = ET.Element("variable", {"name": variable_name})
+            resume_value = ET.SubElement(
+                variable, "value",
+                {"condition": f"String.Contains(Skin.String(Cineva.Widget{row_index}.Path),in_progress)"}
+            )
+            resume_value.text = "RESUME"
+            play_value = ET.SubElement(variable, "value")
+            play_value.text = "PLAY"
+            root.insert(row_index - 1, variable)
         # Brand typography and date treatment are shared across all windows.
         topbar = root.find("./include[@name='CinevaTopBar']")
         if topbar is not None:
