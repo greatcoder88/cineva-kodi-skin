@@ -1152,6 +1152,14 @@ def update_xml(data, path):
             set_child_text(title, "left", 72)
             set_child_text(title, "top", 138)
             set_child_text(title, "font", "font30")
+    elif path == "skin.cineva/xml/Home.xml":
+        # Kodi treats '-' as a literal texture filename and logs a missing
+        # texture for every transparent navigation button. Omit the no-focus
+        # texture entirely; Kodi renders the button text without a background.
+        for node in root.findall(".//control[@type='button']"):
+            texture = node.find("texturenofocus")
+            if texture is not None and (texture.text or "").strip() == "-":
+                node.remove(texture)
     elif path == "skin.cineva/xml/DialogVideoInfo.xml":
         # Full-bleed detail composition with readable copy and a clear primary action.
         for node in root.findall("./controls/control"):
