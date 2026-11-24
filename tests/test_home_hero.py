@@ -5,16 +5,18 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.6.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.7.zip"
 
 
 class HomeHeroActionTests(unittest.TestCase):
     def test_release_changelog_uses_real_line_breaks(self):
         with ZipFile(ARCHIVE) as archive:
             lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
-        self.assertEqual(lines[0], "0.5.6 - Larger, tighter Home poster rails")
-        self.assertTrue(lines[1].startswith("- Enlarged Home poster artwork to its native 2:3 ratio"))
-        self.assertTrue(lines[2].startswith("- Rebalanced caption, progress and focus geometry"))
+        self.assertEqual(lines[0], "0.5.7 - Reliable remote focus and skin handoff")
+        self.assertTrue(lines[1].startswith("- Explicit left/right navigation across Home, Movies, TV Shows, Search and Settings."))
+        self.assertTrue(lines[2].startswith("- Explicit left/right focus between No and Yes in Kodi confirmation dialogs."))
+        self.assertTrue(lines[3].startswith("- Replace the Startup window with Home"))
+        self.assertTrue(lines[4].startswith("- Keep long Home poster titles readable in a full two-line caption band."))
 
     def test_all_home_heroes_use_branded_nine_slice_action_surfaces(self):
         with ZipFile(ARCHIVE) as archive:
@@ -134,20 +136,20 @@ class HomeHeroActionTests(unittest.TestCase):
                 (rail.findtext("left"), rail.findtext("top"), rail.findtext("width"), rail.findtext("height")),
                 ("105", "444", "1710", "670"),
             )
-            first_row_height = 500
+            first_row_height = 516
             visible_next_shelf_preview = (
                 1080 - int(rail.findtext("top")) - first_row_height - int(rail.findtext("itemgap"))
             )
-            self.assertEqual(visible_next_shelf_preview, 124)
+            self.assertEqual(visible_next_shelf_preview, 108)
             for row in range(1, 5):
                 group = rail.find(f"./control[@type='group'][@id='{9060 + row}']")
                 shelf = group.find(f"./control[@type='fixedlist'][@id='{9000 + row}']")
-                self.assertEqual(group.findtext("height"), "500")
-                self.assertEqual((shelf.findtext("top"), shelf.findtext("height")), ("44", "448"))
+                self.assertEqual(group.findtext("height"), "516")
+                self.assertEqual((shelf.findtext("top"), shelf.findtext("height")), ("44", "464"))
                 self.assertEqual(
                     [(node.get("width"), node.get("height"))
                      for node in shelf.findall("itemlayout") + shelf.findall("focusedlayout")],
-                    [("285", "448"), ("285", "448")],
+                    [("285", "464"), ("285", "464")],
                 )
             poster = includes.find("./include[@name='CinevaPosterItem']")
             image = poster.find("./control[@type='image']")
@@ -159,7 +161,7 @@ class HomeHeroActionTests(unittest.TestCase):
             )
             self.assertEqual(
                 (title.findtext("top"), title.findtext("height"), title.findtext("width")),
-                ("362", "52", "285"),
+                ("362", "64", "285"),
             )
             self.assertEqual(
                 (progress.findtext("left"), progress.findtext("top"), progress.findtext("width"), progress.findtext("height")),
@@ -185,12 +187,12 @@ class HomeHeroActionTests(unittest.TestCase):
             )
             self.assertEqual(
                 (focused_title.findtext("top"), focused_title.findtext("height")),
-                ("384", "52"),
+                ("376", "64"),
             )
             self.assertEqual(
                 (focus_accent.findtext("left"), focus_accent.findtext("top"),
                  focus_accent.findtext("width"), focus_accent.findtext("height")),
-                ("101", "440", "84", "4"),
+                ("101", "452", "84", "4"),
             )
 
 

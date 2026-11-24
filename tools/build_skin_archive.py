@@ -1115,7 +1115,7 @@ def update_xml(data, path):
         if focused_label is None:
             focused_label = ET.fromstring(ET.tostring(normal_label, encoding="unicode"))
         # Kodi label controls ellipsize long card titles despite wrapmultiline.
-        # Textboxes wrap naturally inside the same fixed 52px caption area.
+        # Textboxes wrap naturally inside a 64px caption area with room for two lines.
         normal_label.set("type", "textbox")
         focused_label.set("type", "textbox")
         for tag, value in (("left", 22), ("top", 0), ("width", 240), ("height", 360)):
@@ -1128,7 +1128,7 @@ def update_xml(data, path):
         if normal_texture is None:
             raise SystemExit("Includes.xml normal poster image has no texture")
         normal_texture.set("fallback", "poster-placeholder.png")
-        for tag, value in (("left", 0), ("top", 362), ("width", 285), ("height", 52), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
+        for tag, value in (("left", 0), ("top", 362), ("width", 285), ("height", 64), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
             set_child_text(normal_label, tag, value)
         stale_visibility = normal_label.find("visible")
         if stale_visibility is not None:
@@ -1209,8 +1209,8 @@ def update_xml(data, path):
             set_child_text(active_image, "visible", f"Control.HasFocus({container_id})")
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
             set_child_text(fallback_progress, "visible", f"!Control.HasFocus({container_id}) + ListItem.IsResumable")
-            # Reserve a 52px caption area for two full lines at TV distance; larger native 2:3 posters still leave a preview of the next shelf.
-            for tag, value in (("left", 0), ("top", 384), ("width", 285), ("height", 52), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "white")):
+            # Reserve a 64px caption area for two full lines at TV distance; larger native 2:3 posters still leave a preview of the next shelf.
+            for tag, value in (("left", 0), ("top", 376), ("width", 285), ("height", 64), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
             stale_wrap = active_label.find("wrap")
             if stale_wrap is not None:
@@ -1221,7 +1221,7 @@ def update_xml(data, path):
             set_child_text(active_label, "visible", f"Control.HasFocus({container_id})")
             set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
             focus_accent = ET.Element("control", {"type": "image"})
-            for tag, value in (("left", 101), ("top", 440), ("width", 84), ("height", 4)):
+            for tag, value in (("left", 101), ("top", 452), ("width", 84), ("height", 4)):
                 set_child_text(focus_accent, tag, value)
             set_child_text(focus_accent, "texture", "focus-bar.png")
             set_child_text(focus_accent, "visible", f"Control.HasFocus({container_id})")
@@ -1387,6 +1387,21 @@ def update_xml(data, path):
         # texture for every transparent navigation button. Omit the no-focus
         # texture entirely; Kodi renders the button text without a background.
         remove_missing_no_focus_textures(root)
+        # Give long Home shelf titles a complete two-line caption band. The
+        # larger item height also keeps the focus accent below the caption.
+        controls = root.find("controls")
+        rail = controls.find("./control[@type='grouplist'][@id='9050']") if controls is not None else None
+        if rail is None:
+            raise SystemExit("Home.xml is missing the four-row poster rail")
+        for row_index in range(1, 5):
+            row_group = rail.find(f"./control[@type='group'][@id='{9060 + row_index}']")
+            shelf = row_group.find(f"./control[@type='fixedlist'][@id='{9000 + row_index}']") if row_group is not None else None
+            if row_group is None or shelf is None:
+                raise SystemExit(f"Home.xml is missing poster shelf {row_index}")
+            set_child_text(row_group, "height", 516)
+            set_child_text(shelf, "height", 464)
+            for layout in shelf.findall("itemlayout") + shelf.findall("focusedlayout"):
+                layout.set("height", "464")
     elif path == "skin.cineva/xml/DialogVideoInfo.xml":
         # Full-bleed detail composition with readable copy and a clear primary action.
         for node in root.findall("./controls/control"):
@@ -1517,7 +1532,7 @@ def update_xml(data, path):
 
 def main():
     # Start the new distributable version from the last published package once.
-    # Subsequent builds always transform 0.5.5 in place and remain byte-stable.
+    # Subsequent builds always transform 0.5.7 in place and remain byte-stable.
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
@@ -1599,15 +1614,19 @@ def main():
                         "- Explicit left/right navigation across Home, Movies, TV Shows, Search and Settings.",
                         "- Explicit left/right focus between No and Yes in Kodi confirmation dialogs.",
                         "- Replace the Startup window with Home so a transparent Startup layer cannot intercept remote input.",
+                        "- Keep long Home poster titles readable in a full two-line caption band.",
                         "",
                         "",
                     ))
                     if changelog.startswith("0.5.7 - Reliable remote focus and skin handoff"):
                         current_entry, separator, remainder = changelog.partition("0.5.0 - Complete UI structure")
                         normalized_entry = current_entry.replace(chr(92) + "n", chr(10))
+                        caption_note = "- Keep long Home poster titles readable in a full two-line caption band."
+                        if caption_note not in normalized_entry:
+                            normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + caption_note + chr(10) + chr(10)
                         if normalized_entry != current_entry:
                             data = (normalized_entry + separator + remainder).encode("utf-8")
-                            changed.append(info.filename + " (normalize 0.5.6 changelog line breaks)")
+                            changed.append(info.filename + " (normalize 0.5.7 Home caption changelog)")
                     else:
                         data = (entry + changelog).encode("utf-8")
                         changed.append(info.filename + " (0.5.6 Home rail redesign)")
