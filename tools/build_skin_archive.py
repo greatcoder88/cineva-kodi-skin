@@ -191,6 +191,32 @@ def poster_focus_png():
             + png_chunk(b"IEND", b""))
 
 
+def rating_badge_png():
+    """Create a compact dark-gold capsule for dynamic movie and TV ratings."""
+    width, height = 126, 32
+    pixels = bytearray()
+    radius = 15
+    for y in range(height):
+        pixels.append(0)
+        for x in range(width):
+            dx = min(x, width - 1 - x)
+            dy = min(y, height - 1 - y)
+            inside = (dx >= radius or dy >= radius
+                      or (dx - radius) ** 2 + (dy - radius) ** 2 <= radius ** 2)
+            edge = inside and (x <= 1 or x >= width - 2 or y <= 1 or y >= height - 2)
+            if not inside:
+                pixels.extend((0, 0, 0, 0))
+            elif edge:
+                pixels.extend((174, 132, 55, 220))
+            else:
+                pixels.extend((19, 21, 28, 232))
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return (b"\\x89PNG\\r\\n\\x1a\\n"
+            + png_chunk(b"IHDR", header)
+            + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
+            + png_chunk(b"IEND", b""))
+
+
 def poster_placeholder_png():
     """Create cinematic abstract artwork when a provider has no poster."""
     width, height = 342, 513
