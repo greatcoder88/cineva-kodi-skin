@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "repository-site"
 REPO_ID = "repository.cineva"
 REPO_VERSION = "0.1.0"
+FEED_BASE = "https://raw.githubusercontent.com/greatcoder88/cineva-kodi-skin/repository"
 
 
 def addon_xml_from_zip(path: Path) -> tuple[str, bytes]:
@@ -84,9 +85,9 @@ def main() -> None:
     })
     ET.SubElement(repo_addon, "extension", {
         "point": "xbmc.addon.repository", "name": "CINÉVA Repository",
-        "info": "https://greatcoder88.github.io/cineva-kodi-skin/addons.xml",
-        "checksum": "https://greatcoder88.github.io/cineva-kodi-skin/addons.xml.md5",
-        "datadir": "https://greatcoder88.github.io/cineva-kodi-skin/zips/"
+        "info": f"{FEED_BASE}/addons.xml",
+        "checksum": f"{FEED_BASE}/addons.xml.md5",
+        "datadir": f"{FEED_BASE}/zips/"
     })
     metadata = ET.SubElement(repo_addon, "extension", {"point": "xbmc.addon.metadata"})
     ET.SubElement(metadata, "summary", {"lang": "en_GB"}).text = "Official CINÉVA add-on repository"
