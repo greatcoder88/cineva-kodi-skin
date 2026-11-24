@@ -205,6 +205,34 @@ class KodiManagerTests(unittest.TestCase):
         ])
         self.assertEqual(chosen, {"path": "plugin://plugin.video.example/", "title": ""})
 
+    def test_picker_ignores_playable_files_and_only_opens_directories(self):
+        manager = self.module.WidgetManager()
+        seen = {}
+        original_call = self.module.KodiRPC.call
+        def fake_call(method, params=None):
+            return {"files": [
+                {"file": "plugin://plugin.video.example/play/123", "filetype": "file", "label": "A Movie"},
+                {"file": "plugin://plugin.video.example/collections/", "filetype": "directory", "label": "Collections"}
+            ]}
+        self.module.KodiRPC.call = staticmethod(fake_call)
+        def choose(title, choices, **kwargs):
+            seen["choices"] = choices
+            return 1
+        manager.dialog.select = choose
+        try:
+            chosen = manager._browse_directory("plugin://plugin.video.example/", "plugin.video.example")
+        finally:
+            self.module.KodiRPC.call = original_call
+        self.assertEqual(seen["choices"], [
+            "✓  Use this folder as widget",
+            "📁  Collections",
+            "←  Back"
+        ])
+        self.assertEqual(chosen, {
+            "path": "plugin://plugin.video.example/collections/",
+            "title": "Collections"
+        })
+
     def test_invalid_sources_are_filtered(self):
         FakeVFS.files["special://profile/addon_data/script.cineva.widgets/widget_registry.json"] = json.dumps({"home":[
             {"name":"Good","path":"plugin://plugin.video.good/","id":"g"},
