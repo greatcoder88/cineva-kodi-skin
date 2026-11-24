@@ -45,7 +45,7 @@ class RepositoryFileSourceTests(unittest.TestCase):
             with patch.object(build_repository, "OUT", output):
                 build_repository.main()
 
-            installer_name = "repository.cineva-0.1.1.zip"
+            installer_name = "repository.cineva-0.1.2.zip"
             self.assertIn(
                 (installer_name, installer_name),
                 read_links(output / "index.html"),
@@ -77,10 +77,14 @@ class RepositoryFileSourceTests(unittest.TestCase):
             extension = manifest.find("./extension[@point='xbmc.addon.repository']")
             base = "https://greatcoder88.github.io/cineva-kodi-skin"
             self.assertIsNotNone(extension)
-            self.assertEqual(
-                (extension.get("info"), extension.get("checksum"), extension.get("datadir")),
-                (f"{base}/addons.xml", f"{base}/addons.xml.md5", f"{base}/zips/"),
-            )
+            directory = extension.find("dir")
+            self.assertIsNotNone(directory)
+            self.assertEqual(directory.findtext("info"), f"{base}/addons.xml")
+            self.assertEqual(directory.findtext("checksum"), f"{base}/addons.xml.md5")
+            datadir = directory.find("datadir")
+            self.assertIsNotNone(datadir)
+            self.assertEqual(datadir.text, f"{base}/zips/")
+            self.assertEqual(datadir.get("zip"), "true")
 
 
 if __name__ == "__main__":
