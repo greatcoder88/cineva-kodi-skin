@@ -1,0 +1,53 @@
+name: CINÉVA Kodi repository
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: cineva-pages
+  cancel-in-progress: true
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build and validate skin package
+        run: python tools/build_skin_archive.py
+      - name: Assemble Kodi repository feed
+        run: |
+          python tools/build_repository.py
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import xml.etree.ElementTree as ET
+          root = Path("repository-site")
+          feed = (root / "addons.xml").read_bytes()
+          expected = hashlib.md5(feed).hexdigest()
+          actual = (root / "addons.xml.md5").read_text().strip()
+          if expected != actual:
+              raise SystemExit("Kodi repository MD5 does not match addons.xml")
+          addons = ET.parse(root / "addons.xml").getroot()
+          ids = {a.get("id") for a in addons.findall("addon")}
+          if ids != {"skin.cineva", "script.cineva.widgets"}:
+              raise SystemExit(f"Unexpected repository package index: {ids}")
+          for addon_id in ids:
+              if not list((root / "zips" / addon_id).glob(f"{addon_id}-*.zip")):
+                  raise SystemExit(f"Missing installable package for {addon_id}")
+          print("Kodi repository feed, checksum and both installable packages validated.")
+          PY
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: repository-site
+      - id: deployment
+        uses: actions/deploy-pages@v4
