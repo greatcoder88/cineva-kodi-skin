@@ -25,7 +25,7 @@ Add this source in Kodi's **Settings → File manager → Add source**:
 
 `https://greatcoder88.github.io/cineva-kodi-skin/`
 
-Then open **Add-ons → Install from ZIP file → CINÉVA**, choose `repository.cineva-0.1.1.zip` at the source root, and finish through **Install from repository → CINÉVA Add-on Repository**. No separate browser download or custom domain is required. The repository workflow publishes the generated feed to the `gh-pages` branch root. GitHub Pages must serve the `gh-pages` branch from `/(root)`. The root page is a Kodi-compatible directory listing, not this README.
+Then open **Add-ons → Install from ZIP file → CINÉVA**, choose `repository.cineva-0.1.2.zip` at the source root, and finish through **Install from repository → CINÉVA Add-on Repository**. No separate browser download or custom domain is required. The repository workflow publishes the generated feed to the `gh-pages` branch root. GitHub Pages must serve the `gh-pages` branch from `/(root)`. The root page is a Kodi-compatible directory listing, not this README.
 
 See [the complete Kodi installation guide](docs/KODI_REPOSITORY.md) for details.
 
