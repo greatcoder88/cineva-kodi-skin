@@ -150,8 +150,9 @@ jobs:
           hero_plot = hero_group.find("./control[@type='textbox']") if hero_group is not None else None
           hero_meta = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Year]" in c.findtext("label", "")), None) if hero_group is not None else None
           hero_eyebrow = hero_group.find("./control[@id='9300']") if hero_group is not None else None
-          if hero_group is None or hero_group.findtext("top") != "118" or hero_group.findtext("height") != "330" or hero_title is None or hero_title.findtext("top") != "24" or hero_title.findtext("height") != "96" or hero_title.findtext("font") != "font24" or hero_title.findtext("width") != "1100" or hero_title.findtext("wrapmultiline") != "true" or hero_title.findtext("aligny") != "center" or hero_meta is None or hero_meta.findtext("top") != "152" or hero_meta.findtext("font") != "font10" or hero_meta.findtext("textcolor") != "silver" or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("184", "64", "font13") or hero_eyebrow is None or (hero_eyebrow.findtext("top"), hero_eyebrow.findtext("height"), hero_eyebrow.findtext("label"), hero_eyebrow.findtext("visible"), hero_eyebrow.findtext("font"), hero_eyebrow.findtext("textcolor")) != ("0", "24", "CONTINUE WATCHING", "String.Contains(Skin.String(Cineva.Widget1.Path),in_progress)", "font9", "FFE50914"):
-              errors.append("Home hero must present title first, metadata second and synopsis third with distinct baselines")
+          hero_logo = hero_group.find("./control[@id='9190']") if hero_group is not None else None
+          if hero_group is None or hero_group.findtext("top") != "118" or hero_group.findtext("height") != "330" or hero_title is None or (hero_title.findtext("top"), hero_title.findtext("height"), hero_title.findtext("font"), hero_title.findtext("width"), hero_title.findtext("wrapmultiline"), hero_title.findtext("aligny")) != ("32", "96", "font22", "1200", "true", "center") or hero_meta is None or (hero_meta.findtext("top"), hero_meta.findtext("height"), hero_meta.findtext("font"), hero_meta.findtext("textcolor")) != ("136", "32", "font10", "silver") or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("172", "60", "font13") or hero_eyebrow is None or (hero_eyebrow.findtext("top"), hero_eyebrow.findtext("height"), hero_eyebrow.findtext("label"), hero_eyebrow.findtext("visible"), hero_eyebrow.findtext("font"), hero_eyebrow.findtext("textcolor")) != ("0", "24", "CONTINUE WATCHING", "String.Contains(Skin.String(Cineva.Widget1.Path),in_progress)", "font9", "FFE50914") or hero_logo is None or (hero_logo.findtext("top"), hero_logo.findtext("height"), hero_logo.findtext("width")) != ("32", "84", "1220"):
+              errors.append("Home hero eyebrow, title/clearlogo, metadata and synopsis must occupy separate, title-safe vertical bands")
           for group in (g for g in controls.findall("control") if g.get("type") == "group" and g.findtext("control/label", "").startswith("$INFO[Container(")):
               source_label = group.findtext("control/label", "")
               container_id = int(source_label.split("Container(", 1)[1].split(")", 1)[0])
@@ -173,7 +174,7 @@ jobs:
                   if eyebrow is None or (eyebrow.findtext("top"), eyebrow.findtext("height"), eyebrow.findtext("label"), eyebrow.findtext("visible"), eyebrow.findtext("font"), eyebrow.findtext("textcolor")) != ("0", "24", expected_label, expected_visibility, "font9", "FFE50914"):
                       errors.append(f"Home hero {container_id} is missing its source-aware {expected_label} eyebrow")
               buttons = group.findall("./control[@type='button']")
-              if len(buttons) != 2 or any(button.findtext("top") != "262" for button in buttons):
+              if len(buttons) != 2 or any(button.findtext("top") != "246" for button in buttons):
                   errors.append(f"Home hero {container_id} actions are not aligned beneath the synopsis")
               if metadata is None or metadata.findtext("label") != expected:
                   errors.append(f"Home hero {container_id} metadata must omit separators for empty fields")
@@ -445,6 +446,9 @@ jobs:
           shelf_font = next((node for node in fonts.findall("./fontset[@id='Default']/font") if node.findtext("name") == "font18"), None)
           if hero_font is None or (hero_font.findtext("filename"), hero_font.findtext("size")) != ("Poppins-ExtraBold.ttf", "68"):
               errors.append("Home hero title must use the Poppins display face at 68px")
+          compact_hero_font = next((node for node in fonts.findall("./fontset[@id='Default']/font") if node.findtext("name") == "font22"), None)
+          if compact_hero_font is None or (compact_hero_font.findtext("filename"), compact_hero_font.findtext("size")) != ("Poppins-ExtraBold.ttf", "40"):
+              errors.append("Home hero title must use the Poppins ExtraBold 40px title-safe face")
           if shelf_font is None or (shelf_font.findtext("filename"), shelf_font.findtext("size")) != ("Poppins-SemiBold.ttf", "34"):
               errors.append("Home shelf headings must use the Poppins semibold face at 34px")
           focus_border = pathlib.Path("skin.cineva/media/poster-focus.png").read_bytes()

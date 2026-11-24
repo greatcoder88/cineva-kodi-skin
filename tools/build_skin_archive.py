@@ -509,11 +509,11 @@ def update_xml(data, path):
                 labels = [child for child in group.findall("control") if child.get("type") == "label"]
                 if labels:
                     # Title first, metadata second: separate vertical baselines.
-                    set_child_text(labels[0], "top", 24)
+                    set_child_text(labels[0], "top", 32)
                     set_child_text(labels[0], "height", 96)
                     set_child_text(labels[0], "textcolor", "white")
-                    set_child_text(labels[0], "width", 1100)
-                    set_child_text(labels[0], "font", "font24")
+                    set_child_text(labels[0], "width", 1200)
+                    set_child_text(labels[0], "font", "font22")
                     set_child_text(labels[0], "wrapmultiline", "true")
                     set_child_text(labels[0], "aligny", "center")
                     set_child_text(labels[0], "align", "left")
@@ -529,14 +529,14 @@ def update_xml(data, path):
                         f"$INFO[Container({container_id}).ListItem.Rating,  •  ]"
                     )
                     set_child_text(labels[1], "label", metadata)
-                    set_child_text(labels[1], "top", 152)
-                    set_child_text(labels[1], "height", 34)
+                    set_child_text(labels[1], "top", 136)
+                    set_child_text(labels[1], "height", 32)
                     set_child_text(labels[1], "font", "font10")
                     set_child_text(labels[1], "textcolor", "silver")
                 for child in group.findall("control"):
                     if child.get("type") == "textbox":
-                        set_child_text(child, "top", 184)
-                        set_child_text(child, "height", 64)
+                        set_child_text(child, "top", 172)
+                        set_child_text(child, "height", 60)
                         set_child_text(child, "width", 900)
                         set_child_text(child, "font", "font13")
                         set_child_text(child, "textcolor", "white")
@@ -629,7 +629,7 @@ def update_xml(data, path):
                 {"type": "image", "id": str(9190 + (container_id - 9001))}
             )
             for tag, value in (
-                ("left", 0), ("top", 24), ("width", 1220), ("height", 84),
+                ("left", 0), ("top", 32), ("width", 1220), ("height", 84),
                 ("texture", f"$INFO[{clearlogo_info}]"),
                 ("visible", f"!String.IsEmpty({clearlogo_info})"),
             ):
@@ -644,7 +644,7 @@ def update_xml(data, path):
                 button = ET.SubElement(hero_group, "control",
                                        {"type": "button", "id": str(button_id)})
                 for tag, value in (
-                    ("left", left), ("top", 262), ("width", width), ("height", 54),
+                    ("left", left), ("top", 246), ("width", width), ("height", 54),
                     ("label", label), ("font", "font10"),
                     ("onup", f"SetFocus({nav_target})"),
                     ("ondown", f"SetFocus({container_id})"),
@@ -1054,6 +1054,7 @@ def update_xml(data, path):
             "font16": ("Poppins-SemiBold.ttf", 29),
             "font18": ("Poppins-SemiBold.ttf", 34),
             "font20": ("Poppins-SemiBold.ttf", 38),
+            "font22": ("Poppins-ExtraBold.ttf", 40),
             "font24": ("Poppins-ExtraBold.ttf", 46),
             "font30": ("Poppins-ExtraBold.ttf", 58),
             "font36": ("Poppins-ExtraBold.ttf", 68),
