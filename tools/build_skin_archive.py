@@ -191,32 +191,98 @@ def poster_focus_png():
             + png_chunk(b"IEND", b""))
 
 
+def rating_badge_png():
+    """Create the dark, gold-edged capsule that frames the IMDb score."""
+    width, height = 148, 32
+    pixels = bytearray()
+    radius = 15
+    for y in range(height):
+        pixels.append(0)
+        for x in range(width):
+            dx = min(x, width - 1 - x)
+            dy = min(y, height - 1 - y)
+            inside = (dx >= radius or dy >= radius
+                      or (dx - radius) ** 2 + (dy - radius) ** 2 <= radius ** 2)
+            edge = inside and (x <= 1 or x >= width - 2 or y <= 1 or y >= height - 2)
+            if not inside:
+                pixels.extend((0, 0, 0, 0))
+            elif edge:
+                pixels.extend((174, 132, 55, 220))
+            else:
+                pixels.extend((19, 21, 28, 232))
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return (b"\x89PNG\r\n\x1a\n"
+            + png_chunk(b"IHDR", header)
+            + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
+            + png_chunk(b"IEND", b""))
+
+def imdb_logo_png():
+    """Draw a compact IMDb wordmark in its familiar black-on-yellow treatment."""
+    width, height = 48, 24
+    pixels = bytearray()
+    glyphs = {
+        "I": ["111", "010", "010", "010", "010", "010", "111"],
+        "M": ["10001", "11011", "10101", "10101", "10001", "10001", "10001"],
+        "D": ["11110", "10001", "10001", "10001", "10001", "10001", "11110"],
+        "b": ["100", "100", "110", "101", "101", "101", "110"],
+    }
+    scale, gap = 2, 2
+    glyph_widths = [len(glyphs[ch][0]) * scale for ch in "IMDb"]
+    total = sum(glyph_widths) + gap * 3
+    start_x = (width - total) // 2
+    start_y = (height - 7 * scale) // 2
+    ink = set()
+    x = start_x
+    for ch in "IMDb":
+        rows = glyphs[ch]
+        for gy, row in enumerate(rows):
+            for gx, bit in enumerate(row):
+                if bit == "1":
+                    for sy in range(scale):
+                        for sx in range(scale):
+                            ink.add((x + gx * scale + sx, start_y + gy * scale + sy))
+        x += len(rows[0]) * scale + gap
+    for y in range(height):
+        pixels.append(0)
+        for x in range(width):
+            pixels.extend((255, 210, 0, 255) if (x, y) not in ink else (0, 0, 0, 255))
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return (b"\x89PNG\r\n\x1a\n"
+            + png_chunk(b"IHDR", header)
+            + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
+            + png_chunk(b"IEND", b""))
+
+
 def poster_placeholder_png():
-    """Create a branded 2:3 fallback when a provider has no poster artwork."""
+    """Create a branded cinematic film-lens poster when a provider has no artwork."""
     width, height = 342, 513
     pixels = bytearray()
     for y in range(height):
         vertical = y / (height - 1)
-        pixels.append(0)  # PNG filter: None
+        pixels.append(0)
         for x in range(width):
-            dx = (x - width / 2) / (width * 0.72)
-            dy = (y - height * 0.46) / (height * 0.72)
-            glow = max(0.0, 1.0 - (dx * dx + dy * dy)) ** 2
-            red = int(15 * (1 - vertical) + 5 * vertical + 2 * glow)
-            green = int(20 * (1 - vertical) + 7 * vertical + 8 * glow)
-            blue = int(31 * (1 - vertical) + 14 * vertical + 14 * glow)
-            pixels.extend((min(255, red), min(255, green), min(255, blue), 255))
+            horizontal = x / (width - 1)
+            blue_glow = max(0.0, 1.0 - (((horizontal - 0.18) / 0.72) ** 2
+                                       + ((vertical - 0.20) / 0.56) ** 2)) ** 2
+            crimson_glow = max(0.0, 1.0 - (((horizontal - 0.82) / 0.68) ** 2
+                                          + ((vertical - 0.66) / 0.58) ** 2)) ** 2
+            lens_glow = max(0.0, 1.0 - (((horizontal - 0.50) / 0.48) ** 2
+                                       + ((vertical - 0.48) / 0.50) ** 2)) ** 2
+            red = int(5 + 8 * horizontal + 19 * crimson_glow + 8 * lens_glow)
+            green = int(7 + 7 * (1 - vertical) + 5 * blue_glow + 3 * lens_glow)
+            blue = int(17 + 19 * blue_glow + 13 * lens_glow + 8 * crimson_glow)
+            pixels.extend((red, green, blue, 255))
 
     def pixel(x, y, color):
         if 0 <= x < width and 0 <= y < height:
             offset = y * (1 + width * 4) + 1 + x * 4
             pixels[offset:offset + 4] = bytes((*color, 255))
 
-    def line(x1, y1, x2, y2, color, thickness=2):
+    def line(x1, y1, x2, y2, color, thickness=1):
         dx, sx = abs(x2 - x1), 1 if x1 < x2 else -1
         dy, sy = -abs(y2 - y1), 1 if y1 < y2 else -1
         error = dx + dy
-        radius = (thickness - 1) // 2
+        radius = max(0, (thickness - 1) // 2)
         while True:
             for oy in range(-radius, radius + 1):
                 for ox in range(-radius, radius + 1):
@@ -231,32 +297,87 @@ def poster_placeholder_png():
                 error += dx
                 y1 += sy
 
-    muted = (80, 96, 116)
-    muted_dark = (47, 61, 79)
-    crimson = (229, 9, 20)
-    pale = (205, 216, 230)
-    # Minimal clapperboard outline: legible at TV distance, without fake title text.
-    line(80, 167, 262, 167, muted, 3)
-    line(80, 167, 80, 321, muted, 3)
-    line(262, 167, 262, 321, muted, 3)
-    line(80, 321, 262, 321, muted, 3)
-    line(80, 167, 106, 140, muted, 3)
-    line(106, 140, 288, 140, muted, 3)
-    line(288, 140, 262, 167, muted, 3)
-    for start in (108, 151, 194, 237):
-        line(start - 12, 162, start + 12, 140, muted_dark, 6)
-    line(96, 184, 246, 184, muted_dark, 2)
-    # A right-facing crimson play glyph is the only saturated focal point.
-    for step in range(88):
-        x = 128 + step
-        half_height = int((87 - step) * 0.48)
-        for y in range(256 - half_height, 257 + half_height):
-            pixel(x, y, crimson)
-    line(124, 386, 218, 386, crimson, 4)
-    for x, y, sx, sy in ((80, 167, 1, 1), (262, 167, -1, 1),
-                         (80, 321, 1, -1), (262, 321, -1, -1)):
-        line(x, y, x + sx * 16, y, pale, 2)
-        line(x, y, x, y + sy * 16, pale, 2)
+    def rect(x1, y1, x2, y2, color):
+        for y in range(y1, y2 + 1):
+            for x in range(x1, x2 + 1):
+                pixel(x, y, color)
+
+    def circle(cx, cy, radius, color, thickness=2):
+        outer = radius * radius
+        inner = max(0, radius - thickness) ** 2
+        for y in range(cy - radius, cy + radius + 1):
+            for x in range(cx - radius, cx + radius + 1):
+                distance = (x - cx) ** 2 + (y - cy) ** 2
+                if inner <= distance <= outer:
+                    pixel(x, y, color)
+
+    glyphs = {
+        "C": ("01110", "10001", "10000", "10000", "10000", "10001", "01110"),
+        "I": ("11111", "00100", "00100", "00100", "00100", "00100", "11111"),
+        "N": ("10001", "11001", "10101", "10011", "10001", "10001", "10001"),
+        "E": ("11111", "10000", "10000", "11110", "10000", "10000", "11111"),
+        "V": ("10001", "10001", "10001", "10001", "01010", "01010", "00100"),
+        "A": ("01110", "10001", "10001", "11111", "10001", "10001", "10001"),
+    }
+
+    def draw_wordmark():
+        scale, gap = 2, 4
+        label = "CINEVA"
+        text_width = sum(len(glyphs[ch][0]) * scale for ch in label) + gap * (len(label) - 1)
+        x = (width - text_width) // 2
+        start_x = x
+        for ch in label:
+            rows = glyphs[ch]
+            for gy, row in enumerate(rows):
+                for gx, bit in enumerate(row):
+                    if bit == "1":
+                        for sy in range(scale):
+                            for sx in range(scale):
+                                pixel(x + gx * scale + sx, 48 + gy * scale + sy, (226, 233, 245))
+            x += len(rows[0]) * scale + gap
+        # Acute accent above the E keeps the brand mark distinctive at poster scale.
+        e_x = start_x + (5 * 3 + 4 * 3) * scale
+        line(e_x + 8, 45, e_x + 14, 39, (226, 63, 83), 2)
+        line(start_x, 70, start_x + text_width, 70, (94, 35, 53), 2)
+
+    # A quiet film-frame border and sprocket holes make the fallback read as
+    # cinematic artwork rather than a generic play button or a blank tile.
+    frame = (55, 112, 287, 382)
+    line(frame[0], frame[1], frame[2], frame[1], (56, 72, 99), 2)
+    line(frame[0], frame[3], frame[2], frame[3], (56, 72, 99), 2)
+    line(frame[0], frame[1], frame[0], frame[3], (56, 72, 99), 2)
+    line(frame[2], frame[1], frame[2], frame[3], (56, 72, 99), 2)
+    for y in range(132, 366, 36):
+        rect(63, y, 70, y + 12, (27, 38, 57))
+        rect(272, y, 279, y + 12, (27, 38, 57))
+        line(64, y + 2, 69, y + 2, (76, 49, 69), 1)
+        line(273, y + 2, 278, y + 2, (76, 49, 69), 1)
+
+    # Layered lens rings and an iris-shaped hexagon create a calm, recognizable
+    # film motif without implying that the placeholder itself is a play control.
+    circle(171, 246, 88, (37, 51, 77), 3)
+    circle(171, 246, 76, (85, 44, 64), 2)
+    circle(171, 246, 62, (43, 67, 91), 2)
+    circle(171, 246, 48, (87, 57, 77), 2)
+    outer_iris = ((171, 190), (219, 218), (219, 274), (171, 302), (123, 274), (123, 218))
+    inner_iris = ((171, 215), (197, 230), (197, 262), (171, 277), (145, 262), (145, 230))
+    for index in range(6):
+        next_index = (index + 1) % 6
+        line(*outer_iris[index], *outer_iris[next_index], (103, 55, 76), 2)
+        line(*inner_iris[index], *inner_iris[next_index], (67, 86, 111), 2)
+        line(*outer_iris[index], *inner_iris[index], (75, 53, 78), 1)
+    circle(171, 246, 22, (141, 89, 108), 2)
+    circle(171, 246, 8, (194, 154, 137), 2)
+    circle(171, 246, 3, (231, 210, 178), 1)
+
+    # Small corner ticks and a restrained crimson baseline finish the poster.
+    line(55, 112, 79, 112, (169, 40, 63), 3)
+    line(55, 112, 55, 136, (169, 40, 63), 3)
+    line(263, 382, 287, 382, (169, 40, 63), 3)
+    line(287, 358, 287, 382, (169, 40, 63), 3)
+    draw_wordmark()
+    line(68, 426, 274, 426, (116, 28, 46), 2)
+    line(68, 433, 160, 433, (53, 48, 67), 1)
 
     header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
     return (b"\x89PNG\r\n\x1a\n"
@@ -299,6 +420,14 @@ def set_child_text(parent, tag, value):
     if node is None:
         node = ET.SubElement(parent, tag)
     node.text = str(value)
+
+
+def remove_missing_no_focus_textures(root):
+    """Remove dash placeholders that Kodi interprets as missing texture files."""
+    for node in root.findall(".//control[@type='button']"):
+        texture = node.find("texturenofocus")
+        if texture is not None and (texture.text or "").strip() == "-":
+            node.remove(texture)
 
 
 def update_xml(data, path):
@@ -509,11 +638,11 @@ def update_xml(data, path):
                 labels = [child for child in group.findall("control") if child.get("type") == "label"]
                 if labels:
                     # Title first, metadata second: separate vertical baselines.
-                    set_child_text(labels[0], "top", 24)
-                    set_child_text(labels[0], "height", 96)
+                    set_child_text(labels[0], "top", 32)
+                    set_child_text(labels[0], "height", 82)
                     set_child_text(labels[0], "textcolor", "white")
-                    set_child_text(labels[0], "width", 1100)
-                    set_child_text(labels[0], "font", "font24")
+                    set_child_text(labels[0], "width", 1200)
+                    set_child_text(labels[0], "font", "font20")
                     set_child_text(labels[0], "wrapmultiline", "true")
                     set_child_text(labels[0], "aligny", "center")
                     set_child_text(labels[0], "align", "left")
@@ -526,17 +655,41 @@ def update_xml(data, path):
                         f"$INFO[Container({container_id}).ListItem.Year]"
                         f"$INFO[Container({container_id}).ListItem.Duration,  •  ]"
                         f"$INFO[Container({container_id}).ListItem.Genre,  •  ]"
-                        f"$INFO[Container({container_id}).ListItem.Rating,  •  ]"
                     )
                     set_child_text(labels[1], "label", metadata)
-                    set_child_text(labels[1], "top", 152)
-                    set_child_text(labels[1], "height", 34)
+                    set_child_text(labels[1], "top", 128)
+                    set_child_text(labels[1], "height", 28)
                     set_child_text(labels[1], "font", "font10")
                     set_child_text(labels[1], "textcolor", "silver")
+                    set_child_text(labels[1], "width", 680)
+                    row_index = int(source_label.split("Container(", 1)[1].split(")", 1)[0]) - 9000
+                    rating_id = 9340 + (row_index - 1) * 3
+                    for old_rating in list(group.findall("control")):
+                        if (old_rating.findtext("texture") in {"rating-badge.png", "imdb-logo.png"}
+                                or "ListItem.Rating" in old_rating.findtext("label", "")):
+                            group.remove(old_rating)
+                    rating_bg = ET.SubElement(group, "control", {"type": "image", "id": str(rating_id)})
+                    for tag, value in (("left", 770), ("top", 126), ("width", 148), ("height", 32),
+                                       ("texture", "rating-badge.png")):
+                        set_child_text(rating_bg, tag, value)
+                    set_child_text(rating_bg, "visible",
+                                   f"!String.IsEmpty(Container({9000 + row_index}).ListItem.Rating)")
+                    rating_logo = ET.SubElement(group, "control", {"type": "image", "id": str(rating_id + 1)})
+                    for tag, value in (("left", 778), ("top", 130), ("width", 48), ("height", 24),
+                                       ("texture", "imdb-logo.png"),
+                                       ("visible", f"!String.IsEmpty(Container({9000 + row_index}).ListItem.Rating)")):
+                        set_child_text(rating_logo, tag, value)
+                    rating_text = ET.SubElement(group, "control", {"type": "label", "id": str(rating_id + 2)})
+                    for tag, value in (("left", 832), ("top", 126), ("width", 84), ("height", 32),
+                                       ("font", "font10"), ("textcolor", "FFFFD36A"),
+                                       ("label", f"$INFO[Container({9000 + row_index}).ListItem.Rating]"),
+                                       ("align", "left"), ("aligny", "center"),
+                                       ("visible", f"!String.IsEmpty(Container({9000 + row_index}).ListItem.Rating)")):
+                        set_child_text(rating_text, tag, value)
                 for child in group.findall("control"):
                     if child.get("type") == "textbox":
-                        set_child_text(child, "top", 184)
-                        set_child_text(child, "height", 64)
+                        set_child_text(child, "top", 164)
+                        set_child_text(child, "height", 56)
                         set_child_text(child, "width", 900)
                         set_child_text(child, "font", "font13")
                         set_child_text(child, "textcolor", "white")
@@ -579,7 +732,7 @@ def update_xml(data, path):
                 for duplicate in hero_groups:
                     if duplicate is not hero_group:
                         controls.remove(duplicate)
-            set_child_text(hero_group, "height", 330)
+            set_child_text(hero_group, "height", 320)
             # Add a restrained editorial eyebrow above the dynamic title. It
             # gives every selected shelf item a clear hierarchy without
             # hard-coding a movie/show name or implying platform exclusivity.
@@ -629,7 +782,7 @@ def update_xml(data, path):
                 {"type": "image", "id": str(9190 + (container_id - 9001))}
             )
             for tag, value in (
-                ("left", 0), ("top", 24), ("width", 1220), ("height", 84),
+                ("left", 0), ("top", 36), ("width", 900), ("height", 70),
                 ("texture", f"$INFO[{clearlogo_info}]"),
                 ("visible", f"!String.IsEmpty({clearlogo_info})"),
             ):
@@ -638,13 +791,13 @@ def update_xml(data, path):
                 clearlogo, "aspectratio", {"align": "left", "aligny": "center"}
             ).text = "keep"
             for button_id, label, left, width in (
-                (play_id, f"$VAR[CinevaHeroAction{row_index}]", 0, 190),
-                (info_id, "MORE INFO", 214, 236)
+                (play_id, f"$VAR[CinevaHeroAction{row_index}]", 0, 176),
+                (info_id, "MORE INFO", 196, 210)
             ):
                 button = ET.SubElement(hero_group, "control",
                                        {"type": "button", "id": str(button_id)})
                 for tag, value in (
-                    ("left", left), ("top", 262), ("width", width), ("height", 54),
+                    ("left", left), ("top", 238), ("width", width), ("height", 50),
                     ("label", label), ("font", "font10"),
                     ("onup", f"SetFocus({nav_target})"),
                     ("ondown", f"SetFocus({container_id})"),
@@ -693,12 +846,11 @@ def update_xml(data, path):
             set_child_text(rail_list, tag, value)
         set_child_text(rail_list, "orientation", "vertical")
         set_child_text(rail_list, "itemgap", 12)
-        set_child_text(rail_list, "scrolltime", 220)
+        # A short native slide keeps lower shelves feeling connected to the
+        # pinned hero. Keep it conditional and modest rather than animating
+        # continuously or layering multiple transitions.
+        set_child_text(rail_list, "scrolltime", 180)
         set_child_text(rail_list, "usecontrolcoords", "false")
-        # Lower shelves otherwise sit too close to the 1080p bottom edge: their
-        # two-line captions can be clipped when rows 2-4 are docked into view.
-        # Lift the whole scrolling viewport by 40px only while a lower row or
-        # its hero actions are focused; the initial Home composition is unchanged.
         lower_row_focus = " | ".join(
             f"Control.HasFocus({control_id})"
             for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118)
@@ -707,7 +859,7 @@ def update_xml(data, path):
             rail_list,
             "animation",
             {"effect": "slide", "start": "0,0", "end": "0,-40",
-             "time": "220", "condition": lower_row_focus},
+             "time": "180", "condition": lower_row_focus},
         ).text = "Conditional"
         first_row_index = None
         for index in range(1, 5):
@@ -722,7 +874,7 @@ def update_xml(data, path):
             controls.remove(heading)
             controls.remove(shelf)
             row_group = ET.Element("control", {"type": "group", "id": str(9060 + index)})
-            for tag, value in (("left", 0), ("top", 0), ("width", 1710), ("height", 490)):
+            for tag, value in (("left", 0), ("top", 0), ("width", 1710), ("height", 508)):
                 set_child_text(row_group, tag, value)
             play_id = 9111 + (index - 1) * 2
             next_target = 9000 + index + 1 if index < 4 else 1001
@@ -737,13 +889,13 @@ def update_xml(data, path):
             set_child_text(shelf, "left", 0)
             set_child_text(shelf, "top", 52)
             set_child_text(shelf, "width", 1710)
-            set_child_text(shelf, "height", 430)
+            set_child_text(shelf, "height", 448)
             set_child_text(shelf, "itemgap", 14)
             set_child_text(shelf, "onup", f"SetFocus({play_id})")
             set_child_text(shelf, "ondown", f"SetFocus({next_target})")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
                 layout.set("width", "285")
-                layout.set("height", "430")
+                layout.set("height", "448")
             focused_layout = shelf.find("./focusedlayout")
             focused_include = focused_layout.find("include") if focused_layout is not None else None
             if focused_include is not None:
@@ -812,6 +964,27 @@ def update_xml(data, path):
             controls.append(hero_group)
         nav_group = next((node for node in controls.findall("control") if node.get("type") == "group" and node.find("./control[@id='1001']") is not None), None)
         if nav_group is not None:
+            # Widget sources belong in Skin Settings, not in a separate Home destination.
+            # Remove the stale hub button and reclaim its slot for the single Settings entry.
+            widget_hub = next(
+                (button for button in nav_group.findall("./control[@type='button']")
+                 if button.findtext("label", "").strip().upper() == "MY WIDGETS"
+                 or "ActivateWindow(11119)" in button.findtext("onclick", "")),
+                None,
+            )
+            if widget_hub is not None:
+                nav_group.remove(widget_hub)
+            # Find Settings by meaning rather than its old ID: after the first
+            # build it already owns 1005, so rerunning the builder must preserve it.
+            settings_button = next(
+                (button for button in nav_group.findall("./control[@type='button']")
+                 if button.findtext("label", "").strip().upper() == "SETTINGS"),
+                None,
+            )
+            if settings_button is not None:
+                settings_button.set("id", "1005")
+                set_child_text(settings_button, "left", 670)
+                set_child_text(settings_button, "width", 150)
             # Put the menu on the same horizontal baseline as the CINÉVA wordmark
             # instead of stacking it underneath. The right-aligned date remains
             # anchored at the far edge of the same 1080p-safe header row.
@@ -826,16 +999,6 @@ def update_xml(data, path):
                     set_child_text(button, tag, value)
                 set_child_text(button, "font", "font12")
                 set_child_text(button, "height", 48)
-            # Widget configuration belongs in each screen's Skin Settings.
-            # Do not expose a separate My Widgets destination in the primary nav.
-            hub_button = nav_group.find("./control[@id='1005']")
-            if hub_button is not None:
-                nav_group.remove(hub_button)
-            settings_button = nav_group.find("./control[@id='1006']")
-            if settings_button is not None:
-                set_child_text(settings_button, "left", 670)
-            if nav_group.find("./control[@id='1005']") is not None:
-                raise SystemExit("Home navigation must not expose the My Widgets hub")
             # Keep a persistent red section marker under HOME even after focus
             # moves into the catalogue, so users never lose their location.
             old_marker = nav_group.find("./control[@id='9201']")
@@ -847,7 +1010,8 @@ def update_xml(data, path):
             set_child_text(active_marker, "texture", "focus-bar.png")
             set_child_text(active_marker, "visible", "Window.IsActive(home)")
             nav_group.append(active_marker)
-        # Remove the legacy floating button; it used to obscure the fourth shelf.
+        # The top navigation already has a My Widgets destination. The extra
+        # floating button obscured the fourth shelf and is intentionally removed.
         for control in list(controls):
             if control.get("id") == "9010" or control.findtext("label") == "MORE WIDGETS  ›":
                 controls.remove(control)
@@ -911,7 +1075,7 @@ def update_xml(data, path):
         if normal_texture is None:
             raise SystemExit("Includes.xml normal poster image has no texture")
         normal_texture.set("fallback", "poster-placeholder.png")
-        for tag, value in (("left", 0), ("top", 350), ("width", 285), ("height", 48), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
+        for tag, value in (("left", 0), ("top", 350), ("width", 285), ("height", 64), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
             set_child_text(normal_label, tag, value)
         stale_visibility = normal_label.find("visible")
         if stale_visibility is not None:
@@ -944,18 +1108,30 @@ def update_xml(data, path):
         # the title below it. The 104% control geometry plus a 104% focus
         # animation gives a balanced ~108% total scale instead of double-enlarging
         # an already oversized 108% control.
-        for tag, value in (("left", 7), ("top", -6), ("width", 271), ("height", 361)):
+        for tag, value in (("left", 9), ("top", -3), ("width", 267), ("height", 355)):
             set_child_text(focused_image, tag, value)
         set_child_text(focused_image, "texture", "$INFO[ListItem.Art(poster)]")
         focused_texture = focused_image.find("texture")
         if focused_texture is None:
             raise SystemExit("Includes.xml focused poster image has no texture")
         focused_texture.set("fallback", "poster-placeholder.png")
+        # Keep a brief, restrained zoom on the selected poster. It is
+        # event-driven (D-pad focus only), not a perpetual animation.
         focus_animation = focused_image.find("./animation[@effect='zoom']")
         if focus_animation is None:
-            raise SystemExit("Includes.xml focused poster is missing its zoom animation")
-        focus_animation.set("end", "104")
-        focus_animation.set("time", "180")
+            focus_animation = ET.SubElement(
+                focused_image, "animation",
+                {"effect": "zoom", "start": "100", "end": "104", "time": "160",
+                 "tween": "sine", "easing": "out"}
+            )
+            focus_animation.text = "Focus"
+        else:
+            focus_animation.set("start", "100")
+            focus_animation.set("end", "104")
+            focus_animation.set("time", "160")
+            focus_animation.set("tween", "sine")
+            focus_animation.set("easing", "out")
+        focus_animation.text = "Focus"
         for tag, value in (("left", 18), ("width", 249), ("top", 345), ("height", 5)):
             set_child_text(progress, tag, value)
         if focused_label is not None and focused_label in list(focused):
@@ -980,8 +1156,8 @@ def update_xml(data, path):
             set_child_text(active_image, "visible", f"Control.HasFocus({container_id})")
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
             set_child_text(fallback_progress, "visible", f"!Control.HasFocus({container_id}) + ListItem.IsResumable")
-            # Reserve a full 48px, vertically centered caption area so two-line titles remain readable in both normal and focused states.
-            for tag, value in (("left", 0), ("top", 370), ("width", 285), ("height", 48), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "white")):
+            # Reserve a 64px caption area for two full lines at TV distance; row and item geometry below keep it clear of the next shelf.
+            for tag, value in (("left", 0), ("top", 362), ("width", 285), ("height", 64), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
             stale_wrap = active_label.find("wrap")
             if stale_wrap is not None:
@@ -992,7 +1168,7 @@ def update_xml(data, path):
             set_child_text(active_label, "visible", f"Control.HasFocus({container_id})")
             set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
             focus_accent = ET.Element("control", {"type": "image"})
-            for tag, value in (("left", 101), ("top", 421), ("width", 84), ("height", 4)):
+            for tag, value in (("left", 101), ("top", 433), ("width", 84), ("height", 4)):
                 set_child_text(focus_accent, tag, value)
             set_child_text(focus_accent, "texture", "focus-bar.png")
             set_child_text(focus_accent, "visible", f"Control.HasFocus({container_id})")
@@ -1001,6 +1177,46 @@ def update_xml(data, path):
             for child in (fallback_image, active_image, fallback_label, active_label, fallback_progress, clone_progress, focus_accent):
                 clone.append(child)
             root.append(clone)
+    elif path == "skin.cineva/xml/SkinSettings.xml":
+        # Replace the legacy broad widget-manager links with twelve direct,
+        # numbered slot actions. This makes each screen's four sources editable
+        # from the skin's own Settings window without a separate My Widgets hub.
+        controls = root.find("controls")
+        if controls is None:
+            raise SystemExit("SkinSettings.xml is missing its controls container")
+        for stale in list(controls.findall("control")):
+            if stale.get("id") in {"6", "7", "8", "9", "10"}:
+                controls.remove(stale)
+        headings = {
+            "home": ("HOME WIDGETS", 96, "Cineva.Widget"),
+            "movies": ("MOVIES WIDGETS", 704, "Cineva.MovieWidget"),
+            "tvshows": ("TV SHOWS WIDGETS", 1312, "Cineva.ShowWidget"),
+        }
+        for screen, (heading, left, string_prefix) in headings.items():
+            section = ET.Element("control", {"type": "label"})
+            for tag, value in (("left", left), ("top", 238), ("width", 520),
+                               ("height", 42), ("font", "font18"),
+                               ("textcolor", "white"), ("label", heading)):
+                set_child_text(section, tag, value)
+            controls.append(section)
+            for slot in range(1, 5):
+                button = ET.Element("control", {"type": "button", "id": str(20 + (list(headings).index(screen) * 4) + slot)})
+                for tag, value in (("left", left), ("top", 300 + (slot - 1) * 82),
+                                   ("width", 520), ("height", 64), ("font", "font14"),
+                                   ("label", f"WIDGET {slot}  ·  $INFO[Skin.String({string_prefix}{slot}.Name)]"),
+                                   ("texturefocus", "focus-bar.png"),
+                                   ("texturenofocus", "black.png"),
+                                   ("textcolor", "white"), ("focusedcolor", "white"),
+                                   ("onclick", f"RunScript(script.cineva.widgets,action=configure&screen={screen}&slot={slot})")):
+                    set_child_text(button, tag, value)
+                controls.append(button)
+        # A concise hint explains that each action opens the add-on/folder picker.
+        hint = ET.Element("control", {"type": "label"})
+        for tag, value in (("left", 96), ("top", 690), ("width", 1500),
+                           ("height", 44), ("font", "font12"),
+                           ("textcolor", "grey"), ("label", "Choose a slot to select, change or clear its video add-on source.")):
+            set_child_text(hint, tag, value)
+        controls.append(hint)
     elif path == "skin.cineva/xml/Font.xml":
         fontset = root.find("./fontset[@id='Default']")
         if fontset is None:
@@ -1023,6 +1239,7 @@ def update_xml(data, path):
             "font16": ("Poppins-SemiBold.ttf", 29),
             "font18": ("Poppins-SemiBold.ttf", 34),
             "font20": ("Poppins-SemiBold.ttf", 38),
+            "font22": ("Poppins-ExtraBold.ttf", 40),
             "font24": ("Poppins-ExtraBold.ttf", 46),
             "font30": ("Poppins-ExtraBold.ttf", 58),
             "font36": ("Poppins-ExtraBold.ttf", 68),
@@ -1099,6 +1316,11 @@ def update_xml(data, path):
             set_child_text(title, "left", 72)
             set_child_text(title, "top", 138)
             set_child_text(title, "font", "font30")
+    elif path == "skin.cineva/xml/Home.xml":
+        # Kodi treats '-' as a literal texture filename and logs a missing
+        # texture for every transparent navigation button. Omit the no-focus
+        # texture entirely; Kodi renders the button text without a background.
+        remove_missing_no_focus_textures(root)
     elif path == "skin.cineva/xml/DialogVideoInfo.xml":
         # Full-bleed detail composition with readable copy and a clear primary action.
         for node in root.findall("./controls/control"):
@@ -1151,6 +1373,72 @@ def update_xml(data, path):
                     set_child_text(button, "texturefocus", "focus-bar.png")
                     set_child_text(button, "texturenofocus", "black.png")
                     set_child_text(button, "textcolor", "white")
+    elif path in {"skin.cineva/xml/custom11117.xml", "skin.cineva/xml/custom11118.xml"}:
+        # Give catalogue pages a true selected-title hero instead of a static
+        # category heading over four compressed poster strips.
+        is_tv = path.endswith("custom11118.xml")
+        controls = root.find("controls")
+        if controls is not None:
+            page_title = "TV SHOWS" if is_tv else "MOVIES"
+            title = ET.Element("control", {"type": "label", "id": "9210"})
+            for tag, value in {
+                "left": 72, "top": 205, "width": 1120, "height": 64,
+                "font": "font26", "textcolor": "white",
+                "label": "$INFO[Container(9201).ListItem.Label]",
+                "visible": "!String.IsEmpty(Container(9201).ListItem.Label) + !Control.HasFocus(9202) + !Control.HasFocus(9203) + !Control.HasFocus(9204)",
+                "scroll": "no",
+            }.items():
+                ET.SubElement(title, tag).text = str(value)
+            fallback = ET.Element("control", {"type": "label", "id": "9211"})
+            for tag, value in {
+                "left": 72, "top": 205, "width": 1120, "height": 64,
+                "font": "font26", "textcolor": "white",
+                "label": page_title,
+                "visible": "String.IsEmpty(Container(9201).ListItem.Label)",
+            }.items():
+                ET.SubElement(fallback, tag).text = str(value)
+            meta = ET.Element("control", {"type": "label", "id": "9212"})
+            for tag, value in {
+                "left": 76, "top": 270, "width": 1100, "height": 30,
+                "font": "font10", "textcolor": "silver",
+                "label": "$INFO[Container(9201).ListItem.Year]$INFO[Container(9201).ListItem.Genre,  ￼  ]",
+                "visible": "!String.IsEmpty(Container(9201).ListItem.Label)",
+            }.items():
+                ET.SubElement(meta, tag).text = str(value).replace("￼", "•")
+            logo = ET.Element("control", {"type": "image", "id": "9213"})
+            for tag, value in {
+                "left": 72, "top": 205, "width": 850, "height": 64,
+                "texture": "$INFO[Container(9201).ListItem.Art(clearlogo)]",
+                "aspectratio": "keep",
+                "visible": "!String.IsEmpty(Container(9201).ListItem.Art(clearlogo))",
+            }.items():
+                ET.SubElement(logo, tag).text = str(value)
+            # A distinct, source-aware rating chip keeps the score legible and
+            # visually separate from year/genre metadata on catalogue heroes.
+            for stale_id in ("9214", "9215", "9216"):
+                stale = controls.find(f"./control[@id='{stale_id}']")
+                if stale is not None:
+                    controls.remove(stale)
+            rating_bg = ET.Element("control", {"type": "image", "id": "9214"})
+            for tag, value in (("left", 850), ("top", 266), ("width", 148), ("height", 32),
+                               ("texture", "rating-badge.png"),
+                               ("visible", "!String.IsEmpty(Container(9201).ListItem.Rating)")):
+                ET.SubElement(rating_bg, tag).text = str(value)
+            rating_logo = ET.Element("control", {"type": "image", "id": "9216"})
+            for tag, value in (("left", 858), ("top", 270), ("width", 48), ("height", 24),
+                               ("texture", "imdb-logo.png"),
+                               ("visible", "!String.IsEmpty(Container(9201).ListItem.Rating)")):
+                ET.SubElement(rating_logo, tag).text = str(value)
+            rating_text = ET.Element("control", {"type": "label", "id": "9215"})
+            for tag, value in (("left", 912), ("top", 266), ("width", 84), ("height", 32),
+                               ("font", "font10"), ("textcolor", "FFFFD36A"),
+                               ("label", "$INFO[Container(9201).ListItem.Rating]"),
+                               ("align", "left"), ("aligny", "center"),
+                               ("visible", "!String.IsEmpty(Container(9201).ListItem.Rating)")):
+                ET.SubElement(rating_text, tag).text = str(value)
+            # Render hero information above the background and below focusable
+            # controls; all focus movement remains native Kodi D-pad navigation.
+            controls.extend([title, fallback, meta, logo, rating_bg, rating_logo, rating_text])
     elif path == "skin.cineva/xml/custom11112.xml":
         # Search hub: keep the search action prominent and align results to the catalogue grid.
         for node in root.findall(".//control[@type='button']"):
@@ -1176,11 +1464,14 @@ def main():
                 "skin.cineva/xml/Home.xml",
                 "skin.cineva/xml/DialogConfirm.xml",
                 "skin.cineva/xml/Includes.xml",
+                "skin.cineva/xml/SkinSettings.xml",
                 "skin.cineva/xml/Font.xml",
                 "skin.cineva/xml/MyVideoNav.xml",
                 "skin.cineva/xml/DialogVideoInfo.xml",
                 "skin.cineva/xml/VideoOSD.xml",
                 "skin.cineva/xml/custom11112.xml",
+                "skin.cineva/xml/custom11117.xml",
+                "skin.cineva/xml/custom11118.xml",
                 "skin.cineva/xml/Startup.xml",
             }
             missing = sorted(required - names)
@@ -1217,13 +1508,14 @@ def main():
                 "skin.cineva/media/rail-scroll-mask.png": rail_scroll_mask_png(),
                 "skin.cineva/media/resume-track.png": resume_track_png(),
                 "skin.cineva/media/poster-focus.png": poster_focus_png(),
+                "skin.cineva/media/rating-badge.png": rating_badge_png(),
+                "skin.cineva/media/imdb-logo.png": imdb_logo_png(),
                 "skin.cineva/media/poster-placeholder.png": poster_placeholder_png(),
             }
             written_assets = set()
             for info in source.infolist():
                 if info.filename == "skin.cineva/xml/CinevaWidgetHub.xml":
-                    # The old standalone hub conflicts with the per-screen settings flow.
-                    changed.append(info.filename + " (removed)")
+                    changed.append(info.filename + " (removed obsolete My Widgets hub)")
                     continue
                 data = source.read(info.filename)
                 if info.filename in generated_assets:

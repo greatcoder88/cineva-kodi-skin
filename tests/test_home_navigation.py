@@ -26,8 +26,10 @@ class HomeNavigationTests(unittest.TestCase):
             button.get("id"): button
             for button in nav.findall("./control[@type='button']")
         }
-        self.assertNotIn("1005", buttons, "My Widgets must not appear in Home navigation")
-        self.assertEqual(buttons["1006"].findtext("left"), "670")
+        self.assertNotIn("1006", buttons, "obsolete navigation control must not remain")
+        self.assertIn("1005", buttons, "Settings must occupy the reclaimed navigation slot")
+        self.assertEqual(buttons["1005"].findtext("label"), "SETTINGS")
+        self.assertEqual(buttons["1005"].findtext("left"), "670")
         self.assertFalse(
             any((button.findtext("label") or "").strip().upper() == "MY WIDGETS"
                 for button in buttons.values())

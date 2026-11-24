@@ -1,17 +1,23 @@
-# CINÉVA Widget Manager 0.1.0
+# CINÉVA Widget Source Picker
 
-A Kodi Python 3 helper prototype. It stores an ordered registry independently for Home, Movies, TV Shows, Search and My List. It discovers enabled video plugin add-ons using Kodi JSON-RPC, browses plugin folders with `Files.GetDirectory`, and supports add, rename, change-source, reorder and remove.
+This Kodi Python helper backs the per-screen widget slots exposed in CINÉVA Skin Settings. It is not a separate navigation destination.
 
-## Development invocation
+- Screens: Home, Movies and TV Shows.
+- Four numbered slots per screen, matching the current skin renderer.
+- First-install Home defaults: POV Continue Watching Movies, In Progress Shows, Trending Movies and Trending TV Shows.
+- Defaults are written only when the registry file is first created. Clearing all Home slots does not restore defaults.
+- The picker lists enabled Kodi video add-ons and browses their folders through Kodi JSON-RPC.
+- A selected `plugin://` folder is persisted in the profile registry and mirrored into the skin string properties.
+- Existing selections can be kept, changed or cleared. Internal empty slots retain their slot numbers.
 
-Install the ZIP with `script.cineva.widgets/` at its root, then call:
+Skin Settings invokes the helper with:
 
 ```
-RunScript(script.cineva.widgets,action=manage&screen=home)
+RunScript(script.cineva.widgets,action=configure&screen=home&slot=1)
 ```
 
-Supported screens: `home`, `movies`, `tvshows`, `search`, `mylist`. To inspect the stored registry in the Kodi log, call `RunScript(script.cineva.widgets,action=list)`.
+Use `screen=movies` or `screen=tvshows` and `slot=1..4` for other slots.
 
-## Important limitation
+## Runtime contract
 
-This is the configuration and source-browser helper, not the finished skin-side dynamic renderer. Kodi skin XML does not instantiate an arbitrary number of controls from a JSON array by itself; the CINÉVA skin still needs its renderer strategy wired to this registry. Validate `Files.GetDirectory` against each target add-on and Kodi 23 before release. No Fire TV or Kodi runtime test is claimed.
+The manager stores source paths; it does not call add-on APIs or own presentation. The skin's native containers render the selected paths. Add-ons can expose different directory structures, so validate the picker against the installed POV/Umbrella versions. A deterministic CI fixture validates Kodi startup and the Home renderer, but does not replace interactive picker testing or the physical Fire TV Stick test.
