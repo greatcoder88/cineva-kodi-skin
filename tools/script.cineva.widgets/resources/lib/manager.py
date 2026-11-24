@@ -28,10 +28,21 @@ class KodiRPC:
         if params is not None:
             payload['params'] = params
         try:
-            result = json.loads(xbmc.executeJSONRPC(json.dumps(payload)))
-        except (TypeError, ValueError):
+            raw = xbmc.executeJSONRPC(json.dumps(payload))
+            result = json.loads(raw) if isinstance(raw, (str, bytes)) else None
+        except Exception as exc:
+            xbmc.log('CINEVA_WIDGETS: JSON-RPC {} failed: {}'.format(method, exc),
+                     xbmc.LOGWARNING)
             return None
-        return None if 'error' in result else result.get('result')
+        if not isinstance(result, dict):
+            xbmc.log('CINEVA_WIDGETS: JSON-RPC {} returned an invalid response'.format(method),
+                     xbmc.LOGWARNING)
+            return None
+        if result.get('error'):
+            xbmc.log('CINEVA_WIDGETS: JSON-RPC {} error: {}'.format(method, result['error']),
+                     xbmc.LOGWARNING)
+            return None
+        return result.get('result')
 
 
 class WidgetManager:

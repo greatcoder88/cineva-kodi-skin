@@ -118,6 +118,25 @@ class KodiManagerTests(unittest.TestCase):
         self.assertIsNone(addon_xml.find("./extension[@point='xbmc.python.pluginsource']"))
         self.assertIsNotNone(addon_xml.find("./extension[@point='xbmc.python.script']"))
 
+    def test_json_rpc_handles_non_object_and_invalid_responses(self):
+        original = self.module.xbmc.executeJSONRPC
+        try:
+            for raw in ('not-json', '[]', 'null', '{"error":{"message":"bad"}}'):
+                self.module.xbmc.executeJSONRPC = lambda payload, value=raw: value
+                self.assertIsNone(self.module.KodiRPC.call('Files.GetDirectory'))
+        finally:
+            self.module.xbmc.executeJSONRPC = original
+
+    def test_json_rpc_handles_runtime_exceptions(self):
+        original = self.module.xbmc.executeJSONRPC
+        try:
+            def fail(payload):
+                raise RuntimeError("Kodi JSON-RPC unavailable")
+            self.module.xbmc.executeJSONRPC = fail
+            self.assertIsNone(self.module.KodiRPC.call('Addons.GetAddons'))
+        finally:
+            self.module.xbmc.executeJSONRPC = original
+
     def test_screens_are_only_home_movies_tvshows(self):
         self.assertEqual(set(self.module.SCREENS), {"home", "movies", "tvshows"})
 

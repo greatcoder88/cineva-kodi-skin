@@ -1,27 +1,24 @@
 # CINÉVA — Kodi Skin
 
-CINÉVA is an independent, remote-first cinematic Kodi skin. It is a presentation layer: Kodi video add-ons and library sources provide content; CINÉVA renders it. The skin does not call Trakt, TMDb, MDBList or Real-Debrid APIs directly.
+CINÉVA is an independent, remote-first cinematic Kodi skin. Kodi video add-ons and library sources provide content; CINÉVA renders it. The skin does not call Trakt, TMDb, MDBList or Real-Debrid APIs directly.
 
 ## Supported target
 
-- Kodi 22 (Piers) — CI GUI smoke-tested on the Linux desktop runtime.
-- Amazon Fire TV Stick 4K (2024 generation) — target device; physical-device validation is still required before a production release.
-- POV and Umbrella are supported as add-on sources through Kodi's video add-on interfaces; the skin does not hard-code their APIs.
+- Kodi 22 (Piers).
+- Amazon Fire TV Stick 4K (2024 generation) is the target hardware.
+- POV and Umbrella are intended as video add-on sources through Kodi's plugin interfaces; behavior must be checked against the installed add-on versions.
+- Kodi 21 is not a supported target.
 
-Kodi 21 is not a supported target for this project.
+## Product surface
 
-## Current product surface
-
-- Cinematic Home hero driven by the focused item, with clearlogo/title fallback, fanart/poster fallback and hero actions.
+- Cinematic Home hero driven by the focused item, with clearlogo/title fallback and fanart/poster fallback.
 - Four configurable widget slots on each of Home, Movies and TV Shows.
-- First-install Home defaults: Continue Watching Movies, In Progress Shows, Trending Movies and Trending TV Shows (POV paths). Defaults are seeded once only; cleared slots remain empty.
+- First-install Home defaults: Continue Watching Movies, In Progress Shows, Trending Movies and Trending TV Shows (POV paths).
 - Per-screen widget selection from enabled Kodi video add-ons using the widget manager's folder picker.
 - Poster shelves, progress, ratings and metadata with remote-first D-pad navigation.
 - Standard Kodi dialogs and player surfaces remain Kodi-owned.
 
-## Build and validation
-
-Run the local checks:
+## Build and automated validation
 
 ```sh
 python -m unittest discover -s tests -v
@@ -29,16 +26,18 @@ python tools/build_skin_archive.py
 python -m py_compile tools/script.cineva.widgets/default.py tools/script.cineva.widgets/resources/lib/manager.py
 ```
 
-The GitHub Actions workflows validate XML/assets/package structure and launch Kodi with a deterministic video add-on fixture. The GUI workflow checks Home rendering, hero changes, poster fallback, shelf scrolling and focus paths. It does not emulate a physical Fire TV Stick or prove compatibility with every third-party add-on.
+GitHub Actions validates XML/assets/package structure, unit tests the widget manager with mocked Kodi APIs, and launches Kodi Piers with a deterministic video add-on fixture. The GUI smoke test verifies startup, active-skin selection and selected Home rendering paths. It is not a complete interactive test of all screens, all 12 settings slots, third-party add-ons or Fire TV hardware.
 
 ## Release status
 
-The current work is in the open pull request linked below; it is not yet a signed/stable production release. Before calling it production-ready, the release candidate must pass:
-1. CI static/unit checks and the Kodi Piers GUI workflow.
-2. An interactive Kodi test of all 12 Skin Settings slots, including add-on folder browsing, replacement, clear, persistence and empty-slot behavior.
-3. A physical Fire TV Stick 4K test covering install/update, remote navigation, resume/playback hand-off, memory and responsiveness with the intended add-ons enabled.
+**Not yet certified production-ready.** The merged main branch has passed the current automated checks and Linux Kodi Piers GUI smoke test. The remaining release gates are:
 
-A successful Linux GUI run is useful evidence, not a substitute for item 2 or 3.
+1. Interactive Kodi validation of all 12 slots: browse, select, replace, clear, persistence, restart and intentionally empty slots.
+2. Real POV and Umbrella validation on the exact installed add-on versions, including their directory responses and resulting shelf rendering.
+3. Physical Fire TV Stick 4K validation: clean install and update, D-pad focus across every screen, playback/resume hand-off, memory use, responsiveness and recovery after add-on errors.
+4. A final release build and install/upgrade test from the distributable ZIP.
+
+A Linux GUI pass is useful evidence, not a substitute for these checks. Do not publish a stable release or describe the build as production-ready until all gates pass.
 
 ## Repository layout
 
@@ -46,4 +45,4 @@ A successful Linux GUI run is useful evidence, not a substitute for item 2 or 3.
 - `tools/build_skin_archive.py` — deterministic package builder and source patcher.
 - `tools/script.cineva.widgets/` — per-screen widget source picker.
 - `tests/` and `.github/workflows/` — automated validation.
-- `docs/` — architecture and implementation status.
+- `docs/` — architecture, implementation status and release gates.
