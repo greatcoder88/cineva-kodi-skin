@@ -703,22 +703,11 @@ def update_xml(data, path):
             set_child_text(rail_list, tag, value)
         set_child_text(rail_list, "orientation", "vertical")
         set_child_text(rail_list, "itemgap", 12)
-        set_child_text(rail_list, "scrolltime", 220)
+        # Keep the rail viewport responsive on low-power TV hardware. Kodi's
+        # native grouplist already performs the required movement; avoid an
+        # additional conditional slide animation on the entire 4-row viewport.
+        set_child_text(rail_list, "scrolltime", 160)
         set_child_text(rail_list, "usecontrolcoords", "false")
-        # Lower shelves otherwise sit too close to the 1080p bottom edge: their
-        # two-line captions can be clipped when rows 2-4 are docked into view.
-        # Lift the whole scrolling viewport by 40px only while a lower row or
-        # its hero actions are focused; the initial Home composition is unchanged.
-        lower_row_focus = " | ".join(
-            f"Control.HasFocus({control_id})"
-            for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118)
-        )
-        ET.SubElement(
-            rail_list,
-            "animation",
-            {"effect": "slide", "start": "0,0", "end": "0,-40",
-             "time": "220", "condition": lower_row_focus},
-        ).text = "Conditional"
         first_row_index = None
         for index in range(1, 5):
             heading_label = f"$INFO[Skin.String(Cineva.Widget{index}.Name)]"
@@ -973,11 +962,11 @@ def update_xml(data, path):
         if focused_texture is None:
             raise SystemExit("Includes.xml focused poster image has no texture")
         focused_texture.set("fallback", "poster-placeholder.png")
-        focus_animation = focused_image.find("./animation[@effect='zoom']")
-        if focus_animation is None:
-            raise SystemExit("Includes.xml focused poster is missing its zoom animation")
-        focus_animation.set("end", "104")
-        focus_animation.set("time", "180")
+        # Focused poster geometry already provides a subtle 4% emphasis.
+        # Remove the extra animated zoom so Fire TV does not resample a large
+        # poster texture on every focus transition.
+        for focus_animation in list(focused_image.findall("./animation")):
+            focused_image.remove(focus_animation)
         for tag, value in (("left", 18), ("width", 249), ("top", 345), ("height", 5)):
             set_child_text(progress, tag, value)
         if focused_label is not None and focused_label in list(focused):
