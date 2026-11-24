@@ -1293,6 +1293,8 @@ def main():
                 "skin.cineva/xml/DialogVideoInfo.xml",
                 "skin.cineva/xml/VideoOSD.xml",
                 "skin.cineva/xml/custom11112.xml",
+                "skin.cineva/xml/custom11117.xml",
+                "skin.cineva/xml/custom11118.xml",
                 "skin.cineva/xml/Startup.xml",
             }
             missing = sorted(required - names)
