@@ -148,14 +148,20 @@ jobs:
                              if node.get("type") == "image" and node.findtext("texture") == "hero-shade.png"), None)
           if len(hero_artwork) != 4 or any(node.findtext("height") != "750" for node in hero_artwork) or hero_shade is None or hero_shade.findtext("height") != "750":
             raise SystemExit("Home hero fanart and shade must extend through the lower-row transition")
+          row1_artwork = next((node for node in hero_artwork if "Container(9001)" in node.findtext("texture", "")), None)
+          if row1_artwork is None or row1_artwork.find("visible") is not None:
+            raise SystemExit("Home row 1 hero fallback must remain visible on initial navigation focus")
           for container_id, play_id in ((9002, 9113), (9003, 9115), (9004, 9117)):
             artwork = next((node for node in hero_artwork if f"Container({container_id})" in node.findtext("texture", "")), None)
             expected_art_visibility = " | ".join(
-              f"Control.HasFocus({focus_id}) + !String.IsEmpty(Container({container_id}).ListItem.Art(fanart))"
+              f"Control.HasFocus({focus_id})"
               for focus_id in (container_id, play_id, play_id + 1)
-          )
-            if artwork is None or artwork.findtext("visible") != expected_art_visibility:
-              raise SystemExit(f"Home row {container_id} hero fanart disappears when its action buttons receive focus")
+            )
+            texture_node = artwork.find("texture") if artwork is not None else None
+            if artwork is None or texture_node is None or texture_node.attrib.get("fallback") != "hero-placeholder.png" or artwork.findtext("visible") != expected_art_visibility:
+              raise SystemExit(f"Home row {container_id} hero must keep fanart or the branded fallback visible through action focus")
+          if any((node.find("texture") is None or node.find("texture").attrib.get("fallback") != "hero-placeholder.png") for node in hero_artwork):
+            raise SystemExit("All four Home hero artwork controls must use the missing-fanart fallback")
           bottom_shade = controls.find("./control[@id='9106']")
           if bottom_shade is None or (bottom_shade.findtext("left"), bottom_shade.findtext("top"), bottom_shade.findtext("width"), bottom_shade.findtext("height")) != ("0", "320", "1920", "430") or bottom_shade.findtext("texture") != "hero-bottom-fade.png":
             raise SystemExit("Home hero is missing its extended full-width fade into the poster shelves")
@@ -372,6 +378,31 @@ jobs:
           if len(decoded) != (1 + width * 4) * height:
               raise SystemExit("Poster fallback PNG pixel payload has an invalid length")
           print("Normal and focused Home cards package the valid 342x513 branded fallback.")
+          PY
+
+      - name: Validate missing-fanart Home hero fallback
+        run: |
+          python - <<'PY'
+          import struct
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          home = ET.parse("skin.cineva/xml/Home.xml").getroot()
+          controls = home.find("controls")
+          artwork = [node for node in controls.findall("control")
+                     if node.get("type") == "image"
+                     and node.findtext("texture", "").startswith("$INFO[Container(")]
+          if len(artwork) != 4:
+            raise SystemExit(f"Expected four dynamic Home hero layers, got {len(artwork)}")
+          for node in artwork:
+            texture = node.find("texture")
+            if texture is None or texture.attrib.get("fallback") != "hero-placeholder.png":
+              raise SystemExit("A Home hero layer is missing the packaged missing-fanart fallback")
+          data = Path("skin.cineva/media/hero-placeholder.png").read_bytes()
+          if data[:8] != bytes.fromhex("89504e470d0a1a0a"):
+            raise SystemExit("Missing-fanart hero fallback is not a PNG")
+          if struct.unpack(">II", data[16:24]) != (1920, 750):
+            raise SystemExit("Missing-fanart hero fallback must be 1920x750")
+          print("Packaged Home hero uses a valid 1920x750 fallback when providers omit fanart.")
           PY
 
       - name: Install GUI runtime
@@ -828,6 +859,20 @@ jobs:
               if bright_coverage > 0.001:
                 raise SystemExit(f"{row_name} shelf captions still touch or clip at the 1080p bottom edge (bright coverage={bright_coverage:.4f})")
               print(f"Verified {row_name} leaves a clean 16px bottom safe area (bright coverage={bright_coverage:.4f}).")
+            def verify_missing_fanart_hero(screenshot, row_name):
+              signal = subprocess.run(
+                ["convert", screenshot, "-crop", "280x220+1600+200",
+                 "-fx", "((r>0.10)&&(r>g*1.6)&&(r>b*1.2))?1:0",
+                 "-format", "%[fx:mean]", "info:"],
+                text=True, capture_output=True, check=True
+              )
+              try:
+                red_glow_coverage = float(signal.stdout.strip())
+              except ValueError:
+                raise SystemExit(f"Could not measure the missing-fanart hero fallback for {row_name}: {signal.stdout!r}")
+              if red_glow_coverage < 0.30:
+                raise SystemExit(f"{row_name} did not render the branded missing-fanart hero fallback (red-glow coverage={red_glow_coverage:.3f})")
+              print(f"Verified {row_name} renders the branded missing-fanart hero fallback (red-glow coverage={red_glow_coverage:.3f}).")
             def active_rail_indicator_position(row_number):
               import xml.etree.ElementTree as ET
               home_root = ET.parse("skin.cineva/xml/Home.xml").getroot()
@@ -862,6 +907,7 @@ jobs:
                 time.sleep(0.8)
                 subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row2-focus.png"],check=True)
                 verify_lower_row_bottom_clear("artifacts/cineva-home-row2-focus.png", "row 2")
+                verify_missing_fanart_hero("artifacts/cineva-home-row2-focus.png", "row 2")
                 # The previous rail should fade away beneath the pinned hero without
                 # creating an opaque black stripe across its artwork.
                 scroll_mask_signal = subprocess.run(
@@ -950,6 +996,7 @@ jobs:
                 time.sleep(0.8)
                 subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row4-scroll.png"],check=True)
                 verify_lower_row_bottom_clear("artifacts/cineva-home-row4-scroll.png", "row 4")
+                verify_missing_fanart_hero("artifacts/cineva-home-row4-scroll.png", "row 4")
                 row4_mask_signal = subprocess.run(
                   ["convert","artifacts/cineva-home-row4-scroll.png","-crop","1920x36+0+394","-colorspace","gray","-format","%[fx:mean]","info:"],
                   text=True,capture_output=True,check=True

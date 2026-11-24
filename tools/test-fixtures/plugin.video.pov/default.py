@@ -66,13 +66,19 @@ def main():
         fanart = os.path.join(poster_dir, backdrop_name)
         if not os.path.isfile(fanart):
             raise RuntimeError("Missing landscape hero artwork: {}".format(fanart))
-        artwork = {"thumb": fanart, "fanart": fanart, "landscape": fanart}
-        # Interstellar deliberately omits poster art so the Home skin fallback
-        # is exercised in the first visible rail; its landscape fanart remains.
-        if is_tv or index != 3:
-            artwork["poster"] = poster
+        # Breaking Bad deliberately has a poster but no landscape art. This
+        # exercises the Home hero fallback while keeping its card fully usable.
+        if is_tv and index == 1:
+            artwork = {"poster": poster}
+            item.setProperty("Cineva.TestMissingFanart", "true")
         else:
-            item.setProperty("Cineva.TestMissingPoster", "true")
+            artwork = {"thumb": fanart, "fanart": fanart, "landscape": fanart}
+            # Interstellar deliberately omits poster art so the first shelf
+            # exercises the branded portrait fallback while retaining fanart.
+            if is_tv or index != 3:
+                artwork["poster"] = poster
+            else:
+                item.setProperty("Cineva.TestMissingPoster", "true")
         item.setArt(artwork)
         # Continue Watching fixtures need real resume metadata so the skin's
         # progress strips are exercised in both normal and focused card states.

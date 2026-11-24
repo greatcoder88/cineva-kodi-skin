@@ -100,6 +100,48 @@ def hero_bottom_fade_png():
             + png_chunk(b"IEND", b""))
 
 
+def hero_placeholder_png():
+    """Create a restrained cinematic fallback for items without landscape fanart."""
+    width, height = 1920, 750
+    pixels = bytearray()
+    for y in range(height):
+        vertical = y / (height - 1)
+        pixels.append(0)  # PNG filter: None
+        for x in range(width):
+            horizontal = x / (width - 1)
+            # Keep the title-safe left third nearly black; place a soft crimson
+            # lens glow and a muted cool halo on the far side of the composition.
+            red_glow = max(
+                0.0,
+                1.0 - (((horizontal - 0.84) / 0.52) ** 2
+                       + ((vertical - 0.46) / 0.92) ** 2)
+            ) ** 2
+            cool_glow = max(
+                0.0,
+                1.0 - (((horizontal - 0.66) / 0.48) ** 2
+                       + ((vertical - 0.16) / 0.55) ** 2)
+            ) ** 2
+            beam_distance = abs(vertical - (0.13 + 0.48 * horizontal))
+            beam = max(0.0, 1.0 - beam_distance / 0.026) ** 2
+            beam *= max(0.0, (horizontal - 0.48) / 0.52)
+            # Deterministic, very fine grain prevents the gradient from looking flat.
+            grain = (((x * 73856093) ^ (y * 19349663)) & 3) - 1.5
+            red = int(5 + 6 * horizontal + 31 * red_glow + 7 * beam + grain)
+            green = int(7 + 4 * horizontal + 7 * red_glow + 2 * beam + grain)
+            blue = int(13 + 8 * horizontal + 5 * red_glow + 12 * cool_glow + 3 * beam + grain)
+            pixels.extend((
+                max(0, min(255, red)),
+                max(0, min(255, green)),
+                max(0, min(255, blue)),
+                255,
+            ))
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return (b"\\x89PNG\\r\\n\\x1a\\n"
+            + png_chunk(b"IHDR", header)
+            + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
+            + png_chunk(b"IEND", b""))
+
+
 def rail_scroll_mask_png():
     """Create a long, low-contrast fade that avoids a hard black seam over the hero."""
     width, height = 1920, 430
@@ -296,17 +338,25 @@ def update_xml(data, path):
         for control in controls.findall("control"):
             texture = control.findtext("texture", "")
             if control.get("type") == "image" and texture.startswith("$INFO[Container("):
-                # Carry the fanart through the full bottom-fade viewport. Ending
-                # at 660px exposed a hard horizontal edge above the 750px fade.
+                # Keep a branded landscape visible even when a provider supplies
+                # a poster but no fanart. The row-1 hero is always the initial
+                # backdrop; later rows replace it only while their item/actions
+                # are active, regardless of whether landscape art exists.
                 set_child_text(control, "height", 750)
+                texture_node = control.find("texture")
+                if texture_node is None:
+                    raise SystemExit("Home hero artwork control has no texture node")
+                texture_node.set("fallback", "hero-placeholder.png")
                 container_id = int(texture.split("Container(", 1)[1].split(")", 1)[0])
-                if container_id in (9002, 9003, 9004):
+                if container_id == 9001:
+                    # Row 1 owns the initial Home backdrop, including missing-art items.
+                    visible = control.find("visible")
+                    if visible is not None:
+                        control.remove(visible)
+                else:
                     play_id = 9111 + (container_id - 9001) * 2
-                    # Kodi's skin condition parser does not accept parentheses
-                    # around OR groups. Repeat the non-empty-art guard in each
-                    # branch so the selected hero remains visible on both actions.
                     action_focus = " | ".join(
-                        f"Control.HasFocus({focus_id}) + !String.IsEmpty(Container({container_id}).ListItem.Art(fanart))"
+                        f"Control.HasFocus({focus_id})"
                         for focus_id in (container_id, play_id, play_id + 1)
                     )
                     set_child_text(control, "visible", action_focus)
@@ -1026,6 +1076,7 @@ def main():
                 "skin.cineva/media/hero-left-shade.png": hero_left_shade_png(),
                 "skin.cineva/media/hero-topbar-shade.png": hero_topbar_shade_png(),
                 "skin.cineva/media/hero-bottom-fade.png": hero_bottom_fade_png(),
+                "skin.cineva/media/hero-placeholder.png": hero_placeholder_png(),
                 "skin.cineva/media/rail-scroll-mask.png": rail_scroll_mask_png(),
                 "skin.cineva/media/resume-track.png": resume_track_png(),
                 "skin.cineva/media/poster-focus.png": poster_focus_png(),

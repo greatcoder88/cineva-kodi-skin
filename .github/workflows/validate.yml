@@ -226,14 +226,27 @@ jobs:
                              if node.get("type") == "image" and node.findtext("texture") == "hero-shade.png"), None)
           if len(hero_artwork) != 4 or any(node.findtext("height") != "750" for node in hero_artwork) or hero_shade is None or hero_shade.findtext("height") != "750":
               errors.append("Home hero fanart and shade must extend through the lower-row transition")
+          row1_artwork = next((node for node in hero_artwork if "Container(9001)" in node.findtext("texture", "")), None)
+          if row1_artwork is None or row1_artwork.find("visible") is not None:
+              errors.append("Home row 1 hero fallback must remain visible on initial navigation focus")
           for container_id, play_id in ((9002, 9113), (9003, 9115), (9004, 9117)):
               artwork = next((node for node in hero_artwork if f"Container({container_id})" in node.findtext("texture", "")), None)
               expected_art_visibility = " | ".join(
-                  f"Control.HasFocus({focus_id}) + !String.IsEmpty(Container({container_id}).ListItem.Art(fanart))"
+                  f"Control.HasFocus({focus_id})"
                   for focus_id in (container_id, play_id, play_id + 1)
               )
-              if artwork is None or artwork.findtext("visible") != expected_art_visibility:
-                  errors.append(f"Home row {container_id} hero fanart must remain visible while its actions are focused")
+              texture_node = artwork.find("texture") if artwork is not None else None
+              if artwork is None or texture_node is None or texture_node.attrib.get("fallback") != "hero-placeholder.png" or artwork.findtext("visible") != expected_art_visibility:
+                  errors.append(f"Home row {container_id} hero must show fanart or the branded fallback while its actions are focused")
+          if any((node.find("texture") is None or node.find("texture").attrib.get("fallback") != "hero-placeholder.png") for node in hero_artwork):
+              errors.append("All four Home hero artwork controls must package the missing-fanart fallback")
+          hero_fallback_path = root / "media/hero-placeholder.png"
+          if not hero_fallback_path.is_file():
+              errors.append("Packaged missing-fanart hero placeholder is missing")
+          else:
+              hero_fallback_data = hero_fallback_path.read_bytes()
+              if hero_fallback_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(hero_fallback_data[16:20], "big"), int.from_bytes(hero_fallback_data[20:24], "big")) != (1920, 750):
+                  errors.append("Packaged missing-fanart hero placeholder must be a 1920x750 PNG")
           bottom_shade = controls.find("./control[@id='9106']")
           if bottom_shade is None or (bottom_shade.findtext("left"), bottom_shade.findtext("top"), bottom_shade.findtext("width"), bottom_shade.findtext("height")) != ("0", "320", "1920", "430") or bottom_shade.findtext("texture") != "hero-bottom-fade.png":
               errors.append("Home hero is missing the extended full-width fade into the poster shelves")
