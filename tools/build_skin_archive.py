@@ -5,12 +5,39 @@ from zipfile import ZipFile, ZIP_DEFLATED
 import os
 import struct
 import tempfile
+import time
 import zlib
 import binascii
 import xml.etree.ElementTree as ET
+import urllib.error
 import urllib.request
 
 ARCHIVE = Path(__file__).resolve().parents[1] / "skin.cineva-0.5.3.zip"
+
+
+def fetch_asset(url, attempts=5):
+    """Fetch a pinned build asset with bounded retries for transient GitHub/CDN errors."""
+    request = urllib.request.Request(
+        url, headers={"User-Agent": "CINEVA-Skin-Builder/1.0"}
+    )
+    for attempt in range(attempts):
+        try:
+            with urllib.request.urlopen(request, timeout=45) as response:
+                return response.read()
+        except urllib.error.HTTPError as exc:
+            if exc.code not in {408, 425, 429, 500, 502, 503, 504} or attempt == attempts - 1:
+                raise
+            retry_after = exc.headers.get("Retry-After")
+            try:
+                delay = min(30.0, max(1.0, float(retry_after))) if retry_after else min(16, 2 ** attempt)
+            except ValueError:
+                delay = min(16, 2 ** attempt)
+            time.sleep(delay)
+        except (urllib.error.URLError, TimeoutError, OSError):
+            if attempt == attempts - 1:
+                raise
+            time.sleep(min(16, 2 ** attempt))
+    raise RuntimeError(f"Could not download build asset after {attempts} attempts: {url}")
 
 
 def png_chunk(kind, payload):
@@ -879,9 +906,9 @@ def main():
                 "skin.cineva/fonts/Poppins-OFL.txt": "OFL.txt",
             }
             generated_assets = {
-                **{path: urllib.request.urlopen(font_base + filename, timeout=30).read()
+                **{path: fetch_asset(font_base + filename)
                    for path, filename in font_assets.items()},
-                **{path: urllib.request.urlopen(poppins_base + filename, timeout=30).read()
+                **{path: fetch_asset(poppins_base + filename)
                    for path, filename in poppins_assets.items()},
                 "skin.cineva/media/hero-left-shade.png": hero_left_shade_png(),
                 "skin.cineva/media/hero-topbar-shade.png": hero_topbar_shade_png(),
