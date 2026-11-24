@@ -192,27 +192,10 @@ def poster_focus_png():
 
 
 def rating_badge_png():
-    """Create a dark-gold rating capsule with a raster star independent of font glyphs."""
-    width, height = 126, 32
+    """Create the dark, gold-edged capsule that frames the IMDb score."""
+    width, height = 148, 32
     pixels = bytearray()
     radius = 15
-    star_points = (
-        (16.0, 7.0), (18.1, 12.2), (23.5, 12.7), (19.5, 16.4),
-        (20.7, 22.0), (16.0, 19.0), (11.3, 22.0), (12.5, 16.4),
-        (8.5, 12.7), (13.9, 12.2),
-    )
-
-    def in_star(px, py):
-        inside_star = False
-        previous = len(star_points) - 1
-        for current, (sx, sy) in enumerate(star_points):
-            px0, py0 = star_points[previous]
-            if ((sy > py) != (py0 > py)
-                    and px < (px0 - sx) * (py - sy) / (py0 - sy) + sx):
-                inside_star = not inside_star
-            previous = current
-        return inside_star
-
     for y in range(height):
         pixels.append(0)
         for x in range(width):
@@ -221,9 +204,7 @@ def rating_badge_png():
             inside = (dx >= radius or dy >= radius
                       or (dx - radius) ** 2 + (dy - radius) ** 2 <= radius ** 2)
             edge = inside and (x <= 1 or x >= width - 2 or y <= 1 or y >= height - 2)
-            if inside and in_star(x + 0.5, y + 0.5):
-                pixels.extend((255, 211, 106, 255))
-            elif not inside:
+            if not inside:
                 pixels.extend((0, 0, 0, 0))
             elif edge:
                 pixels.extend((174, 132, 55, 220))
@@ -234,7 +215,6 @@ def rating_badge_png():
             + png_chunk(b"IHDR", header)
             + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
             + png_chunk(b"IEND", b""))
-
 
 def imdb_logo_png():
     """Draw a compact IMDb wordmark in its familiar black-on-yellow treatment."""
@@ -267,7 +247,7 @@ def imdb_logo_png():
         for x in range(width):
             pixels.extend((255, 210, 0, 255) if (x, y) not in ink else (0, 0, 0, 255))
     header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
-    return (b"\\x89PNG\\r\\n\\x1a\\n"
+    return (b"\x89PNG\r\n\x1a\n"
             + png_chunk(b"IHDR", header)
             + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
             + png_chunk(b"IEND", b""))
@@ -626,23 +606,23 @@ def update_xml(data, path):
                     set_child_text(labels[1], "textcolor", "silver")
                     set_child_text(labels[1], "width", 680)
                     row_index = int(source_label.split("Container(", 1)[1].split(")", 1)[0]) - 9000
-                    rating_id = 9340 + (row_index - 1) * 2
+                    rating_id = 9340 + (row_index - 1) * 3
                     for old_rating in list(group.findall("control")):
                         if (old_rating.findtext("texture") in {"rating-badge.png", "imdb-logo.png"}
                                 or "ListItem.Rating" in old_rating.findtext("label", "")):
                             group.remove(old_rating)
                     rating_bg = ET.SubElement(group, "control", {"type": "image", "id": str(rating_id)})
-                    for tag, value in (("left", 770), ("top", 126), ("width", 126), ("height", 32),
+                    for tag, value in (("left", 770), ("top", 126), ("width", 148), ("height", 32),
                                        ("texture", "rating-badge.png")):
                         set_child_text(rating_bg, tag, value)
                     set_child_text(rating_bg, "visible",
                                    f"!String.IsEmpty(Container({9000 + row_index}).ListItem.Rating)")
-                    rating_logo = ET.SubElement(group, "control", {"type": "image", "id": str(rating_id + 2)})
+                    rating_logo = ET.SubElement(group, "control", {"type": "image", "id": str(rating_id + 1)})
                     for tag, value in (("left", 778), ("top", 130), ("width", 48), ("height", 24),
                                        ("texture", "imdb-logo.png"),
                                        ("visible", f"!String.IsEmpty(Container({9000 + row_index}).ListItem.Rating)")):
                         set_child_text(rating_logo, tag, value)
-                    rating_text = ET.SubElement(group, "control", {"type": "label", "id": str(rating_id + 1)})
+                    rating_text = ET.SubElement(group, "control", {"type": "label", "id": str(rating_id + 2)})
                     for tag, value in (("left", 832), ("top", 126), ("width", 84), ("height", 32),
                                        ("font", "font10"), ("textcolor", "FFFFD36A"),
                                        ("label", f"$INFO[Container({9000 + row_index}).ListItem.Rating]"),
@@ -1383,7 +1363,7 @@ def update_xml(data, path):
                 if stale is not None:
                     controls.remove(stale)
             rating_bg = ET.Element("control", {"type": "image", "id": "9214"})
-            for tag, value in (("left", 850), ("top", 266), ("width", 126), ("height", 32),
+            for tag, value in (("left", 850), ("top", 266), ("width", 148), ("height", 32),
                                ("texture", "rating-badge.png"),
                                ("visible", "!String.IsEmpty(Container(9201).ListItem.Rating)")):
                 ET.SubElement(rating_bg, tag).text = str(value)
@@ -1393,7 +1373,7 @@ def update_xml(data, path):
                                ("visible", "!String.IsEmpty(Container(9201).ListItem.Rating)")):
                 ET.SubElement(rating_logo, tag).text = str(value)
             rating_text = ET.Element("control", {"type": "label", "id": "9215"})
-            for tag, value in (("left", 912), ("top", 266), ("width", 108), ("height", 32),
+            for tag, value in (("left", 912), ("top", 266), ("width", 84), ("height", 32),
                                ("font", "font10"), ("textcolor", "FFFFD36A"),
                                ("label", "$INFO[Container(9201).ListItem.Rating]"),
                                ("align", "left"), ("aligny", "center"),
