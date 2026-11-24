@@ -176,8 +176,7 @@ jobs:
               metadata = next((c for c in group.findall("control") if c.get("type") == "label" and ".ListItem.Year]" in c.findtext("label", "")), None)
               expected = (f"$INFO[Container({container_id}).ListItem.Year]"
                           f"$INFO[Container({container_id}).ListItem.Duration,  •  ]"
-                          f"$INFO[Container({container_id}).ListItem.Genre,  •  ]"
-                          f"$INFO[Container({container_id}).ListItem.Rating,  •  ]")
+                          f"$INFO[Container({container_id}).ListItem.Genre,  •  ]")
               row_index = container_id - 9000
               eyebrow_base_id = 9300 + (row_index - 1) * 3
               source_path = f"Skin.String(Cineva.Widget{row_index}.Path)"
