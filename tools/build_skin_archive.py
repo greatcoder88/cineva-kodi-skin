@@ -228,13 +228,13 @@ def hero_action_texture_png(primary=True, focused=False):
             pixels.extend((*color, 255))
 
     header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
-    return (b"\\x89PNG\\r\\n\\x1a\\n"
+    return (b"\x89PNG\r\n\x1a\n"
             + png_chunk(b"IHDR", header)
             + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
             + png_chunk(b"IEND", b""))
 
 
-def rating_badge_png()
+def rating_badge_png():
     """Create the dark, gold-edged capsule that frames the IMDb score."""
     width, height = 148, 32
     pixels = bytearray()
