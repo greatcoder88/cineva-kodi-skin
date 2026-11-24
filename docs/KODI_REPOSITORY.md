@@ -9,24 +9,37 @@ The repository feed is assembled from the exact packages produced by the build. 
 
 ## Hosting
 
-The source repository is private. Kodi cannot authenticate to a private GitHub repository when it fetches repository metadata or packages. The generated feed therefore must be published at the public GitHub Pages URL configured in `tools/build_repository.py`.
+The public Kodi feed is published to the `gh-pages` branch by `.github/workflows/repository.yml`. The GitHub Pages site URL is:
 
-Before the first deployment, enable GitHub Pages for this repository with **Build and deployment → Source: GitHub Actions**. The workflow `.github/workflows/repository.yml` then builds and deploys the feed from `main`. If this GitHub account does not allow Pages for a private repository, publish the generated `repository-site/` directory to a separate public static host/repository; do not make the source repository public merely to expose the feed.
+`https://greatcoder88.github.io/cineva-kodi-skin/`
 
-## Kodi installation
+For this branch-publishing workflow, GitHub **Settings → Pages → Build and deployment** must use:
 
-After the Pages deployment is live, download `repository.cineva-0.1.0.zip` from the published site's `zips/repository.cineva/` directory. In Kodi:
+- **Source:** Deploy from a branch
+- **Branch:** `gh-pages`
+- **Folder:** `/(root)`
 
-1. **Add-ons → Install from ZIP file** and select that repository ZIP.
-2. Open **Install from repository → CINÉVA Add-on Repository**.
-3. Install **CINÉVA Skin**. Kodi will install the Widget Helper dependency automatically.
-4. Future repository refreshes provide normal Kodi add-on updates.
+The custom-domain field should remain blank. The workflow publishes the feed and creates HTML directory indexes whose link names match their paths; Kodi's HTTP directory browser uses those links for the File Manager source.
 
-Do not advertise the feed URL or instruct users to add it as a source until the first Pages deployment is confirmed successful.
+## Install through Kodi's Add file source flow
+
+Do not download the installer in a separate browser. Use Kodi's own File Manager:
+
+1. Open **Settings → File manager → Add source**.
+2. Enter `https://greatcoder88.github.io/cineva-kodi-skin/` as the source location and name it `CINÉVA`.
+3. Open **Add-ons → Install from ZIP file → CINÉVA**.
+4. Select `repository.cineva-0.1.0.zip` at the source root.
+5. Open **Install from repository → CINÉVA Add-on Repository**.
+6. Open **Look and feel → Skin → CINÉVA** and install it. Kodi installs the Widget Helper dependency automatically.
+7. After installation, future feed refreshes provide normal Kodi add-on updates.
+
+The root source index exposes the repository installer directly. The `zips/` directory also contains browsable folders for the repository, skin and helper packages. The repository add-on itself reads `addons.xml`, `addons.xml.md5` and `zips/` from the same Pages base URL.
+
+If Kodi cannot browse the source, first confirm the Pages deployment has completed and that Pages is configured for the `gh-pages` branch and root folder. A blank custom-domain field is expected.
 
 ## Release discipline
 
 - Bump the skin version in the source add-on manifest/build script and the helper version in `tools/script.cineva.widgets/addon.xml` for releases.
 - Keep the skin's declared helper dependency version aligned with the helper package version.
 - Never publish a package from an untested or draft build.
-- The repository workflow validates package IDs, ZIP presence and feed checksum; it does not replace Kodi GUI, POV/Umbrella or physical Fire TV validation.
+- The repository workflow validates package IDs, ZIP presence, feed checksum and the browsable source indexes; it does not replace Kodi GUI, POV/Umbrella or physical Fire TV validation.
