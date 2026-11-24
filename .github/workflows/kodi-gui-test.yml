@@ -50,6 +50,17 @@ jobs:
           home = ET.parse("skin.cineva/xml/Home.xml").getroot()
           if home.findtext("defaultcontrol") != "1001":
             raise SystemExit("Home must default to HOME navigation control 1001")
+          nav_group = next((g for g in home.findall("./controls/control[@type='group']") if g.find("./control[@id='1001']") is not None), None)
+          if nav_group is None:
+            raise SystemExit("Home navigation group is missing")
+          nav_buttons = nav_group.findall("./control[@type='button']")
+          if any((b.findtext("label", "").strip().upper() == "MY WIDGETS" or "ActivateWindow(11119)" in b.findtext("onclick", "")) for b in nav_buttons):
+            raise SystemExit("Home must not expose a separate My Widgets destination; widget slots belong in Skin Settings")
+          settings = nav_group.find("./control[@id='1005']")
+          if settings is None or (settings.findtext("label"), settings.findtext("left"), settings.findtext("width"), settings.findtext("onclick")) != ("SETTINGS", "670", "150", "ActivateWindow(11113)"):
+            raise SystemExit("Home navigation must place the single Settings destination in the reclaimed final slot")
+          if nav_group.find("./control[@id='1006']") is not None:
+            raise SystemExit("Obsolete navigation control 1006 must not remain")
           if (home.findtext("onload") or "").strip() != "RunScript(script.cineva.widgets,action=init)":
             raise SystemExit("Home must initialize widget strings through the Python manager")
           confirm = ET.parse("skin.cineva/xml/DialogConfirm.xml").getroot()
