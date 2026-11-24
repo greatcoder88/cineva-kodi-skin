@@ -43,6 +43,7 @@ jobs:
           test -f tools/script.cineva.widgets/addon.xml
           # Validate the packaged runtime fixes; never silently patch the test copy.
           python - <<'PY'
+          import struct
           import xml.etree.ElementTree as ET
           import zlib
           from pathlib import Path
