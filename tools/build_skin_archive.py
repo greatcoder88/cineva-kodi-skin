@@ -590,7 +590,8 @@ def update_xml(data, path):
                     row_index = int(source_label.split("Container(", 1)[1].split(")", 1)[0]) - 9000
                     rating_id = 9340 + (row_index - 1) * 2
                     for old_rating in list(group.findall("control")):
-                        if old_rating.get("id") in {str(rating_id), str(rating_id + 1)}:
+                        if (old_rating.findtext("texture") == "rating-badge.png"
+                                or "ListItem.Rating" in old_rating.findtext("label", "")):
                             group.remove(old_rating)
                     rating_bg = ET.SubElement(group, "control", {"type": "image", "id": str(rating_id)})
                     for tag, value in (("left", 770), ("top", 126), ("width", 126), ("height", 32),
