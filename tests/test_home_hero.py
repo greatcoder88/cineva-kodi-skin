@@ -9,6 +9,13 @@ ARCHIVE = ROOT / "skin.cineva-0.5.6.zip"
 
 
 class HomeHeroActionTests(unittest.TestCase):
+    def test_release_changelog_uses_real_line_breaks(self):
+        with ZipFile(ARCHIVE) as archive:
+            lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
+        self.assertEqual(lines[0], "0.5.6 - Larger, tighter Home poster rails")
+        self.assertTrue(lines[1].startswith("- Enlarged Home poster artwork to its native 2:3 ratio"))
+        self.assertTrue(lines[2].startswith("- Rebalanced caption, progress and focus geometry"))
+
     def test_all_home_heroes_use_branded_nine_slice_action_surfaces(self):
         with ZipFile(ARCHIVE) as archive:
             home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
