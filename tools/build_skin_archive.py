@@ -192,10 +192,27 @@ def poster_focus_png():
 
 
 def rating_badge_png():
-    """Create a compact dark-gold capsule for dynamic movie and TV ratings."""
+    """Create a dark-gold rating capsule with a raster star independent of font glyphs."""
     width, height = 126, 32
     pixels = bytearray()
     radius = 15
+    star_points = (
+        (16.0, 7.0), (18.1, 12.2), (23.5, 12.7), (19.5, 16.4),
+        (20.7, 22.0), (16.0, 19.0), (11.3, 22.0), (12.5, 16.4),
+        (8.5, 12.7), (13.9, 12.2),
+    )
+
+    def in_star(px, py):
+        inside_star = False
+        previous = len(star_points) - 1
+        for current, (sx, sy) in enumerate(star_points):
+            px0, py0 = star_points[previous]
+            if ((sy > py) != (py0 > py)
+                    and px < (px0 - sx) * (py - sy) / (py0 - sy) + sx):
+                inside_star = not inside_star
+            previous = current
+        return inside_star
+
     for y in range(height):
         pixels.append(0)
         for x in range(width):
@@ -204,7 +221,9 @@ def rating_badge_png():
             inside = (dx >= radius or dy >= radius
                       or (dx - radius) ** 2 + (dy - radius) ** 2 <= radius ** 2)
             edge = inside and (x <= 1 or x >= width - 2 or y <= 1 or y >= height - 2)
-            if not inside:
+            if inside and in_star(x + 0.5, y + 0.5):
+                pixels.extend((255, 211, 106, 255))
+            elif not inside:
                 pixels.extend((0, 0, 0, 0))
             elif edge:
                 pixels.extend((174, 132, 55, 220))
@@ -215,7 +234,6 @@ def rating_badge_png():
             + png_chunk(b"IHDR", header)
             + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
             + png_chunk(b"IEND", b""))
-
 
 def poster_placeholder_png():
     """Create cinematic abstract artwork when a provider has no poster."""
@@ -570,7 +588,7 @@ def update_xml(data, path):
                     set_child_text(labels[1], "textcolor", "silver")
                     set_child_text(labels[1], "width", 680)
                     row_index = int(source_label.split("Container(", 1)[1].split(")", 1)[0]) - 9000
-                    rating_id = 9340 + row_index
+                    rating_id = 9340 + (row_index - 1) * 2
                     for old_rating in list(group.findall("control")):
                         if old_rating.get("id") in {str(rating_id), str(rating_id + 1)}:
                             group.remove(old_rating)
@@ -581,9 +599,9 @@ def update_xml(data, path):
                     set_child_text(rating_bg, "visible",
                                    f"!String.IsEmpty(Container({9000 + row_index}).ListItem.Rating)")
                     rating_text = ET.SubElement(group, "control", {"type": "label", "id": str(rating_id + 1)})
-                    for tag, value in (("left", 782), ("top", 126), ("width", 108), ("height", 32),
+                    for tag, value in (("left", 802), ("top", 126), ("width", 84), ("height", 32),
                                        ("font", "font10"), ("textcolor", "FFFFD36A"),
-                                       ("label", f"★  $INFO[Container({9000 + row_index}).ListItem.Rating]"),
+                                       ("label", f"$INFO[Container({9000 + row_index}).ListItem.Rating]"),
                                        ("align", "left"), ("aligny", "center"),
                                        ("visible", f"!String.IsEmpty(Container({9000 + row_index}).ListItem.Rating)")):
                         set_child_text(rating_text, tag, value)
@@ -1030,6 +1048,9 @@ def update_xml(data, path):
             focus_animation.set("start", "100")
             focus_animation.set("end", "104")
             focus_animation.set("time", "160")
+            focus_animation.set("tween", "sine")
+            focus_animation.set("easing", "out")
+        focus_animation.text = "Focus"
         for tag, value in (("left", 18), ("width", 249), ("top", 345), ("height", 5)):
             set_child_text(progress, tag, value)
         if focused_label is not None and focused_label in list(focused):
