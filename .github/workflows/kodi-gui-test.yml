@@ -28,18 +28,18 @@ jobs:
           python tools/build_skin_archive.py
           before="$(sha256sum skin.cineva-0.5.6.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.5.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.6.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
           fi
           echo "Archive SHA-256 is stable across consecutive builds: $after"
           mkdir -p artifacts
-          cp skin.cineva-0.5.5.zip artifacts/
-          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.5.zip)" ]; then
+          cp skin.cineva-0.5.6.zip artifacts/
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.6.zip)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add skin.cineva-0.5.5.zip
+            git add skin.cineva-0.5.6.zip
             git commit -m "Build updated CINÉVA 0.5.6 skin archive"
             git push origin HEAD:main || echo "::warning::Could not push rebuilt skin ZIP; GUI test still uses the rebuilt local ZIP."
           fi
@@ -47,8 +47,8 @@ jobs:
       - name: Expand uploaded skin archive and prepare add-ons
         run: |
           mkdir -p artifacts
-          test -s skin.cineva-0.5.5.zip
-          unzip -q skin.cineva-0.5.5.zip -d .
+          test -s skin.cineva-0.5.6.zip
+          unzip -q skin.cineva-0.5.6.zip -d .
           test -f skin.cineva/addon.xml
           test -d skin.cineva/xml
           test -f skin.cineva/xml/Home.xml
