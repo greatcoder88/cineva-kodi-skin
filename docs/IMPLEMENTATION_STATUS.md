@@ -7,10 +7,10 @@
 - [x] Preserve editable POV Home defaults on first install.
 - [x] Ensure clearing all widgets does not silently restore defaults.
 - [x] Persist selected plugin paths into the skin string properties consumed by the current shelf renderer.
-- [ ] Wire each numbered slot into the actual CINÉVA Skin Settings UI.
+- [x] Wire each numbered slot into the actual CINÉVA Skin Settings UI (12 direct slot actions generated into SkinSettings.xml).
 - [ ] Verify the settings picker can browse POV, Umbrella and other installed add-ons on Kodi 23.
 - [ ] Complete rendering for all screen slots and verify empty-slot behavior in the installed skin.
-- [ ] Validate Kodi 23 XML/includes/assets and package layout.
+- [x] Validate generated Kodi XML/includes/assets and release package layout in automated checks; full interactive settings validation remains pending.
 - [ ] Install and test on Kodi 23; separately test on Fire TV Stick 4K.
 
 ## Validation honesty
