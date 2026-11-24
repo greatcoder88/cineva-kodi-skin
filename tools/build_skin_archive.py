@@ -814,10 +814,21 @@ def update_xml(data, path):
         if nav_group is not None:
             # Widget sources belong in Skin Settings, not in a separate Home destination.
             # Remove the stale hub button and reclaim its slot for the single Settings entry.
-            widget_hub = nav_group.find("./control[@id='1005']")
+            widget_hub = next(
+                (button for button in nav_group.findall("./control[@type='button']")
+                 if button.findtext("label", "").strip().upper() == "MY WIDGETS"
+                 or "ActivateWindow(11119)" in button.findtext("onclick", "")),
+                None,
+            )
             if widget_hub is not None:
                 nav_group.remove(widget_hub)
-            settings_button = nav_group.find("./control[@id='1006']")
+            # Find Settings by meaning rather than its old ID: after the first
+            # build it already owns 1005, so rerunning the builder must preserve it.
+            settings_button = next(
+                (button for button in nav_group.findall("./control[@type='button']")
+                 if button.findtext("label", "").strip().upper() == "SETTINGS"),
+                None,
+            )
             if settings_button is not None:
                 settings_button.set("id", "1005")
                 set_child_text(settings_button, "left", 670)
