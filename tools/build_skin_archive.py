@@ -512,7 +512,7 @@ def update_xml(data, path):
                     set_child_text(labels[0], "top", 24)
                     set_child_text(labels[0], "height", 96)
                     set_child_text(labels[0], "textcolor", "white")
-                    set_child_text(labels[0], "width", 1220)
+                    set_child_text(labels[0], "width", 1100)
                     set_child_text(labels[0], "font", "font24")
                     set_child_text(labels[0], "wrapmultiline", "true")
                     set_child_text(labels[0], "aligny", "center")
@@ -529,14 +529,14 @@ def update_xml(data, path):
                         f"$INFO[Container({container_id}).ListItem.Rating,  •  ]"
                     )
                     set_child_text(labels[1], "label", metadata)
-                    set_child_text(labels[1], "top", 128)
+                    set_child_text(labels[1], "top", 152)
                     set_child_text(labels[1], "height", 34)
                     set_child_text(labels[1], "font", "font10")
                     set_child_text(labels[1], "textcolor", "silver")
                 for child in group.findall("control"):
                     if child.get("type") == "textbox":
-                        set_child_text(child, "top", 176)
-                        set_child_text(child, "height", 72)
+                        set_child_text(child, "top", 184)
+                        set_child_text(child, "height", 64)
                         set_child_text(child, "width", 900)
                         set_child_text(child, "font", "font13")
                         set_child_text(child, "textcolor", "white")
@@ -876,14 +876,22 @@ def update_xml(data, path):
         if normal is None or focused is None:
             raise SystemExit("Includes.xml is missing CINÉVA poster layouts")
         normal_image = normal.find("./control[@type='image']")
-        normal_label = normal.find("./control[@type='label']")
+        normal_label = normal.find("./control[@type='textbox']")
+        if normal_label is None:
+            normal_label = normal.find("./control[@type='label']")
         focused_image = focused.find("./control[@type='image']")
-        focused_label = focused.find("./control[@type='label']")
+        focused_label = focused.find("./control[@type='textbox']")
+        if focused_label is None:
+            focused_label = focused.find("./control[@type='label']")
         progress = focused.find("./control[@type='progress']")
         if any(node is None for node in (normal_image, normal_label, focused_image, progress)):
             raise SystemExit("Includes.xml has an incomplete poster layout")
         if focused_label is None:
             focused_label = ET.fromstring(ET.tostring(normal_label, encoding="unicode"))
+        # Kodi label controls ellipsize long card titles despite wrapmultiline.
+        # Textboxes wrap naturally inside the same fixed 48px caption area.
+        normal_label.set("type", "textbox")
+        focused_label.set("type", "textbox")
         for tag, value in (("left", 12), ("top", 0), ("width", 261), ("height", 348)):
             set_child_text(normal_image, tag, value)
         # Use the semantic poster key for every shelf state. Providers often map
@@ -902,7 +910,9 @@ def update_xml(data, path):
         stale_wrap = normal_label.find("wrap")
         if stale_wrap is not None:
             normal_label.remove(stale_wrap)
-        set_child_text(normal_label, "wrapmultiline", "true")
+        stale_multiline = normal_label.find("wrapmultiline")
+        if stale_multiline is not None:
+            normal_label.remove(stale_multiline)
         set_child_text(normal_label, "textcolor", "gainsboro")
         set_child_text(normal_label, "visible", "!ListItem.IsSelected")
         # Netflix-style resume progress belongs to every in-progress card, not
@@ -967,7 +977,9 @@ def update_xml(data, path):
             stale_wrap = active_label.find("wrap")
             if stale_wrap is not None:
                 active_label.remove(stale_wrap)
-            set_child_text(active_label, "wrapmultiline", "true")
+            stale_multiline = active_label.find("wrapmultiline")
+            if stale_multiline is not None:
+                active_label.remove(stale_multiline)
             set_child_text(active_label, "visible", f"Control.HasFocus({container_id})")
             set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
             focus_accent = ET.Element("control", {"type": "image"})

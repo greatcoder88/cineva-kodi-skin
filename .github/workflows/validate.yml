@@ -150,7 +150,7 @@ jobs:
           hero_plot = hero_group.find("./control[@type='textbox']") if hero_group is not None else None
           hero_meta = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Year]" in c.findtext("label", "")), None) if hero_group is not None else None
           hero_eyebrow = hero_group.find("./control[@id='9300']") if hero_group is not None else None
-          if hero_group is None or hero_group.findtext("top") != "118" or hero_group.findtext("height") != "330" or hero_title is None or hero_title.findtext("top") != "24" or hero_title.findtext("height") != "96" or hero_title.findtext("font") != "font24" or hero_title.findtext("width") != "1220" or hero_title.findtext("wrapmultiline") != "true" or hero_title.findtext("aligny") != "center" or hero_meta is None or hero_meta.findtext("top") != "128" or hero_meta.findtext("font") != "font10" or hero_meta.findtext("textcolor") != "silver" or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("176", "72", "font13") or hero_eyebrow is None or (hero_eyebrow.findtext("top"), hero_eyebrow.findtext("height"), hero_eyebrow.findtext("label"), hero_eyebrow.findtext("visible"), hero_eyebrow.findtext("font"), hero_eyebrow.findtext("textcolor")) != ("0", "24", "CONTINUE WATCHING", "String.Contains(Skin.String(Cineva.Widget1.Path),in_progress)", "font9", "FFE50914"):
+          if hero_group is None or hero_group.findtext("top") != "118" or hero_group.findtext("height") != "330" or hero_title is None or hero_title.findtext("top") != "24" or hero_title.findtext("height") != "96" or hero_title.findtext("font") != "font24" or hero_title.findtext("width") != "1100" or hero_title.findtext("wrapmultiline") != "true" or hero_title.findtext("aligny") != "center" or hero_meta is None or hero_meta.findtext("top") != "152" or hero_meta.findtext("font") != "font10" or hero_meta.findtext("textcolor") != "silver" or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("184", "64", "font13") or hero_eyebrow is None or (hero_eyebrow.findtext("top"), hero_eyebrow.findtext("height"), hero_eyebrow.findtext("label"), hero_eyebrow.findtext("visible"), hero_eyebrow.findtext("font"), hero_eyebrow.findtext("textcolor")) != ("0", "24", "CONTINUE WATCHING", "String.Contains(Skin.String(Cineva.Widget1.Path),in_progress)", "font9", "FFE50914"):
               errors.append("Home hero must present title first, metadata second and synopsis third with distinct baselines")
           for group in (g for g in controls.findall("control") if g.get("type") == "group" and g.findtext("control/label", "").startswith("$INFO[Container(")):
               source_label = group.findtext("control/label", "")
@@ -461,10 +461,10 @@ jobs:
               if len(values) != 2 or values[0].get("condition") != expected_condition or values[0].text != "RESUME" or values[1].get("condition") is not None or values[1].text != "PLAY":
                   errors.append(f"Home row {row_index} must resolve RESUME for in-progress sources and PLAY otherwise")
           poster = includes.find("./include[@name='CinevaPosterItem']")
-          normal_title = poster.find("./control[@type='label']") if poster is not None else None
+          normal_title = poster.find("./control[@type='textbox']") if poster is not None else None
           focused_poster = includes.find("./include[@name='CinevaFocusedPosterItem']")
-          focused_title = focused_poster.find("./control[@type='label']") if focused_poster is not None else None
-          if poster is None or poster.findtext("./control[@type='image']/height") != "348" or normal_title is None or (normal_title.findtext("width"), normal_title.findtext("top"), normal_title.findtext("height"), normal_title.findtext("font"), normal_title.findtext("wrapmultiline"), normal_title.findtext("aligny")) != ("285", "350", "48", "font10", "true", "center") or normal_title.find("wrap") is not None:
+          focused_title = next((node for node in focused_poster.findall("./control") if node.get("type") in {"label", "textbox"}), None) if focused_poster is not None else None
+          if poster is None or poster.findtext("./control[@type='image']/height") != "348" or normal_title is None or (normal_title.findtext("width"), normal_title.findtext("top"), normal_title.findtext("height"), normal_title.findtext("font"), normal_title.findtext("aligny")) != ("285", "350", "48", "font10", "center") or normal_title.find("wrap") is not None:
               errors.append("Poster image and normal title geometry is not the redesigned large-card layout")
           normal_image = poster.find("./control[@type='image']") if poster is not None else None
           if normal_image is None or normal_image.findtext("texture") != "$INFO[ListItem.Art(poster)]":
@@ -491,7 +491,7 @@ jobs:
               row_focus = row.find("./focusedlayout/include") if row is not None else None
               focus_include = includes.find(f"./include[@name='CinevaFocusedPosterItem{container_id}']")
               focus_images = focus_include.findall("./control[@type='image']") if focus_include is not None else []
-              focus_labels = focus_include.findall("./control[@type='label']") if focus_include is not None else []
+              focus_labels = focus_include.findall("./control[@type='textbox']") if focus_include is not None else []
               focus_progresses = focus_include.findall("./control[@type='progress']") if focus_include is not None else []
               if row_focus is None or row_focus.text != f"CinevaFocusedPosterItem{container_id}":
                   errors.append(f"Home row {container_id} does not use its own focus layout")
@@ -503,7 +503,7 @@ jobs:
                   errors.append(f"Home row {container_id} focused poster is missing its red selection accent")
               if len(focus_labels) != 2 or focus_labels[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_labels[1].findtext("visible") != f"Control.HasFocus({container_id})":
                   errors.append(f"Home row {container_id} must keep exactly one correctly styled title visible")
-              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width"), focus_labels[1].findtext("wrapmultiline"), focus_labels[1].findtext("aligny")) != ("font10", "370", "48", "285", "true", "center") or focus_labels[1].find("wrap") is not None:
+              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width"), focus_labels[1].findtext("aligny")) != ("font10", "370", "48", "285", "center") or focus_labels[1].find("wrap") is not None:
                   errors.append(f"Home row {container_id} focused title must use the compact, multiline card-title treatment")
               zoom = focus_images[1].find("./animation[@effect='zoom']") if len(focus_images) > 1 else None
               if len(focus_images) > 1 and (focus_images[1].findtext("left"), focus_images[1].findtext("top"), focus_images[1].findtext("width"), focus_images[1].findtext("height")) != ("7", "-6", "271", "361"):
