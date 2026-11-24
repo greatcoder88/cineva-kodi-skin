@@ -401,20 +401,21 @@ def update_xml(data, path):
         poster_layers = []
         row1_exclusions = (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118)
         for row_index, container_id in enumerate((9001, 9002, 9003, 9004), start=1):
+            art_conditions = (
+                f"String.IsEmpty(Container({container_id}).ListItem.Art(fanart))",
+                f"!String.IsEmpty(Container({container_id}).ListItem.Art(poster))",
+            )
             if row_index == 1:
-                active = " + ".join(
-                    f"!Control.HasFocus({focus_id})" for focus_id in row1_exclusions
+                visible = " + ".join(
+                    [f"!Control.HasFocus({focus_id})" for focus_id in row1_exclusions]
+                    + list(art_conditions)
                 )
             else:
                 play_id = 9111 + (row_index - 1) * 2
-                active = "(" + " | ".join(
-                    f"Control.HasFocus({focus_id})"
+                visible = " | ".join(
+                    " + ".join((f"Control.HasFocus({focus_id})",) + art_conditions)
                     for focus_id in (container_id, play_id, play_id + 1)
-                ) + ")"
-            visible = (
-                f"{active} + String.IsEmpty(Container({container_id}).ListItem.Art(fanart))"
-                f" + !String.IsEmpty(Container({container_id}).ListItem.Art(poster))"
-            )
+                )
             poster = ET.Element("control", {"type": "image", "id": str(9139 + row_index)})
             for tag, value in (
                 ("left", 1280), ("top", 0), ("width", 640), ("height", 750),
