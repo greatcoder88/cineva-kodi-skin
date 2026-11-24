@@ -81,5 +81,39 @@ class HomeHeroActionTests(unittest.TestCase):
                     )
 
 
+    def test_hero_metadata_and_imdb_chip_share_a_compact_row(self):
+        with ZipFile(ARCHIVE) as archive:
+            home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
+            controls = home.find("controls")
+            for container_id, play_id in ((9001, 9111), (9002, 9113), (9003, 9115), (9004, 9117)):
+                hero = next(
+                    group for group in controls.findall("control")
+                    if group.get("type") == "group"
+                    and group.find(f"./control[@id='{play_id}']") is not None
+                )
+                metadata = next(
+                    node for node in hero.findall("control")
+                    if node.get("type") == "label"
+                    and f"$INFO[Container({container_id}).ListItem.Year]" in node.findtext("label", "")
+                )
+                rating_id = 9340 + (container_id - 9001) * 3
+                badge = hero.find(f"./control[@id='{rating_id}']")
+                logo = hero.find(f"./control[@id='{rating_id + 1}']")
+                score = hero.find(f"./control[@id='{rating_id + 2}']")
+                self.assertEqual(metadata.findtext("width"), "430")
+                self.assertEqual(
+                    (badge.findtext("left"), badge.findtext("width")),
+                    ("460", "148"),
+                )
+                self.assertEqual(
+                    (logo.findtext("left"), logo.findtext("top"), logo.findtext("width"), logo.findtext("height")),
+                    ("468", "138", "48", "24"),
+                )
+                self.assertEqual(
+                    (score.findtext("left"), score.findtext("width")),
+                    ("522", "84"),
+                )
+
+
 if __name__ == "__main__":
     unittest.main()
