@@ -45,7 +45,7 @@ class RepositoryFileSourceTests(unittest.TestCase):
             with patch.object(build_repository, "OUT", output):
                 build_repository.main()
 
-            installer_name = "repository.cineva-0.1.2.zip"
+            installer_name = "repository.cineva-0.1.3.zip"
             self.assertIn(
                 (installer_name, installer_name),
                 read_links(output / "index.html"),
