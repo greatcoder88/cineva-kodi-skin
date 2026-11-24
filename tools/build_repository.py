@@ -95,12 +95,13 @@ def main() -> None:
         "id": REPO_ID, "name": "CINÉVA Add-on Repository",
         "version": REPO_VERSION, "provider-name": "CINÉVA"
     })
-    ET.SubElement(repo_addon, "extension", {
-        "point": "xbmc.addon.repository", "name": "CINÉVA Repository",
-        "info": f"{FEED_BASE}/addons.xml",
-        "checksum": f"{FEED_BASE}/addons.xml.md5",
-        "datadir": f"{FEED_BASE}/zips/"
+    repository_extension = ET.SubElement(repo_addon, "extension", {
+        "point": "xbmc.addon.repository", "name": "CINÉVA Repository"
     })
+    directory = ET.SubElement(repository_extension, "dir")
+    ET.SubElement(directory, "info").text = f"{FEED_BASE}/addons.xml"
+    ET.SubElement(directory, "checksum").text = f"{FEED_BASE}/addons.xml.md5"
+    ET.SubElement(directory, "datadir", {"zip": "true"}).text = f"{FEED_BASE}/zips/"
     metadata = ET.SubElement(repo_addon, "extension", {"point": "xbmc.addon.metadata"})
     ET.SubElement(metadata, "summary", {"lang": "en_GB"}).text = "Official CINÉVA add-on repository"
     ET.SubElement(metadata, "description", {"lang": "en_GB"}).text = "Install and update CINÉVA skin and widget helper."
