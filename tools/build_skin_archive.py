@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.4.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.3.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.5.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.4.zip"
 
 
 def fetch_asset(url, attempts=5):
@@ -478,7 +478,7 @@ def remove_missing_no_focus_textures(root):
 def update_xml(data, path):
     root = ET.fromstring(data)
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.4")
+        root.set("version", "0.5.5")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.3")
@@ -922,7 +922,7 @@ def update_xml(data, path):
             controls.remove(heading)
             controls.remove(shelf)
             row_group = ET.Element("control", {"type": "group", "id": str(9060 + index)})
-            for tag, value in (("left", 0), ("top", 0), ("width", 1710), ("height", 460)):
+            for tag, value in (("left", 0), ("top", 0), ("width", 1710), ("height", 468)):
                 set_child_text(row_group, tag, value)
             play_id = 9111 + (index - 1) * 2
             next_target = 9000 + index + 1 if index < 4 else 1001
@@ -937,13 +937,13 @@ def update_xml(data, path):
             set_child_text(shelf, "left", 0)
             set_child_text(shelf, "top", 52)
             set_child_text(shelf, "width", 1710)
-            set_child_text(shelf, "height", 408)
+            set_child_text(shelf, "height", 416)
             set_child_text(shelf, "itemgap", 14)
             set_child_text(shelf, "onup", f"SetFocus({play_id})")
             set_child_text(shelf, "ondown", f"SetFocus({next_target})")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
                 layout.set("width", "285")
-                layout.set("height", "408")
+                layout.set("height", "416")
             focused_layout = shelf.find("./focusedlayout")
             focused_include = focused_layout.find("include") if focused_layout is not None else None
             if focused_include is not None:
@@ -1123,7 +1123,7 @@ def update_xml(data, path):
         if normal_texture is None:
             raise SystemExit("Includes.xml normal poster image has no texture")
         normal_texture.set("fallback", "poster-placeholder.png")
-        for tag, value in (("left", 0), ("top", 322), ("width", 285), ("height", 56), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
+        for tag, value in (("left", 0), ("top", 322), ("width", 285), ("height", 64), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
             set_child_text(normal_label, tag, value)
         stale_visibility = normal_label.find("visible")
         if stale_visibility is not None:
@@ -1204,8 +1204,8 @@ def update_xml(data, path):
             set_child_text(active_image, "visible", f"Control.HasFocus({container_id})")
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
             set_child_text(fallback_progress, "visible", f"!Control.HasFocus({container_id}) + ListItem.IsResumable")
-            # Reserve a 56px caption area for two lines at TV distance; the compact rail geometry reveals the next shelf preview.
-            for tag, value in (("left", 0), ("top", 340), ("width", 285), ("height", 56), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "white")):
+            # Reserve a 64px caption area for two full lines at TV distance; the compact rail geometry still reveals the next shelf preview.
+            for tag, value in (("left", 0), ("top", 340), ("width", 285), ("height", 64), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
             stale_wrap = active_label.find("wrap")
             if stale_wrap is not None:
@@ -1216,7 +1216,7 @@ def update_xml(data, path):
             set_child_text(active_label, "visible", f"Control.HasFocus({container_id})")
             set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
             focus_accent = ET.Element("control", {"type": "image"})
-            for tag, value in (("left", 101), ("top", 399), ("width", 84), ("height", 4)):
+            for tag, value in (("left", 101), ("top", 407), ("width", 84), ("height", 4)):
                 set_child_text(focus_accent, tag, value)
             set_child_text(focus_accent, "texture", "focus-bar.png")
             set_child_text(focus_accent, "visible", f"Control.HasFocus({container_id})")
@@ -1510,7 +1510,7 @@ def main():
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.4.zip and migration source skin.cineva-0.5.3.zip")
+        raise SystemExit("Missing skin.cineva-0.5.5.zip and migration source skin.cineva-0.5.4.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
