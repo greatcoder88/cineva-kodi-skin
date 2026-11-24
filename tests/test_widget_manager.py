@@ -61,6 +61,24 @@ class KodiManagerTests(unittest.TestCase):
         FakeVFS.files.clear()
         self.builtins.clear()
 
+    def test_skin_settings_exposes_twelve_numbered_widget_slots(self):
+        builder_path = ROOT / "tools/build_skin_archive.py"
+        spec = importlib.util.spec_from_file_location("cineva_builder", builder_path)
+        builder = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(builder)
+        source = b'<window id="10035"><controls><control type="button" id="6"><label>OLD</label></control></controls></window>'
+        rendered = ET.fromstring(builder.update_xml(source, "skin.cineva/xml/SkinSettings.xml"))
+        controls = rendered.find("controls")
+        buttons = controls.findall("control[@type='button']")
+        self.assertEqual(len(buttons), 12)
+        actions = [button.findtext("onclick", "") for button in buttons]
+        for screen in ("home", "movies", "tvshows"):
+            for slot in range(1, 5):
+                self.assertTrue(any(f"screen={screen}&amp;slot={slot}" in action or
+                                    f"screen={screen}&slot={slot}" in action for action in actions))
+        self.assertFalse(any("screen=search" in action or "screen=mylist" in action for action in actions))
+        self.assertFalse(any(button.get("id") == "6" for button in buttons))
+
     def test_screens_are_only_home_movies_tvshows(self):
         self.assertEqual(set(self.module.SCREENS), {"home", "movies", "tvshows"})
 
