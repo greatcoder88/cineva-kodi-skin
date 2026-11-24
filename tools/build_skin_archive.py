@@ -536,13 +536,31 @@ def update_xml(data, path):
                         f"$INFO[Container({container_id}).ListItem.Year]"
                         f"$INFO[Container({container_id}).ListItem.Duration,  •  ]"
                         f"$INFO[Container({container_id}).ListItem.Genre,  •  ]"
-                        f"$INFO[Container({container_id}).ListItem.Rating,  •  ]"
                     )
                     set_child_text(labels[1], "label", metadata)
                     set_child_text(labels[1], "top", 128)
                     set_child_text(labels[1], "height", 28)
                     set_child_text(labels[1], "font", "font10")
                     set_child_text(labels[1], "textcolor", "silver")
+                    set_child_text(labels[1], "width", 680)
+                    row_index = int(source_label.split("Container(", 1)[1].split(")", 1)[0]) - 9000
+                    rating_id = 9340 + row_index
+                    for old_rating in list(group.findall("control")):
+                        if old_rating.get("id") in {str(rating_id), str(rating_id + 1)}:
+                            group.remove(old_rating)
+                    rating_bg = ET.SubElement(group, "control", {"type": "image", "id": str(rating_id)})
+                    for tag, value in (("left", 770), ("top", 126), ("width", 126), ("height", 32),
+                                       ("texture", "rating-badge.png")):
+                        set_child_text(rating_bg, tag, value)
+                    set_child_text(rating_bg, "visible",
+                                   f"!String.IsEmpty(Container({9000 + row_index}).ListItem.Rating)")
+                    rating_text = ET.SubElement(group, "control", {"type": "label", "id": str(rating_id + 1)})
+                    for tag, value in (("left", 782), ("top", 126), ("width", 108), ("height", 32),
+                                       ("font", "font10"), ("textcolor", "FFFFD36A"),
+                                       ("label", f"★  $INFO[Container({9000 + row_index}).ListItem.Rating]"),
+                                       ("align", "left"), ("aligny", "center"),
+                                       ("visible", f"!String.IsEmpty(Container({9000 + row_index}).ListItem.Rating)")):
+                        set_child_text(rating_text, tag, value)
                 for child in group.findall("control"):
                     if child.get("type") == "textbox":
                         set_child_text(child, "top", 164)
@@ -1255,7 +1273,7 @@ def update_xml(data, path):
             for tag, value in {
                 "left": 76, "top": 270, "width": 1100, "height": 30,
                 "font": "font10", "textcolor": "silver",
-                "label": "$INFO[Container(9201).ListItem.Year]$INFO[Container(9201).ListItem.Genre,  ￼  ]$INFO[Container(9201).ListItem.Rating,  ￼  ]",
+                "label": "$INFO[Container(9201).ListItem.Year]$INFO[Container(9201).ListItem.Genre,  ￼  ]",
                 "visible": "!String.IsEmpty(Container(9201).ListItem.Label)",
             }.items():
                 ET.SubElement(meta, tag).text = str(value).replace("￼", "•")
@@ -1267,9 +1285,27 @@ def update_xml(data, path):
                 "visible": "!String.IsEmpty(Container(9201).ListItem.Art(clearlogo))",
             }.items():
                 ET.SubElement(logo, tag).text = str(value)
+            # A distinct, source-aware rating chip keeps the score legible and
+            # visually separate from year/genre metadata on catalogue heroes.
+            for stale_id in ("9214", "9215"):
+                stale = controls.find(f"./control[@id='{stale_id}']")
+                if stale is not None:
+                    controls.remove(stale)
+            rating_bg = ET.Element("control", {"type": "image", "id": "9214"})
+            for tag, value in (("left", 850), ("top", 266), ("width", 126), ("height", 32),
+                               ("texture", "rating-badge.png"),
+                               ("visible", "!String.IsEmpty(Container(9201).ListItem.Rating)")):
+                ET.SubElement(rating_bg, tag).text = str(value)
+            rating_text = ET.Element("control", {"type": "label", "id": "9215"})
+            for tag, value in (("left", 862), ("top", 266), ("width", 108), ("height", 32),
+                               ("font", "font10"), ("textcolor", "FFFFD36A"),
+                               ("label", "★  $INFO[Container(9201).ListItem.Rating]"),
+                               ("align", "left"), ("aligny", "center"),
+                               ("visible", "!String.IsEmpty(Container(9201).ListItem.Rating)")):
+                ET.SubElement(rating_text, tag).text = str(value)
             # Render hero information above the background and below focusable
             # controls; all focus movement remains native Kodi D-pad navigation.
-            controls.extend([title, fallback, meta, logo])
+            controls.extend([title, fallback, meta, logo, rating_bg, rating_text])
     elif path == "skin.cineva/xml/custom11112.xml":
         # Search hub: keep the search action prominent and align results to the catalogue grid.
         for node in root.findall(".//control[@type='button']"):
@@ -1339,6 +1375,7 @@ def main():
                 "skin.cineva/media/rail-scroll-mask.png": rail_scroll_mask_png(),
                 "skin.cineva/media/resume-track.png": resume_track_png(),
                 "skin.cineva/media/poster-focus.png": poster_focus_png(),
+                "skin.cineva/media/rating-badge.png": rating_badge_png(),
                 "skin.cineva/media/poster-placeholder.png": poster_placeholder_png(),
             }
             written_assets = set()
