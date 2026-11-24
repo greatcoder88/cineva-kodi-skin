@@ -264,6 +264,25 @@ def poster_placeholder_png():
             + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
             + png_chunk(b"IEND", b""))
 
+def hero_poster_vignette_png():
+    """Fade the edges of portrait key art into a fanart-free Home hero."""
+    width, height = 640, 750
+    pixels = bytearray()
+    for _ in range(height):
+        pixels.append(0)  # PNG filter: None
+        for x in range(width):
+            horizontal = x / (width - 1)
+            left_fade = max(0.0, 1.0 - horizontal / 0.32) ** 1.8
+            right_fade = max(0.0, (horizontal - 0.72) / 0.28) ** 1.7
+            alpha = int(232 * max(left_fade, right_fade))
+            pixels.extend((5, 7, 12, alpha))
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return (b"\x89PNG\r\n\x1a\n"
+            + png_chunk(b"IHDR", header)
+            + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
+            + png_chunk(b"IEND", b""))
+
+
 def set_child_text(parent, tag, value):
     node = parent.find(tag)
     if node is None:
@@ -334,10 +353,18 @@ def update_xml(data, path):
                     and orphan.findtext("visible", "") in row_focus_conditions
                     and (orphan.findtext("left"), orphan.findtext("width"), orphan.findtext("height")) == ("0", "58", "3")):
                 controls.remove(orphan)
+        # Rebuild the optional portrait-led fallback without accumulating controls
+        # when the archive transformation is run more than once.
+        generated_hero_ids = {str(control_id) for control_id in range(9140, 9148)}
+        for stale in list(controls.findall("control")):
+            if stale.get("id") in generated_hero_ids:
+                controls.remove(stale)
         # Cinematic hero: give artwork room to breathe and fade it cleanly into the catalogue.
         for control in controls.findall("control"):
             texture = control.findtext("texture", "")
-            if control.get("type") == "image" and texture.startswith("$INFO[Container("):
+            if (control.get("type") == "image"
+                    and texture.startswith("$INFO[Container(")
+                    and ".ListItem.Art(fanart)]" in texture):
                 # Keep a branded landscape visible even when a provider supplies
                 # a poster but no fanart. The row-1 hero is always the initial
                 # backdrop; later rows replace it only while their item/actions
@@ -362,6 +389,54 @@ def update_xml(data, path):
                     set_child_text(control, "visible", action_focus)
             if control.get("type") == "image" and texture == "hero-shade.png":
                 set_child_text(control, "height", 750)
+        # If the selected item has a poster but no landscape artwork, use that
+        # portrait as a right-side key-art panel instead of leaving the hero empty.
+        hero_artwork = [
+            node for node in controls.findall("control")
+            if node.get("type") == "image"
+            and ".ListItem.Art(fanart)]" in node.findtext("texture", "")
+        ]
+        if len(hero_artwork) != 4:
+            raise SystemExit(f"Home.xml must have four dynamic fanart layers, found {len(hero_artwork)}")
+        poster_layers = []
+        row1_exclusions = (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118)
+        for row_index, container_id in enumerate((9001, 9002, 9003, 9004), start=1):
+            if row_index == 1:
+                active = " + ".join(
+                    f"!Control.HasFocus({focus_id})" for focus_id in row1_exclusions
+                )
+            else:
+                play_id = 9111 + (row_index - 1) * 2
+                active = "(" + " | ".join(
+                    f"Control.HasFocus({focus_id})"
+                    for focus_id in (container_id, play_id, play_id + 1)
+                ) + ")"
+            visible = (
+                f"{active} + String.IsEmpty(Container({container_id}).ListItem.Art(fanart))"
+                f" + !String.IsEmpty(Container({container_id}).ListItem.Art(poster))"
+            )
+            poster = ET.Element("control", {"type": "image", "id": str(9139 + row_index)})
+            for tag, value in (
+                ("left", 1280), ("top", 0), ("width", 640), ("height", 750),
+                ("texture", f"$INFO[Container({container_id}).ListItem.Art(poster)]"),
+                ("visible", visible),
+            ):
+                set_child_text(poster, tag, value)
+            ET.SubElement(
+                poster, "aspectratio", {"align": "center", "aligny": "center"}
+            ).text = "keep"
+            vignette = ET.Element("control", {"type": "image", "id": str(9143 + row_index)})
+            for tag, value in (
+                ("left", 1280), ("top", 0), ("width", 640), ("height", 750),
+                ("texture", "hero-poster-vignette.png"), ("visible", visible),
+            ):
+                set_child_text(vignette, tag, value)
+            set_child_text(vignette, "aspectratio", "scale")
+            poster_layers.extend((poster, vignette))
+        insert_at = list(controls).index(hero_artwork[-1]) + 1
+        for layer in poster_layers:
+            controls.insert(insert_at, layer)
+            insert_at += 1
         # Add a mirrored top fade so the logo/date remain legible over bright fanart.
         hero_shade = next((node for node in controls.findall("control")
                            if node.get("type") == "image" and node.findtext("texture") == "hero-shade.png"), None)
@@ -1102,6 +1177,7 @@ def main():
                 "skin.cineva/media/hero-topbar-shade.png": hero_topbar_shade_png(),
                 "skin.cineva/media/hero-bottom-fade.png": hero_bottom_fade_png(),
                 "skin.cineva/media/hero-placeholder.png": hero_placeholder_png(),
+                "skin.cineva/media/hero-poster-vignette.png": hero_poster_vignette_png(),
                 "skin.cineva/media/rail-scroll-mask.png": rail_scroll_mask_png(),
                 "skin.cineva/media/resume-track.png": resume_track_png(),
                 "skin.cineva/media/poster-focus.png": poster_focus_png(),
