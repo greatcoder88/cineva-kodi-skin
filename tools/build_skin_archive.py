@@ -732,7 +732,7 @@ def update_xml(data, path):
                 for child in group.findall("control"):
                     if child.get("type") == "textbox":
                         set_child_text(child, "top", 206)
-                        set_child_text(child, "height", 52)
+                        set_child_text(child, "height", 60)
                         set_child_text(child, "width", 900)
                         set_child_text(child, "font", "font13")
                         set_child_text(child, "textcolor", "white")
@@ -775,7 +775,7 @@ def update_xml(data, path):
                 for duplicate in hero_groups:
                     if duplicate is not hero_group:
                         controls.remove(duplicate)
-            set_child_text(hero_group, "height", 330)
+            set_child_text(hero_group, "height", 350)
             # Add a restrained editorial eyebrow above the dynamic title. It
             # gives every selected shelf item a clear hierarchy without
             # hard-coding a movie/show name or implying platform exclusivity.
@@ -842,7 +842,7 @@ def update_xml(data, path):
                 button = ET.SubElement(hero_group, "control",
                                        {"type": "button", "id": str(button_id)})
                 for tag, value in (
-                    ("left", left), ("top", 268), ("width", width), ("height", 54),
+                    ("left", left), ("top", 280), ("width", width), ("height", 54),
                     ("label", label), ("font", "font10"),
                     ("onup", f"SetFocus({nav_target})"),
                     ("ondown", f"SetFocus({container_id})"),
@@ -888,7 +888,7 @@ def update_xml(data, path):
         # Each row is a single grouplist child so its non-focusable heading cannot
         # intercept Up from the nested fixedlist before the shelf's explicit route.
         rail_list = ET.Element("control", {"type": "grouplist", "id": "9050"})
-        for tag, value in (("left", 105), ("top", 454), ("width", 1710), ("height", 670)):
+        for tag, value in (("left", 105), ("top", 474), ("width", 1710), ("height", 670)):
             set_child_text(rail_list, tag, value)
         set_child_text(rail_list, "orientation", "vertical")
         set_child_text(rail_list, "itemgap", 12)

@@ -24,7 +24,7 @@ class HomeHeroActionTests(unittest.TestCase):
                 self.assertEqual(
                     [(button.findtext("left"), button.findtext("top"),
                       button.findtext("width"), button.findtext("height")) for button in buttons],
-                    [("0", "268", "190", "54"), ("212", "268", "220", "54")],
+                    [("0", "280", "190", "54"), ("212", "280", "220", "54")],
                 )
                 self.assertEqual(
                     [button.findtext("texturefocus") for button in buttons],
@@ -103,7 +103,7 @@ class HomeHeroActionTests(unittest.TestCase):
                 self.assertEqual(metadata.findtext("width"), "430")
                 self.assertEqual(metadata.findtext("top"), "136")
                 plot = hero.find("./control[@type='textbox']")
-                self.assertEqual((plot.findtext("top"), plot.findtext("height")), ("206", "52"))
+                self.assertEqual((plot.findtext("top"), plot.findtext("height")), ("206", "60"))
                 self.assertEqual(
                     (badge.findtext("left"), badge.findtext("top"), badge.findtext("width"), badge.findtext("height")),
                     ("0", "168", "148", "32"),
