@@ -85,7 +85,7 @@ def hero_topbar_shade_png():
 
 
 def hero_right_shade_png():
-    """Create a gentle right-edge vignette that frames bright full-bleed artwork."""
+    """Create a cinematic right-side fade while keeping the title-safe area clear."""
     width, height = 1920, 750
     pixels = bytearray()
     for y in range(height):
@@ -94,16 +94,18 @@ def hero_right_shade_png():
         pixels.append(0)  # PNG filter: None
         for x in range(width):
             position = x / (width - 1)
-            ramp = max(0.0, min(1.0, (position - 0.70) / 0.30))
+            # Start beyond the long-title safe area, then deepen smoothly across
+            # the final 42% of the frame so bright fanart no longer dominates
+            # the right side of the hero composition.
+            ramp = max(0.0, min(1.0, (position - 0.58) / 0.42))
             smooth = ramp * ramp * (3.0 - 2.0 * ramp)
-            alpha = int(88 * smooth * edge_weight)
+            alpha = int(168 * smooth * edge_weight)
             pixels.extend((5, 7, 12, alpha))
     header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
-    return (b"\x89PNG\r\n\x1a\n"
+    return (b"\\x89PNG\\r\\n\\x1a\\n"
             + png_chunk(b"IHDR", header)
             + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
             + png_chunk(b"IEND", b""))
-
 
 def hero_bottom_fade_png():
     """Create a full-width fade that cleanly separates hero artwork from the shelves."""

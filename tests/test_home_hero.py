@@ -164,9 +164,11 @@ class HomeHeroActionTests(unittest.TestCase):
             self.assertEqual(decoded[row], 0, "vignette PNG must use deterministic unfiltered rows")
             return decoded[row + 1 + x * 4 + 3]
 
-        self.assertEqual(alpha_at(200, 375), 0, "left-side title area must remain untouched")
-        self.assertGreater(alpha_at(1500, 375), 0, "right-side fade must begin gradually")
-        self.assertGreaterEqual(alpha_at(1919, 375), 70, "outer edge must receive a visible but restrained fade")
+        self.assertEqual(alpha_at(1050, 375), 0, "long-title safe area must remain untouched")
+        self.assertGreater(alpha_at(1200, 375), 0, "right-side fade must begin gradually after the title-safe area")
+        self.assertGreaterEqual(alpha_at(1500, 375), 55, "mid-right artwork must receive a readable contrast fade")
+        self.assertGreaterEqual(alpha_at(1800, 375), 120, "outer-right artwork must be visibly subdued")
+        self.assertGreaterEqual(alpha_at(1919, 375), 135, "outer edge must receive the full cinematic vignette")
 
     def test_home_uses_larger_native_2_3_posters_and_preserves_next_shelf_preview(self):
         with ZipFile(ARCHIVE) as archive:
