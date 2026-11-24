@@ -885,7 +885,7 @@ jobs:
             def verify_missing_fanart_hero(screenshot, row_name):
               signal = subprocess.run(
                 ["convert", screenshot, "-crop", "280x220+1600+200",
-                 "-fx", "((r>0.10)&&(r>g*1.6)&&(b>r*1.2))?1:0",
+                 "-fx", "((r>0.10)&&(r>g*1.6)&&(r>b*1.2))?1:0",
                  "-format", "%[fx:mean]", "info:"],
                 text=True, capture_output=True, check=True
               )
