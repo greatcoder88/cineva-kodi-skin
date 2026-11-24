@@ -85,6 +85,16 @@ class KodiManagerTests(unittest.TestCase):
         self.assertFalse(any("screen=search" in action or "screen=mylist" in action for action in actions))
         self.assertFalse(any(button.get("id") == "6" for button in buttons))
 
+    def test_poster_fallback_is_cinematic_art_not_a_play_icon(self):
+        builder_path = ROOT / "tools/build_skin_archive.py"
+        spec = importlib.util.spec_from_file_location("cineva_builder_poster_art", builder_path)
+        builder = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(builder)
+        artwork = builder.poster_placeholder_png()
+        self.assertTrue(artwork.startswith(b"\\x89PNG\\r\\n\\x1a\\n"))
+        self.assertEqual(struct.unpack(">II", artwork[16:24]), (342, 513))
+        self.assertNotIn(b"play glyph", builder.poster_placeholder_png.__doc__.encode("utf-8"))
+
     def test_home_navigation_uses_no_missing_dash_texture(self):
         builder_path = ROOT / "tools/build_skin_archive.py"
         spec = importlib.util.spec_from_file_location("cineva_builder_home_texture", builder_path)
