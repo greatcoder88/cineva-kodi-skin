@@ -2,6 +2,8 @@ name: CINÉVA Kodi repository
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "repository-site/**"
   workflow_dispatch:
 permissions:
   contents: write
@@ -38,7 +40,7 @@ jobs:
           for addon_id in ids:
               if not list((root / "zips" / addon_id).glob(f"{addon_id}-*.zip")):
                   raise SystemExit(f"Missing installable package for {addon_id}")
-          repo_zip = root / "zips/repository.cineva/repository.cineva-0.1.0.zip"
+          repo_zip = root / "zips/repository.cineva/repository.cineva-0.1.1.zip"
           root_zip = root / repo_zip.name
           if not repo_zip.is_file() or not root_zip.is_file():
               raise SystemExit("Missing repository installer ZIP at the source root or package directory")
@@ -70,7 +72,7 @@ jobs:
               return set(parser.items)
 
           expected_root = {
-              ("repository.cineva-0.1.0.zip", "repository.cineva-0.1.0.zip"),
+              ("repository.cineva-0.1.1.zip", "repository.cineva-0.1.1.zip"),
               ("zips/", "zips/"),
           }
           if not expected_root.issubset(links(root / "index.html")):
@@ -88,18 +90,21 @@ jobs:
           with ZipFile(repo_zip) as archive:
               repo_manifest = ET.fromstring(archive.read("repository.cineva/addon.xml"))
           repo_extension = repo_manifest.find("./extension[@point='xbmc.addon.repository']")
-          base = "https://greatcoder88.github.io/cineva-kodi-skin"
+          base = "https://greatcoder88.github.io/cineva-kodi-skin/repository-site"
           if repo_extension is None or (
               repo_extension.get("info"), repo_extension.get("checksum"), repo_extension.get("datadir")
           ) != (f"{base}/addons.xml", f"{base}/addons.xml.md5", f"{base}/zips/"):
               raise SystemExit("Repository installer does not point at the published Pages feed")
           print("Feed, checksum, packages, root installer and Kodi-browsable directory indexes validated.")
           PY
-      - name: Publish browsable file-source feed to GitHub Pages branch
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./repository-site
-          publish_branch: gh-pages
-          force_orphan: true
-          commit_message: "Publish CINÉVA Kodi repository feed"
+      - name: Publish feed into the Pages-served main-branch subpath
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f repository-site
+          if git diff --cached --quiet; then
+            echo "CINÉVA Pages feed is already current."
+          else
+            git commit -m "Publish CINÉVA Kodi repository feed"
+            git push origin HEAD:main
+          fi

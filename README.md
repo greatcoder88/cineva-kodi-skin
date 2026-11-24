@@ -21,13 +21,13 @@ CINÉVA is an independent, remote-first cinematic Kodi skin. Kodi video add-ons 
 
 ## Install from Kodi File Manager
 
-After the GitHub Pages feed is published, add this source in Kodi's **Settings → File manager → Add source**:
+Add this source in Kodi's **Settings → File manager → Add source**:
 
-`https://greatcoder88.github.io/cineva-kodi-skin/`
+`https://greatcoder88.github.io/cineva-kodi-skin/repository-site/`
 
-Then open **Add-ons → Install from ZIP file → CINÉVA**, choose `repository.cineva-0.1.0.zip` at the source root, and finish through **Install from repository → CINÉVA Add-on Repository**. No separate browser download or custom domain is required. The source must be served by GitHub Pages from the `gh-pages` branch at `/(root)`.
+Then open **Add-ons → Install from ZIP file → CINÉVA**, choose `repository.cineva-0.1.1.zip` at the source root, and finish through **Install from repository → CINÉVA Add-on Repository**. No separate browser download or custom domain is required. GitHub Pages serves the feed from the `repository-site/` subdirectory of `main`.
 
-See [the complete Kodi installation guide](docs/KODI_REPOSITORY.md) for the Pages setting and troubleshooting steps.
+See [the complete Kodi installation guide](docs/KODI_REPOSITORY.md) for details.
 
 ## Build and automated validation
 

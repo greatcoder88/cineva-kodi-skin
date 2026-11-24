@@ -3,6 +3,8 @@ name: CINÉVA Kodi GUI smoke test
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "repository-site/**"
   pull_request:
     branches: [main]
   workflow_dispatch:

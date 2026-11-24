@@ -9,33 +9,25 @@ The repository feed is assembled from the exact packages produced by the build. 
 
 ## Hosting
 
-The public Kodi feed is published to the `gh-pages` branch by `.github/workflows/repository.yml`. The GitHub Pages site URL is:
+GitHub Pages currently builds the `main` branch root. The repository workflow commits the generated feed into the `repository-site/` subdirectory, so the feed is served at:
 
-`https://greatcoder88.github.io/cineva-kodi-skin/`
+`https://greatcoder88.github.io/cineva-kodi-skin/repository-site/`
 
-For this branch-publishing workflow, GitHub **Settings → Pages → Build and deployment** must use:
-
-- **Source:** Deploy from a branch
-- **Branch:** `gh-pages`
-- **Folder:** `/(root)`
-
-The custom-domain field should remain blank. The workflow publishes the feed and creates HTML directory indexes whose link names match their paths; Kodi's HTTP directory browser uses those links for the File Manager source.
+No Pages source change or custom domain is needed. The custom-domain field should remain blank. Each generated directory contains an HTML index with relative links whose visible names match their hrefs, matching Kodi's HTTPDirectory parser.
 
 ## Install through Kodi's Add file source flow
 
 Do not download the installer in a separate browser. Use Kodi's own File Manager:
 
 1. Open **Settings → File manager → Add source**.
-2. Enter `https://greatcoder88.github.io/cineva-kodi-skin/` as the source location and name it `CINÉVA`.
+2. Enter `https://greatcoder88.github.io/cineva-kodi-skin/repository-site/` as the source location and name it `CINÉVA`.
 3. Open **Add-ons → Install from ZIP file → CINÉVA**.
-4. Select `repository.cineva-0.1.0.zip` at the source root.
+4. Select `repository.cineva-0.1.1.zip` at the source root.
 5. Open **Install from repository → CINÉVA Add-on Repository**.
 6. Open **Look and feel → Skin → CINÉVA** and install it. Kodi installs the Widget Helper dependency automatically.
 7. After installation, future feed refreshes provide normal Kodi add-on updates.
 
-The root source index exposes the repository installer directly. The `zips/` directory also contains browsable folders for the repository, skin and helper packages. The repository add-on itself reads `addons.xml`, `addons.xml.md5` and `zips/` from the same Pages base URL.
-
-If Kodi cannot browse the source, first confirm the Pages deployment has completed and that Pages is configured for the `gh-pages` branch and root folder. A blank custom-domain field is expected.
+The root source index exposes the repository installer directly. The `zips/` directory also contains browsable folders for the repository, skin and helper packages. The repository add-on reads `addons.xml`, `addons.xml.md5` and `zips/` from the same Pages base URL.
 
 ## Release discipline
 

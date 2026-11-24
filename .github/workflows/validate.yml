@@ -2,6 +2,8 @@ name: CINÉVA automated checks
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "repository-site/**"
   pull_request:
     branches: [main]
   workflow_dispatch:

@@ -11,8 +11,8 @@ from zipfile import ZIP_DEFLATED, ZipFile
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "repository-site"
 REPO_ID = "repository.cineva"
-REPO_VERSION = "0.1.0"
-FEED_BASE = "https://greatcoder88.github.io/cineva-kodi-skin"
+REPO_VERSION = "0.1.1"
+FEED_BASE = "https://greatcoder88.github.io/cineva-kodi-skin/repository-site"
 
 
 def addon_xml_from_zip(path: Path) -> tuple[str, bytes]:
