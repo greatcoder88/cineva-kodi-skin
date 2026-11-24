@@ -101,7 +101,7 @@ jobs:
           hero_meta = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Year]" in c.findtext("label", "")), None) if hero_group is not None else None
           hero_eyebrow = hero_group.find("./control[@id='9300']") if hero_group is not None else None
           hero_logo = hero_group.find("./control[@id='9190']") if hero_group is not None else None
-          if hero_group is None or hero_group.findtext("top") != "118" or hero_group.findtext("height") != "350" or hero_title is None or (hero_title.findtext("top"), hero_title.findtext("height"), hero_title.findtext("font"), hero_title.findtext("width"), hero_title.findtext("wrapmultiline"), hero_title.findtext("aligny")) != ("36", "82", "font20", "1200", "true", "center") or hero_meta is None or (hero_meta.findtext("top"), hero_meta.findtext("height"), hero_meta.findtext("font"), hero_meta.findtext("textcolor"), hero_meta.findtext("width")) != ("136", "28", "font10", "silver", "430") or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("206", "60", "font13") or hero_eyebrow is None or (hero_eyebrow.findtext("top"), hero_eyebrow.findtext("height"), hero_eyebrow.findtext("label"), hero_eyebrow.findtext("visible"), hero_eyebrow.findtext("font"), hero_eyebrow.findtext("textcolor")) != ("0", "24", "CONTINUE WATCHING", "String.Contains(Skin.String(Cineva.Widget1.Path),in_progress)", "font9", "FFE50914") or hero_logo is None or (hero_logo.findtext("top"), hero_logo.findtext("height"), hero_logo.findtext("width")) != ("36", "70", "900"):
+          if hero_group is None or hero_group.findtext("top") != "118" or hero_group.findtext("height") != "318" or hero_title is None or (hero_title.findtext("top"), hero_title.findtext("height"), hero_title.findtext("font"), hero_title.findtext("width"), hero_title.findtext("wrapmultiline"), hero_title.findtext("aligny")) != ("36", "82", "font20", "1200", "true", "center") or hero_meta is None or (hero_meta.findtext("top"), hero_meta.findtext("height"), hero_meta.findtext("font"), hero_meta.findtext("textcolor"), hero_meta.findtext("width")) != ("128", "28", "font10", "silver", "430") or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("194", "56", "font13") or hero_eyebrow is None or (hero_eyebrow.findtext("top"), hero_eyebrow.findtext("height"), hero_eyebrow.findtext("label"), hero_eyebrow.findtext("visible"), hero_eyebrow.findtext("font"), hero_eyebrow.findtext("textcolor")) != ("0", "24", "CONTINUE WATCHING", "String.Contains(Skin.String(Cineva.Widget1.Path),in_progress)", "font9", "FFE50914") or hero_logo is None or (hero_logo.findtext("top"), hero_logo.findtext("height"), hero_logo.findtext("width")) != ("36", "70", "900"):
             raise SystemExit("Home hero eyebrow, title/clearlogo, metadata and synopsis must occupy separate, title-safe vertical bands")
           if hero_title.findtext("visible") != "String.IsEmpty(Container(9001).ListItem.Art(clearlogo))" or hero_logo is None or (hero_logo.findtext("left"), hero_logo.findtext("top"), hero_logo.findtext("width"), hero_logo.findtext("height"), hero_logo.findtext("texture"), hero_logo.findtext("visible")) != ("0", "36", "900", "70", "$INFO[Container(9001).ListItem.Art(clearlogo)]", "!String.IsEmpty(Container(9001).ListItem.Art(clearlogo))") or hero_logo.find("aspectratio") is None or hero_logo.find("aspectratio").attrib != {"align": "left", "aligny": "center"} or hero_logo.findtext("aspectratio") != "keep":
             raise SystemExit("Home hero must prefer provider clearlogo artwork and retain a text-title fallback")
@@ -133,7 +133,7 @@ jobs:
                 if eyebrow is None or (eyebrow.findtext("top"), eyebrow.findtext("height"), eyebrow.findtext("label"), eyebrow.findtext("visible"), eyebrow.findtext("font"), eyebrow.findtext("textcolor")) != ("0", "24", expected_label, expected_visibility, "font9", "FFE50914"):
                     raise SystemExit(f"Home hero {container_id} is missing its source-aware {expected_label} eyebrow")
             buttons = group.findall("./control[@type='button']")
-            if len(buttons) != 2 or any(button.findtext("top") != "280" for button in buttons) or [(button.findtext("left"), button.findtext("width"), button.findtext("height")) for button in buttons] != [("0", "190", "54"), ("212", "220", "54")]:
+            if len(buttons) != 2 or any(button.findtext("top") != "260" for button in buttons) or [(button.findtext("left"), button.findtext("width"), button.findtext("height")) for button in buttons] != [("0", "190", "54"), ("212", "220", "54")]:
               raise SystemExit(f"Home hero {container_id} actions are not aligned beneath the synopsis")
             if metadata is None or metadata.findtext("label") != expected:
               raise SystemExit(f"Home hero {container_id} metadata leaves separators for empty fields")
@@ -142,12 +142,12 @@ jobs:
             rating_logo = group.find(f"./control[@id='{rating_id + 1}']")
             rating_text = group.find(f"./control[@id='{rating_id + 2}']")
             if (rating_bg is None or rating_bg.findtext("texture") != "rating-badge.png"
-                or (rating_bg.findtext("left"), rating_bg.findtext("top"), rating_bg.findtext("width"), rating_bg.findtext("height")) != ("0", "168", "148", "32")
+                or (rating_bg.findtext("left"), rating_bg.findtext("top"), rating_bg.findtext("width"), rating_bg.findtext("height")) != ("0", "158", "148", "32")
                 or rating_logo is None or rating_logo.findtext("texture") != "imdb-logo.png"
-                or (rating_logo.findtext("left"), rating_logo.findtext("top"), rating_logo.findtext("width"), rating_logo.findtext("height")) != ("8", "172", "48", "24")
+                or (rating_logo.findtext("left"), rating_logo.findtext("top"), rating_logo.findtext("width"), rating_logo.findtext("height")) != ("8", "162", "48", "24")
                 or rating_text is None or "ListItem.Rating" not in rating_text.findtext("label", "")
                 or "★" in rating_text.findtext("label", "")
-                or (rating_text.findtext("left"), rating_text.findtext("top"), rating_text.findtext("width"), rating_text.findtext("height")) != ("62", "168", "84", "32")):
+                or (rating_text.findtext("left"), rating_text.findtext("top"), rating_text.findtext("width"), rating_text.findtext("height")) != ("62", "158", "84", "32")):
               raise SystemExit(f"Home hero {container_id} must render an IMDb-branded score chip and separate rating value")
           rating_control_ids = [node.get("id") for node in home.iter()
                                 if node.get("id") in {str(value) for value in range(9340, 9352)}]
@@ -271,7 +271,7 @@ jobs:
           if overlay_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(overlay_data[16:20], "big"), int.from_bytes(overlay_data[20:24], "big")) != (1920, 440):
             raise SystemExit("Packaged hero contrast texture is missing or has the wrong dimensions")
           rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
-          if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("105", "474", "1710", "670") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "180"):
+          if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("105", "444", "1710", "670") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "180"):
             raise SystemExit("Home rails are missing their vertical scrolling viewport")
           lower_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118))
           lower_slide = rail_list.find("./animation[@effect='slide']") if rail_list is not None else None
@@ -317,13 +317,13 @@ jobs:
             heading = row_controls[0] if len(row_controls) == 3 else None
             row_accent = row_controls[1] if len(row_controls) == 3 else None
             shelf = row_controls[2] if len(row_controls) == 3 else None
-            if row_group is None or row_group.get("type") != "group" or row_group.get("id") != str(9060 + index) or row_group.findtext("height") != "508":
+            if row_group is None or row_group.get("type") != "group" or row_group.get("id") != str(9060 + index) or row_group.findtext("height") != "460":
               raise SystemExit(f"Home widget {index} is not a single scrollable row group")
             if heading is None or heading.get("type") != "label" or heading.findtext("label") != f"$INFO[Skin.String(Cineva.Widget{index}.Name)]" or (heading.findtext("top"), heading.findtext("height")) != ("0", "38") or heading.findtext("font") != "font18":
               raise SystemExit(f"Home widget {index} heading is missing from its row group")
             if row_accent is None or row_accent.get("type") != "image" or (row_accent.findtext("left"), row_accent.findtext("top"), row_accent.findtext("width"), row_accent.findtext("height")) != ("0", "40", "58", "3") or row_accent.findtext("texture") != "focus-bar.png" or row_accent.findtext("visible") != f"Control.HasFocus({9000 + index})":
               raise SystemExit(f"Home widget {index} is missing its active-rail accent")
-            if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("52", "448") or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
+            if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("52", "408") or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
               raise SystemExit(f"Home widget {index} shelf geometry or upward focus route is incorrect")
             later_focus_ids = [control_id for later_index in range(index + 1, 5)
                                for control_id in (9000 + later_index, 9111 + (later_index - 1) * 2, 9112 + (later_index - 1) * 2)]
@@ -338,7 +338,7 @@ jobs:
             if shelf.findtext("ondown") != expected_down or row_group.findtext("ondown") != expected_down:
               raise SystemExit(f"Home widget {index} cannot navigate down to the next rail")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
-              if (layout.get("width"), layout.get("height")) != ("285", "448"):
+              if (layout.get("width"), layout.get("height")) != ("285", "408"):
                 raise SystemExit(f"Home widget {index} poster card geometry is not the 6-up layout")
           if controls.find("./control[@id='9010']") is not None:
             raise SystemExit("Obstructive floating More Widgets button is still present")
@@ -364,27 +364,27 @@ jobs:
               raise SystemExit(f"Home row {row_index} must resolve RESUME for in-progress sources and PLAY otherwise")
           poster = includes.find("./include[@name='CinevaPosterItem']")
           normal_image = poster.find("./control[@type='image']") if poster is not None else None
-          if poster is None or normal_image is None or (normal_image.findtext("left"), normal_image.findtext("top"), normal_image.findtext("width"), normal_image.findtext("height")) != ("12", "0", "261", "348") or poster.findtext("./control[@type='textbox']/width") != "285" or poster.findtext("./control[@type='textbox']/top") != "350" or poster.findtext("./control[@type='textbox']/height") != "64" or poster.find("./control[@type='textbox']/wrap") is not None or poster.findtext("./control[@type='textbox']/font") != "font10" or poster.findtext("./control[@type='textbox']/aligny") != "center":
+          if poster is None or normal_image is None or (normal_image.findtext("left"), normal_image.findtext("top"), normal_image.findtext("width"), normal_image.findtext("height")) != ("22", "0", "240", "320") or poster.findtext("./control[@type='textbox']/width") != "285" or poster.findtext("./control[@type='textbox']/top") != "322" or poster.findtext("./control[@type='textbox']/height") != "56" or poster.find("./control[@type='textbox']/wrap") is not None or poster.findtext("./control[@type='textbox']/font") != "font10" or poster.findtext("./control[@type='textbox']/aligny") != "center":
             raise SystemExit("Home poster and title layout is missing its enlarged 3:4 artwork or readable title baseline")
           focused_poster = includes.find("./include[@name='CinevaFocusedPosterItem9001']")
           focused_title = next((label for label in focused_poster.findall("./control[@type='textbox']") if label.findtext("textcolor") == "white"), None) if focused_poster is not None else None
-          if focused_title is None or focused_title.findtext("font") != "font10" or focused_title.findtext("top") != "362" or focused_title.findtext("height") != "64" or focused_title.findtext("aligny") != "center" or focused_title.find("wrap") is not None :
+          if focused_title is None or focused_title.findtext("font") != "font10" or focused_title.findtext("top") != "340" or focused_title.findtext("height") != "56" or focused_title.findtext("aligny") != "center" or focused_title.find("wrap") is not None :
             raise SystemExit("Focused poster titles must sit below the focused artwork without overlap")
           focused_image = next((node for node in focused_poster.findall("./control[@type='image']") if node.findtext("visible") == "Control.HasFocus(9001)"), None) if focused_poster is not None else None
           focused_zoom = focused_image.find("./animation[@effect='zoom']") if focused_image is not None else None
-          if focused_image is None or (focused_image.findtext("left"), focused_image.findtext("top"), focused_image.findtext("width"), focused_image.findtext("height")) != ("9", "-3", "267", "355") or focused_zoom is None or (focused_zoom.get("start"), focused_zoom.get("end"), focused_zoom.get("time"), focused_zoom.get("tween"), focused_zoom.get("easing")) != ("100", "104", "160", "sine", "out"):
+          if focused_image is None or (focused_image.findtext("left"), focused_image.findtext("top"), focused_image.findtext("width"), focused_image.findtext("height")) != ("19", "-3", "246", "327") or focused_zoom is None or (focused_zoom.get("start"), focused_zoom.get("end"), focused_zoom.get("time"), focused_zoom.get("tween"), focused_zoom.get("easing")) != ("100", "104", "160", "sine", "out"):
             raise SystemExit("Focused poster artwork must use the title-safe 106% selection zoom")
           normal_progress = poster.find("./control[@type='progress']") if poster is not None else None
-          if normal_progress is None or (normal_progress.findtext("left"), normal_progress.findtext("top"), normal_progress.findtext("width"), normal_progress.findtext("height"), normal_progress.findtext("visible"), normal_progress.findtext("info"), normal_progress.findtext("texturebg")) != ("18", "337", "249", "5", "ListItem.IsResumable", "ListItem.PercentPlayed", "resume-track.png"):
+          if normal_progress is None or (normal_progress.findtext("left"), normal_progress.findtext("top"), normal_progress.findtext("width"), normal_progress.findtext("height"), normal_progress.findtext("visible"), normal_progress.findtext("info"), normal_progress.findtext("texturebg")) != ("28", "309", "228", "5", "ListItem.IsResumable", "ListItem.PercentPlayed", "resume-track.png"):
             raise SystemExit("Normal poster cards must show a correctly aligned resumable progress strip on a charcoal track")
           focus_progresses = focused_poster.findall("./control[@type='progress']") if focused_poster is not None else []
           if len(focus_progresses) != 2 or {node.findtext("visible") for node in focus_progresses} != {"!Control.HasFocus(9001) + ListItem.IsResumable", "Control.HasFocus(9001) + ListItem.IsResumable"} or any(node.findtext("texturebg") != "resume-track.png" for node in focus_progresses):
             raise SystemExit("Focused poster template must retain one charcoal-track progress strip in both focus states")
-          if any((node.findtext("left"), node.findtext("top"), node.findtext("width"), node.findtext("height")) != (("18", "337", "249", "5") if node.findtext("visible").startswith("!") else ("18", "345", "249", "5")) for node in focus_progresses):
+          if any((node.findtext("left"), node.findtext("top"), node.findtext("width"), node.findtext("height")) != (("28", "309", "228", "5") if node.findtext("visible").startswith("!") else ("28", "317", "228", "5")) for node in focus_progresses):
             raise SystemExit("Normal and focused poster progress strips must align to their respective artwork baselines")
           row_focus = ET.parse("skin.cineva/xml/Includes.xml").getroot().find("./include[@name='CinevaFocusedPosterItem9001']")
           focus_accent = next((node for node in row_focus.findall("./control[@type='image']") if node.findtext("texture") == "focus-bar.png"), None) if row_focus is not None else None
-          if focus_accent is None or (focus_accent.findtext("left"), focus_accent.findtext("top"), focus_accent.findtext("width"), focus_accent.findtext("height")) != ("101", "433", "84", "4"):
+          if focus_accent is None or (focus_accent.findtext("left"), focus_accent.findtext("top"), focus_accent.findtext("width"), focus_accent.findtext("height")) != ("101", "399", "84", "4"):
             raise SystemExit("Focused poster selection accent must be a short centered underline")
           focus_border = Path("skin.cineva/media/poster-focus.png").read_bytes()
           if focus_border[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(focus_border[16:20], "big"), int.from_bytes(focus_border[20:24], "big")) != (8, 8):
@@ -931,7 +931,7 @@ jobs:
             # JSON-RPC can focus an invisible Kodi control. Verify the first-row
             # PLAY surface is actually painted in the framebuffer, as well as focused.
             first_play = subprocess.run(
-              ["convert","artifacts/cineva-home-actions.png","-crop","190x54+60+398",
+              ["convert","artifacts/cineva-home-actions.png","-crop","190x54+60+378",
                "-fx","((r>0.7)&&(g<0.25)&&(b<0.25))?1:0","-format","%[fx:mean]","info:"],
               text=True,capture_output=True,check=True
             )
@@ -1101,7 +1101,7 @@ jobs:
                 # Measure its actual 190x54 Home geometry, not the old white button.
                 signal = subprocess.run([
                   "convert", "artifacts/cineva-home-row2-focus.png",
-                  "-crop", "190x54+60+398",
+                  "-crop", "190x54+60+378",
                   "-fx", "((r>0.55)&&(g<0.35)&&(b<0.35))?1:0",
                   "-format", "%[fx:mean]", "info:"
                 ], text=True, capture_output=True, check=True)
