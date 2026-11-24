@@ -520,10 +520,10 @@ def update_xml(data, path):
                 if labels:
                     # Title first, metadata second: separate vertical baselines.
                     set_child_text(labels[0], "top", 32)
-                    set_child_text(labels[0], "height", 96)
+                    set_child_text(labels[0], "height", 82)
                     set_child_text(labels[0], "textcolor", "white")
                     set_child_text(labels[0], "width", 1200)
-                    set_child_text(labels[0], "font", "font22")
+                    set_child_text(labels[0], "font", "font20")
                     set_child_text(labels[0], "wrapmultiline", "true")
                     set_child_text(labels[0], "aligny", "center")
                     set_child_text(labels[0], "align", "left")
@@ -539,14 +539,14 @@ def update_xml(data, path):
                         f"$INFO[Container({container_id}).ListItem.Rating,  •  ]"
                     )
                     set_child_text(labels[1], "label", metadata)
-                    set_child_text(labels[1], "top", 136)
-                    set_child_text(labels[1], "height", 32)
+                    set_child_text(labels[1], "top", 128)
+                    set_child_text(labels[1], "height", 28)
                     set_child_text(labels[1], "font", "font10")
                     set_child_text(labels[1], "textcolor", "silver")
                 for child in group.findall("control"):
                     if child.get("type") == "textbox":
-                        set_child_text(child, "top", 172)
-                        set_child_text(child, "height", 60)
+                        set_child_text(child, "top", 164)
+                        set_child_text(child, "height", 56)
                         set_child_text(child, "width", 900)
                         set_child_text(child, "font", "font13")
                         set_child_text(child, "textcolor", "white")
@@ -589,7 +589,7 @@ def update_xml(data, path):
                 for duplicate in hero_groups:
                     if duplicate is not hero_group:
                         controls.remove(duplicate)
-            set_child_text(hero_group, "height", 330)
+            set_child_text(hero_group, "height", 320)
             # Add a restrained editorial eyebrow above the dynamic title. It
             # gives every selected shelf item a clear hierarchy without
             # hard-coding a movie/show name or implying platform exclusivity.
@@ -639,7 +639,7 @@ def update_xml(data, path):
                 {"type": "image", "id": str(9190 + (container_id - 9001))}
             )
             for tag, value in (
-                ("left", 0), ("top", 32), ("width", 1220), ("height", 84),
+                ("left", 0), ("top", 36), ("width", 900), ("height", 70),
                 ("texture", f"$INFO[{clearlogo_info}]"),
                 ("visible", f"!String.IsEmpty({clearlogo_info})"),
             ):
@@ -648,13 +648,13 @@ def update_xml(data, path):
                 clearlogo, "aspectratio", {"align": "left", "aligny": "center"}
             ).text = "keep"
             for button_id, label, left, width in (
-                (play_id, f"$VAR[CinevaHeroAction{row_index}]", 0, 190),
-                (info_id, "MORE INFO", 214, 236)
+                (play_id, f"$VAR[CinevaHeroAction{row_index}]", 0, 176),
+                (info_id, "MORE INFO", 196, 210)
             ):
                 button = ET.SubElement(hero_group, "control",
                                        {"type": "button", "id": str(button_id)})
                 for tag, value in (
-                    ("left", left), ("top", 246), ("width", width), ("height", 54),
+                    ("left", left), ("top", 238), ("width", width), ("height", 50),
                     ("label", label), ("font", "font10"),
                     ("onup", f"SetFocus({nav_target})"),
                     ("ondown", f"SetFocus({container_id})"),
@@ -955,7 +955,7 @@ def update_xml(data, path):
         # the title below it. The 104% control geometry plus a 104% focus
         # animation gives a balanced ~108% total scale instead of double-enlarging
         # an already oversized 108% control.
-        for tag, value in (("left", 7), ("top", -6), ("width", 271), ("height", 361)):
+        for tag, value in (("left", 9), ("top", -3), ("width", 267), ("height", 355)):
             set_child_text(focused_image, tag, value)
         set_child_text(focused_image, "texture", "$INFO[ListItem.Art(poster)]")
         focused_texture = focused_image.find("texture")
