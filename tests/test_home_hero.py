@@ -170,7 +170,7 @@ class HomeHeroActionTests(unittest.TestCase):
         self.assertGreaterEqual(alpha_at(1800, 375), 120, "outer-right artwork must be visibly subdued")
         self.assertGreaterEqual(alpha_at(1919, 375), 135, "outer edge must receive the full cinematic vignette")
 
-    def test_home_uses_larger_native_2_3_posters_and_preserves_next_shelf_preview(self):
+    def test_home_uses_balanced_native_2_3_posters_and_expands_next_shelf_preview(self):
         with ZipFile(ARCHIVE) as archive:
             home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
             includes = ET.fromstring(archive.read("skin.cineva/xml/Includes.xml"))
@@ -180,20 +180,20 @@ class HomeHeroActionTests(unittest.TestCase):
                 (rail.findtext("left"), rail.findtext("top"), rail.findtext("width"), rail.findtext("height")),
                 ("105", "444", "1710", "670"),
             )
-            first_row_height = 516
+            first_row_height = 482
             visible_next_shelf_preview = (
                 1080 - int(rail.findtext("top")) - first_row_height - int(rail.findtext("itemgap"))
             )
-            self.assertEqual(visible_next_shelf_preview, 108)
+            self.assertEqual(visible_next_shelf_preview, 142)
             for row in range(1, 5):
                 group = rail.find(f"./control[@type='group'][@id='{9060 + row}']")
                 shelf = group.find(f"./control[@type='fixedlist'][@id='{9000 + row}']")
-                self.assertEqual(group.findtext("height"), "516")
-                self.assertEqual((shelf.findtext("top"), shelf.findtext("height")), ("44", "464"))
+                self.assertEqual(group.findtext("height"), "482")
+                self.assertEqual((shelf.findtext("top"), shelf.findtext("height")), ("44", "430"))
                 self.assertEqual(
                     [(node.get("width"), node.get("height"))
                      for node in shelf.findall("itemlayout") + shelf.findall("focusedlayout")],
-                    [("285", "464"), ("285", "464")],
+                    [("285", "430"), ("285", "430")],
                 )
             poster = includes.find("./include[@name='CinevaPosterItem']")
             image = poster.find("./control[@type='image']")
@@ -201,15 +201,15 @@ class HomeHeroActionTests(unittest.TestCase):
             progress = poster.find("./control[@type='progress']")
             self.assertEqual(
                 (image.findtext("left"), image.findtext("top"), image.findtext("width"), image.findtext("height")),
-                ("22", "0", "240", "360"),
+                ("32", "0", "220", "330"),
             )
             self.assertEqual(
                 (title.findtext("top"), title.findtext("height"), title.findtext("width")),
-                ("362", "64", "285"),
+                ("332", "64", "285"),
             )
             self.assertEqual(
                 (progress.findtext("left"), progress.findtext("top"), progress.findtext("width"), progress.findtext("height")),
-                ("28", "349", "228", "5"),
+                ("38", "319", "208", "5"),
             )
             focused = includes.find("./include[@name='CinevaFocusedPosterItem9001']")
             focused_image = next(
@@ -227,16 +227,16 @@ class HomeHeroActionTests(unittest.TestCase):
             self.assertEqual(
                 (focused_image.findtext("left"), focused_image.findtext("top"),
                  focused_image.findtext("width"), focused_image.findtext("height")),
-                ("19", "-3", "246", "369"),
+                ("29", "-3", "226", "339"),
             )
             self.assertEqual(
                 (focused_title.findtext("top"), focused_title.findtext("height")),
-                ("376", "64"),
+                ("344", "64"),
             )
             self.assertEqual(
                 (focus_accent.findtext("left"), focus_accent.findtext("top"),
                  focus_accent.findtext("width"), focus_accent.findtext("height")),
-                ("101", "452", "84", "4"),
+                ("104", "418", "76", "4"),
             )
 
 
