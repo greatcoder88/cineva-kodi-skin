@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.3.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.4.zip"
 
 
 class HomeHeroActionTests(unittest.TestCase):
