@@ -93,20 +93,16 @@ jobs:
           if len(decoded) != (1 + width * 4) * height:
               raise SystemExit("Poster fallback PNG pixel payload has an invalid length")
           stride = 1 + width * 4
-          def crimson_pixels(x0, x1):
-              return sum(
-                  decoded[y * stride + 1 + x * 4] > 200
-                  and decoded[y * stride + 1 + x * 4 + 1] < 40
-                  and decoded[y * stride + 1 + x * 4 + 2] < 40
-                  for y in range(210, 303) for x in range(x0, x1)
-              )
-          left_play_pixels = crimson_pixels(128, 153)
-          right_play_pixels = crimson_pixels(190, 215)
-          if left_play_pixels <= right_play_pixels * 2:
-              raise SystemExit(
-                  "Poster fallback play glyph must point right (broad left edge, tapered right tip)"
-              )
-          print("Normal and focused Home cards package the valid 342x513 fallback with a right-facing play glyph.")
+          # The fallback is intentionally cinematic abstract artwork, not a
+          # play-button placeholder. Confirm it has real tonal variation and
+          # a non-flat composition after decoding the PNG payload.
+          samples = [
+              decoded[y * stride + 1 + x * 4: y * stride + 1 + x * 4 + 3]
+              for y, x in ((40, 40), (140, 240), (250, 170), (390, 80), (450, 270))
+          ]
+          if len({tuple(pixel) for pixel in samples}) < 4:
+              raise SystemExit("Poster fallback artwork is too flat; expected cinematic tonal variation")
+          print("Normal and focused Home cards package valid 342x513 cinematic poster fallback artwork.")
           PY
 
       - name: Python syntax
