@@ -303,6 +303,14 @@ def set_child_text(parent, tag, value):
     node.text = str(value)
 
 
+def remove_missing_no_focus_textures(root):
+    """Remove dash placeholders that Kodi interprets as missing texture files."""
+    for node in root.findall(".//control[@type='button']"):
+        texture = node.find("texturenofocus")
+        if texture is not None and (texture.text or "").strip() == "-":
+            node.remove(texture)
+
+
 def update_xml(data, path):
     root = ET.fromstring(data)
     if path == "skin.cineva/addon.xml":
@@ -1158,10 +1166,7 @@ def update_xml(data, path):
         # Kodi treats '-' as a literal texture filename and logs a missing
         # texture for every transparent navigation button. Omit the no-focus
         # texture entirely; Kodi renders the button text without a background.
-        for node in root.findall(".//control[@type='button']"):
-            texture = node.find("texturenofocus")
-            if texture is not None and (texture.text or "").strip() == "-":
-                node.remove(texture)
+        remove_missing_no_focus_textures(root)
     elif path == "skin.cineva/xml/DialogVideoInfo.xml":
         # Full-bleed detail composition with readable copy and a clear primary action.
         for node in root.findall("./controls/control"):
