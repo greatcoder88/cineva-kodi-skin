@@ -24,6 +24,8 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import hashlib
+          from html.parser import HTMLParser
+          from zipfile import ZipFile
           import xml.etree.ElementTree as ET
           root = Path("repository-site")
           feed = (root / "addons.xml").read_bytes()
@@ -37,11 +39,63 @@ jobs:
               if not list((root / "zips" / addon_id).glob(f"{addon_id}-*.zip")):
                   raise SystemExit(f"Missing installable package for {addon_id}")
           repo_zip = root / "zips/repository.cineva/repository.cineva-0.1.0.zip"
-          if not repo_zip.is_file():
-              raise SystemExit("Missing repository installer ZIP")
-          print("Feed, checksum, skin, helper and repository installer validated.")
+          root_zip = root / repo_zip.name
+          if not repo_zip.is_file() or not root_zip.is_file():
+              raise SystemExit("Missing repository installer ZIP at the source root or package directory")
+          if root_zip.read_bytes() != repo_zip.read_bytes():
+              raise SystemExit("Root file-source installer is not identical to the repository package ZIP")
+
+          class Anchors(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.items = []
+                  self.href = None
+                  self.text = []
+              def handle_starttag(self, tag, attrs):
+                  if tag == "a":
+                      self.href = dict(attrs).get("href")
+                      self.text = []
+              def handle_data(self, data):
+                  if self.href is not None:
+                      self.text.append(data)
+              def handle_endtag(self, tag):
+                  if tag == "a" and self.href is not None:
+                      self.items.append((self.href, "".join(self.text).strip()))
+                      self.href = None
+                      self.text = []
+
+          def links(path):
+              parser = Anchors()
+              parser.feed(path.read_text(encoding="utf-8"))
+              return set(parser.items)
+
+          expected_root = {
+              ("repository.cineva-0.1.0.zip", "repository.cineva-0.1.0.zip"),
+              ("zips/", "zips/"),
+          }
+          if not expected_root.issubset(links(root / "index.html")):
+              raise SystemExit("Root index must expose the installer ZIP and zips/ folder as Kodi-browsable links")
+          expected_packages = {(f"{addon_id}/", f"{addon_id}/") for addon_id in
+                               ("repository.cineva", "skin.cineva", "script.cineva.widgets")}
+          if not expected_packages.issubset(links(root / "zips/index.html")):
+              raise SystemExit("zips/index.html must expose all add-on package folders")
+          for addon_id in ("repository.cineva", "skin.cineva", "script.cineva.widgets"):
+              package_dir = root / "zips" / addon_id
+              package_files = sorted(package_dir.glob("*.zip"))
+              package_links = links(package_dir / "index.html")
+              if not package_files or any((p.name, p.name) not in package_links for p in package_files):
+                  raise SystemExit(f"{addon_id} index does not expose every installable ZIP")
+          with ZipFile(repo_zip) as archive:
+              repo_manifest = ET.fromstring(archive.read("repository.cineva/addon.xml"))
+          repo_extension = repo_manifest.find("./extension[@point='xbmc.addon.repository']")
+          base = "https://greatcoder88.github.io/cineva-kodi-skin"
+          if repo_extension is None or (
+              repo_extension.get("info"), repo_extension.get("checksum"), repo_extension.get("datadir")
+          ) != (f"{base}/addons.xml", f"{base}/addons.xml.md5", f"{base}/zips/"):
+              raise SystemExit("Repository installer does not point at the published Pages feed")
+          print("Feed, checksum, packages, root installer and Kodi-browsable directory indexes validated.")
           PY
-      - name: Publish feed to dedicated repository branch
+      - name: Publish browsable file-source feed to GitHub Pages branch
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
