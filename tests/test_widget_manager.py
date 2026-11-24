@@ -29,7 +29,8 @@ class FakeVFS:
         def close(self): pass
 
 class FakeDialog:
-    def select(self, *args, **kwargs): return -1
+    selection = -1
+    def select(self, *args, **kwargs): return self.selection
     def ok(self, *args, **kwargs): pass
     def input(self, *args, **kwargs): return ""
     def yesno(self, *args, **kwargs): return False
@@ -119,6 +120,23 @@ class KodiManagerTests(unittest.TestCase):
         self.assertTrue(any('Cineva.Widget1.Path,"")' in command for command in self.builtins))
         self.assertTrue(any('Cineva.MovieWidget1.Path,"")' in command for command in self.builtins))
         self.assertTrue(any('Cineva.ShowWidget1.Path,"")' in command for command in self.builtins))
+
+    def test_current_slot_menu_entry_keeps_existing_widget(self):
+        manager = self.module.WidgetManager()
+        registry = manager.load()
+        original = dict(registry["home"][0])
+        manager.dialog.selection = 0
+        manager.configure_slot(registry, "home", 1)
+        self.assertEqual(manager.load()["home"][0], original)
+        self.assertEqual(self.builtins, [])
+
+    def test_malformed_and_out_of_range_slot_arguments_are_ignored(self):
+        manager = self.module.WidgetManager()
+        for slot in ("oops", "0", "5", "-1"):
+            manager.run(action="configure", screen="home", slot=slot)
+            manager.run(action="clear", screen="home", slot=slot)
+        self.assertEqual(len(manager.load()["home"]), 4)
+        self.assertEqual(self.builtins, [])
 
     def test_invalid_sources_are_filtered(self):
         FakeVFS.files["special://profile/addon_data/script.cineva.widgets/widget_registry.json"] = json.dumps({"home":[
