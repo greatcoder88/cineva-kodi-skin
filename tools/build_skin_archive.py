@@ -700,7 +700,7 @@ def update_xml(data, path):
                         f"$INFO[Container({container_id}).ListItem.Genre,  •  ]"
                     )
                     set_child_text(labels[1], "label", metadata)
-                    set_child_text(labels[1], "top", 136)
+                    set_child_text(labels[1], "top", 128)
                     set_child_text(labels[1], "height", 28)
                     set_child_text(labels[1], "font", "font10")
                     set_child_text(labels[1], "textcolor", "silver")
@@ -712,18 +712,18 @@ def update_xml(data, path):
                                 or "ListItem.Rating" in old_rating.findtext("label", "")):
                             group.remove(old_rating)
                     rating_bg = ET.SubElement(group, "control", {"type": "image", "id": str(rating_id)})
-                    for tag, value in (("left", 0), ("top", 168), ("width", 148), ("height", 32),
+                    for tag, value in (("left", 0), ("top", 158), ("width", 148), ("height", 32),
                                        ("texture", "rating-badge.png")):
                         set_child_text(rating_bg, tag, value)
                     set_child_text(rating_bg, "visible",
                                    f"!String.IsEmpty(Container({9000 + row_index}).ListItem.Rating)")
                     rating_logo = ET.SubElement(group, "control", {"type": "image", "id": str(rating_id + 1)})
-                    for tag, value in (("left", 8), ("top", 172), ("width", 48), ("height", 24),
+                    for tag, value in (("left", 8), ("top", 162), ("width", 48), ("height", 24),
                                        ("texture", "imdb-logo.png"),
                                        ("visible", f"!String.IsEmpty(Container({9000 + row_index}).ListItem.Rating)")):
                         set_child_text(rating_logo, tag, value)
                     rating_text = ET.SubElement(group, "control", {"type": "label", "id": str(rating_id + 2)})
-                    for tag, value in (("left", 62), ("top", 168), ("width", 84), ("height", 32),
+                    for tag, value in (("left", 62), ("top", 158), ("width", 84), ("height", 32),
                                        ("font", "font10"), ("textcolor", "FFFFD36A"),
                                        ("label", f"$INFO[Container({9000 + row_index}).ListItem.Rating]"),
                                        ("align", "left"), ("aligny", "center"),
@@ -731,8 +731,8 @@ def update_xml(data, path):
                         set_child_text(rating_text, tag, value)
                 for child in group.findall("control"):
                     if child.get("type") == "textbox":
-                        set_child_text(child, "top", 206)
-                        set_child_text(child, "height", 60)
+                        set_child_text(child, "top", 194)
+                        set_child_text(child, "height", 56)
                         set_child_text(child, "width", 900)
                         set_child_text(child, "font", "font13")
                         set_child_text(child, "textcolor", "white")
@@ -775,7 +775,7 @@ def update_xml(data, path):
                 for duplicate in hero_groups:
                     if duplicate is not hero_group:
                         controls.remove(duplicate)
-            set_child_text(hero_group, "height", 350)
+            set_child_text(hero_group, "height", 318)
             # Add a restrained editorial eyebrow above the dynamic title. It
             # gives every selected shelf item a clear hierarchy without
             # hard-coding a movie/show name or implying platform exclusivity.
@@ -842,7 +842,7 @@ def update_xml(data, path):
                 button = ET.SubElement(hero_group, "control",
                                        {"type": "button", "id": str(button_id)})
                 for tag, value in (
-                    ("left", left), ("top", 280), ("width", width), ("height", 54),
+                    ("left", left), ("top", 260), ("width", width), ("height", 54),
                     ("label", label), ("font", "font10"),
                     ("onup", f"SetFocus({nav_target})"),
                     ("ondown", f"SetFocus({container_id})"),
@@ -888,7 +888,7 @@ def update_xml(data, path):
         # Each row is a single grouplist child so its non-focusable heading cannot
         # intercept Up from the nested fixedlist before the shelf's explicit route.
         rail_list = ET.Element("control", {"type": "grouplist", "id": "9050"})
-        for tag, value in (("left", 105), ("top", 474), ("width", 1710), ("height", 670)):
+        for tag, value in (("left", 105), ("top", 444), ("width", 1710), ("height", 670)):
             set_child_text(rail_list, tag, value)
         set_child_text(rail_list, "orientation", "vertical")
         set_child_text(rail_list, "itemgap", 12)
@@ -920,7 +920,7 @@ def update_xml(data, path):
             controls.remove(heading)
             controls.remove(shelf)
             row_group = ET.Element("control", {"type": "group", "id": str(9060 + index)})
-            for tag, value in (("left", 0), ("top", 0), ("width", 1710), ("height", 508)):
+            for tag, value in (("left", 0), ("top", 0), ("width", 1710), ("height", 460)):
                 set_child_text(row_group, tag, value)
             play_id = 9111 + (index - 1) * 2
             next_target = 9000 + index + 1 if index < 4 else 1001
@@ -935,13 +935,13 @@ def update_xml(data, path):
             set_child_text(shelf, "left", 0)
             set_child_text(shelf, "top", 52)
             set_child_text(shelf, "width", 1710)
-            set_child_text(shelf, "height", 448)
+            set_child_text(shelf, "height", 408)
             set_child_text(shelf, "itemgap", 14)
             set_child_text(shelf, "onup", f"SetFocus({play_id})")
             set_child_text(shelf, "ondown", f"SetFocus({next_target})")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
                 layout.set("width", "285")
-                layout.set("height", "448")
+                layout.set("height", "408")
             focused_layout = shelf.find("./focusedlayout")
             focused_include = focused_layout.find("include") if focused_layout is not None else None
             if focused_include is not None:
@@ -1111,7 +1111,7 @@ def update_xml(data, path):
         # Textboxes wrap naturally inside the same fixed 48px caption area.
         normal_label.set("type", "textbox")
         focused_label.set("type", "textbox")
-        for tag, value in (("left", 12), ("top", 0), ("width", 261), ("height", 348)):
+        for tag, value in (("left", 22), ("top", 0), ("width", 240), ("height", 320)):
             set_child_text(normal_image, tag, value)
         # Use the semantic poster key for every shelf state. Providers often map
         # thumb to landscape fanart, which makes inactive cards turn into short,
@@ -1121,7 +1121,7 @@ def update_xml(data, path):
         if normal_texture is None:
             raise SystemExit("Includes.xml normal poster image has no texture")
         normal_texture.set("fallback", "poster-placeholder.png")
-        for tag, value in (("left", 0), ("top", 350), ("width", 285), ("height", 64), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
+        for tag, value in (("left", 0), ("top", 322), ("width", 285), ("height", 56), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
             set_child_text(normal_label, tag, value)
         stale_visibility = normal_label.find("visible")
         if stale_visibility is not None:
@@ -1143,7 +1143,7 @@ def update_xml(data, path):
         if normal_progress is None:
             normal_progress = ET.fromstring(ET.tostring(progress, encoding="unicode"))
             normal.append(normal_progress)
-        for tag, value in (("left", 18), ("top", 337), ("width", 249), ("height", 5)):
+        for tag, value in (("left", 28), ("top", 309), ("width", 228), ("height", 5)):
             set_child_text(normal_progress, tag, value)
         set_child_text(normal_progress, "info", "ListItem.PercentPlayed")
         set_child_text(normal_progress, "visible", "ListItem.IsResumable")
@@ -1154,7 +1154,7 @@ def update_xml(data, path):
         # the title below it. The 104% control geometry plus a 104% focus
         # animation gives a balanced ~108% total scale instead of double-enlarging
         # an already oversized 108% control.
-        for tag, value in (("left", 9), ("top", -3), ("width", 267), ("height", 355)):
+        for tag, value in (("left", 19), ("top", -3), ("width", 246), ("height", 327)):
             set_child_text(focused_image, tag, value)
         set_child_text(focused_image, "texture", "$INFO[ListItem.Art(poster)]")
         focused_texture = focused_image.find("texture")
@@ -1178,7 +1178,7 @@ def update_xml(data, path):
             focus_animation.set("tween", "sine")
             focus_animation.set("easing", "out")
         focus_animation.text = "Focus"
-        for tag, value in (("left", 18), ("width", 249), ("top", 345), ("height", 5)):
+        for tag, value in (("left", 28), ("width", 228), ("top", 317), ("height", 5)):
             set_child_text(progress, tag, value)
         if focused_label is not None and focused_label in list(focused):
             focused.remove(focused_label)
@@ -1202,8 +1202,8 @@ def update_xml(data, path):
             set_child_text(active_image, "visible", f"Control.HasFocus({container_id})")
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
             set_child_text(fallback_progress, "visible", f"!Control.HasFocus({container_id}) + ListItem.IsResumable")
-            # Reserve a 64px caption area for two full lines at TV distance; row and item geometry below keep it clear of the next shelf.
-            for tag, value in (("left", 0), ("top", 362), ("width", 285), ("height", 64), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "white")):
+            # Reserve a 56px caption area for two lines at TV distance; the compact rail geometry reveals the next shelf preview.
+            for tag, value in (("left", 0), ("top", 340), ("width", 285), ("height", 56), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
             stale_wrap = active_label.find("wrap")
             if stale_wrap is not None:
@@ -1214,7 +1214,7 @@ def update_xml(data, path):
             set_child_text(active_label, "visible", f"Control.HasFocus({container_id})")
             set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
             focus_accent = ET.Element("control", {"type": "image"})
-            for tag, value in (("left", 101), ("top", 433), ("width", 84), ("height", 4)):
+            for tag, value in (("left", 101), ("top", 399), ("width", 84), ("height", 4)):
                 set_child_text(focus_accent, tag, value)
             set_child_text(focus_accent, "texture", "focus-bar.png")
             set_child_text(focus_accent, "visible", f"Control.HasFocus({container_id})")
