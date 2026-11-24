@@ -469,7 +469,7 @@ def update_xml(data, path):
             controls.remove(heading)
             controls.remove(shelf)
             row_group = ET.Element("control", {"type": "group", "id": str(9060 + index)})
-            for tag, value in (("left", 0), ("top", 0), ("width", 1710), ("height", 480)):
+            for tag, value in (("left", 0), ("top", 0), ("width", 1710), ("height", 490)):
                 set_child_text(row_group, tag, value)
             play_id = 9111 + (index - 1) * 2
             next_target = 9000 + index + 1 if index < 4 else 1001
@@ -484,13 +484,13 @@ def update_xml(data, path):
             set_child_text(shelf, "left", 0)
             set_child_text(shelf, "top", 52)
             set_child_text(shelf, "width", 1710)
-            set_child_text(shelf, "height", 420)
+            set_child_text(shelf, "height", 430)
             set_child_text(shelf, "itemgap", 14)
             set_child_text(shelf, "onup", f"SetFocus({play_id})")
             set_child_text(shelf, "ondown", f"SetFocus({next_target})")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
                 layout.set("width", "285")
-                layout.set("height", "420")
+                layout.set("height", "430")
             focused_layout = shelf.find("./focusedlayout")
             focused_include = focused_layout.find("include") if focused_layout is not None else None
             if focused_include is not None:
@@ -620,7 +620,7 @@ def update_xml(data, path):
         # thumb to landscape fanart, which makes inactive cards turn into short,
         # cropped strips while the selected row still appears portrait.
         set_child_text(normal_image, "texture", "$INFO[ListItem.Art(poster)]")
-        for tag, value in (("left", 0), ("top", 350), ("width", 285), ("height", 46), ("align", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
+        for tag, value in (("left", 0), ("top", 350), ("width", 285), ("height", 48), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
             set_child_text(normal_label, tag, value)
         stale_visibility = normal_label.find("visible")
         if stale_visibility is not None:
@@ -683,8 +683,8 @@ def update_xml(data, path):
             set_child_text(active_image, "visible", f"Control.HasFocus({container_id})")
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
             set_child_text(fallback_progress, "visible", f"!Control.HasFocus({container_id}) + ListItem.IsResumable")
-            # Reserve enough vertical room for long titles that wrap to two lines.
-            for tag, value in (("left", 0), ("top", 370), ("width", 285), ("height", 42), ("align", "center"), ("font", "font10"), ("textcolor", "white")):
+            # Reserve a full 48px, vertically centered caption area so two-line titles remain readable in both normal and focused states.
+            for tag, value in (("left", 0), ("top", 370), ("width", 285), ("height", 48), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
             stale_wrap = active_label.find("wrap")
             if stale_wrap is not None:
@@ -693,7 +693,7 @@ def update_xml(data, path):
             set_child_text(active_label, "visible", f"Control.HasFocus({container_id})")
             set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
             focus_accent = ET.Element("control", {"type": "image"})
-            for tag, value in (("left", 101), ("top", 415), ("width", 84), ("height", 4)):
+            for tag, value in (("left", 101), ("top", 421), ("width", 84), ("height", 4)):
                 set_child_text(focus_accent, tag, value)
             set_child_text(focus_accent, "texture", "focus-bar.png")
             set_child_text(focus_accent, "visible", f"Control.HasFocus({container_id})")
