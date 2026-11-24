@@ -1595,13 +1595,14 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.6 - Larger, tighter Home poster rails",
-                        "- Enlarged Home poster artwork to its native 2:3 ratio and reduced the side gutters.",
-                        "- Rebalanced caption, progress and focus geometry while preserving the next-shelf preview.",
+                        "0.5.7 - Reliable remote focus and skin handoff",
+                        "- Explicit left/right navigation across Home, Movies, TV Shows, Search and Settings.",
+                        "- Explicit left/right focus between No and Yes in Kodi confirmation dialogs.",
+                        "- Replace the Startup window with Home so a transparent Startup layer cannot intercept remote input.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.6 - Larger, tighter Home poster rails"):
+                    if changelog.startswith("0.5.7 - Reliable remote focus and skin handoff"):
                         current_entry, separator, remainder = changelog.partition("0.5.0 - Complete UI structure")
                         normalized_entry = current_entry.replace(chr(92) + "n", chr(10))
                         if normalized_entry != current_entry:
