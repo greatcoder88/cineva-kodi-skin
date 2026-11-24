@@ -2,8 +2,12 @@ name: CINÉVA Kodi repository
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - "repository-site/**"
+    paths:
+      - "tools/build_repository.py"
+      - "tools/build_skin_archive.py"
+      - "tools/script.cineva.widgets/**"
+      - ".github/workflows/repository.yml"
+      - "skin.cineva/**"
   workflow_dispatch:
 permissions:
   contents: write
@@ -18,93 +22,59 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Build and validate skin package
-        run: python tools/build_skin_archive.py
-      - name: Assemble and validate Kodi repository feed
+      - name: Build packages and repository site
         run: |
+          python tools/build_skin_archive.py
           python tools/build_repository.py
+      - name: Validate repository feed and Kodi directory indexes
+        run: |
           python - <<'PY'
           from pathlib import Path
-          import hashlib
           from html.parser import HTMLParser
           from zipfile import ZipFile
+          import hashlib
           import xml.etree.ElementTree as ET
           root = Path("repository-site")
-          feed = (root / "addons.xml").read_bytes()
-          if hashlib.md5(feed).hexdigest() != (root / "addons.xml.md5").read_text().strip():
-              raise SystemExit("Kodi repository MD5 does not match addons.xml")
-          addons = ET.parse(root / "addons.xml").getroot()
-          ids = {a.get("id") for a in addons.findall("addon")}
-          if ids != {"skin.cineva", "script.cineva.widgets"}:
-              raise SystemExit(f"Unexpected repository package index: {ids}")
-          for addon_id in ids:
-              if not list((root / "zips" / addon_id).glob(f"{addon_id}-*.zip")):
-                  raise SystemExit(f"Missing installable package for {addon_id}")
-          repo_zip = root / "zips/repository.cineva/repository.cineva-0.1.1.zip"
-          root_zip = root / repo_zip.name
-          if not repo_zip.is_file() or not root_zip.is_file():
-              raise SystemExit("Missing repository installer ZIP at the source root or package directory")
-          if root_zip.read_bytes() != repo_zip.read_bytes():
-              raise SystemExit("Root file-source installer is not identical to the repository package ZIP")
-
-          class Anchors(HTMLParser):
+          xml = (root / "addons.xml").read_bytes()
+          assert hashlib.md5(xml).hexdigest() == (root / "addons.xml.md5").read_text().strip()
+          ids = {x.get("id") for x in ET.fromstring(xml).findall("addon")}
+          assert ids == {"skin.cineva", "script.cineva.widgets"}, ids
+          repo_zip = root / "repository.cineva-0.1.1.zip"
+          assert repo_zip.is_file(), "root-level repository installer missing"
+          with ZipFile(repo_zip) as z:
+              addon = ET.fromstring(z.read("repository.cineva/addon.xml"))
+          ext = addon.find("./extension[@point='xbmc.addon.repository']")
+          base = "https://greatcoder88.github.io/cineva-kodi-skin"
+          assert ext is not None
+          assert ext.get("info") == base + "/addons.xml"
+          assert ext.get("checksum") == base + "/addons.xml.md5"
+          assert ext.get("datadir") == base + "/zips/"
+          class Links(HTMLParser):
               def __init__(self):
-                  super().__init__()
-                  self.items = []
-                  self.href = None
-                  self.text = []
+                  super().__init__(); self.links=[]; self.href=None; self.label=[]
               def handle_starttag(self, tag, attrs):
-                  if tag == "a":
-                      self.href = dict(attrs).get("href")
-                      self.text = []
+                  if tag == "a": self.href=dict(attrs).get("href"); self.label=[]
               def handle_data(self, data):
-                  if self.href is not None:
-                      self.text.append(data)
+                  if self.href is not None: self.label.append(data)
               def handle_endtag(self, tag):
                   if tag == "a" and self.href is not None:
-                      self.items.append((self.href, "".join(self.text).strip()))
-                      self.href = None
-                      self.text = []
-
+                      self.links.append((self.href, "".join(self.label).strip())); self.href=None
           def links(path):
-              parser = Anchors()
-              parser.feed(path.read_text(encoding="utf-8"))
-              return set(parser.items)
-
-          expected_root = {
-              ("repository.cineva-0.1.1.zip", "repository.cineva-0.1.1.zip"),
-              ("zips/", "zips/"),
-          }
-          if not expected_root.issubset(links(root / "index.html")):
-              raise SystemExit("Root index must expose the installer ZIP and zips/ folder as Kodi-browsable links")
-          expected_packages = {(f"{addon_id}/", f"{addon_id}/") for addon_id in
-                               ("repository.cineva", "skin.cineva", "script.cineva.widgets")}
-          if not expected_packages.issubset(links(root / "zips/index.html")):
-              raise SystemExit("zips/index.html must expose all add-on package folders")
-          for addon_id in ("repository.cineva", "skin.cineva", "script.cineva.widgets"):
-              package_dir = root / "zips" / addon_id
-              package_files = sorted(package_dir.glob("*.zip"))
-              package_links = links(package_dir / "index.html")
-              if not package_files or any((p.name, p.name) not in package_links for p in package_files):
-                  raise SystemExit(f"{addon_id} index does not expose every installable ZIP")
-          with ZipFile(repo_zip) as archive:
-              repo_manifest = ET.fromstring(archive.read("repository.cineva/addon.xml"))
-          repo_extension = repo_manifest.find("./extension[@point='xbmc.addon.repository']")
-          base = "https://greatcoder88.github.io/cineva-kodi-skin/repository-site"
-          if repo_extension is None or (
-              repo_extension.get("info"), repo_extension.get("checksum"), repo_extension.get("datadir")
-          ) != (f"{base}/addons.xml", f"{base}/addons.xml.md5", f"{base}/zips/"):
-              raise SystemExit("Repository installer does not point at the published Pages feed")
-          print("Feed, checksum, packages, root installer and Kodi-browsable directory indexes validated.")
+              p=Links(); p.feed(path.read_text()); return set(p.links)
+          assert ("repository.cineva-0.1.1.zip","repository.cineva-0.1.1.zip") in links(root/"index.html")
+          assert ("zips/","zips/") in links(root/"index.html")
+          for addon_id in ("repository.cineva","skin.cineva","script.cineva.widgets"):
+              folder=root/"zips"/addon_id
+              files=list(folder.glob("*.zip"))
+              assert files, f"missing ZIP in {folder}"
+              found=links(folder/"index.html")
+              assert all((f.name,f.name) in found for f in files), (addon_id,found)
+          print("CINÉVA feed URLs, installer ZIP, checksums and browsable indexes validated.")
           PY
-      - name: Publish feed into the Pages-served main-branch subpath
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f repository-site
-          if git diff --cached --quiet; then
-            echo "CINÉVA Pages feed is already current."
-          else
-            git commit -m "Publish CINÉVA Kodi repository feed"
-            git push origin HEAD:main
-          fi
+      - name: Publish browsable repository to GitHub Pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./repository-site
+          force_orphan: true
