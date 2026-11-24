@@ -234,6 +234,7 @@ class KodiManagerTests(unittest.TestCase):
         ])
         self.assertEqual(seen["calls"][1], [
             "✓  Use this folder as widget",
+            "↑  Parent folder",
             "←  Back"
         ])
         self.assertEqual(chosen, {
