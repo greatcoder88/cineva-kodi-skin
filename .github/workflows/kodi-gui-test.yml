@@ -192,7 +192,7 @@ jobs:
             hero_group = next((group for group in hero_groups
                                if group.find(f"./control[@id='{play_id}']") is not None), None)
             buttons = hero_group.findall("./control[@type='button']") if hero_group is not None else []
-            if hero_group is None or len(buttons) != 2 or [button.findtext("label") for button in buttons] != ["PLAY", "MORE INFO"]:
+            if hero_group is None or len(buttons) != 2 or [button.findtext("label") for button in buttons] != [f"$VAR[CinevaHeroAction{container_id - 9000}]", "MORE INFO"]:
               raise SystemExit(f"Home row {container_id} is missing its two nested hero actions")
             if buttons[0].findtext("onclick") != f"PlayMedia($INFO[Container({container_id}).ListItem.File])" or buttons[1].findtext("onclick") != f"SetFocus({container_id})" or [node.text for node in buttons[1].findall("onclick")] != [f"SetFocus({container_id})", "Action(Info)"]:
               raise SystemExit(f"Home row {container_id} hero actions are not wired to its selected item")
@@ -247,6 +247,12 @@ jobs:
           if shelf_font is None or (shelf_font.findtext("filename"), shelf_font.findtext("size")) != ("Poppins-SemiBold.ttf", "34"):
             raise SystemExit("Home shelf headings must use the Poppins semibold face at 34px")
           includes = ET.parse("skin.cineva/xml/Includes.xml").getroot()
+          for row_index in range(1, 5):
+            action_variable = includes.find(f"./variable[@name='CinevaHeroAction{row_index}']")
+            values = action_variable.findall("value") if action_variable is not None else []
+            expected_condition = f"String.Contains(Skin.String(Cineva.Widget{row_index}.Path),in_progress)"
+            if len(values) != 2 or values[0].get("condition") != expected_condition or values[0].text != "RESUME" or values[1].get("condition") is not None or values[1].text != "PLAY":
+              raise SystemExit(f"Home row {row_index} must resolve RESUME for in-progress sources and PLAY otherwise")
           poster = includes.find("./include[@name='CinevaPosterItem']")
           normal_image = poster.find("./control[@type='image']") if poster is not None else None
           if poster is None or normal_image is None or (normal_image.findtext("left"), normal_image.findtext("top"), normal_image.findtext("width"), normal_image.findtext("height")) != ("12", "0", "261", "348") or poster.findtext("./control[@type='label']/width") != "285" or poster.findtext("./control[@type='label']/top") != "350" or poster.findtext("./control[@type='label']/height") != "48" or poster.findtext("./control[@type='label']/wrapmultiline") != "true" or poster.find("./control[@type='label']/wrap") is not None or poster.findtext("./control[@type='label']/font") != "font10" or poster.findtext("./control[@type='label']/aligny") != "center":
@@ -666,11 +672,11 @@ jobs:
             deadline = time.time() + 8
             while time.time() < deadline:
               state = gui()
-              if state.get("currentcontrol",{}).get("label","").strip().upper() == "PLAY":
+              if state.get("currentcontrol",{}).get("label","").strip().upper() == "RESUME":
                 break
               time.sleep(0.25)
             else:
-              raise SystemExit(f"Home shelf Up did not focus the PLAY hero action: {state}")
+              raise SystemExit(f"Home shelf Up did not focus the RESUME hero action: {state}")
             subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-actions.png"],check=True)
             eyebrow_signal = subprocess.run(
               ["convert","artifacts/cineva-home-actions.png","-crop","420x30+60+110",
@@ -822,11 +828,11 @@ jobs:
                 deadline = time.time() + 8
                 while time.time() < deadline:
                   state = gui()
-                  if state.get("currentcontrol",{}).get("label","").strip().upper() == "PLAY":
+                  if state.get("currentcontrol",{}).get("label","").strip().upper() == "RESUME":
                     break
                   time.sleep(0.25)
                 else:
-                  raise SystemExit(f"Row-2 Up did not focus its PLAY action: {state}")
+                  raise SystemExit(f"Row-2 Up did not focus its RESUME action: {state}")
                 subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row2-actions.png"],check=True)
                 # The selected row's fanart must remain pinned while focus moves
                 # from the poster to PLAY; compare only the unobstructed right hero.
