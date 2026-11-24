@@ -39,7 +39,7 @@ def write_http_directory_index(directory: Path, title: str, entries: list[tuple[
     link text literal (including the trailing slash for folders) so Add file
     source and the repository add-on can navigate this static Pages host.
     """
-    links = "\\n".join(
+    links = "\n".join(
         f'<li><a href="{html.escape(href, quote=True)}">{html.escape(label)}</a></li>'
         for href, label in entries
     )
