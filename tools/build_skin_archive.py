@@ -235,6 +235,44 @@ def rating_badge_png():
             + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
             + png_chunk(b"IEND", b""))
 
+
+def imdb_logo_png():
+    """Draw a compact IMDb wordmark in its familiar black-on-yellow treatment."""
+    width, height = 48, 24
+    pixels = bytearray()
+    glyphs = {
+        "I": ["111", "010", "010", "010", "010", "010", "111"],
+        "M": ["10001", "11011", "10101", "10101", "10001", "10001", "10001"],
+        "D": ["11110", "10001", "10001", "10001", "10001", "10001", "11110"],
+        "b": ["100", "100", "110", "101", "101", "101", "110"],
+    }
+    scale, gap = 2, 2
+    glyph_widths = [len(glyphs[ch][0]) * scale for ch in "IMDb"]
+    total = sum(glyph_widths) + gap * 3
+    start_x = (width - total) // 2
+    start_y = (height - 7 * scale) // 2
+    ink = set()
+    x = start_x
+    for ch in "IMDb":
+        rows = glyphs[ch]
+        for gy, row in enumerate(rows):
+            for gx, bit in enumerate(row):
+                if bit == "1":
+                    for sy in range(scale):
+                        for sx in range(scale):
+                            ink.add((x + gx * scale + sx, start_y + gy * scale + sy))
+        x += len(rows[0]) * scale + gap
+    for y in range(height):
+        pixels.append(0)
+        for x in range(width):
+            pixels.extend((255, 210, 0, 255) if (x, y) not in ink else (0, 0, 0, 255))
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return (b"\\x89PNG\\r\\n\\x1a\\n"
+            + png_chunk(b"IHDR", header)
+            + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
+            + png_chunk(b"IEND", b""))
+
+
 def poster_placeholder_png():
     """Create cinematic abstract artwork when a provider has no poster."""
     width, height = 342, 513
@@ -590,7 +628,7 @@ def update_xml(data, path):
                     row_index = int(source_label.split("Container(", 1)[1].split(")", 1)[0]) - 9000
                     rating_id = 9340 + (row_index - 1) * 2
                     for old_rating in list(group.findall("control")):
-                        if (old_rating.findtext("texture") == "rating-badge.png"
+                        if (old_rating.findtext("texture") in {"rating-badge.png", "imdb-logo.png"}
                                 or "ListItem.Rating" in old_rating.findtext("label", "")):
                             group.remove(old_rating)
                     rating_bg = ET.SubElement(group, "control", {"type": "image", "id": str(rating_id)})
@@ -599,8 +637,13 @@ def update_xml(data, path):
                         set_child_text(rating_bg, tag, value)
                     set_child_text(rating_bg, "visible",
                                    f"!String.IsEmpty(Container({9000 + row_index}).ListItem.Rating)")
+                    rating_logo = ET.SubElement(group, "control", {"type": "image", "id": str(rating_id + 2)})
+                    for tag, value in (("left", 778), ("top", 130), ("width", 48), ("height", 24),
+                                       ("texture", "imdb-logo.png"),
+                                       ("visible", f"!String.IsEmpty(Container({9000 + row_index}).ListItem.Rating)")):
+                        set_child_text(rating_logo, tag, value)
                     rating_text = ET.SubElement(group, "control", {"type": "label", "id": str(rating_id + 1)})
-                    for tag, value in (("left", 802), ("top", 126), ("width", 84), ("height", 32),
+                    for tag, value in (("left", 832), ("top", 126), ("width", 84), ("height", 32),
                                        ("font", "font10"), ("textcolor", "FFFFD36A"),
                                        ("label", f"$INFO[Container({9000 + row_index}).ListItem.Rating]"),
                                        ("align", "left"), ("aligny", "center"),
@@ -1335,7 +1378,7 @@ def update_xml(data, path):
                 ET.SubElement(logo, tag).text = str(value)
             # A distinct, source-aware rating chip keeps the score legible and
             # visually separate from year/genre metadata on catalogue heroes.
-            for stale_id in ("9214", "9215"):
+            for stale_id in ("9214", "9215", "9216"):
                 stale = controls.find(f"./control[@id='{stale_id}']")
                 if stale is not None:
                     controls.remove(stale)
@@ -1344,16 +1387,21 @@ def update_xml(data, path):
                                ("texture", "rating-badge.png"),
                                ("visible", "!String.IsEmpty(Container(9201).ListItem.Rating)")):
                 ET.SubElement(rating_bg, tag).text = str(value)
+            rating_logo = ET.Element("control", {"type": "image", "id": "9216"})
+            for tag, value in (("left", 858), ("top", 270), ("width", 48), ("height", 24),
+                               ("texture", "imdb-logo.png"),
+                               ("visible", "!String.IsEmpty(Container(9201).ListItem.Rating)")):
+                ET.SubElement(rating_logo, tag).text = str(value)
             rating_text = ET.Element("control", {"type": "label", "id": "9215"})
-            for tag, value in (("left", 862), ("top", 266), ("width", 108), ("height", 32),
+            for tag, value in (("left", 912), ("top", 266), ("width", 108), ("height", 32),
                                ("font", "font10"), ("textcolor", "FFFFD36A"),
-                               ("label", "★  $INFO[Container(9201).ListItem.Rating]"),
+                               ("label", "$INFO[Container(9201).ListItem.Rating]"),
                                ("align", "left"), ("aligny", "center"),
                                ("visible", "!String.IsEmpty(Container(9201).ListItem.Rating)")):
                 ET.SubElement(rating_text, tag).text = str(value)
             # Render hero information above the background and below focusable
             # controls; all focus movement remains native Kodi D-pad navigation.
-            controls.extend([title, fallback, meta, logo, rating_bg, rating_text])
+            controls.extend([title, fallback, meta, logo, rating_bg, rating_logo, rating_text])
     elif path == "skin.cineva/xml/custom11112.xml":
         # Search hub: keep the search action prominent and align results to the catalogue grid.
         for node in root.findall(".//control[@type='button']"):
@@ -1424,6 +1472,7 @@ def main():
                 "skin.cineva/media/resume-track.png": resume_track_png(),
                 "skin.cineva/media/poster-focus.png": poster_focus_png(),
                 "skin.cineva/media/rating-badge.png": rating_badge_png(),
+                "skin.cineva/media/imdb-logo.png": imdb_logo_png(),
                 "skin.cineva/media/poster-placeholder.png": poster_placeholder_png(),
             }
             written_assets = set()
