@@ -125,6 +125,7 @@ class KodiManagerTests(unittest.TestCase):
         manager = self.module.WidgetManager()
         registry = manager.load()
         original = dict(registry["home"][0])
+        self.builtins.clear()  # Ignore first-install Skin.String initialization.
         manager.dialog.selection = 0
         manager.configure_slot(registry, "home", 1)
         self.assertEqual(manager.load()["home"][0], original)
@@ -132,6 +133,8 @@ class KodiManagerTests(unittest.TestCase):
 
     def test_malformed_and_out_of_range_slot_arguments_are_ignored(self):
         manager = self.module.WidgetManager()
+        manager.load()
+        self.builtins.clear()  # Ignore first-install Skin.String initialization.
         for slot in ("oops", "0", "5", "-1"):
             manager.run(action="configure", screen="home", slot=slot)
             manager.run(action="clear", screen="home", slot=slot)
@@ -146,6 +149,7 @@ class KodiManagerTests(unittest.TestCase):
         ]})
         registry = self.module.WidgetManager().load()
         self.assertEqual([w["name"] for w in registry["home"] if w], ["Good"])
+        self.assertEqual(registry["home"][1], {})  # Bad source keeps its slot empty.
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
