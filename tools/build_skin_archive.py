@@ -1264,6 +1264,9 @@ def main():
             }
             written_assets = set()
             for info in source.infolist():
+                if info.filename == "skin.cineva/xml/CinevaWidgetHub.xml":
+                    changed.append(info.filename + " (removed obsolete My Widgets hub)")
+                    continue
                 data = source.read(info.filename)
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
