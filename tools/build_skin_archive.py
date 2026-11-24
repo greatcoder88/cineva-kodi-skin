@@ -826,6 +826,16 @@ def update_xml(data, path):
                     set_child_text(button, tag, value)
                 set_child_text(button, "font", "font12")
                 set_child_text(button, "height", 48)
+            # Widget configuration belongs in each screen's Skin Settings.
+            # Do not expose a separate My Widgets destination in the primary nav.
+            hub_button = nav_group.find("./control[@id='1005']")
+            if hub_button is not None:
+                nav_group.remove(hub_button)
+            settings_button = nav_group.find("./control[@id='1006']")
+            if settings_button is not None:
+                set_child_text(settings_button, "left", 670)
+            if nav_group.find("./control[@id='1005']") is not None:
+                raise SystemExit("Home navigation must not expose the My Widgets hub")
             # Keep a persistent red section marker under HOME even after focus
             # moves into the catalogue, so users never lose their location.
             old_marker = nav_group.find("./control[@id='9201']")
@@ -837,8 +847,7 @@ def update_xml(data, path):
             set_child_text(active_marker, "texture", "focus-bar.png")
             set_child_text(active_marker, "visible", "Window.IsActive(home)")
             nav_group.append(active_marker)
-        # The top navigation already has a My Widgets destination. The extra
-        # floating button obscured the fourth shelf and is intentionally removed.
+        # Remove the legacy floating button; it used to obscure the fourth shelf.
         for control in list(controls):
             if control.get("id") == "9010" or control.findtext("label") == "MORE WIDGETS  ›":
                 controls.remove(control)
@@ -1212,6 +1221,10 @@ def main():
             }
             written_assets = set()
             for info in source.infolist():
+                if info.filename == "skin.cineva/xml/CinevaWidgetHub.xml":
+                    # The old standalone hub conflicts with the per-screen settings flow.
+                    changed.append(info.filename + " (removed)")
+                    continue
                 data = source.read(info.filename)
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
