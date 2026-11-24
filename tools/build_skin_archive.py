@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.6.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.5.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.7.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.6.zip"
 
 
 def fetch_asset(url, attempts=5):
@@ -478,7 +478,7 @@ def remove_missing_no_focus_textures(root):
 def update_xml(data, path):
     root = ET.fromstring(data)
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.6")
+        root.set("version", "0.5.7")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.3")
@@ -1041,6 +1041,11 @@ def update_xml(data, path):
             for button in nav_group.findall("./control[@type='button']"):
                 # Text-first navigation: remove the heavy black button slabs.
                 action_targets = {"1001": "9111", "1002": "9115", "1003": "9117"}
+                nav_ids = ("1001", "1002", "1003", "1004", "1005")
+                if button.get("id") in nav_ids:
+                    position = nav_ids.index(button.get("id"))
+                    set_child_text(button, "onleft", f"SetFocus({nav_ids[max(0, position - 1)]})")
+                    set_child_text(button, "onright", f"SetFocus({nav_ids[min(len(nav_ids) - 1, position + 1)]})")
                 if button.get("id") in action_targets:
                     set_child_text(button, "ondown", f"SetFocus({action_targets[button.get('id')]})")
                 for tag, value in (("texturefocus", "focus-bar.png"), ("texturenofocus", "-"), ("textcolor", "silver"), ("focusedcolor", "white"), ("align", "center"), ("aligny", "center")):
@@ -1312,12 +1317,18 @@ def update_xml(data, path):
         if default is None:
             default = ET.Element("defaultcontrol")
             root.insert(0, default)
-        # Runtime JSON-RPC confirms control 11 is Yes and control 10 is No.
+        # Kodi's standard confirmation dialog uses 10=No and 11=Yes.
+        # Explicit directional links avoid broken spatial focus on TV remotes.
         default.set("always", "true")
         default.text = "11"
-        # The skin has no bundled default button textures. Supply explicit
-        # textures and colors so Yes/No are actually visible in the modal.
         for button in root.findall(".//control[@type='button']"):
+            control_id = button.get("id")
+            if control_id == "10":
+                set_child_text(button, "onleft", "SetFocus(10)")
+                set_child_text(button, "onright", "SetFocus(11)")
+            elif control_id == "11":
+                set_child_text(button, "onleft", "SetFocus(10)")
+                set_child_text(button, "onright", "SetFocus(11)")
             values = {
                 "texturefocus": "focus-bar.png",
                 "texturenofocus": "black.png",
@@ -1335,10 +1346,10 @@ def update_xml(data, path):
         # The old startup panel had no content but was the default focus target.
         root.clear()
         root.set("id", "12999")
-        # Startup remains the topmost window after a skin switch unless it
-        # explicitly hands off to Home. This leaves the Home UI underneath but
-        # keeps currentwindow=Startup and prevents Home navigation focus.
-        ET.SubElement(root, "onload").text = "ActivateWindow(Home)"
+        # Replace Startup rather than pushing Home above it. ActivateWindow
+        # leaves Startup underneath and can retain a transparent top window
+        # that intercepts remote focus after a skin switch.
+        ET.SubElement(root, "onload").text = "ReplaceWindow(Home)"
         controls = ET.SubElement(root, "controls")
         ET.SubElement(controls, "include").text = "CinevaBackground"
         ET.SubElement(controls, "include").text = "CinevaTopBar"
@@ -1510,7 +1521,7 @@ def main():
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.6.zip and migration source skin.cineva-0.5.5.zip")
+        raise SystemExit("Missing skin.cineva-0.5.7.zip and migration source skin.cineva-0.5.6.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
