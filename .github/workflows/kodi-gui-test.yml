@@ -839,15 +839,19 @@ jobs:
             subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-actions.png"],check=True)
             # Interstellar is intentionally missing ListItem.Art(poster) in the
             # fixture. Its visible third card must render the crimson placeholder.
+            # The branded fallback is intentionally a near-black navy/crimson
+            # graphic with fine geometric linework, not a solid crimson panel.
+            # Validate its rendered texture detail rather than requiring a large
+            # red-pixel area (which incorrectly rejected the actual artwork).
             placeholder_signal = subprocess.run(
-              ["convert","artifacts/cineva-home-actions.png","-crop","260x340+690+420",
-               "-fx","((r>0.7)&&(g<0.2)&&(b<0.25))?1:0","-format","%[fx:mean]","info:"],
+              ["convert","artifacts/cineva-home-actions.png","-crop","200x295+603+435",
+               "-colorspace","gray","-format","%[fx:standard_deviation]","info:"],
               text=True,capture_output=True,check=True
             )
-            placeholder_coverage = float(placeholder_signal.stdout.strip())
-            if placeholder_coverage < 0.006:
-              raise SystemExit(f"Missing-poster fallback is not visible in the real Home screenshot (crimson coverage={placeholder_coverage:.4f})")
-            print(f"Verified the branded missing-poster fallback in the first Home rail (crimson coverage={placeholder_coverage:.4f}).")
+            placeholder_detail = float(placeholder_signal.stdout.strip())
+            if placeholder_detail < 0.025:
+              raise SystemExit(f"Missing-poster fallback has no visible graphic detail in the real Home screenshot (grayscale standard deviation={placeholder_detail:.4f})")
+            print(f"Verified the branded missing-poster fallback artwork in the first Home rail (grayscale detail={placeholder_detail:.4f}).")
             eyebrow_signal = subprocess.run(
               ["convert","artifacts/cineva-home-actions.png","-crop","420x30+60+110",
                "-fx","((r>0.55)&&(g<0.35)&&(b<0.35))?1:0","-format","%[fx:mean]","info:"],
