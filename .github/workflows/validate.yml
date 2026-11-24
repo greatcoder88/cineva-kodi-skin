@@ -351,12 +351,12 @@ jobs:
                   if len(decoded) != stride * 430 or alpha_at(0) != 0 or not (50 <= alpha_at(214) <= 78) or alpha_at(429) < 120:
                       errors.append("Lower-row scroll mask must use a gradual 0-to-128 alpha fade aligned with the hero bottom fade")
           rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
-          if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("105", "454", "1710", "670") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "220"):
+          if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("105", "454", "1710", "670") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "160"):
               errors.append("Home rails must use the pinned-hero vertical scrolling viewport")
           lower_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118))
           lower_slide = rail_list.find("./animation[@effect='slide']") if rail_list is not None else None
-          if lower_slide is None or (lower_slide.get("start"), lower_slide.get("end"), lower_slide.get("time"), lower_slide.get("condition"), lower_slide.text) != ("0,0", "0,-40", "220", lower_focus, "Conditional"):
-              errors.append("Home lower-row focus must lift the scrolling viewport 40px so poster captions remain inside the screen")
+          if lower_slide is not None:
+              errors.append("Home rail viewport should not animate as a whole during lower-row focus changes")
           scroll_mask = controls.find("./control[@id='9107']")
           expected_scroll_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118))
           if scroll_mask is None or (scroll_mask.findtext("left"), scroll_mask.findtext("top"), scroll_mask.findtext("width"), scroll_mask.findtext("height")) != ("0", "320", "1920", "430") or scroll_mask.findtext("texture") != "rail-scroll-mask.png" or scroll_mask.findtext("visible") != expected_scroll_focus:
@@ -527,10 +527,10 @@ jobs:
               elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width"), focus_labels[1].findtext("aligny")) != ("font10", "362", "64", "285", "center") or focus_labels[1].find("wrap") is not None:
                   errors.append(f"Home row {container_id} focused title must use the compact, multiline card-title treatment")
               zoom = focus_images[1].find("./animation[@effect='zoom']") if len(focus_images) > 1 else None
-              if len(focus_images) > 1 and (focus_images[1].findtext("left"), focus_images[1].findtext("top"), focus_images[1].findtext("width"), focus_images[1].findtext("height")) != ("7", "-6", "271", "361"):
+              if len(focus_images) > 1 and (focus_images[1].findtext("left"), focus_images[1].findtext("top"), focus_images[1].findtext("width"), focus_images[1].findtext("height")) != ("9", "-3", "267", "355"):
                   errors.append(f"Home row {container_id} focused artwork must stop above its title baseline")
-              if zoom is None or (zoom.get("end"), zoom.get("time")) != ("104", "180"):
-                  errors.append(f"Home row {container_id} focused poster needs the restrained, title-safe selection zoom")
+              if zoom is not None:
+                  errors.append(f"Home row {container_id} focused poster should use static emphasis to avoid texture resampling on D-pad focus")
               expected_progress_visibility = {
                   f"!Control.HasFocus({container_id}) + ListItem.IsResumable",
                   f"Control.HasFocus({container_id}) + ListItem.IsResumable",
