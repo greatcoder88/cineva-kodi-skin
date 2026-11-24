@@ -701,11 +701,21 @@ jobs:
               poster_count = sum(1 for poster in posters if poster)
               unique_posters = len(set(poster for poster in posters if poster))
               unique_fanarts = len(set(fanart for fanart in fanarts if fanart))
+              missing_fanarts = [index for index, fanart in enumerate(fanarts) if not fanart]
+              expected_missing_fanarts = 1 if row in (2, 4) else 0
+              expected_unique_fanarts = 7 if row in (2, 4) else 8
               if fanarts:
                 hero_fanart_by_row[row] = fanarts[0]
-              print(f"Widget row {row}: items={len(items)}, poster_art={poster_count}, unique_posters={unique_posters}, unique_fanarts={unique_fanarts}, first={items[0] if items else None}")
-              if len(items) < 8 or poster_count < 8 or unique_posters < 8 or unique_fanarts < 8:
-                raise SystemExit(f"Widget row {row} did not return eight distinct poster-backed and fanart-backed items")
+              print(f"Widget row {row}: items={len(items)}, poster_art={poster_count}, unique_posters={unique_posters}, unique_fanarts={unique_fanarts}, missing_fanarts={missing_fanarts}, first={items[0] if items else None}")
+              if (len(items) < 8 or poster_count < 8 or unique_posters < 8
+                  or unique_fanarts != expected_unique_fanarts
+                  or len(missing_fanarts) != expected_missing_fanarts
+                  or (expected_missing_fanarts and (missing_fanarts != [0] or items[0].get("label") != "Breaking Bad"))):
+                raise SystemExit(
+                  f"Widget row {row} did not match its poster/fanart fixture contract "
+                  f"(expected {expected_unique_fanarts} distinct fanarts and missing indices "
+                  f"{[0] if expected_missing_fanarts else []}, got {unique_fanarts} and {missing_fanarts})"
+                )
             if hero_fanart_by_row.get(1) == hero_fanart_by_row.get(2):
               raise SystemExit("Movie and TV Home rows share the same hero fanart; dynamic hero switching cannot be visually verified")
             rpc("Input.Down")  # Home navigation -> PLAY action
