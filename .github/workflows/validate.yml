@@ -194,6 +194,10 @@ jobs:
                   errors.append(f"Home hero {container_id} actions are not aligned beneath the synopsis")
               if metadata is None or metadata.findtext("label") != expected:
                   errors.append(f"Home hero {container_id} metadata must omit separators for empty fields")
+              rating_bg = group.find(f"./control[@id='{9340 + container_id - 9000}']")
+              rating_text = group.find(f"./control[@id='{9341 + container_id - 9000}']")
+              if rating_bg is None or rating_bg.findtext("texture") != "rating-badge.png" or rating_text is None or "ListItem.Rating" not in rating_text.findtext("label", ""):
+                  errors.append(f"Home hero {container_id} must render its rating in a dedicated gold badge")
           topbar_index = next((i for i, node in enumerate(list(controls))
                                if node.tag == "include" and (node.text or "").strip() == "CinevaTopBar"), -1)
           shade_index = next((i for i, node in enumerate(list(controls))
