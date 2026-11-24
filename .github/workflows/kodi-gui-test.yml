@@ -366,7 +366,7 @@ jobs:
               raise SystemExit(f"Home row {row_index} must resolve RESUME for in-progress sources and PLAY otherwise")
           poster = includes.find("./include[@name='CinevaPosterItem']")
           normal_image = poster.find("./control[@type='image']") if poster is not None else None
-          if poster is None or normal_image is None or (normal_image.findtext("left"), normal_image.findtext("top"), normal_image.findtext("width"), normal_image.findtext("height")) != ("22", "0", "240", "360") or poster.findtext("./control[@type='textbox']/width") != "285" or poster.findtext("./control[@type='textbox']/top") != "362" or poster.findtext("./control[@type='textbox']/height") != "52" or poster.find("./control[@type='textbox']/wrap") is not None or poster.findtext("./control[@type='textbox']/font") != "font10" or poster.findtext("./control[@type='textbox']/aligny") != "center":
+          if poster is None or normal_image is None or (normal_image.findtext("left"), normal_image.findtext("top"), normal_image.findtext("width"), normal_image.findtext("height")) != ("22", "0", "240", "360") or poster.findtext("./control[@type='textbox']/width") != "285" or poster.findtext("./control[@type='textbox']/top") != "362" or poster.findtext("./control[@type='textbox']/height") != "64" or poster.find("./control[@type='textbox']/wrap") is not None or poster.findtext("./control[@type='textbox']/font") != "font10" or poster.findtext("./control[@type='textbox']/aligny") != "center":
             raise SystemExit("Home poster and title layout is missing its larger native 2:3 poster artwork or readable title baseline")
           focused_poster = includes.find("./include[@name='CinevaFocusedPosterItem9001']")
           focused_title = next((label for label in focused_poster.findall("./control[@type='textbox']") if label.findtext("textcolor") == "white"), None) if focused_poster is not None else None
@@ -1021,7 +1021,7 @@ jobs:
               print(f"Verified long text-only hero title wraps cleanly across two lines (white coverage={coverages}).")
             def verify_wrapped_poster_caption(screenshot):
               signal = subprocess.run(
-                ["convert", screenshot, "-crop", "285x52+105+850",
+                ["convert", screenshot, "-crop", "285x64+105+850",
                  "-fx", "((r>0.65)&&(g>0.65)&&(b>0.65))?1:0",
                  "-trim", "-format", "%wx%h", "info:"],
                 text=True, capture_output=True, check=True
