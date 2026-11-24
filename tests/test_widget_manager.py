@@ -101,29 +101,17 @@ class KodiManagerTests(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("cineva_builder_home_texture", builder_path)
         builder = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(builder)
-        source = (b'<window><controls>'
-            b'<control type="image" id="9001"><texture>$INFO[Container(9001).ListItem.Art(fanart)]</texture></control>'
-            b'<control type="image" id="9002"><texture>$INFO[Container(9002).ListItem.Art(fanart)]</texture></control>'
-            b'<control type="image" id="9003"><texture>$INFO[Container(9003).ListItem.Art(fanart)]</texture></control>'
-            b'<control type="image" id="9004"><texture>$INFO[Container(9004).ListItem.Art(fanart)]</texture></control>'
-            b'<control type="group" id="9201"><visible>Control.HasFocus(1001)</visible><control type="label"><label>$INFO[Container(9001).ListItem.Label]</label></control></control>'
-            b'<control type="group" id="9202"><visible>Control.HasFocus(9002)</visible><control type="label"><label>$INFO[Container(9002).ListItem.Label]</label></control></control>'
-            b'<control type="group" id="9203"><visible>Control.HasFocus(9003)</visible><control type="label"><label>$INFO[Container(9003).ListItem.Label]</label></control></control>'
-            b'<control type="group" id="9204"><visible>Control.HasFocus(9004)</visible><control type="label"><label>$INFO[Container(9004).ListItem.Label]</label></control></control>'
-            b'<control type="label"><label>$INFO[Skin.String(Cineva.Widget1.Name)]</label></control>'
-            b'<control type="fixedlist" id="9001"><itemlayout width="285" height="430"><control type="image"><texture>$INFO[ListItem.Art(poster)]</texture></control></itemlayout><focusedlayout width="285" height="430"><control type="image"><texture>$INFO[ListItem.Art(poster)]</texture></control></focusedlayout></control>'
-            b'<control type="label"><label>$INFO[Skin.String(Cineva.Widget2.Name)]</label></control>'
-            b'<control type="fixedlist" id="9002"><itemlayout width="285" height="430"><control type="image"><texture>$INFO[ListItem.Art(poster)]</texture></control></itemlayout><focusedlayout width="285" height="430"><control type="image"><texture>$INFO[ListItem.Art(poster)]</texture></control></focusedlayout></control>'
-            b'<control type="label"><label>$INFO[Skin.String(Cineva.Widget3.Name)]</label></control>'
-            b'<control type="fixedlist" id="9003"><itemlayout width="285" height="430"><control type="image"><texture>$INFO[ListItem.Art(poster)]</texture></control></itemlayout><focusedlayout width="285" height="430"><control type="image"><texture>$INFO[ListItem.Art(poster)]</texture></control></focusedlayout></control>'
-            b'<control type="label"><label>$INFO[Skin.String(Cineva.Widget4.Name)]</label></control>'
-            b'<control type="fixedlist" id="9004"><itemlayout width="285" height="430"><control type="image"><texture>$INFO[ListItem.Art(poster)]</texture></control></itemlayout><focusedlayout width="285" height="430"><control type="image"><texture>$INFO[ListItem.Art(poster)]</texture></control></focusedlayout></control>'
-            b'<control type="image" id="9101"><texture>hero-shade.png</texture></control>'
+        root = ET.fromstring(
+            b'<window><controls>'
             b'<control type="button" id="1001"><texturenofocus>-</texturenofocus><label>HOME</label></control>'
-            b'</controls></window>')
-        rendered = ET.fromstring(builder.update_xml(source, "skin.cineva/xml/Home.xml"))
-        button = rendered.find(".//control[@id='1001']")
-        self.assertIsNone(button.find("texturenofocus"))
+            b'<control type="button" id="1002"><texturenofocus>black.png</texturenofocus><label>MOVIES</label></control>'
+            b'</controls></window>'
+        )
+        builder.remove_missing_no_focus_textures(root)
+        home = root.find(".//control[@id='1001']")
+        movies = root.find(".//control[@id='1002']")
+        self.assertIsNone(home.find("texturenofocus"))
+        self.assertEqual(movies.findtext("texturenofocus"), "black.png")
 
     def test_widget_helper_is_not_advertised_as_a_video_plugin(self):
         addon_xml = ET.parse(ROOT / "tools/script.cineva.widgets/addon.xml").getroot()
