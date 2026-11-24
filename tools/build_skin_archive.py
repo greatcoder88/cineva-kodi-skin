@@ -812,6 +812,16 @@ def update_xml(data, path):
             controls.append(hero_group)
         nav_group = next((node for node in controls.findall("control") if node.get("type") == "group" and node.find("./control[@id='1001']") is not None), None)
         if nav_group is not None:
+            # Widget sources belong in Skin Settings, not in a separate Home destination.
+            # Remove the stale hub button and reclaim its slot for the single Settings entry.
+            widget_hub = nav_group.find("./control[@id='1005']")
+            if widget_hub is not None:
+                nav_group.remove(widget_hub)
+            settings_button = nav_group.find("./control[@id='1006']")
+            if settings_button is not None:
+                settings_button.set("id", "1005")
+                set_child_text(settings_button, "left", 670)
+                set_child_text(settings_button, "width", 150)
             # Put the menu on the same horizontal baseline as the CINÉVA wordmark
             # instead of stacking it underneath. The right-aligned date remains
             # anchored at the far edge of the same 1080p-safe header row.
