@@ -39,20 +39,20 @@ def write_http_directory_index(directory: Path, title: str, entries: list[tuple[
     link text literal (including the trailing slash for folders) so Add file
     source and the repository add-on can navigate this static Pages host.
     """
-    links = "\n".join(
+    links = "\\n".join(
         f'<li><a href="{html.escape(href, quote=True)}">{html.escape(label)}</a></li>'
         for href, label in entries
     )
     page = (
-        "<!doctype html><html lang=\\"en\\"><head><meta charset=\\"utf-8\\">"
-        f"<title>{html.escape(title)}</title>"
-        "<meta name=\\"viewport\\" content=\\"width=device-width,initial-scale=1\\">"
-        "<style>body{margin:0;padding:2rem;background:#090b11;color:#e8eaf0;"
-        "font:16px/1.6 system-ui,sans-serif}main{max-width:760px;margin:auto}"
-        "h1{font-size:1.5rem}ul{padding-left:1.25rem}a{color:#ff5b68;text-decoration:none}"
-        "a:hover{text-decoration:underline}</style></head><body><main>"
-        f"<h1>{html.escape(title)}</h1><ul>{links}</ul>"
-        "</main></body></html>"
+        '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+        f'<title>{html.escape(title)}</title>'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        '<style>body{margin:0;padding:2rem;background:#090b11;color:#e8eaf0;'
+        'font:16px/1.6 system-ui,sans-serif}main{max-width:760px;margin:auto}'
+        'h1{font-size:1.5rem}ul{padding-left:1.25rem}a{color:#ff5b68;text-decoration:none}'
+        'a:hover{text-decoration:underline}</style></head><body><main>'
+        f'<h1>{html.escape(title)}</h1><ul>{links}</ul>'
+        '</main></body></html>'
     )
     (directory / "index.html").write_text(page, encoding="utf-8")
 
