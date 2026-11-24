@@ -703,11 +703,21 @@ def update_xml(data, path):
             set_child_text(rail_list, tag, value)
         set_child_text(rail_list, "orientation", "vertical")
         set_child_text(rail_list, "itemgap", 12)
-        # Keep the rail viewport responsive on low-power TV hardware. Kodi's
-        # native grouplist already performs the required movement; avoid an
-        # additional conditional slide animation on the entire 4-row viewport.
-        set_child_text(rail_list, "scrolltime", 160)
+        # A short native slide keeps lower shelves feeling connected to the
+        # pinned hero. Keep it conditional and modest rather than animating
+        # continuously or layering multiple transitions.
+        set_child_text(rail_list, "scrolltime", 180)
         set_child_text(rail_list, "usecontrolcoords", "false")
+        lower_row_focus = " | ".join(
+            f"Control.HasFocus({control_id})"
+            for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118)
+        )
+        ET.SubElement(
+            rail_list,
+            "animation",
+            {"effect": "slide", "start": "0,0", "end": "0,-40",
+             "time": "180", "condition": lower_row_focus},
+        ).text = "Conditional"
         first_row_index = None
         for index in range(1, 5):
             heading_label = f"$INFO[Skin.String(Cineva.Widget{index}.Name)]"
@@ -962,11 +972,20 @@ def update_xml(data, path):
         if focused_texture is None:
             raise SystemExit("Includes.xml focused poster image has no texture")
         focused_texture.set("fallback", "poster-placeholder.png")
-        # Focused poster geometry already provides a subtle 4% emphasis.
-        # Remove the extra animated zoom so Fire TV does not resample a large
-        # poster texture on every focus transition.
-        for focus_animation in list(focused_image.findall("./animation")):
-            focused_image.remove(focus_animation)
+        # Keep a brief, restrained zoom on the selected poster. It is
+        # event-driven (D-pad focus only), not a perpetual animation.
+        focus_animation = focused_image.find("./animation[@effect='zoom']")
+        if focus_animation is None:
+            focus_animation = ET.SubElement(
+                focused_image, "animation",
+                {"effect": "zoom", "start": "100", "end": "104", "time": "160",
+                 "tween": "sine", "easing": "out"}
+            )
+            focus_animation.text = "Focus"
+        else:
+            focus_animation.set("start", "100")
+            focus_animation.set("end", "104")
+            focus_animation.set("time", "160")
         for tag, value in (("left", 18), ("width", 249), ("top", 345), ("height", 5)):
             set_child_text(progress, tag, value)
         if focused_label is not None and focused_label in list(focused):
