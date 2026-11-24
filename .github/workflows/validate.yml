@@ -366,8 +366,14 @@ jobs:
               }
               if len(focus_progresses) != 2 or {p.findtext("visible") for p in focus_progresses} != expected_progress_visibility:
                   errors.append(f"Home row {container_id} must show one resumable progress strip in both inactive and active card states")
-              elif any((p.findtext("left"), p.findtext("top"), p.findtext("width"), p.findtext("height"), p.findtext("info"), p.findtext("texturebg")) != ("18", "345", "249", "5", "ListItem.PercentPlayed", "resume-track.png") for p in focus_progresses):
-                  errors.append(f"Home row {container_id} resume progress geometry is inconsistent between focus states")
+              elif any(
+                  (p.findtext("left"), p.findtext("top"), p.findtext("width"), p.findtext("height"), p.findtext("info"), p.findtext("texturebg"))
+                  != (("18", "337", "249", "5", "ListItem.PercentPlayed", "resume-track.png")
+                      if p.findtext("visible").startswith("!") else
+                      ("18", "345", "249", "5", "ListItem.PercentPlayed", "resume-track.png"))
+                  for p in focus_progresses
+              ):
+                  errors.append(f"Home row {container_id} resume progress geometry is inconsistent between normal and focused poster sizes")
           catalogue = ET.parse(root / "xml/MyVideoNav.xml").getroot()
           panel = catalogue.find("./controls/control[@type='panel']")
           layout = panel.find("itemlayout") if panel is not None else None
