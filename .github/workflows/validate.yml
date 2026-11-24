@@ -385,8 +385,12 @@ jobs:
           elif (normal_image.findtext("left"), normal_image.findtext("top"), normal_image.findtext("width"), normal_image.findtext("height")) != ("12", "0", "261", "348"):
               errors.append("Normal Home posters must use the enlarged, consistent 3:4 card artwork")
           fixture_source = pathlib.Path("tools/test-fixtures/plugin.video.pov/default.py").read_text()
-          if '"poster": poster, "thumb": fanart' not in fixture_source:
-              errors.append("GUI fixture must keep portrait poster art distinct from landscape thumbnail/fanart art")
+          if (
+              '"thumb": fanart, "fanart": fanart, "landscape": fanart' not in fixture_source
+              or "if is_tv or index != 3:" not in fixture_source
+              or 'artwork["poster"] = poster' not in fixture_source
+          ):
+              errors.append("GUI fixture must preserve portrait poster/fanart separation and intentionally omit Interstellar poster art")
           if normal_title is None or normal_title.findtext("visible") != "!ListItem.IsSelected":
               errors.append("Normal poster title must yield to the row-aware selected-item title")
           normal_progress = poster.find("./control[@type='progress']") if poster is not None else None
