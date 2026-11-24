@@ -28,6 +28,7 @@
 - [x] Run automated Python/unit checks.
 - [x] Launch Kodi Piers in CI, verify CINÉVA becomes the active skin through JSON-RPC, and capture GUI screenshots.
 - [x] Verify the deterministic fixture's Home hero, dynamic fanart, poster fallback, shelf scrolling, lower-row safe area and selected D-pad paths.
+- [x] Enlarge Home poster rails to native 2:3 240×360 artwork, tighten the gutters, align two-line captions and resume progress, and retain a visible next-shelf preview; verified in Kodi GUI screenshots.
 - [ ] Complete interactive Skin Settings and widget-picker testing in Kodi.
 - [ ] Test Movies and TV Shows screens with populated and empty sources.
 - [ ] Install and test on a physical Fire TV Stick 4K, including remote navigation, playback hand-off, memory, responsiveness and install/update behavior.
