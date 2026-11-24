@@ -80,6 +80,11 @@ class KodiManagerTests(unittest.TestCase):
         self.assertFalse(any("screen=search" in action or "screen=mylist" in action for action in actions))
         self.assertFalse(any(button.get("id") == "6" for button in buttons))
 
+    def test_widget_helper_is_not_advertised_as_a_video_plugin(self):
+        addon_xml = ET.parse(ROOT / "tools/script.cineva.widgets/addon.xml").getroot()
+        self.assertIsNone(addon_xml.find("./extension[@point='xbmc.python.pluginsource']"))
+        self.assertIsNotNone(addon_xml.find("./extension[@point='xbmc.python.script']"))
+
     def test_screens_are_only_home_movies_tvshows(self):
         self.assertEqual(set(self.module.SCREENS), {"home", "movies", "tvshows"})
 
