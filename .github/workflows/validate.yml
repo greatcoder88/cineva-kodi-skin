@@ -529,8 +529,8 @@ jobs:
               zoom = focus_images[1].find("./animation[@effect='zoom']") if len(focus_images) > 1 else None
               if len(focus_images) > 1 and (focus_images[1].findtext("left"), focus_images[1].findtext("top"), focus_images[1].findtext("width"), focus_images[1].findtext("height")) != ("9", "-3", "267", "355"):
                   errors.append(f"Home row {container_id} focused artwork must stop above its title baseline")
-              if zoom is not None:
-                  errors.append(f"Home row {container_id} focused poster should use static emphasis to avoid texture resampling on D-pad focus")
+              if zoom is None or (zoom.get("start"), zoom.get("end"), zoom.get("time"), zoom.get("tween"), zoom.get("easing")) != ("100", "104", "160", "sine", "out") or zoom.text != "Focus":
+                  errors.append(f"Home row {container_id} focused poster is missing its short, event-driven D-pad zoom")
               expected_progress_visibility = {
                   f"!Control.HasFocus({container_id}) + ListItem.IsResumable",
                   f"Control.HasFocus({container_id}) + ListItem.IsResumable",
