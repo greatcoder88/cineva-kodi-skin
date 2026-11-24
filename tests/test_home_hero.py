@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.5.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.6.zip"
 
 
 class HomeHeroActionTests(unittest.TestCase):
@@ -130,12 +130,12 @@ class HomeHeroActionTests(unittest.TestCase):
             for row in range(1, 5):
                 group = rail.find(f"./control[@type='group'][@id='{9060 + row}']")
                 shelf = group.find(f"./control[@type='fixedlist'][@id='{9000 + row}']")
-                self.assertEqual(group.findtext("height"), "468")
-                self.assertEqual((shelf.findtext("top"), shelf.findtext("height")), ("52", "416"))
+                self.assertEqual(group.findtext("height"), "500")
+                self.assertEqual((shelf.findtext("top"), shelf.findtext("height")), ("44", "448"))
                 self.assertEqual(
                     [(node.get("width"), node.get("height"))
                      for node in shelf.findall("itemlayout") + shelf.findall("focusedlayout")],
-                    [("285", "416"), ("285", "416")],
+                    [("285", "448"), ("285", "448")],
                 )
             poster = includes.find("./include[@name='CinevaPosterItem']")
             image = poster.find("./control[@type='image']")
@@ -143,11 +143,11 @@ class HomeHeroActionTests(unittest.TestCase):
             progress = poster.find("./control[@type='progress']")
             self.assertEqual(
                 (image.findtext("left"), image.findtext("top"), image.findtext("width"), image.findtext("height")),
-                ("22", "0", "240", "320"),
+                ("22", "0", "240", "360"),
             )
             self.assertEqual(
                 (title.findtext("top"), title.findtext("height"), title.findtext("width")),
-                ("322", "64", "285"),
+                ("362", "52", "285"),
             )
             self.assertEqual(
                 (progress.findtext("left"), progress.findtext("top"), progress.findtext("width"), progress.findtext("height")),
@@ -169,16 +169,16 @@ class HomeHeroActionTests(unittest.TestCase):
             self.assertEqual(
                 (focused_image.findtext("left"), focused_image.findtext("top"),
                  focused_image.findtext("width"), focused_image.findtext("height")),
-                ("19", "-3", "246", "327"),
+                ("19", "-3", "246", "369"),
             )
             self.assertEqual(
                 (focused_title.findtext("top"), focused_title.findtext("height")),
-                ("340", "64"),
+                ("384", "52"),
             )
             self.assertEqual(
                 (focus_accent.findtext("left"), focus_accent.findtext("top"),
                  focus_accent.findtext("width"), focus_accent.findtext("height")),
-                ("101", "407", "84", "4"),
+                ("101", "440", "84", "4"),
             )
 
 
