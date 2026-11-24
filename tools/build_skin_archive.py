@@ -1584,9 +1584,9 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = (
-                        "0.5.6 - Larger, tighter Home poster rails\\n"
-                        "- Enlarged Home poster artwork to its native 2:3 ratio and reduced the side gutters.\\n"
-                        "- Rebalanced caption, progress and focus geometry while preserving the next-shelf preview.\\n\\n"
+                        "0.5.6 - Larger, tighter Home poster rails\n"
+                        "- Enlarged Home poster artwork to its native 2:3 ratio and reduced the side gutters.\n"
+                        "- Rebalanced caption, progress and focus geometry while preserving the next-shelf preview.\n\n"
                     )
                     if not changelog.startswith("0.5.6 -"):
                         data = (entry + changelog).encode("utf-8")
