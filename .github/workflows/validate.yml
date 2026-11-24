@@ -285,8 +285,14 @@ jobs:
                   decoded = zlib.decompress(bytes(compressed))
                   stride = 1 + 640 * 4
                   alpha_at = lambda x: decoded[(375 * stride) + 1 + x * 4 + 3]
-                  if len(decoded) != stride * 750 or not (alpha_at(0) > 200 and alpha_at(320) < 10 and alpha_at(639) > 200):
-                      errors.append("Poster-led hero vignette must fade dark at both edges and remain clear in the center")
+                  if len(decoded) != stride * 750 or not (
+                      alpha_at(0) >= 220 and alpha_at(70) >= 220
+                      and 70 <= alpha_at(100) <= 110 and alpha_at(140) < 10
+                      and alpha_at(320) < 10 and alpha_at(500) < 10
+                      and 70 <= alpha_at(540) <= 110 and alpha_at(570) >= 220
+                      and alpha_at(639) >= 220
+                  ):
+                      errors.append("Poster-led hero vignette must align its soft fade to the fitted 2:3 poster edges")
           bottom_shade = controls.find("./control[@id='9106']")
           if bottom_shade is None or (bottom_shade.findtext("left"), bottom_shade.findtext("top"), bottom_shade.findtext("width"), bottom_shade.findtext("height")) != ("0", "320", "1920", "430") or bottom_shade.findtext("texture") != "hero-bottom-fade.png":
               errors.append("Home hero is missing the extended full-width fade into the poster shelves")
