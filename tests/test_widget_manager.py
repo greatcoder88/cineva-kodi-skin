@@ -106,6 +106,10 @@ class KodiManagerTests(unittest.TestCase):
             b'<control type="image" id="9002"><texture>$INFO[Container(9002).ListItem.Art(fanart)]</texture></control>'
             b'<control type="image" id="9003"><texture>$INFO[Container(9003).ListItem.Art(fanart)]</texture></control>'
             b'<control type="image" id="9004"><texture>$INFO[Container(9004).ListItem.Art(fanart)]</texture></control>'
+            b'<control type="group" id="9201"><visible>Control.HasFocus(1001)</visible><control type="label"><label>$INFO[Container(9001).ListItem.Label]</label></control></control>'
+            b'<control type="group" id="9202"><visible>Control.HasFocus(9002)</visible><control type="label"><label>$INFO[Container(9002).ListItem.Label]</label></control></control>'
+            b'<control type="group" id="9203"><visible>Control.HasFocus(9003)</visible><control type="label"><label>$INFO[Container(9003).ListItem.Label]</label></control></control>'
+            b'<control type="group" id="9204"><visible>Control.HasFocus(9004)</visible><control type="label"><label>$INFO[Container(9004).ListItem.Label]</label></control></control>'
             b'<control type="image" id="9101"><texture>hero-shade.png</texture></control>'
             b'<control type="button" id="1001"><texturenofocus>-</texturenofocus><label>HOME</label></control>'
             b'</controls></window>')
