@@ -9,18 +9,18 @@ The repository feed is assembled from the exact packages produced by the build. 
 
 ## Hosting
 
-GitHub Pages currently builds the `main` branch root. The repository workflow commits the generated feed into the `repository-site/` subdirectory, so the feed is served at:
+The repository workflow publishes the generated feed to the `gh-pages` branch root. GitHub Pages must be configured to deploy from the `gh-pages` branch and `/(root)`. The Kodi File Manager source is:
 
-`https://greatcoder88.github.io/cineva-kodi-skin/repository-site/`
+`https://greatcoder88.github.io/cineva-kodi-skin/`
 
-No Pages source change or custom domain is needed. The custom-domain field should remain blank. Each generated directory contains an HTML index with relative links whose visible names match their hrefs, matching Kodi's HTTPDirectory parser.
+The custom-domain field should remain blank. The published root contains an Apache-style HTML directory index with a direct link to the repository installer ZIP and a `zips/` folder. This is intentionally a directory listing for Kodi's HTTPDirectory parser, not the project README.
 
 ## Install through Kodi's Add file source flow
 
 Do not download the installer in a separate browser. Use Kodi's own File Manager:
 
 1. Open **Settings → File manager → Add source**.
-2. Enter `https://greatcoder88.github.io/cineva-kodi-skin/repository-site/` as the source location and name it `CINÉVA`.
+2. Enter `https://greatcoder88.github.io/cineva-kodi-skin/` as the source location and name it `CINÉVA`.
 3. Open **Add-ons → Install from ZIP file → CINÉVA**.
 4. Select `repository.cineva-0.1.1.zip` at the source root.
 5. Open **Install from repository → CINÉVA Add-on Repository**.
