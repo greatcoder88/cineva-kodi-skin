@@ -611,15 +611,39 @@ jobs:
           tree.write(p, encoding="UTF-8", xml_declaration=True)
           print("Configured CINÉVA while preserving Kodi-generated resolution settings.")
           PY
-          flatpak run --user tv.kodi.Kodi//beta --standalone > /tmp/kodi-stdout.log 2>&1 &
-          echo $! > /tmp/kodi.pid
-          for i in $(seq 1 60); do
-            if pgrep -x kodi.bin >/dev/null || pgrep -x kodi-x11 >/dev/null; then break; fi
+          # Detach Kodi from the Actions shell process group. A transient runner/Flatpak
+          # signal previously stopped the app during Home startup before JSON-RPC opened.
+          launch_kodi() {
+            nohup setsid -f flatpak run --user tv.kodi.Kodi//beta --standalone </dev/null > /tmp/kodi-stdout.log 2>&1
+          }
+          for launch_attempt in 1 2; do
+            launch_kodi
+            for i in $(seq 1 45); do
+              if (pgrep -x kodi.bin >/dev/null || pgrep -x kodi-x11 >/dev/null) && ss -ltn | grep -q ':9090'; then
+                break
+              fi
+              if ! pgrep -x kodi.bin >/dev/null && ! pgrep -x kodi-x11 >/dev/null && [ "$i" -gt 5 ]; then
+                break
+              fi
+              sleep 2
+            done
+            if ss -ltn | grep -q ':9090'; then
+              break
+            fi
+            echo "Kodi did not keep its GUI/JSON-RPC listener alive on launch attempt $launch_attempt; restarting once."
+            flatpak kill --user tv.kodi.Kodi 2>/dev/null || true
+            pkill -x kodi.bin 2>/dev/null || true
+            pkill -x kodi-x11 2>/dev/null || true
             sleep 2
           done
-          pgrep -a -x kodi.bin || pgrep -a -x kodi-x11 || (echo "Kodi process did not start"; exit 1)
-          sleep 15
-          # Preserve a real Kodi framebuffer even if JSON-RPC fails before UI assertions.
+          if ! ss -ltn | grep -q ':9090'; then
+            pgrep -a -x kodi.bin || pgrep -a -x kodi-x11 || true
+            echo "Kodi did not expose its JSON-RPC listener after two detached launch attempts."
+            exit 1
+          fi
+          pgrep -a -x kodi.bin || pgrep -a -x kodi-x11 || true
+          sleep 10
+          # Preserve a real Kodi framebuffer after the Home window and JSON-RPC are ready.
           import -display :99 -window root artifacts/kodi-before-jsonrpc.png
           ss -ltnp > artifacts/listeners-before-jsonrpc.txt || true
           python - <<'PY'
