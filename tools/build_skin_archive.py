@@ -442,7 +442,7 @@ def update_xml(data, path):
             controls.remove(heading)
             controls.remove(shelf)
             row_group = ET.Element("control", {"type": "group", "id": str(9060 + index)})
-            for tag, value in (("left", 0), ("top", 0), ("width", 1710), ("height", 460)):
+            for tag, value in (("left", 0), ("top", 0), ("width", 1710), ("height", 480)):
                 set_child_text(row_group, tag, value)
             play_id = 9111 + (index - 1) * 2
             next_target = 9000 + index + 1 if index < 4 else 1001
@@ -457,13 +457,13 @@ def update_xml(data, path):
             set_child_text(shelf, "left", 0)
             set_child_text(shelf, "top", 52)
             set_child_text(shelf, "width", 1710)
-            set_child_text(shelf, "height", 390)
+            set_child_text(shelf, "height", 420)
             set_child_text(shelf, "itemgap", 14)
             set_child_text(shelf, "onup", f"SetFocus({play_id})")
             set_child_text(shelf, "ondown", f"SetFocus({next_target})")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
                 layout.set("width", "285")
-                layout.set("height", "390")
+                layout.set("height", "420")
             focused_layout = shelf.find("./focusedlayout")
             focused_include = focused_layout.find("include") if focused_layout is not None else None
             if focused_include is not None:
@@ -587,13 +587,13 @@ def update_xml(data, path):
             raise SystemExit("Includes.xml has an incomplete poster layout")
         if focused_label is None:
             focused_label = ET.fromstring(ET.tostring(normal_label, encoding="unicode"))
-        for tag, value in (("left", 22), ("top", 0), ("width", 240), ("height", 320)):
+        for tag, value in (("left", 12), ("top", 0), ("width", 261), ("height", 348)):
             set_child_text(normal_image, tag, value)
         # Use the semantic poster key for every shelf state. Providers often map
         # thumb to landscape fanart, which makes inactive cards turn into short,
         # cropped strips while the selected row still appears portrait.
         set_child_text(normal_image, "texture", "$INFO[ListItem.Art(poster)]")
-        for tag, value in (("left", 0), ("top", 322), ("width", 285), ("height", 46), ("align", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
+        for tag, value in (("left", 0), ("top", 350), ("width", 285), ("height", 46), ("align", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
             set_child_text(normal_label, tag, value)
         stale_visibility = normal_label.find("visible")
         if stale_visibility is not None:
@@ -613,7 +613,7 @@ def update_xml(data, path):
         if normal_progress is None:
             normal_progress = ET.fromstring(ET.tostring(progress, encoding="unicode"))
             normal.append(normal_progress)
-        for tag, value in (("left", 27), ("top", 308), ("width", 231), ("height", 5)):
+        for tag, value in (("left", 18), ("top", 337), ("width", 249), ("height", 5)):
             set_child_text(normal_progress, tag, value)
         set_child_text(normal_progress, "info", "ListItem.PercentPlayed")
         set_child_text(normal_progress, "visible", "ListItem.IsResumable")
@@ -624,7 +624,7 @@ def update_xml(data, path):
         # the title below it. The 104% control geometry plus a 104% focus
         # animation gives a balanced ~108% total scale instead of double-enlarging
         # an already oversized 108% control.
-        for tag, value in (("left", 18), ("top", -6), ("width", 250), ("height", 333)):
+        for tag, value in (("left", 7), ("top", -6), ("width", 271), ("height", 361)):
             set_child_text(focused_image, tag, value)
         set_child_text(focused_image, "texture", "$INFO[ListItem.Art(poster)]")
         focus_animation = focused_image.find("./animation[@effect='zoom']")
@@ -632,7 +632,7 @@ def update_xml(data, path):
             raise SystemExit("Includes.xml focused poster is missing its zoom animation")
         focus_animation.set("end", "104")
         focus_animation.set("time", "180")
-        for tag, value in (("left", 27), ("width", 231), ("top", 308), ("height", 5)):
+        for tag, value in (("left", 18), ("width", 249), ("top", 345), ("height", 5)):
             set_child_text(progress, tag, value)
         if focused_label is not None and focused_label in list(focused):
             focused.remove(focused_label)
@@ -657,7 +657,7 @@ def update_xml(data, path):
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
             set_child_text(fallback_progress, "visible", f"!Control.HasFocus({container_id}) + ListItem.IsResumable")
             # Reserve enough vertical room for long titles that wrap to two lines.
-            for tag, value in (("left", 0), ("top", 344), ("width", 285), ("height", 42), ("align", "center"), ("font", "font10"), ("textcolor", "white")):
+            for tag, value in (("left", 0), ("top", 370), ("width", 285), ("height", 42), ("align", "center"), ("font", "font10"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
             stale_wrap = active_label.find("wrap")
             if stale_wrap is not None:
@@ -666,7 +666,7 @@ def update_xml(data, path):
             set_child_text(active_label, "visible", f"Control.HasFocus({container_id})")
             set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
             focus_accent = ET.Element("control", {"type": "image"})
-            for tag, value in (("left", 104), ("top", 386), ("width", 78), ("height", 4)):
+            for tag, value in (("left", 101), ("top", 415), ("width", 84), ("height", 4)):
                 set_child_text(focus_accent, tag, value)
             set_child_text(focus_accent, "texture", "focus-bar.png")
             set_child_text(focus_accent, "visible", f"Control.HasFocus({container_id})")
