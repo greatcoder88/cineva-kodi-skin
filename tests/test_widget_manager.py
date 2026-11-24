@@ -101,7 +101,14 @@ class KodiManagerTests(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("cineva_builder_home_texture", builder_path)
         builder = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(builder)
-        source = b'<window><controls><control type="button" id="1001"><texturenofocus>-</texturenofocus><label>HOME</label></control></controls></window>'
+        source = (b'<window><controls>'
+            b'<control type="image" id="9001"><texture>$INFO[Container(9001).ListItem.Art(fanart)]</texture></control>'
+            b'<control type="image" id="9002"><texture>$INFO[Container(9002).ListItem.Art(fanart)]</texture></control>'
+            b'<control type="image" id="9003"><texture>$INFO[Container(9003).ListItem.Art(fanart)]</texture></control>'
+            b'<control type="image" id="9004"><texture>$INFO[Container(9004).ListItem.Art(fanart)]</texture></control>'
+            b'<control type="image" id="9101"><texture>hero-shade.png</texture></control>'
+            b'<control type="button" id="1001"><texturenofocus>-</texturenofocus><label>HOME</label></control>'
+            b'</controls></window>')
         rendered = ET.fromstring(builder.update_xml(source, "skin.cineva/xml/Home.xml"))
         button = rendered.find(".//control[@id='1001']")
         self.assertIsNone(button.find("texturenofocus"))
