@@ -372,7 +372,7 @@ jobs:
               aspect = clearlogo.find("aspectratio") if clearlogo is not None else None
               if title_label is None or title_label.findtext("visible") != f"String.IsEmpty({clearlogo_info})":
                   errors.append(f"Home row {container_id} must retain its text title only when clearlogo art is absent")
-              if clearlogo is None or clearlogo.get("type") != "image" or (clearlogo.findtext("left"), clearlogo.findtext("top"), clearlogo.findtext("width"), clearlogo.findtext("height"), clearlogo.findtext("texture"), clearlogo.findtext("visible")) != ("0", "24", "1220", "84", f"$INFO[{clearlogo_info}]", f"!String.IsEmpty({clearlogo_info})") or aspect is None or aspect.attrib != {"align": "left", "aligny": "center"} or aspect.text != "keep":
+              if clearlogo is None or clearlogo.get("type") != "image" or (clearlogo.findtext("left"), clearlogo.findtext("top"), clearlogo.findtext("width"), clearlogo.findtext("height"), clearlogo.findtext("texture"), clearlogo.findtext("visible")) != ("0", "32", "1220", "84", f"$INFO[{clearlogo_info}]", f"!String.IsEmpty({clearlogo_info})") or aspect is None or aspect.attrib != {"align": "left", "aligny": "center"} or aspect.text != "keep":
                   errors.append(f"Home row {container_id} is missing its title-slot clearlogo image and proportional sizing")
               if buttons[0].findtext("onclick") != f"PlayMedia($INFO[Container({container_id}).ListItem.File])":
                   errors.append(f"Home row {container_id} PLAY action is not bound to its selected item")
