@@ -145,8 +145,12 @@ class WidgetManager:
             return {'path': target, 'title': title}
         if action == 'folder':
             return self._browse_directory(target, addon_id, parents + [path])
-        if action == 'parent':
-            return self._browse_directory(target, addon_id, parents[:-1])
+        if action == 'parent' or (action == 'back' and parents):
+            # Back inside a nested add-on folder should return to its parent;
+            # only Back at the add-on root should close the picker.
+            parent = parents[-1] if action == 'back' else target
+            next_parents = parents[:-1]
+            return self._browse_directory(parent, addon_id, next_parents)
         return None
 
     def choose_source(self):
