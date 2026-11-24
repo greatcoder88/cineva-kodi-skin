@@ -446,13 +446,13 @@ jobs:
               heading = row_controls[0] if len(row_controls) == 3 else None
               row_accent = row_controls[1] if len(row_controls) == 3 else None
               shelf = row_controls[2] if len(row_controls) == 3 else None
-              if row_group is None or row_group.get("type") != "group" or row_group.get("id") != str(9060 + index) or row_group.findtext("height") != "482":
+              if row_group is None or row_group.get("type") != "group" or row_group.get("id") != str(9060 + index) or row_group.findtext("height") != "506":
                   errors.append(f"Home widget {index} must be one grouped row inside the scrolling viewport")
               if heading is None or heading.get("type") != "label" or heading.findtext("label") != f"$INFO[Skin.String(Cineva.Widget{index}.Name)]" or (heading.findtext("top"), heading.findtext("height")) != ("0", "38") or heading.findtext("font") != "font18":
                   errors.append(f"Home widget {index} heading is missing from its row group")
-              if row_accent is None or row_accent.get("type") != "image" or (row_accent.findtext("left"), row_accent.findtext("top"), row_accent.findtext("width"), row_accent.findtext("height")) != ("0", "40", "58", "3") or row_accent.findtext("texture") != "focus-bar.png" or row_accent.findtext("visible") != f"Control.HasFocus({9000 + index})":
+              if row_accent is None or row_accent.get("type") != "image" or (row_accent.findtext("left"), row_accent.findtext("top"), row_accent.findtext("width"), row_accent.findtext("height")) != ("0", "42", "58", "3") or row_accent.findtext("texture") != "focus-bar.png" or row_accent.findtext("visible") != f"Control.HasFocus({9000 + index})":
                   errors.append(f"Home widget {index} is missing its active-rail accent")
-              if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("44", "430") or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
+              if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("60", "430") or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
                   errors.append(f"Home widget {index} shelf geometry or upward focus route is incorrect")
               later_focus_ids = [control_id for later_index in range(index + 1, 5)
                                  for control_id in (9000 + later_index, 9111 + (later_index - 1) * 2, 9112 + (later_index - 1) * 2)]
