@@ -21,9 +21,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build release ZIP and commit it when source fixes change
+      - name: Build release ZIP, verify idempotence, and commit source fixes
         run: |
           python tools/build_skin_archive.py
+          before="$(sha256sum skin.cineva-0.5.3.zip | cut -d' ' -f1)"
+          python tools/build_skin_archive.py
+          after="$(sha256sum skin.cineva-0.5.3.zip | cut -d' ' -f1)"
+          if [ "$before" != "$after" ]; then
+            echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
+            exit 1
+          fi
+          echo "Archive SHA-256 is stable across consecutive builds: $after"
           if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && ! git diff --quiet -- skin.cineva-0.5.3.zip; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -91,7 +99,7 @@ jobs:
           hero_meta = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Year]" in c.findtext("label", "")), None) if hero_group is not None else None
           hero_eyebrow = hero_group.find("./control[@id='9300']") if hero_group is not None else None
           hero_logo = hero_group.find("./control[@id='9190']") if hero_group is not None else None
-          if hero_group is None or hero_group.findtext("top") != "118" or hero_group.findtext("height") != "320" or hero_title is None or (hero_title.findtext("top"), hero_title.findtext("height"), hero_title.findtext("font"), hero_title.findtext("width"), hero_title.findtext("wrapmultiline"), hero_title.findtext("aligny")) != ("32", "82", "font20", "1200", "true", "center") or hero_meta is None or (hero_meta.findtext("top"), hero_meta.findtext("height"), hero_meta.findtext("font"), hero_meta.findtext("textcolor")) != ("128", "28", "font10", "silver") or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("164", "56", "font13") or hero_eyebrow is None or (hero_eyebrow.findtext("top"), hero_eyebrow.findtext("height"), hero_eyebrow.findtext("label"), hero_eyebrow.findtext("visible"), hero_eyebrow.findtext("font"), hero_eyebrow.findtext("textcolor")) != ("0", "24", "CONTINUE WATCHING", "String.Contains(Skin.String(Cineva.Widget1.Path),in_progress)", "font9", "FFE50914") or hero_logo is None or (hero_logo.findtext("top"), hero_logo.findtext("height"), hero_logo.findtext("width")) != ("36", "70", "900"):
+          if hero_group is None or hero_group.findtext("top") != "118" or hero_group.findtext("height") != "330" or hero_title is None or (hero_title.findtext("top"), hero_title.findtext("height"), hero_title.findtext("font"), hero_title.findtext("width"), hero_title.findtext("wrapmultiline"), hero_title.findtext("aligny")) != ("36", "82", "font20", "1200", "true", "center") or hero_meta is None or (hero_meta.findtext("top"), hero_meta.findtext("height"), hero_meta.findtext("font"), hero_meta.findtext("textcolor")) != ("136", "28", "font10", "silver") or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("174", "60", "font13") or hero_eyebrow is None or (hero_eyebrow.findtext("top"), hero_eyebrow.findtext("height"), hero_eyebrow.findtext("label"), hero_eyebrow.findtext("visible"), hero_eyebrow.findtext("font"), hero_eyebrow.findtext("textcolor")) != ("0", "24", "CONTINUE WATCHING", "String.Contains(Skin.String(Cineva.Widget1.Path),in_progress)", "font9", "FFE50914") or hero_logo is None or (hero_logo.findtext("top"), hero_logo.findtext("height"), hero_logo.findtext("width")) != ("36", "70", "900"):
             raise SystemExit("Home hero eyebrow, title/clearlogo, metadata and synopsis must occupy separate, title-safe vertical bands")
           if hero_title.findtext("visible") != "String.IsEmpty(Container(9001).ListItem.Art(clearlogo))" or hero_logo is None or (hero_logo.findtext("left"), hero_logo.findtext("top"), hero_logo.findtext("width"), hero_logo.findtext("height"), hero_logo.findtext("texture"), hero_logo.findtext("visible")) != ("0", "36", "900", "70", "$INFO[Container(9001).ListItem.Art(clearlogo)]", "!String.IsEmpty(Container(9001).ListItem.Art(clearlogo))") or hero_logo.find("aspectratio") is None or hero_logo.find("aspectratio").attrib != {"align": "left", "aligny": "center"} or hero_logo.findtext("aspectratio") != "keep":
             raise SystemExit("Home hero must prefer provider clearlogo artwork and retain a text-title fallback")
@@ -123,7 +131,7 @@ jobs:
                 if eyebrow is None or (eyebrow.findtext("top"), eyebrow.findtext("height"), eyebrow.findtext("label"), eyebrow.findtext("visible"), eyebrow.findtext("font"), eyebrow.findtext("textcolor")) != ("0", "24", expected_label, expected_visibility, "font9", "FFE50914"):
                     raise SystemExit(f"Home hero {container_id} is missing its source-aware {expected_label} eyebrow")
             buttons = group.findall("./control[@type='button']")
-            if len(buttons) != 2 or any(button.findtext("top") != "238" for button in buttons):
+            if len(buttons) != 2 or any(button.findtext("top") != "250" for button in buttons) or [(button.findtext("left"), button.findtext("width"), button.findtext("height")) for button in buttons] != [("0", "190", "54"), ("212", "220", "54")]:
               raise SystemExit(f"Home hero {container_id} actions are not aligned beneath the synopsis")
             if metadata is None or metadata.findtext("label") != expected:
               raise SystemExit(f"Home hero {container_id} metadata leaves separators for empty fields")
@@ -134,7 +142,7 @@ jobs:
             if (rating_bg is None or rating_bg.findtext("texture") != "rating-badge.png"
                 or rating_bg.findtext("width") != "148"
                 or rating_logo is None or rating_logo.findtext("texture") != "imdb-logo.png"
-                or (rating_logo.findtext("left"), rating_logo.findtext("top"), rating_logo.findtext("width"), rating_logo.findtext("height")) != ("778", "130", "48", "24")
+                or (rating_logo.findtext("left"), rating_logo.findtext("top"), rating_logo.findtext("width"), rating_logo.findtext("height")) != ("778", "138", "48", "24")
                 or rating_text is None or "ListItem.Rating" not in rating_text.findtext("label", "")
                 or "★" in rating_text.findtext("label", "")
                 or (rating_text.findtext("left"), rating_text.findtext("width")) != ("832", "84")):
@@ -149,6 +157,10 @@ jobs:
             raise SystemExit("Packaged rating badge must be a valid 148x32 PNG")
           if imdb_logo[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(imdb_logo[16:20], "big"), int.from_bytes(imdb_logo[20:24], "big")) != (48, 24):
             raise SystemExit("Packaged IMDb wordmark must be a valid 48x24 PNG")
+          for asset_name in ("hero-primary.png", "hero-primary-focus.png", "hero-secondary.png", "hero-secondary-focus.png"):
+            asset = Path("skin.cineva/media") .joinpath(asset_name).read_bytes()
+            if asset[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(asset[16:20], "big"), int.from_bytes(asset[20:24], "big")) != (32, 32):
+              raise SystemExit(f"Home CTA texture {asset_name} must be a valid 32x32 PNG")
           topbar_index = next((i for i, node in enumerate(list(controls))
                                if node.tag == "include" and (node.text or "").strip() == "CinevaTopBar"), -1)
           shade_index = next((i for i, node in enumerate(list(controls))
@@ -291,8 +303,8 @@ jobs:
               raise SystemExit(f"Home row {container_id} is missing its two nested hero actions")
             if buttons[0].findtext("onclick") != f"PlayMedia($INFO[Container({container_id}).ListItem.File])" or buttons[1].findtext("onclick") != f"SetFocus({container_id})" or [node.text for node in buttons[1].findall("onclick")] != [f"SetFocus({container_id})", "Action(Info)"]:
               raise SystemExit(f"Home row {container_id} hero actions are not wired to its selected item")
-            if [button.findtext("texturenofocus") for button in buttons] != ["white.png", "black.png"] or [button.findtext("textcolor") for button in buttons] != ["black", "gainsboro"]:
-              raise SystemExit(f"Home row {container_id} hero actions do not have contrasting Play/Info surfaces")
+            if [button.findtext("texturefocus") for button in buttons] != ["hero-primary-focus.png", "hero-secondary-focus.png"] or [button.findtext("texturenofocus") for button in buttons] != ["hero-primary.png", "hero-secondary.png"] or [button.findtext("textcolor") for button in buttons] != ["white", "white"] or any(button.find("texturefocus") is None or button.find("texturefocus").attrib.get("border") != "8" or button.find("texturenofocus") is None or button.find("texturenofocus").attrib.get("border") != "8" for button in buttons):
+              raise SystemExit(f"Home row {container_id} hero actions are missing their branded nine-slice focus surfaces")
             row_group = rail_list.find(f"./control[@type='group'][@id='{9060 + container_id - 9000}']") if rail_list is not None else None
             shelf = row_group.find(f"./control[@type='fixedlist'][@id='{container_id}']") if row_group is not None else None
             if shelf is None or shelf.findtext("onup") != f"SetFocus({play_id})" or row_group.findtext("onup") != f"SetFocus({play_id})":
@@ -1083,21 +1095,21 @@ jobs:
                 if indicator_coverage < 0.8:
                   raise SystemExit(f"Row-2 heading indicator is not visible at the compact rail position (coverage={indicator_coverage:.3f})")
                 print(f"Verified row-2 active-rail underline at y={indicator_y} (coverage={indicator_coverage:.3f}).")
-                # The PLAY surface must remain visible when row 2, rather than
-                # row 1, supplies the hero. A white unselected button occupies
-                # this exact 176x50 region in the 1920x1080 Home layout.
+                # The branded primary action is crimson at rest and focused.
+                # Measure its actual 190x54 Home geometry, not the old white button.
                 signal = subprocess.run([
                   "convert", "artifacts/cineva-home-row2-focus.png",
-                  "-crop", "176x50+72+356", "-colorspace", "gray",
-                  "-threshold", "82%", "-format", "%[fx:mean]", "info:"
+                  "-crop", "190x54+60+368",
+                  "-fx", "((r>0.55)&&(g<0.35)&&(b<0.35))?1:0",
+                  "-format", "%[fx:mean]", "info:"
                 ], text=True, capture_output=True, check=True)
                 try:
-                  white_coverage = float(signal.stdout.strip())
+                  crimson_coverage = float(signal.stdout.strip())
                 except ValueError:
                   raise SystemExit(f"Could not measure row-2 hero PLAY surface: {signal.stdout!r}")
-                if white_coverage < 0.55:
-                  raise SystemExit(f"Row-2 hero PLAY surface is not visibly rendered (white coverage={white_coverage:.3f})")
-                print(f"Verified row-2 hero PLAY surface in rendered screenshot (white coverage={white_coverage:.3f}).")
+                if crimson_coverage < 0.35:
+                  raise SystemExit(f"Row-2 hero PLAY surface is not visibly rendered (crimson coverage={crimson_coverage:.3f})")
+                print(f"Verified row-2 hero PLAY surface in rendered screenshot (crimson coverage={crimson_coverage:.3f}).")
                 subprocess.run(["xdotool","key","Up"],check=True)
                 deadline = time.time() + 8
                 while time.time() < deadline:

@@ -191,6 +191,49 @@ def poster_focus_png():
             + png_chunk(b"IEND", b""))
 
 
+def hero_action_texture_png(primary=True, focused=False):
+    """Create a rounded, nine-slice Home CTA surface with distinct focus states."""
+    width, height = 32, 32
+    radius = 7.5
+    if primary:
+        top = (177, 18, 31) if not focused else (244, 31, 44)
+        bottom = (112, 6, 17) if not focused else (190, 7, 22)
+        border = (224, 49, 61) if not focused else (255, 158, 164)
+    else:
+        top = (34, 38, 47) if not focused else (53, 21, 28)
+        bottom = (10, 12, 18) if not focused else (24, 8, 12)
+        border = (86, 92, 105) if not focused else (229, 9, 20)
+
+    pixels = bytearray()
+    for y in range(height):
+        position = y / (height - 1)
+        pixels.append(0)  # PNG filter: None
+        for x in range(width):
+            dx = max(radius - x - 0.5, 0.0, x + 0.5 - (width - radius))
+            dy = max(radius - y - 0.5, 0.0, y + 0.5 - (height - radius))
+            if dx * dx + dy * dy > radius * radius:
+                pixels.extend((0, 0, 0, 0))
+                continue
+            edge = x <= 1 or x >= width - 2 or y <= 1 or y >= height - 2
+            if edge:
+                color = border
+            else:
+                sheen = max(0.0, 1.0 - position * 1.7)
+                color = tuple(
+                    max(0, min(255, int(top[channel] * (1.0 - position)
+                                        + bottom[channel] * position
+                                        + (8 if channel == 0 else 4) * sheen)))
+                    for channel in range(3)
+                )
+            pixels.extend((*color, 255))
+
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return (b"\x89PNG\r\n\x1a\n"
+            + png_chunk(b"IHDR", header)
+            + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
+            + png_chunk(b"IEND", b""))
+
+
 def rating_badge_png():
     """Create the dark, gold-edged capsule that frames the IMDb score."""
     width, height = 148, 32
@@ -638,7 +681,7 @@ def update_xml(data, path):
                 labels = [child for child in group.findall("control") if child.get("type") == "label"]
                 if labels:
                     # Title first, metadata second: separate vertical baselines.
-                    set_child_text(labels[0], "top", 32)
+                    set_child_text(labels[0], "top", 36)
                     set_child_text(labels[0], "height", 82)
                     set_child_text(labels[0], "textcolor", "white")
                     set_child_text(labels[0], "width", 1200)
@@ -657,7 +700,7 @@ def update_xml(data, path):
                         f"$INFO[Container({container_id}).ListItem.Genre,  •  ]"
                     )
                     set_child_text(labels[1], "label", metadata)
-                    set_child_text(labels[1], "top", 128)
+                    set_child_text(labels[1], "top", 136)
                     set_child_text(labels[1], "height", 28)
                     set_child_text(labels[1], "font", "font10")
                     set_child_text(labels[1], "textcolor", "silver")
@@ -669,18 +712,18 @@ def update_xml(data, path):
                                 or "ListItem.Rating" in old_rating.findtext("label", "")):
                             group.remove(old_rating)
                     rating_bg = ET.SubElement(group, "control", {"type": "image", "id": str(rating_id)})
-                    for tag, value in (("left", 770), ("top", 126), ("width", 148), ("height", 32),
+                    for tag, value in (("left", 770), ("top", 134), ("width", 148), ("height", 32),
                                        ("texture", "rating-badge.png")):
                         set_child_text(rating_bg, tag, value)
                     set_child_text(rating_bg, "visible",
                                    f"!String.IsEmpty(Container({9000 + row_index}).ListItem.Rating)")
                     rating_logo = ET.SubElement(group, "control", {"type": "image", "id": str(rating_id + 1)})
-                    for tag, value in (("left", 778), ("top", 130), ("width", 48), ("height", 24),
+                    for tag, value in (("left", 778), ("top", 138), ("width", 48), ("height", 24),
                                        ("texture", "imdb-logo.png"),
                                        ("visible", f"!String.IsEmpty(Container({9000 + row_index}).ListItem.Rating)")):
                         set_child_text(rating_logo, tag, value)
                     rating_text = ET.SubElement(group, "control", {"type": "label", "id": str(rating_id + 2)})
-                    for tag, value in (("left", 832), ("top", 126), ("width", 84), ("height", 32),
+                    for tag, value in (("left", 832), ("top", 134), ("width", 84), ("height", 32),
                                        ("font", "font10"), ("textcolor", "FFFFD36A"),
                                        ("label", f"$INFO[Container({9000 + row_index}).ListItem.Rating]"),
                                        ("align", "left"), ("aligny", "center"),
@@ -688,8 +731,8 @@ def update_xml(data, path):
                         set_child_text(rating_text, tag, value)
                 for child in group.findall("control"):
                     if child.get("type") == "textbox":
-                        set_child_text(child, "top", 164)
-                        set_child_text(child, "height", 56)
+                        set_child_text(child, "top", 174)
+                        set_child_text(child, "height", 60)
                         set_child_text(child, "width", 900)
                         set_child_text(child, "font", "font13")
                         set_child_text(child, "textcolor", "white")
@@ -732,7 +775,7 @@ def update_xml(data, path):
                 for duplicate in hero_groups:
                     if duplicate is not hero_group:
                         controls.remove(duplicate)
-            set_child_text(hero_group, "height", 320)
+            set_child_text(hero_group, "height", 330)
             # Add a restrained editorial eyebrow above the dynamic title. It
             # gives every selected shelf item a clear hierarchy without
             # hard-coding a movie/show name or implying platform exclusivity.
@@ -790,26 +833,29 @@ def update_xml(data, path):
             ET.SubElement(
                 clearlogo, "aspectratio", {"align": "left", "aligny": "center"}
             ).text = "keep"
-            for button_id, label, left, width in (
-                (play_id, f"$VAR[CinevaHeroAction{row_index}]", 0, 176),
-                (info_id, "MORE INFO", 196, 210)
+            # Use a consistent crimson primary action and a restrained dark secondary
+            # surface. Nine-slice textures preserve rounded corners at 1080p and 4K.
+            for button_id, label, left, width, surface in (
+                (play_id, f"$VAR[CinevaHeroAction{row_index}]", 0, 190, "primary"),
+                (info_id, "MORE INFO", 212, 220, "secondary")
             ):
                 button = ET.SubElement(hero_group, "control",
                                        {"type": "button", "id": str(button_id)})
                 for tag, value in (
-                    ("left", left), ("top", 238), ("width", width), ("height", 50),
+                    ("left", left), ("top", 250), ("width", width), ("height", 54),
                     ("label", label), ("font", "font10"),
                     ("onup", f"SetFocus({nav_target})"),
                     ("ondown", f"SetFocus({container_id})"),
                     ("onleft", f"SetFocus({play_id})"),
                     ("onright", f"SetFocus({info_id})"),
-                    ("texturefocus", "focus-bar.png"),
-                    ("texturenofocus", "white.png" if button_id == play_id else "black.png"),
-                    ("textcolor", "black" if button_id == play_id else "white"),
-                    ("focusedcolor", "white"), ("align", "center"), ("aligny", "center")
+                    ("texturefocus", f"hero-{surface}-focus.png"),
+                    ("texturenofocus", f"hero-{surface}.png"),
+                    ("textcolor", "white"), ("focusedcolor", "white"),
+                    ("align", "center"), ("aligny", "center")
                 ):
                     set_child_text(button, tag, value)
-                set_child_text(button, "textcolor", "black" if button_id == play_id else "gainsboro")
+                button.find("texturefocus").set("border", "8")
+                button.find("texturenofocus").set("border", "8")
                 if button_id == play_id:
                     set_child_text(button, "onclick",
                                    f"PlayMedia($INFO[Container({container_id}).ListItem.File])")
@@ -1184,16 +1230,23 @@ def update_xml(data, path):
         controls = root.find("controls")
         if controls is None:
             raise SystemExit("SkinSettings.xml is missing its controls container")
-        for stale in list(controls.findall("control")):
-            if stale.get("id") in {"6", "7", "8", "9", "10"}:
-                controls.remove(stale)
         headings = {
             "home": ("HOME WIDGETS", 96, "Cineva.Widget"),
             "movies": ("MOVIES WIDGETS", 704, "Cineva.MovieWidget"),
             "tvshows": ("TV SHOWS WIDGETS", 1312, "Cineva.ShowWidget"),
         }
-        for screen, (heading, left, string_prefix) in headings.items():
-            section = ET.Element("control", {"type": "label"})
+        generated_ids = {"6", "7", "8", "9", "10", "40", "41", "42", "43"}
+        generated_ids.update(str(control_id) for control_id in range(21, 33))
+        generated_labels = {
+            "HOME WIDGETS", "MOVIES WIDGETS", "TV SHOWS WIDGETS",
+            "Choose a slot to select, change or clear its video add-on source.",
+        }
+        for stale in list(controls.findall("control")):
+            if (stale.get("id") in generated_ids
+                    or stale.findtext("label", "") in generated_labels):
+                controls.remove(stale)
+        for screen_index, (screen, (heading, left, string_prefix)) in enumerate(headings.items()):
+            section = ET.Element("control", {"type": "label", "id": str(40 + screen_index)})
             for tag, value in (("left", left), ("top", 238), ("width", 520),
                                ("height", 42), ("font", "font18"),
                                ("textcolor", "white"), ("label", heading)):
@@ -1211,7 +1264,7 @@ def update_xml(data, path):
                     set_child_text(button, tag, value)
                 controls.append(button)
         # A concise hint explains that each action opens the add-on/folder picker.
-        hint = ET.Element("control", {"type": "label"})
+        hint = ET.Element("control", {"type": "label", "id": "43"})
         for tag, value in (("left", 96), ("top", 690), ("width", 1500),
                            ("height", 44), ("font", "font12"),
                            ("textcolor", "grey"), ("label", "Choose a slot to select, change or clear its video add-on source.")):
@@ -1415,7 +1468,7 @@ def update_xml(data, path):
                 ET.SubElement(logo, tag).text = str(value)
             # A distinct, source-aware rating chip keeps the score legible and
             # visually separate from year/genre metadata on catalogue heroes.
-            for stale_id in ("9214", "9215", "9216"):
+            for stale_id in ("9210", "9211", "9212", "9213", "9214", "9215", "9216"):
                 stale = controls.find(f"./control[@id='{stale_id}']")
                 if stale is not None:
                     controls.remove(stale)
@@ -1508,6 +1561,10 @@ def main():
                 "skin.cineva/media/rail-scroll-mask.png": rail_scroll_mask_png(),
                 "skin.cineva/media/resume-track.png": resume_track_png(),
                 "skin.cineva/media/poster-focus.png": poster_focus_png(),
+                "skin.cineva/media/hero-primary.png": hero_action_texture_png(primary=True),
+                "skin.cineva/media/hero-primary-focus.png": hero_action_texture_png(primary=True, focused=True),
+                "skin.cineva/media/hero-secondary.png": hero_action_texture_png(primary=False),
+                "skin.cineva/media/hero-secondary-focus.png": hero_action_texture_png(primary=False, focused=True),
                 "skin.cineva/media/rating-badge.png": rating_badge_png(),
                 "skin.cineva/media/imdb-logo.png": imdb_logo_png(),
                 "skin.cineva/media/poster-placeholder.png": poster_placeholder_png(),
