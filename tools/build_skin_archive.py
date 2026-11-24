@@ -207,7 +207,7 @@ def poster_placeholder_png():
     # A right-facing crimson play glyph is the only saturated focal point.
     for step in range(88):
         x = 128 + step
-        half_height = int(step * 0.48)
+        half_height = int((87 - step) * 0.48)
         for y in range(256 - half_height, 257 + half_height):
             pixel(x, y, crimson)
     line(124, 386, 218, 386, crimson, 4)
@@ -530,6 +530,20 @@ def update_xml(data, path):
         set_child_text(rail_list, "itemgap", 12)
         set_child_text(rail_list, "scrolltime", 220)
         set_child_text(rail_list, "usecontrolcoords", "false")
+        # Lower shelves otherwise sit too close to the 1080p bottom edge: their
+        # two-line captions can be clipped when rows 2-4 are docked into view.
+        # Lift the whole scrolling viewport by 40px only while a lower row or
+        # its hero actions are focused; the initial Home composition is unchanged.
+        lower_row_focus = " | ".join(
+            f"Control.HasFocus({control_id})"
+            for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118)
+        )
+        ET.SubElement(
+            rail_list,
+            "animation",
+            {"effect": "slide", "start": "0,0", "end": "0,-40",
+             "time": "220", "condition": lower_row_focus},
+        ).text = "Conditional"
         first_row_index = None
         for index in range(1, 5):
             heading_label = f"$INFO[Skin.String(Cineva.Widget{index}.Name)]"

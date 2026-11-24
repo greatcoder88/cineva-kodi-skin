@@ -71,7 +71,21 @@ jobs:
           decoded = zlib.decompress(bytes(compressed))
           if len(decoded) != (1 + width * 4) * height:
               raise SystemExit("Poster fallback PNG pixel payload has an invalid length")
-          print("Normal and focused Home cards package the valid 342x513 branded fallback.")
+          stride = 1 + width * 4
+          def crimson_pixels(x0, x1):
+              return sum(
+                  decoded[y * stride + 1 + x * 4] > 200
+                  and decoded[y * stride + 1 + x * 4 + 1] < 40
+                  and decoded[y * stride + 1 + x * 4 + 2] < 40
+                  for y in range(210, 303) for x in range(x0, x1)
+              )
+          left_play_pixels = crimson_pixels(128, 153)
+          right_play_pixels = crimson_pixels(190, 215)
+          if left_play_pixels <= right_play_pixels * 2:
+              raise SystemExit(
+                  "Poster fallback play glyph must point right (broad left edge, tapered right tip)"
+              )
+          print("Normal and focused Home cards package the valid 342x513 fallback with a right-facing play glyph.")
           PY
 
       - name: Python syntax
@@ -262,6 +276,10 @@ jobs:
           rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
           if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("105", "454", "1710", "670") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "220"):
               errors.append("Home rails must use the pinned-hero vertical scrolling viewport")
+          lower_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118))
+          lower_slide = rail_list.find("./animation[@effect='slide']") if rail_list is not None else None
+          if lower_slide is None or (lower_slide.get("start"), lower_slide.get("end"), lower_slide.get("time"), lower_slide.get("condition"), lower_slide.text) != ("0,0", "0,-40", "220", lower_focus, "Conditional"):
+              errors.append("Home lower-row focus must lift the scrolling viewport 40px so poster captions remain inside the screen")
           scroll_mask = controls.find("./control[@id='9107']")
           expected_scroll_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118))
           if scroll_mask is None or (scroll_mask.findtext("left"), scroll_mask.findtext("top"), scroll_mask.findtext("width"), scroll_mask.findtext("height")) != ("0", "320", "1920", "430") or scroll_mask.findtext("texture") != "rail-scroll-mask.png" or scroll_mask.findtext("visible") != expected_scroll_focus:

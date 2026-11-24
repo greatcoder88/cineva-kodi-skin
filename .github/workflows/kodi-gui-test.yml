@@ -168,6 +168,10 @@ jobs:
           rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
           if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("105", "454", "1710", "670") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "220"):
             raise SystemExit("Home rails are missing their vertical scrolling viewport")
+          lower_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118))
+          lower_slide = rail_list.find("./animation[@effect='slide']") if rail_list is not None else None
+          if lower_slide is None or (lower_slide.get("start"), lower_slide.get("end"), lower_slide.get("time"), lower_slide.get("condition"), lower_slide.text) != ("0,0", "0,-40", "220", lower_focus, "Conditional"):
+            raise SystemExit("Home lower-row focus must lift the poster viewport 40px to keep captions clear of the screen edge")
           scroll_mask = controls.find("./control[@id='9107']")
           expected_scroll_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118))
           if scroll_mask is None or (scroll_mask.findtext("left"), scroll_mask.findtext("top"), scroll_mask.findtext("width"), scroll_mask.findtext("height")) != ("0", "320", "1920", "430") or scroll_mask.findtext("texture") != "rail-scroll-mask.png" or scroll_mask.findtext("visible") != expected_scroll_focus:
@@ -811,6 +815,19 @@ jobs:
             else:
               raise SystemExit(f"Hero action Down did not return to the selected poster: {state}")
             # Move through every row; the grouplist must scroll the lower shelves into view.
+            def verify_lower_row_bottom_clear(screenshot, row_name):
+              signal = subprocess.run(
+                ["convert", screenshot, "-crop", "1920x16+0+1064", "-colorspace", "gray",
+                 "-threshold", "70%", "-format", "%[fx:mean]", "info:"],
+                text=True, capture_output=True, check=True
+              )
+              try:
+                bright_coverage = float(signal.stdout.strip())
+              except ValueError:
+                raise SystemExit(f"Could not measure the bottom safe area for {row_name}: {signal.stdout!r}")
+              if bright_coverage > 0.001:
+                raise SystemExit(f"{row_name} shelf captions still touch or clip at the 1080p bottom edge (bright coverage={bright_coverage:.4f})")
+              print(f"Verified {row_name} leaves a clean 16px bottom safe area (bright coverage={bright_coverage:.4f}).")
             def active_rail_indicator_position(row_number):
               import xml.etree.ElementTree as ET
               home_root = ET.parse("skin.cineva/xml/Home.xml").getroot()
@@ -822,6 +839,10 @@ jobs:
               # The active group is docked to the viewport's bottom edge when scrolled into view.
               x = int(rail.findtext("left", "0")) + int(row_accent.findtext("left", "0"))
               y = int(rail.findtext("top", "0")) + int(rail.findtext("height", "0")) - int(row_group.findtext("height", "0")) + int(row_accent.findtext("top", "0"))
+              slide = rail.find("./animation[@effect='slide']")
+              if slide is not None:
+                end_y = (slide.get("end", "0,0").split(",") + ["0"])[1]
+                y += int(end_y)
               return x, y
             expected_row_labels = {2: "Breaking Bad", 3: "The Shawshank Redemption", 4: "Breaking Bad"}
             for row_number in (2, 3, 4):
@@ -840,6 +861,7 @@ jobs:
               if row_number == 2:
                 time.sleep(0.8)
                 subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row2-focus.png"],check=True)
+                verify_lower_row_bottom_clear("artifacts/cineva-home-row2-focus.png", "row 2")
                 # The previous rail should fade away beneath the pinned hero without
                 # creating an opaque black stripe across its artwork.
                 scroll_mask_signal = subprocess.run(
@@ -927,6 +949,7 @@ jobs:
               if row_number == 4:
                 time.sleep(0.8)
                 subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row4-scroll.png"],check=True)
+                verify_lower_row_bottom_clear("artifacts/cineva-home-row4-scroll.png", "row 4")
                 row4_mask_signal = subprocess.run(
                   ["convert","artifacts/cineva-home-row4-scroll.png","-crop","1920x36+0+394","-colorspace","gray","-format","%[fx:mean]","info:"],
                   text=True,capture_output=True,check=True
