@@ -26,6 +26,24 @@ jobs:
         run: |
           test -s skin.cineva-0.5.3.zip
           unzip -q skin.cineva-0.5.3.zip -d .
+      - name: Validate Settings-only widget configuration navigation
+        run: |
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          home = ET.parse("skin.cineva/xml/Home.xml").getroot()
+          nav = next((g for g in home.findall("./controls/control[@type='group']") if g.find("./control[@id='1001']") is not None), None)
+          if nav is None:
+              raise SystemExit("Home navigation group is missing")
+          buttons = nav.findall("./control[@type='button']")
+          if any(b.findtext("label", "").strip().upper() == "MY WIDGETS" or "ActivateWindow(11119)" in b.findtext("onclick", "") for b in buttons):
+              raise SystemExit("Separate My Widgets destination must not appear in Home navigation")
+          settings = nav.find("./control[@id='1005']")
+          if settings is None or (settings.findtext("label"), settings.findtext("left"), settings.findtext("width"), settings.findtext("onclick")) != ("SETTINGS", "670", "150", "ActivateWindow(11113)"):
+              raise SystemExit("Settings must occupy the reclaimed Home navigation slot")
+          if nav.find("./control[@id='1006']") is not None:
+              raise SystemExit("Obsolete Home navigation control 1006 remains")
+          print("Home navigation is Settings-only; widget slots remain configurable in Skin Settings.")
+          PY
       - name: Validate branded Home poster fallback
         run: |
           python - <<'PY'
