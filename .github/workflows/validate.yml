@@ -29,6 +29,7 @@ jobs:
       - name: Validate Settings-only widget configuration navigation
         run: |
           python - <<'PY'
+          from pathlib import Path
           import xml.etree.ElementTree as ET
           home = ET.parse("skin.cineva/xml/Home.xml").getroot()
           nav = next((g for g in home.findall("./controls/control[@type='group']") if g.find("./control[@id='1001']") is not None), None)
@@ -42,6 +43,8 @@ jobs:
               raise SystemExit("Settings must occupy the reclaimed Home navigation slot")
           if nav.find("./control[@id='1006']") is not None:
               raise SystemExit("Obsolete Home navigation control 1006 remains")
+          if Path("skin.cineva/xml/CinevaWidgetHub.xml").exists():
+              raise SystemExit("Obsolete My Widgets hub window must not be packaged")
           print("Home navigation is Settings-only; widget slots remain configurable in Skin Settings.")
           PY
       - name: Validate branded Home poster fallback
