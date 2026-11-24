@@ -992,6 +992,46 @@ def update_xml(data, path):
             for child in (fallback_image, active_image, fallback_label, active_label, fallback_progress, clone_progress, focus_accent):
                 clone.append(child)
             root.append(clone)
+    elif path == "skin.cineva/xml/SkinSettings.xml":
+        # Replace the legacy broad widget-manager links with twelve direct,
+        # numbered slot actions. This makes each screen's four sources editable
+        # from the skin's own Settings window without a separate My Widgets hub.
+        controls = root.find("controls")
+        if controls is None:
+            raise SystemExit("SkinSettings.xml is missing its controls container")
+        for stale in list(controls.findall("control")):
+            if stale.get("id") in {"6", "7", "8", "9", "10"}:
+                controls.remove(stale)
+        headings = {
+            "home": ("HOME WIDGETS", 96),
+            "movies": ("MOVIES WIDGETS", 704),
+            "tvshows": ("TV SHOWS WIDGETS", 1312),
+        }
+        for screen, (heading, left) in headings.items():
+            section = ET.Element("control", {"type": "label"})
+            for tag, value in (("left", left), ("top", 238), ("width", 520),
+                               ("height", 42), ("font", "font18"),
+                               ("textcolor", "white"), ("label", heading)):
+                set_child_text(section, tag, value)
+            controls.append(section)
+            for slot in range(1, 5):
+                button = ET.Element("control", {"type": "button", "id": str(20 + (list(headings).index(screen) * 4) + slot)})
+                for tag, value in (("left", left), ("top", 300 + (slot - 1) * 82),
+                                   ("width", 520), ("height", 64), ("font", "font14"),
+                                   ("label", f"EDIT WIDGET {slot}"),
+                                   ("texturefocus", "focus-bar.png"),
+                                   ("texturenofocus", "black.png"),
+                                   ("textcolor", "white"), ("focusedcolor", "white"),
+                                   ("onclick", f"RunScript(script.cineva.widgets,action=configure&screen={screen}&slot={slot})")):
+                    set_child_text(button, tag, value)
+                controls.append(button)
+        # A concise hint explains that each action opens the add-on/folder picker.
+        hint = ET.Element("control", {"type": "label"})
+        for tag, value in (("left", 96), ("top", 690), ("width", 1500),
+                           ("height", 44), ("font", "font12"),
+                           ("textcolor", "grey"), ("label", "Choose a slot to select, change or clear its video add-on source.")):
+            set_child_text(hint, tag, value)
+        controls.append(hint)
     elif path == "skin.cineva/xml/Font.xml":
         fontset = root.find("./fontset[@id='Default']")
         if fontset is None:
@@ -1167,6 +1207,7 @@ def main():
                 "skin.cineva/xml/Home.xml",
                 "skin.cineva/xml/DialogConfirm.xml",
                 "skin.cineva/xml/Includes.xml",
+                "skin.cineva/xml/SkinSettings.xml",
                 "skin.cineva/xml/Font.xml",
                 "skin.cineva/xml/MyVideoNav.xml",
                 "skin.cineva/xml/DialogVideoInfo.xml",
