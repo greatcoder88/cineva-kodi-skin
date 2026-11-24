@@ -221,7 +221,8 @@ jobs:
                   if len(decoded) != stride * 180 or not (150 <= alpha_at(0) <= 170) or not (20 <= alpha_at(90) <= 50) or alpha_at(179) != 0 or not (alpha_at(0) > alpha_at(90) > alpha_at(179)):
                       errors.append("Topbar contrast veil must fade smoothly from strong top opacity to transparent")
           hero_artwork = [node for node in controls.findall("control")
-                          if node.get("type") == "image" and node.findtext("texture", "").startswith("$INFO[Container(")]
+                          if node.get("type") == "image"
+                          and ".ListItem.Art(fanart)]" in node.findtext("texture", "")]
           hero_shade = next((node for node in controls.findall("control")
                              if node.get("type") == "image" and node.findtext("texture") == "hero-shade.png"), None)
           if len(hero_artwork) != 4 or any(node.findtext("height") != "750" for node in hero_artwork) or hero_shade is None or hero_shade.findtext("height") != "750":
@@ -247,6 +248,44 @@ jobs:
               hero_fallback_data = hero_fallback_path.read_bytes()
               if hero_fallback_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(hero_fallback_data[16:20], "big"), int.from_bytes(hero_fallback_data[20:24], "big")) != (1920, 750):
                   errors.append("Packaged missing-fanart hero placeholder must be a 1920x750 PNG")
+          row1_exclusions = (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118)
+          for row_index, container_id in enumerate((9001, 9002, 9003, 9004), start=1):
+              if row_index == 1:
+                  active = " + ".join(f"!Control.HasFocus({focus_id})" for focus_id in row1_exclusions)
+              else:
+                  play_id = 9111 + (row_index - 1) * 2
+                  active = "(" + " | ".join(f"Control.HasFocus({focus_id})" for focus_id in (container_id, play_id, play_id + 1)) + ")"
+              expected_visible = f"{active} + String.IsEmpty(Container({container_id}).ListItem.Art(fanart)) + !String.IsEmpty(Container({container_id}).ListItem.Art(poster))"
+              poster_layer = controls.find(f"./control[@id='{9139 + row_index}']")
+              vignette_layer = controls.find(f"./control[@id='{9143 + row_index}']")
+              if poster_layer is None or (poster_layer.findtext("left"), poster_layer.findtext("top"), poster_layer.findtext("width"), poster_layer.findtext("height"), poster_layer.findtext("texture"), poster_layer.findtext("visible")) != ("1280", "0", "640", "750", f"$INFO[Container({container_id}).ListItem.Art(poster)]", expected_visible):
+                  errors.append(f"Home row {container_id} is missing its conditional poster-led hero panel")
+              else:
+                  aspect = poster_layer.find("aspectratio")
+                  if aspect is None or aspect.text != "keep" or aspect.attrib != {"align": "center", "aligny": "center"}:
+                      errors.append(f"Home row {container_id} poster hero must preserve portrait aspect ratio")
+              if vignette_layer is None or (vignette_layer.findtext("left"), vignette_layer.findtext("top"), vignette_layer.findtext("width"), vignette_layer.findtext("height"), vignette_layer.findtext("texture"), vignette_layer.findtext("visible")) != ("1280", "0", "640", "750", "hero-poster-vignette.png", expected_visible):
+                  errors.append(f"Home row {container_id} is missing its poster edge vignette")
+          vignette_path = root / "media/hero-poster-vignette.png"
+          if not vignette_path.is_file():
+              errors.append("Packaged poster-led hero vignette is missing")
+          else:
+              vignette_data = vignette_path.read_bytes()
+              if vignette_data[:8] != bytes.fromhex("89504e470d0a1a0a") or struct.unpack(">II", vignette_data[16:24]) != (640, 750):
+                  errors.append("Poster-led hero vignette must be a valid 640x750 PNG")
+              else:
+                  offset, compressed = 8, bytearray()
+                  while offset < len(vignette_data):
+                      chunk_length = int.from_bytes(vignette_data[offset:offset + 4], "big")
+                      chunk_type = vignette_data[offset + 4:offset + 8]
+                      if chunk_type == b"IDAT":
+                          compressed.extend(vignette_data[offset + 8:offset + 8 + chunk_length])
+                      offset += chunk_length + 12
+                  decoded = zlib.decompress(bytes(compressed))
+                  stride = 1 + 640 * 4
+                  alpha_at = lambda x: decoded[(375 * stride) + 1 + x * 4 + 3]
+                  if len(decoded) != stride * 750 or not (alpha_at(0) > 200 and alpha_at(320) < 10 and alpha_at(639) > 200):
+                      errors.append("Poster-led hero vignette must fade dark at both edges and remain clear in the center")
           bottom_shade = controls.find("./control[@id='9106']")
           if bottom_shade is None or (bottom_shade.findtext("left"), bottom_shade.findtext("top"), bottom_shade.findtext("width"), bottom_shade.findtext("height")) != ("0", "320", "1920", "430") or bottom_shade.findtext("texture") != "hero-bottom-fade.png":
               errors.append("Home hero is missing the extended full-width fade into the poster shelves")
