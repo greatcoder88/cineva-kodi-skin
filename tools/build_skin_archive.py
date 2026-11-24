@@ -192,31 +192,34 @@ def poster_focus_png():
 
 
 def poster_placeholder_png():
-    """Create a branded 2:3 fallback when a provider has no poster artwork."""
+    """Create cinematic abstract artwork when a provider has no poster."""
     width, height = 342, 513
     pixels = bytearray()
     for y in range(height):
         vertical = y / (height - 1)
-        pixels.append(0)  # PNG filter: None
+        pixels.append(0)
         for x in range(width):
-            dx = (x - width / 2) / (width * 0.72)
-            dy = (y - height * 0.46) / (height * 0.72)
-            glow = max(0.0, 1.0 - (dx * dx + dy * dy)) ** 2
-            red = int(15 * (1 - vertical) + 5 * vertical + 2 * glow)
-            green = int(20 * (1 - vertical) + 7 * vertical + 8 * glow)
-            blue = int(31 * (1 - vertical) + 14 * vertical + 14 * glow)
-            pixels.extend((min(255, red), min(255, green), min(255, blue), 255))
+            horizontal = x / (width - 1)
+            # Deep midnight gradient with restrained crimson and blue light leaks.
+            red_glow = max(0.0, 1.0 - (((horizontal - 0.82) / 0.62) ** 2
+                                      + ((vertical - 0.48) / 0.56) ** 2)) ** 2
+            blue_glow = max(0.0, 1.0 - (((horizontal - 0.18) / 0.62) ** 2
+                                       + ((vertical - 0.22) / 0.48) ** 2)) ** 2
+            red = int(5 + 8 * horizontal + 31 * red_glow)
+            green = int(8 + 7 * (1 - vertical) + 5 * red_glow)
+            blue = int(17 + 17 * blue_glow + 10 * red_glow)
+            pixels.extend((red, green, blue, 255))
 
     def pixel(x, y, color):
         if 0 <= x < width and 0 <= y < height:
             offset = y * (1 + width * 4) + 1 + x * 4
             pixels[offset:offset + 4] = bytes((*color, 255))
 
-    def line(x1, y1, x2, y2, color, thickness=2):
+    def line(x1, y1, x2, y2, color, thickness=1):
         dx, sx = abs(x2 - x1), 1 if x1 < x2 else -1
         dy, sy = -abs(y2 - y1), 1 if y1 < y2 else -1
         error = dx + dy
-        radius = (thickness - 1) // 2
+        radius = max(0, (thickness - 1) // 2)
         while True:
             for oy in range(-radius, radius + 1):
                 for ox in range(-radius, radius + 1):
@@ -231,35 +234,34 @@ def poster_placeholder_png():
                 error += dx
                 y1 += sy
 
-    muted = (80, 96, 116)
-    muted_dark = (47, 61, 79)
-    crimson = (229, 9, 20)
-    pale = (205, 216, 230)
-    # Minimal clapperboard outline: legible at TV distance, without fake title text.
-    line(80, 167, 262, 167, muted, 3)
-    line(80, 167, 80, 321, muted, 3)
-    line(262, 167, 262, 321, muted, 3)
-    line(80, 321, 262, 321, muted, 3)
-    line(80, 167, 106, 140, muted, 3)
-    line(106, 140, 288, 140, muted, 3)
-    line(288, 140, 262, 167, muted, 3)
-    for start in (108, 151, 194, 237):
-        line(start - 12, 162, start + 12, 140, muted_dark, 6)
-    line(96, 184, 246, 184, muted_dark, 2)
-    # A right-facing crimson play glyph is the only saturated focal point.
-    for step in range(88):
-        x = 128 + step
-        half_height = int((87 - step) * 0.48)
-        for y in range(256 - half_height, 257 + half_height):
-            pixel(x, y, crimson)
-    line(124, 386, 218, 386, crimson, 4)
-    for x, y, sx, sy in ((80, 167, 1, 1), (262, 167, -1, 1),
-                         (80, 321, 1, -1), (262, 321, -1, -1)):
-        line(x, y, x + sx * 16, y, pale, 2)
-        line(x, y, x, y + sy * 16, pale, 2)
+    # A distant horizon and layered angular silhouettes create a film-poster
+    # composition without implying playback or pretending to be real artwork.
+    horizon = 356
+    for y in range(horizon, height):
+        fade = (y - horizon) / (height - horizon)
+        shade = int(9 + 9 * fade)
+        for x in range(width):
+            pixel(x, y, (shade + 3, shade + 5, shade + 13))
+    skyline = [
+        (0, 353), (38, 322), (70, 345), (108, 298), (143, 338),
+        (178, 310), (213, 344), (258, 292), (296, 331), (342, 307)
+    ]
+    for index in range(len(skyline) - 1):
+        x1, y1 = skyline[index]
+        x2, y2 = skyline[index + 1]
+        line(x1, y1, x2, y2, (17, 25, 39), 5)
+    # A narrow vertical shaft of light gives the art a focal point.
+    for y in range(90, 350):
+        spread = max(1, int((y - 88) * 0.035))
+        for x in range(246 - spread, 247 + spread):
+            pixel(x, y, (24, 30, 48))
+    line(246, 112, 246, 344, (76, 43, 55), 1)
+    # Fine crimson horizon accent, deliberately understated.
+    line(54, 420, 288, 420, (116, 25, 39), 2)
+    line(54, 426, 154, 426, (54, 39, 53), 1)
 
     header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
-    return (b"\x89PNG\r\n\x1a\n"
+    return (b"\\x89PNG\\r\\n\\x1a\\n"
             + png_chunk(b"IHDR", header)
             + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
             + png_chunk(b"IEND", b""))
