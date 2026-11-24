@@ -72,6 +72,11 @@ class KodiManagerTests(unittest.TestCase):
         controls = rendered.find("controls")
         buttons = controls.findall("control[@type='button']")
         self.assertEqual(len(buttons), 12)
+        labels = [button.findtext("label", "") for button in buttons]
+        for prefix in ("Cineva.Widget", "Cineva.MovieWidget", "Cineva.ShowWidget"):
+            for slot in range(1, 5):
+                self.assertTrue(any(f"$INFO[Skin.String({prefix}{slot}.Name)]" in label
+                                    for label in labels))
         actions = [button.findtext("onclick", "") for button in buttons]
         for screen in ("home", "movies", "tvshows"):
             for slot in range(1, 5):
