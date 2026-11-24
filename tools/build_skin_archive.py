@@ -12,7 +12,9 @@ import xml.etree.ElementTree as ET
 import urllib.error
 import urllib.request
 
-ARCHIVE = Path(__file__).resolve().parents[1] / "skin.cineva-0.5.3.zip"
+ROOT = Path(__file__).resolve().parents[1]
+ARCHIVE = ROOT / "skin.cineva-0.5.4.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.3.zip"
 
 
 def fetch_asset(url, attempts=5):
@@ -476,7 +478,7 @@ def remove_missing_no_focus_textures(root):
 def update_xml(data, path):
     root = ET.fromstring(data)
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.3")
+        root.set("version", "0.5.4")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.3")
@@ -1503,8 +1505,12 @@ def update_xml(data, path):
 
 
 def main():
+    # Start the new distributable version from the last published package once.
+    # Subsequent builds always transform 0.5.4 in place and remain byte-stable.
+    if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
+        ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.3.zip")
+        raise SystemExit("Missing skin.cineva-0.5.4.zip and migration source skin.cineva-0.5.3.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
