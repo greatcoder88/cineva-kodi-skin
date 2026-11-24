@@ -722,7 +722,7 @@ def update_xml(data, path):
                     set_child_text(labels[0], "height", 82)
                     set_child_text(labels[0], "textcolor", "white")
                     set_child_text(labels[0], "width", 1200)
-                    set_child_text(labels[0], "font", "font20")
+                    set_child_text(labels[0], "font", "font22")
                     set_child_text(labels[0], "wrapmultiline", "true")
                     set_child_text(labels[0], "aligny", "center")
                     set_child_text(labels[0], "align", "left")
@@ -1636,6 +1636,7 @@ def main():
                         "- Explicit left/right focus between No and Yes in Kodi confirmation dialogs.",
                         "- Replace the Startup window with Home so a transparent Startup layer cannot intercept remote input.",
                         "- Keep long Home poster titles readable in a full two-line caption band.",
+        "- Use a bold 40px ExtraBold display face for text-only Home hero titles.",
                         "",
                         "",
                     ))
@@ -1650,6 +1651,9 @@ def main():
                         if rail_note not in normalized_entry:
                             normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + rail_note + chr(10) + chr(10)
                         spacing_note = "- Add clear breathing room between Home shelf headings and poster artwork."
+                        title_note = "- Use a bold 40px ExtraBold display face for text-only Home hero titles."
+                        if title_note not in normalized_entry:
+                            normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + title_note + chr(10) + chr(10)
                         if spacing_note not in normalized_entry:
                             normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + spacing_note + chr(10) + chr(10)
                         if vignette_note not in normalized_entry:

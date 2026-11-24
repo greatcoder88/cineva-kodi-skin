@@ -92,6 +92,37 @@ class HomeHeroActionTests(unittest.TestCase):
                     )
 
 
+    def test_text_only_hero_titles_use_bold_display_typography(self):
+        with ZipFile(ARCHIVE) as archive:
+            home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
+            fonts = ET.fromstring(archive.read("skin.cineva/xml/Font.xml"))
+            fontset = fonts.find("./fontset[@id='Default']")
+            display_font = next(node for node in fontset.findall("font")
+                                if node.findtext("name") == "font22")
+            self.assertEqual(display_font.findtext("filename"), "Poppins-ExtraBold.ttf")
+            self.assertEqual(display_font.findtext("size"), "40")
+            controls = home.find("controls")
+            for container_id, play_id in ((9001, 9111), (9002, 9113), (9003, 9115), (9004, 9117)):
+                hero = next(
+                    group for group in controls.findall("control")
+                    if group.get("type") == "group"
+                    and group.find(f"./control[@id='{play_id}']") is not None
+                )
+                title = next(
+                    node for node in hero.findall("control")
+                    if node.get("type") == "label"
+                    and f"$INFO[Container({container_id}).ListItem.Label]" in node.findtext("label", "")
+                )
+                self.assertEqual(
+                    (title.findtext("font"), title.findtext("width"), title.findtext("height")),
+                    ("font22", "1200", "82"),
+                )
+                self.assertEqual(
+                    title.findtext("visible"),
+                    f"String.IsEmpty(Container({container_id}).ListItem.Art(clearlogo))",
+                )
+
+
     def test_hero_metadata_rating_and_synopsis_form_a_left_aligned_stack(self):
         with ZipFile(ARCHIVE) as archive:
             home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
