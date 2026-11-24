@@ -61,6 +61,8 @@ jobs:
             raise SystemExit("Home navigation must place the single Settings destination in the reclaimed final slot")
           if nav_group.find("./control[@id='1006']") is not None:
             raise SystemExit("Obsolete navigation control 1006 must not remain")
+          if Path("skin.cineva/xml/CinevaWidgetHub.xml").exists():
+            raise SystemExit("Obsolete My Widgets hub window must not be packaged")
           if (home.findtext("onload") or "").strip() != "RunScript(script.cineva.widgets,action=init)":
             raise SystemExit("Home must initialize widget strings through the Python manager")
           confirm = ET.parse("skin.cineva/xml/DialogConfirm.xml").getroot()
