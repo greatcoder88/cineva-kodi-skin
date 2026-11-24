@@ -957,7 +957,7 @@ def update_xml(data, path):
             controls.remove(heading)
             controls.remove(shelf)
             row_group = ET.Element("control", {"type": "group", "id": str(9060 + index)})
-            for tag, value in (("left", 0), ("top", 0), ("width", 1710), ("height", 482)):
+            for tag, value in (("left", 0), ("top", 0), ("width", 1710), ("height", 506)):
                 set_child_text(row_group, tag, value)
             play_id = 9111 + (index - 1) * 2
             next_target = 9000 + index + 1 if index < 4 else 1001
@@ -970,7 +970,7 @@ def update_xml(data, path):
             set_child_text(heading, "height", 38)
             set_child_text(heading, "font", "font18")
             set_child_text(shelf, "left", 0)
-            set_child_text(shelf, "top", 44)
+            set_child_text(shelf, "top", 60)
             set_child_text(shelf, "width", 1710)
             set_child_text(shelf, "height", 430)
             set_child_text(shelf, "itemgap", 14)
@@ -1005,7 +1005,7 @@ def update_xml(data, path):
             # A restrained red underline makes the active Home rail legible
             # even when the selected poster is several cards into the row.
             row_accent = ET.Element("control", {"type": "image"})
-            for tag, value in (("left", 0), ("top", 40), ("width", 58), ("height", 3)):
+            for tag, value in (("left", 0), ("top", 42), ("width", 58), ("height", 3)):
                 set_child_text(row_accent, tag, value)
             set_child_text(row_accent, "texture", "focus-bar.png")
             set_child_text(row_accent, "visible", f"Control.HasFocus({9000 + index})")
@@ -1649,6 +1649,9 @@ def main():
                         rail_note = "- Balance Home shelves with compact native 2:3 posters and a tighter vertical rhythm."
                         if rail_note not in normalized_entry:
                             normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + rail_note + chr(10) + chr(10)
+                        spacing_note = "- Add clear breathing room between Home shelf headings and poster artwork."
+                        if spacing_note not in normalized_entry:
+                            normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + spacing_note + chr(10) + chr(10)
                         if vignette_note not in normalized_entry:
                             normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + vignette_note + chr(10) + chr(10)
                         if normalized_entry != current_entry:

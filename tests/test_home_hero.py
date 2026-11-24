@@ -170,7 +170,7 @@ class HomeHeroActionTests(unittest.TestCase):
         self.assertGreaterEqual(alpha_at(1800, 375), 120, "outer-right artwork must be visibly subdued")
         self.assertGreaterEqual(alpha_at(1919, 375), 135, "outer edge must receive the full cinematic vignette")
 
-    def test_home_uses_balanced_native_2_3_posters_and_expands_next_shelf_preview(self):
+    def test_home_uses_balanced_native_2_3_posters_with_clear_heading_spacing(self):
         with ZipFile(ARCHIVE) as archive:
             home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
             includes = ET.fromstring(archive.read("skin.cineva/xml/Includes.xml"))
@@ -180,16 +180,16 @@ class HomeHeroActionTests(unittest.TestCase):
                 (rail.findtext("left"), rail.findtext("top"), rail.findtext("width"), rail.findtext("height")),
                 ("105", "444", "1710", "670"),
             )
-            first_row_height = 482
+            first_row_height = 506
             visible_next_shelf_preview = (
                 1080 - int(rail.findtext("top")) - first_row_height - int(rail.findtext("itemgap"))
             )
-            self.assertEqual(visible_next_shelf_preview, 142)
+            self.assertEqual(visible_next_shelf_preview, 118)
             for row in range(1, 5):
                 group = rail.find(f"./control[@type='group'][@id='{9060 + row}']")
                 shelf = group.find(f"./control[@type='fixedlist'][@id='{9000 + row}']")
-                self.assertEqual(group.findtext("height"), "482")
-                self.assertEqual((shelf.findtext("top"), shelf.findtext("height")), ("44", "430"))
+                self.assertEqual(group.findtext("height"), "506")
+                self.assertEqual((shelf.findtext("top"), shelf.findtext("height")), ("60", "430"))
                 self.assertEqual(
                     [(node.get("width"), node.get("height"))
                      for node in shelf.findall("itemlayout") + shelf.findall("focusedlayout")],
@@ -231,6 +231,14 @@ class HomeHeroActionTests(unittest.TestCase):
             )
             self.assertEqual(focused_image.findtext("bordersize"), "4")
             self.assertEqual(focused_image.find("bordertexture").attrib.get("border"), "4")
+            row_group = rail.find("./control[@type='group'][@id='9061']")
+            row_accent = next(node for node in row_group.findall("./control[@type='image']")
+                              if node.findtext("texture") == "focus-bar.png")
+            heading_to_poster_gap = (int(shelf.findtext("top"))
+                                     + int(focused_image.findtext("top"))
+                                     - int(row_accent.findtext("top"))
+                                     - int(row_accent.findtext("height")))
+            self.assertEqual((row_accent.findtext("top"), heading_to_poster_gap), ("42", 9))
             focus_png = archive.read("skin.cineva/media/poster-focus.png")
             offset = 8
             compressed = bytearray()
