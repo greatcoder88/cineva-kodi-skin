@@ -1,5 +1,7 @@
+import struct
 import unittest
 import xml.etree.ElementTree as ET
+import zlib
 from zipfile import ZipFile
 from pathlib import Path
 
@@ -125,6 +127,46 @@ class HomeHeroActionTests(unittest.TestCase):
                     (score.findtext("left"), score.findtext("top"), score.findtext("width"), score.findtext("height")),
                     ("62", "158", "84", "32"),
                 )
+
+    def test_home_has_soft_right_edge_vignette_for_full_bleed_hero_art(self):
+        with ZipFile(ARCHIVE) as archive:
+            home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
+            controls = home.find("controls")
+            shade = controls.find("./control[@id='9109']")
+            self.assertIsNotNone(shade, "Home must package the right-edge hero vignette")
+            self.assertEqual(
+                (shade.findtext("left"), shade.findtext("top"),
+                 shade.findtext("width"), shade.findtext("height")),
+                ("0", "0", "1920", "750"),
+            )
+            self.assertEqual(shade.findtext("texture"), "hero-right-shade.png")
+            data = archive.read("skin.cineva/media/hero-right-shade.png")
+
+        self.assertEqual(data[:8], bytes.fromhex("89504e470d0a1a0a"))
+        width, height = struct.unpack(">II", data[16:24])
+        self.assertEqual((width, height), (1920, 750))
+        offset = 8
+        compressed = bytearray()
+        while offset < len(data):
+            length = int.from_bytes(data[offset:offset + 4], "big")
+            kind = data[offset + 4:offset + 8]
+            payload = data[offset + 8:offset + 8 + length]
+            crc = int.from_bytes(data[offset + 8 + length:offset + 12 + length], "big")
+            self.assertEqual(zlib.crc32(kind + payload) & 0xffffffff, crc)
+            if kind == b"IDAT":
+                compressed.extend(payload)
+            offset += length + 12
+        decoded = zlib.decompress(bytes(compressed))
+        stride = 1 + width * 4
+
+        def alpha_at(x, y):
+            row = y * stride
+            self.assertEqual(decoded[row], 0, "vignette PNG must use deterministic unfiltered rows")
+            return decoded[row + 1 + x * 4 + 3]
+
+        self.assertEqual(alpha_at(200, 375), 0, "left-side title area must remain untouched")
+        self.assertGreater(alpha_at(1500, 375), 0, "right-side fade must begin gradually")
+        self.assertGreaterEqual(alpha_at(1919, 375), 70, "outer edge must receive a visible but restrained fade")
 
     def test_home_uses_larger_native_2_3_posters_and_preserves_next_shelf_preview(self):
         with ZipFile(ARCHIVE) as archive:

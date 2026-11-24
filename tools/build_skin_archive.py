@@ -84,6 +84,27 @@ def hero_topbar_shade_png():
             + png_chunk(b"IEND", b""))
 
 
+def hero_right_shade_png():
+    """Create a gentle right-edge vignette that frames bright full-bleed artwork."""
+    width, height = 1920, 750
+    pixels = bytearray()
+    for y in range(height):
+        vertical = y / (height - 1)
+        edge_weight = 0.82 + 0.18 * abs(2.0 * vertical - 1.0) ** 1.5
+        pixels.append(0)  # PNG filter: None
+        for x in range(width):
+            position = x / (width - 1)
+            ramp = max(0.0, min(1.0, (position - 0.70) / 0.30))
+            smooth = ramp * ramp * (3.0 - 2.0 * ramp)
+            alpha = int(88 * smooth * edge_weight)
+            pixels.extend((5, 7, 12, alpha))
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return (b"\\x89PNG\\r\\n\\x1a\\n"
+            + png_chunk(b"IHDR", header)
+            + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
+            + png_chunk(b"IEND", b""))
+
+
 def hero_bottom_fade_png():
     """Create a full-width fade that cleanly separates hero artwork from the shelves."""
     width, height = 1920, 430
@@ -668,6 +689,17 @@ def update_xml(data, path):
         ET.SubElement(topbar_shade, "texture").text = "hero-topbar-shade.png"
         set_child_text(topbar_shade, "aspectratio", "scale")
         controls.insert(list(controls).index(bottom_shade) + 1, topbar_shade)
+        # Add a restrained right-edge vignette to balance bright full-bleed art.
+        # It sits above the backdrop/fades but below navigation, hero copy and shelves.
+        previous_right_shade = controls.find("./control[@id='9109']")
+        if previous_right_shade is not None:
+            controls.remove(previous_right_shade)
+        right_shade = ET.Element("control", {"type": "image", "id": "9109"})
+        for tag, value in (("left", 0), ("top", 0), ("width", 1920), ("height", 750)):
+            set_child_text(right_shade, tag, value)
+        ET.SubElement(right_shade, "texture").text = "hero-right-shade.png"
+        set_child_text(right_shade, "aspectratio", "scale")
+        controls.insert(list(controls).index(topbar_shade) + 1, right_shade)
         # Keep navigation above full-bleed artwork; it was previously painted first
         # and then hidden beneath the hero image controls.
         topbar = next((node for node in list(controls)
@@ -1568,6 +1600,7 @@ def main():
                    for path, filename in poppins_assets.items()},
                 "skin.cineva/media/hero-left-shade.png": hero_left_shade_png(),
                 "skin.cineva/media/hero-topbar-shade.png": hero_topbar_shade_png(),
+                "skin.cineva/media/hero-right-shade.png": hero_right_shade_png(),
                 "skin.cineva/media/hero-bottom-fade.png": hero_bottom_fade_png(),
                 "skin.cineva/media/hero-placeholder.png": hero_placeholder_png(),
                 "skin.cineva/media/hero-poster-vignette.png": hero_poster_vignette_png(),
@@ -1605,6 +1638,9 @@ def main():
                         caption_note = "- Keep long Home poster titles readable in a full two-line caption band."
                         if caption_note not in normalized_entry:
                             normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + caption_note + chr(10) + chr(10)
+                        vignette_note = "- Add a soft right-edge vignette to frame bright full-bleed hero artwork."
+                        if vignette_note not in normalized_entry:
+                            normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + vignette_note + chr(10) + chr(10)
                         if normalized_entry != current_entry:
                             data = (normalized_entry + separator + remainder).encode("utf-8")
                             changed.append(info.filename + " (normalize 0.5.7 Home caption changelog)")
