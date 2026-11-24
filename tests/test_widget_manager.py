@@ -86,6 +86,15 @@ class KodiManagerTests(unittest.TestCase):
         self.assertEqual(len(again["movies"]), 1)
         self.assertEqual(again["tvshows"], [])
 
+    def test_empty_middle_slot_keeps_later_slot_number(self):
+        manager = self.module.WidgetManager()
+        registry = manager.load()
+        registry['home'] = [registry['home'][0], {}, registry['home'][2]]
+        manager.save(registry)
+        reloaded = manager.load()
+        self.assertEqual(reloaded['home'][1], {})
+        self.assertEqual(reloaded['home'][2]['name'], 'Trending Movies')
+
     def test_empty_slots_are_mirrored_to_skin_strings(self):
         manager = self.module.WidgetManager()
         manager.save({screen: [] for screen in self.module.SCREENS})
