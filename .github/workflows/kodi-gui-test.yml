@@ -1095,21 +1095,21 @@ jobs:
                 if indicator_coverage < 0.8:
                   raise SystemExit(f"Row-2 heading indicator is not visible at the compact rail position (coverage={indicator_coverage:.3f})")
                 print(f"Verified row-2 active-rail underline at y={indicator_y} (coverage={indicator_coverage:.3f}).")
-                # The PLAY surface must remain visible when row 2, rather than
-                # row 1, supplies the hero. A white unselected button occupies
-                # this exact 176x50 region in the 1920x1080 Home layout.
+                # The branded primary action is crimson at rest and focused.
+                # Measure its actual 190x54 Home geometry, not the old white button.
                 signal = subprocess.run([
                   "convert", "artifacts/cineva-home-row2-focus.png",
-                  "-crop", "176x50+72+356", "-colorspace", "gray",
-                  "-threshold", "82%", "-format", "%[fx:mean]", "info:"
+                  "-crop", "190x54+60+368",
+                  "-fx", "((r>0.55)&&(g<0.35)&&(b<0.35))?1:0",
+                  "-format", "%[fx:mean]", "info:"
                 ], text=True, capture_output=True, check=True)
                 try:
-                  white_coverage = float(signal.stdout.strip())
+                  crimson_coverage = float(signal.stdout.strip())
                 except ValueError:
                   raise SystemExit(f"Could not measure row-2 hero PLAY surface: {signal.stdout!r}")
-                if white_coverage < 0.55:
-                  raise SystemExit(f"Row-2 hero PLAY surface is not visibly rendered (white coverage={white_coverage:.3f})")
-                print(f"Verified row-2 hero PLAY surface in rendered screenshot (white coverage={white_coverage:.3f}).")
+                if crimson_coverage < 0.35:
+                  raise SystemExit(f"Row-2 hero PLAY surface is not visibly rendered (crimson coverage={crimson_coverage:.3f})")
+                print(f"Verified row-2 hero PLAY surface in rendered screenshot (crimson coverage={crimson_coverage:.3f}).")
                 subprocess.run(["xdotool","key","Up"],check=True)
                 deadline = time.time() + 8
                 while time.time() < deadline:
