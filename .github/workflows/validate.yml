@@ -235,7 +235,7 @@ jobs:
               hero_group = next((group for group in hero_groups
                                  if group.find(f"./control[@id='{play_id}']") is not None), None)
               buttons = hero_group.findall("./control[@type='button']") if hero_group is not None else []
-              if hero_group is None or int(hero_group.findtext("height", "0")) < 270 or len(buttons) != 2 or [button.findtext("label") for button in buttons] != ["PLAY", "MORE INFO"]:
+              if hero_group is None or int(hero_group.findtext("height", "0")) < 270 or len(buttons) != 2 or [button.findtext("label") for button in buttons] != [f"$VAR[CinevaHeroAction{container_id - 9000}]", "MORE INFO"]:
                   errors.append(f"Home row {container_id} is missing its two nested hero actions")
                   continue
               if buttons[0].findtext("onclick") != f"PlayMedia($INFO[Container({container_id}).ListItem.File])":
@@ -319,6 +319,12 @@ jobs:
           if resume_track[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(resume_track[16:20], "big"), int.from_bytes(resume_track[20:24], "big")) != (8, 8):
               errors.append("Packaged charcoal resume-track texture is missing or has the wrong dimensions")
           includes = ET.parse(root / "xml/Includes.xml").getroot()
+          for row_index in range(1, 5):
+              action_variable = includes.find(f"./variable[@name='CinevaHeroAction{row_index}']")
+              values = action_variable.findall("value") if action_variable is not None else []
+              expected_condition = f"String.Contains(Skin.String(Cineva.Widget{row_index}.Path),in_progress)"
+              if len(values) != 2 or values[0].get("condition") != expected_condition or values[0].text != "RESUME" or values[1].get("condition") is not None or values[1].text != "PLAY":
+                  errors.append(f"Home row {row_index} must resolve RESUME for in-progress sources and PLAY otherwise")
           poster = includes.find("./include[@name='CinevaPosterItem']")
           normal_title = poster.find("./control[@type='label']") if poster is not None else None
           focused_poster = includes.find("./include[@name='CinevaFocusedPosterItem']")
