@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <addon id="script.cineva.widgets" name="CINÉVA Widget Manager" version="0.1.3" provider-name="CINÉVA">
   <requires><import addon="xbmc.python" version="3.0.0"/><import addon="xbmc.gui" version="5.18.0"/></requires>
-  <extension point="xbmc.python.pluginsource" library="default.py"><provides>video</provides></extension>
   <extension point="xbmc.python.script" library="default.py"><provides>executable</provides></extension>
-  <extension point="xbmc.addon.metadata"><summary lang="en_GB">CINÉVA generic video widget manager</summary><description lang="en_GB">Browse installed video add-ons and manage ordered widgets for each CINÉVA screen.</description><platform>all</platform><license>GPL-2.0-or-later</license></extension>
+  <extension point="xbmc.addon.metadata"><summary lang="en_GB">CINÉVA widget source picker</summary><description lang="en_GB">Configure per-screen video widget slots by browsing installed video add-ons.</description><platform>all</platform><license>GPL-2.0-or-later</license></extension>
 </addon>
