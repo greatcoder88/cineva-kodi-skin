@@ -4,18 +4,13 @@ on:
     branches: [main]
   workflow_dispatch:
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 concurrency:
-  group: cineva-pages
+  group: cineva-repository-feed
   cancel-in-progress: true
 jobs:
-  build-and-deploy:
+  build-and-publish:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -23,7 +18,7 @@ jobs:
           python-version: "3.12"
       - name: Build and validate skin package
         run: python tools/build_skin_archive.py
-      - name: Assemble Kodi repository feed
+      - name: Assemble and validate Kodi repository feed
         run: |
           python tools/build_repository.py
           python - <<'PY'
@@ -32,9 +27,7 @@ jobs:
           import xml.etree.ElementTree as ET
           root = Path("repository-site")
           feed = (root / "addons.xml").read_bytes()
-          expected = hashlib.md5(feed).hexdigest()
-          actual = (root / "addons.xml.md5").read_text().strip()
-          if expected != actual:
+          if hashlib.md5(feed).hexdigest() != (root / "addons.xml.md5").read_text().strip():
               raise SystemExit("Kodi repository MD5 does not match addons.xml")
           addons = ET.parse(root / "addons.xml").getroot()
           ids = {a.get("id") for a in addons.findall("addon")}
@@ -43,11 +36,16 @@ jobs:
           for addon_id in ids:
               if not list((root / "zips" / addon_id).glob(f"{addon_id}-*.zip")):
                   raise SystemExit(f"Missing installable package for {addon_id}")
-          print("Kodi repository feed, checksum and both installable packages validated.")
+          repo_zip = root / "zips/repository.cineva/repository.cineva-0.1.0.zip"
+          if not repo_zip.is_file():
+              raise SystemExit("Missing repository installer ZIP")
+          print("Feed, checksum, skin, helper and repository installer validated.")
           PY
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - name: Publish feed to dedicated repository branch
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: repository-site
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./repository-site
+          publish_branch: repository
+          force_orphan: true
+          commit_message: "Publish CINÉVA Kodi repository feed"
