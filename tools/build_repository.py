@@ -43,7 +43,7 @@ def write_http_directory_index(directory: Path, title: str, entries: list[tuple[
         '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">'
         '<html><head><title>Index of /</title></head><body>'
         f'<h1>Index of {html.escape(title)}</h1><hr><pre>'
-        + "\\n".join(lines)
+        + "\n".join(lines)
         + '</pre><hr></body></html>'
     )
     (directory / "index.html").write_text(page, encoding="utf-8")
