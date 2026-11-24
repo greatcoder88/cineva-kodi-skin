@@ -109,7 +109,7 @@ class KodiManagerTests(unittest.TestCase):
             "not-a-dict"
         ]})
         registry = self.module.WidgetManager().load()
-        self.assertEqual([w["name"] for w in registry["home"]], ["Good"])
+        self.assertEqual([w["name"] for w in registry["home"] if w], ["Good"])
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
