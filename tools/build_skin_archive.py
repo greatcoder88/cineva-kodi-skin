@@ -1640,7 +1640,10 @@ def main():
                         caption_note = "- Keep long Home poster titles readable in a full two-line caption band."
                         if caption_note not in normalized_entry:
                             normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + caption_note + chr(10) + chr(10)
-                        vignette_note = "- Add a soft right-edge vignette to frame bright full-bleed hero artwork."\n                        rail_note = "- Balance Home shelves with compact native 2:3 posters and a tighter vertical rhythm."\n                        if rail_note not in normalized_entry:\n                            normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + rail_note + chr(10) + chr(10)
+                        vignette_note = "- Add a soft right-edge vignette to frame bright full-bleed hero artwork."
+                        rail_note = "- Balance Home shelves with compact native 2:3 posters and a tighter vertical rhythm."
+                        if rail_note not in normalized_entry:
+                            normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + rail_note + chr(10) + chr(10)
                         if vignette_note not in normalized_entry:
                             normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + vignette_note + chr(10) + chr(10)
                         if normalized_entry != current_entry:
