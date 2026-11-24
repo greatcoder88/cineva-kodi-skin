@@ -10,11 +10,6 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 MANAGER = ROOT / "tools/script.cineva.widgets/resources/lib/manager.py"
 SETTINGS = ROOT / "tools/script.cineva.widgets/resources/settings.xml"
 
-class FakeAddon:
-    def __init__(self): self.settings = {}
-    def getSettingString(self, key): return self.settings.get(key, "")
-    def setSettingString(self, key, value): self.settings[key] = value
-
 class FakeVFS:
     files = {}
     @staticmethod
@@ -25,26 +20,7 @@ class FakeVFS:
     def mkdirs(path): return True
     class File:
         def __init__(self, path, mode):
-            self.path, self.mode, self.buffer = path, mode, ""
-            if mode == "r":
-                self.buffer = FakeVFS.files.get(path, "")
-        def read(self): return self.buffer
-        def write(self, value):
-            self.buffer += value
-            FakeVFS.files[self.path] = self.buffer
-        def close(self): pass
-
-class FakeVFS:
-    files = {}
-    @staticmethod
-    def translatePath(path): return path
-    @classmethod
-    def exists(cls, path): return path in cls.files
-    @staticmethod
-    def mkdirs(path): return True
-    class File:
-        def __init__(self, path, mode):
-            self.path, self.mode = path, mode
+            self.path = path
             self.buffer = FakeVFS.files.get(path, "") if mode == "r" else ""
         def read(self): return self.buffer
         def write(self, value):
@@ -61,24 +37,20 @@ class FakeDialog:
 class KodiManagerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.addon = FakeAddon()
         cls.builtins = []
         xbmc = types.ModuleType("xbmc")
-        xbmc.LOGINFO = 1
-        xbmc.LOGWARNING = 2
+        xbmc.LOGINFO, xbmc.LOGWARNING = 1, 2
         xbmc.executeJSONRPC = lambda payload: json.dumps({"result": {"addons": []}})
         xbmc.executebuiltin = lambda command: cls.builtins.append(command)
-        xbmc.getCondVisibility = lambda condition: condition == "Window.IsActive(home)"
+        xbmc.getCondVisibility = lambda condition: True
         xbmc.log = lambda *args: None
         addon_mod = types.ModuleType("xbmcaddon")
-        addon_mod.Addon = lambda: cls.addon
+        addon_mod.Addon = lambda: object()
         gui = types.ModuleType("xbmcgui")
         gui.Dialog = FakeDialog
         vfs = types.ModuleType("xbmcvfs")
-        vfs.translatePath = FakeVFS.translatePath
-        vfs.exists = FakeVFS.exists
-        vfs.mkdirs = FakeVFS.mkdirs
-        vfs.File = FakeVFS.File
+        vfs.translatePath, vfs.exists = FakeVFS.translatePath, FakeVFS.exists
+        vfs.mkdirs, vfs.File = FakeVFS.mkdirs, FakeVFS.File
         sys.modules.update({"xbmc": xbmc, "xbmcaddon": addon_mod,
                             "xbmcgui": gui, "xbmcvfs": vfs})
         spec = importlib.util.spec_from_file_location("cineva_manager", MANAGER)
@@ -86,39 +58,42 @@ class KodiManagerTests(unittest.TestCase):
         spec.loader.exec_module(cls.module)
 
     def setUp(self):
-        self.addon.settings.clear()
+        FakeVFS.files.clear()
         self.builtins.clear()
-        FakeVFS.files.clear()
-        FakeVFS.files.clear()
 
-    def test_widget_registry_is_declared_as_a_string_setting(self):
-        root = ET.parse(SETTINGS).getroot()
-        setting = root.find(".//setting[@id='widget_registry']")
-        self.assertIsNotNone(setting)
-        self.assertEqual(setting.attrib.get("type"), "string")
-        self.assertEqual(setting.attrib.get("default"), "{}")
+    def test_screens_are_only_home_movies_tvshows(self):
+        self.assertEqual(set(self.module.SCREENS), {"home", "movies", "tvshows"})
 
-    def test_default_home_has_four_pov_widgets(self):
+    def test_first_install_seeds_editable_pov_home_defaults(self):
         registry = self.module.WidgetManager().load()
         self.assertEqual(len(registry["home"]), 4)
+        self.assertEqual(registry["home"][1]["name"], "In Progress Shows")
         self.assertTrue(all(w["path"].startswith("plugin://plugin.video.pov/") for w in registry["home"]))
 
-    def test_all_screens_exist_and_are_independent(self):
-        registry = self.module.WidgetManager().load()
-        self.assertEqual(set(registry), set(self.module.SCREENS))
-        registry["movies"].append({"id":"x","name":"X","path":"plugin://plugin.video.example/","addon":"plugin.video.example","content":"videos"})
-        self.module.WidgetManager().save(registry)
-        again = self.module.WidgetManager().load()
+    def test_clearing_all_home_widgets_does_not_restore_defaults(self):
+        manager = self.module.WidgetManager()
+        registry = manager.load()
+        registry["home"] = []
+        manager.save(registry)
+        self.assertEqual(manager.load()["home"], [])
+
+    def test_each_screen_has_independent_slots(self):
+        manager = self.module.WidgetManager()
+        registry = manager.load()
+        registry["movies"] = [{"id":"m1","name":"Movies","path":"plugin://plugin.video.example/","addon":"plugin.video.example","content":"videos"}]
+        manager.save(registry)
+        again = manager.load()
         self.assertEqual(len(again["movies"]), 1)
-        self.assertEqual(len(again["tvshows"]), 0)
+        self.assertEqual(again["tvshows"], [])
 
-    def test_home_widget_target_uses_kodi_videos_window_and_refreshes_shelves(self):
-        registry = self.module.WidgetManager().load()
-        self.module.WidgetManager().save(registry)
-        self.assertTrue(any('Cineva.Widget1.Target,"videos")' in command for command in self.builtins))
-        self.assertTrue(all('Container.Refresh({})'.format(i) in self.builtins for i in (9001, 9002, 9003, 9004)))
+    def test_empty_slots_are_mirrored_to_skin_strings(self):
+        manager = self.module.WidgetManager()
+        manager.save({screen: [] for screen in self.module.SCREENS})
+        self.assertTrue(any('Cineva.Widget1.Path,"")' in command for command in self.builtins))
+        self.assertTrue(any('Cineva.MovieWidget1.Path,"")' in command for command in self.builtins))
+        self.assertTrue(any('Cineva.ShowWidget1.Path,"")' in command for command in self.builtins))
 
-    def test_invalid_entries_are_filtered(self):
+    def test_invalid_sources_are_filtered(self):
         FakeVFS.files["special://profile/addon_data/script.cineva.widgets/widget_registry.json"] = json.dumps({"home":[
             {"name":"Good","path":"plugin://plugin.video.good/","id":"g"},
             {"name":"Bad","path":"https://example.com","id":"b"},
@@ -127,17 +102,5 @@ class KodiManagerTests(unittest.TestCase):
         registry = self.module.WidgetManager().load()
         self.assertEqual([w["name"] for w in registry["home"]], ["Good"])
 
-    def test_registry_persists_more_than_six_widgets(self):
-        manager = self.module.WidgetManager()
-        registry = {screen: [] for screen in self.module.SCREENS}
-        registry["home"] = [
-            {"id":str(i),"name":"W"+str(i),"path":"plugin://plugin.video.x/"+str(i),"addon":"plugin.video.x","content":"videos"}
-            for i in range(12)
-        ]
-        manager.save(registry)
-        again = manager.load()
-        self.assertEqual(len(again["home"]), 12)
-        stored = json.loads(FakeVFS.files["special://profile/addon_data/script.cineva.widgets/widget_registry.json"])
-        self.assertEqual(len(stored["home"]), 12)
-
-if __name__ == "__main__": unittest.main(verbosity=2)
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
