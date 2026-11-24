@@ -24,7 +24,7 @@ class HomeHeroActionTests(unittest.TestCase):
                 self.assertEqual(
                     [(button.findtext("left"), button.findtext("top"),
                       button.findtext("width"), button.findtext("height")) for button in buttons],
-                    [("0", "280", "190", "54"), ("212", "280", "220", "54")],
+                    [("0", "260", "190", "54"), ("212", "260", "220", "54")],
                 )
                 self.assertEqual(
                     [button.findtext("texturefocus") for button in buttons],
@@ -101,21 +101,85 @@ class HomeHeroActionTests(unittest.TestCase):
                 logo = hero.find(f"./control[@id='{rating_id + 1}']")
                 score = hero.find(f"./control[@id='{rating_id + 2}']")
                 self.assertEqual(metadata.findtext("width"), "430")
-                self.assertEqual(metadata.findtext("top"), "136")
+                self.assertEqual(metadata.findtext("top"), "128")
                 plot = hero.find("./control[@type='textbox']")
-                self.assertEqual((plot.findtext("top"), plot.findtext("height")), ("206", "60"))
+                self.assertEqual((plot.findtext("top"), plot.findtext("height")), ("194", "56"))
                 self.assertEqual(
                     (badge.findtext("left"), badge.findtext("top"), badge.findtext("width"), badge.findtext("height")),
-                    ("0", "168", "148", "32"),
+                    ("0", "158", "148", "32"),
                 )
                 self.assertEqual(
                     (logo.findtext("left"), logo.findtext("top"), logo.findtext("width"), logo.findtext("height")),
-                    ("8", "172", "48", "24"),
+                    ("8", "162", "48", "24"),
                 )
                 self.assertEqual(
                     (score.findtext("left"), score.findtext("top"), score.findtext("width"), score.findtext("height")),
-                    ("62", "168", "84", "32"),
+                    ("62", "158", "84", "32"),
                 )
+
+    def test_home_uses_compact_poster_rails_to_preview_the_next_shelf(self):
+        with ZipFile(ARCHIVE) as archive:
+            home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
+            includes = ET.fromstring(archive.read("skin.cineva/xml/Includes.xml"))
+            controls = home.find("controls")
+            rail = controls.find("./control[@type='grouplist'][@id='9050']")
+            self.assertEqual(
+                (rail.findtext("left"), rail.findtext("top"), rail.findtext("width"), rail.findtext("height")),
+                ("105", "444", "1710", "670"),
+            )
+            for row in range(1, 5):
+                group = rail.find(f"./control[@type='group'][@id='{9060 + row}']")
+                shelf = group.find(f"./control[@type='fixedlist'][@id='{9000 + row}']")
+                self.assertEqual(group.findtext("height"), "460")
+                self.assertEqual((shelf.findtext("top"), shelf.findtext("height")), ("52", "408"))
+                self.assertEqual(
+                    [(node.get("width"), node.get("height"))
+                     for node in shelf.findall("itemlayout") + shelf.findall("focusedlayout")],
+                    [("285", "408"), ("285", "408")],
+                )
+            poster = includes.find("./include[@name='CinevaPosterItem']")
+            image = poster.find("./control[@type='image']")
+            title = poster.find("./control[@type='textbox']")
+            progress = poster.find("./control[@type='progress']")
+            self.assertEqual(
+                (image.findtext("left"), image.findtext("top"), image.findtext("width"), image.findtext("height")),
+                ("22", "0", "240", "320"),
+            )
+            self.assertEqual(
+                (title.findtext("top"), title.findtext("height"), title.findtext("width")),
+                ("322", "56", "285"),
+            )
+            self.assertEqual(
+                (progress.findtext("left"), progress.findtext("top"), progress.findtext("width"), progress.findtext("height")),
+                ("28", "309", "228", "5"),
+            )
+            focused = includes.find("./include[@name='CinevaFocusedPosterItem9001']")
+            focused_image = next(
+                node for node in focused.findall("./control[@type='image']")
+                if node.findtext("visible") == "Control.HasFocus(9001)"
+            )
+            focused_title = next(
+                node for node in focused.findall("./control[@type='textbox']")
+                if node.findtext("visible") == "Control.HasFocus(9001)"
+            )
+            focus_accent = next(
+                node for node in focused.findall("./control[@type='image']")
+                if node.findtext("texture") == "focus-bar.png"
+            )
+            self.assertEqual(
+                (focused_image.findtext("left"), focused_image.findtext("top"),
+                 focused_image.findtext("width"), focused_image.findtext("height")),
+                ("19", "-3", "246", "327"),
+            )
+            self.assertEqual(
+                (focused_title.findtext("top"), focused_title.findtext("height")),
+                ("340", "56"),
+            )
+            self.assertEqual(
+                (focus_accent.findtext("left"), focus_accent.findtext("top"),
+                 focus_accent.findtext("width"), focus_accent.findtext("height")),
+                ("101", "399", "84", "4"),
+            )
 
 
 if __name__ == "__main__":
