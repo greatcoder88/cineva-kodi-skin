@@ -70,8 +70,12 @@ class WidgetManager:
         cleaned = []
         for item in items[:SLOT_COUNT]:
             if not isinstance(item, dict):
+                cleaned.append({})
                 continue
             name, path = str(item.get('name', '')).strip(), str(item.get('path', '')).strip()
+            if not name and not path:
+                cleaned.append({})
+                continue
             if name and path.startswith('plugin://'):
                 cleaned.append({'id': str(item.get('id') or path), 'name': name,
                                 'path': path, 'addon': str(item.get('addon', '')),
