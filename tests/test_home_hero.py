@@ -238,6 +238,17 @@ class HomeHeroActionTests(unittest.TestCase):
                  focus_accent.findtext("width"), focus_accent.findtext("height")),
                 ("104", "418", "76", "4"),
             )
+            focus_progresses = focused.findall("./control[@type='progress']")
+            self.assertEqual(len(focus_progresses), 2)
+            self.assertEqual(
+                {node.findtext("visible") for node in focus_progresses},
+                {"!Control.HasFocus(9001) + ListItem.IsResumable", "Control.HasFocus(9001) + ListItem.IsResumable"},
+            )
+            self.assertEqual(
+                [(node.findtext("left"), node.findtext("top"), node.findtext("width"), node.findtext("height"))
+                 for node in focus_progresses],
+                [("38", "319", "208", "5"), ("38", "326", "208", "5")],
+            )
 
 
 if __name__ == "__main__":
