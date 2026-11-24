@@ -244,8 +244,9 @@ jobs:
             raise SystemExit("Home shelf headings must use the Poppins semibold face at 34px")
           includes = ET.parse("skin.cineva/xml/Includes.xml").getroot()
           poster = includes.find("./include[@name='CinevaPosterItem']")
-          if poster is None or poster.findtext("./control[@type='image']/height") != "348" or poster.findtext("./control[@type='label']/width") != "285" or poster.findtext("./control[@type='label']/top") != "350" or poster.findtext("./control[@type='label']/height") != "46" or poster.findtext("./control[@type='label']/wrapmultiline") != "true" or poster.find("./control[@type='label']/wrap") is not None or poster.findtext("./control[@type='label']/font") != "font10":
-            raise SystemExit("Home poster and title layout is missing its redesigned large-card geometry or readable title font")
+          normal_image = poster.find("./control[@type='image']") if poster is not None else None
+          if poster is None or normal_image is None or (normal_image.findtext("left"), normal_image.findtext("top"), normal_image.findtext("width"), normal_image.findtext("height")) != ("12", "0", "261", "348") or poster.findtext("./control[@type='label']/width") != "285" or poster.findtext("./control[@type='label']/top") != "350" or poster.findtext("./control[@type='label']/height") != "46" or poster.findtext("./control[@type='label']/wrapmultiline") != "true" or poster.find("./control[@type='label']/wrap") is not None or poster.findtext("./control[@type='label']/font") != "font10":
+            raise SystemExit("Home poster and title layout is missing its enlarged 3:4 artwork or readable title baseline")
           focused_poster = includes.find("./include[@name='CinevaFocusedPosterItem9001']")
           focused_title = next((label for label in focused_poster.findall("./control[@type='label']") if label.findtext("textcolor") == "white"), None) if focused_poster is not None else None
           if focused_title is None or focused_title.findtext("font") != "font10" or focused_title.findtext("top") != "370" or focused_title.findtext("height") != "42" or focused_title.find("wrap") is not None or focused_title.findtext("wrapmultiline") != "true":
@@ -255,11 +256,13 @@ jobs:
           if focused_image is None or (focused_image.findtext("left"), focused_image.findtext("top"), focused_image.findtext("width"), focused_image.findtext("height")) != ("7", "-6", "271", "361") or focused_zoom is None or (focused_zoom.get("end"), focused_zoom.get("time")) != ("104", "180"):
             raise SystemExit("Focused poster artwork must use the title-safe 106% selection zoom")
           normal_progress = poster.find("./control[@type='progress']") if poster is not None else None
-          if normal_progress is None or normal_progress.findtext("visible") != "ListItem.IsResumable" or normal_progress.findtext("info") != "ListItem.PercentPlayed" or normal_progress.findtext("texturebg") != "resume-track.png":
-            raise SystemExit("Normal poster cards must show resumable progress on a charcoal track")
+          if normal_progress is None or (normal_progress.findtext("left"), normal_progress.findtext("top"), normal_progress.findtext("width"), normal_progress.findtext("height"), normal_progress.findtext("visible"), normal_progress.findtext("info"), normal_progress.findtext("texturebg")) != ("18", "337", "249", "5", "ListItem.IsResumable", "ListItem.PercentPlayed", "resume-track.png"):
+            raise SystemExit("Normal poster cards must show a correctly aligned resumable progress strip on a charcoal track")
           focus_progresses = focused_poster.findall("./control[@type='progress']") if focused_poster is not None else []
           if len(focus_progresses) != 2 or {node.findtext("visible") for node in focus_progresses} != {"!Control.HasFocus(9001) + ListItem.IsResumable", "Control.HasFocus(9001) + ListItem.IsResumable"} or any(node.findtext("texturebg") != "resume-track.png" for node in focus_progresses):
             raise SystemExit("Focused poster template must retain one charcoal-track progress strip in both focus states")
+          if any((node.findtext("left"), node.findtext("top"), node.findtext("width"), node.findtext("height")) != (("18", "337", "249", "5") if node.findtext("visible").startswith("!") else ("18", "345", "249", "5")) for node in focus_progresses):
+            raise SystemExit("Normal and focused poster progress strips must align to their respective artwork baselines")
           row_focus = ET.parse("skin.cineva/xml/Includes.xml").getroot().find("./include[@name='CinevaFocusedPosterItem9001']")
           focus_accent = next((node for node in row_focus.findall("./control[@type='image']") if node.findtext("texture") == "focus-bar.png"), None) if row_focus is not None else None
           if focus_accent is None or (focus_accent.findtext("left"), focus_accent.findtext("top"), focus_accent.findtext("width"), focus_accent.findtext("height")) != ("101", "415", "84", "4"):
