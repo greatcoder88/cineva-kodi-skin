@@ -1110,7 +1110,7 @@ def update_xml(data, path):
         if focused_label is None:
             focused_label = ET.fromstring(ET.tostring(normal_label, encoding="unicode"))
         # Kodi label controls ellipsize long card titles despite wrapmultiline.
-        # Textboxes wrap naturally inside the same fixed 48px caption area.
+        # Textboxes wrap naturally inside the same fixed 52px caption area.
         normal_label.set("type", "textbox")
         focused_label.set("type", "textbox")
         for tag, value in (("left", 22), ("top", 0), ("width", 240), ("height", 360)):
