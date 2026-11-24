@@ -2,6 +2,7 @@ import importlib.util
 import json
 import pathlib
 import sys
+import struct
 import types
 import unittest
 import xml.etree.ElementTree as ET
@@ -91,7 +92,7 @@ class KodiManagerTests(unittest.TestCase):
         builder = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(builder)
         artwork = builder.poster_placeholder_png()
-        self.assertTrue(artwork.startswith(b"\\x89PNG\\r\\n\\x1a\\n"))
+        self.assertTrue(artwork.startswith(b"\x89PNG\r\n\x1a\n"))
         self.assertEqual(struct.unpack(">II", artwork[16:24]), (342, 513))
         self.assertNotIn(b"play glyph", builder.poster_placeholder_png.__doc__.encode("utf-8"))
 
