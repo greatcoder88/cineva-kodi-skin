@@ -117,7 +117,7 @@ class HomeHeroActionTests(unittest.TestCase):
                     ("62", "158", "84", "32"),
                 )
 
-    def test_home_uses_compact_poster_rails_to_preview_the_next_shelf(self):
+    def test_home_uses_larger_native_2_3_posters_and_preserves_next_shelf_preview(self):
         with ZipFile(ARCHIVE) as archive:
             home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
             includes = ET.fromstring(archive.read("skin.cineva/xml/Includes.xml"))
@@ -127,6 +127,11 @@ class HomeHeroActionTests(unittest.TestCase):
                 (rail.findtext("left"), rail.findtext("top"), rail.findtext("width"), rail.findtext("height")),
                 ("105", "444", "1710", "670"),
             )
+            first_row_height = 500
+            visible_next_shelf_preview = (
+                1080 - int(rail.findtext("top")) - first_row_height - int(rail.findtext("itemgap"))
+            )
+            self.assertEqual(visible_next_shelf_preview, 124)
             for row in range(1, 5):
                 group = rail.find(f"./control[@type='group'][@id='{9060 + row}']")
                 shelf = group.find(f"./control[@type='fixedlist'][@id='{9000 + row}']")
