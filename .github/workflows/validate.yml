@@ -554,14 +554,14 @@ jobs:
                   errors.append(f"Home row {container_id} must show a normal poster when inactive and focus artwork only when active")
               elif any(image.findtext("texture") != "$INFO[ListItem.Art(poster)]" for image in focus_images[:2]):
                   errors.append(f"Home row {container_id} must use semantic portrait poster art in both focus states")
-              elif (focus_images[2].findtext("texture"), focus_images[2].findtext("visible"), focus_images[2].findtext("left"), focus_images[2].findtext("top"), focus_images[2].findtext("width"), focus_images[2].findtext("height")) != ("focus-bar.png", f"Control.HasFocus({container_id})", "104", "418", "76", "4"):
+              elif (focus_images[2].findtext("texture"), focus_images[2].findtext("visible"), focus_images[2].findtext("left"), focus_images[2].findtext("top"), focus_images[2].findtext("width"), focus_images[2].findtext("height")) != ("focus-bar.png", f"Control.HasFocus({container_id})", "100", "426", "84", "4"):
                   errors.append(f"Home row {container_id} focused poster is missing its red selection accent")
               if len(focus_labels) != 2 or focus_labels[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_labels[1].findtext("visible") != f"Control.HasFocus({container_id})":
                   errors.append(f"Home row {container_id} must keep exactly one correctly styled title visible")
-              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width"), focus_labels[1].findtext("aligny")) != ("font10", "344", "64", "285", "center") or focus_labels[1].find("wrap") is not None:
+              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width"), focus_labels[1].findtext("aligny")) != ("font10", "354", "64", "285", "center") or focus_labels[1].find("wrap") is not None:
                   errors.append(f"Home row {container_id} focused title must use the compact, multiline card-title treatment")
               zoom = focus_images[1].find("./animation[@effect='zoom']") if len(focus_images) > 1 else None
-              if len(focus_images) > 1 and (focus_images[1].findtext("left"), focus_images[1].findtext("top"), focus_images[1].findtext("width"), focus_images[1].findtext("height")) != ("29", "-3", "226", "339"):
+              if len(focus_images) > 1 and (focus_images[1].findtext("left"), focus_images[1].findtext("top"), focus_images[1].findtext("width"), focus_images[1].findtext("height")) != ("26", "-6", "232", "348"):
                   errors.append(f"Home row {container_id} focused artwork must stop above its title baseline")
               if zoom is None or (zoom.get("start"), zoom.get("end"), zoom.get("time"), zoom.get("tween"), zoom.get("easing")) != ("100", "104", "160", "sine", "out") or zoom.text != "Focus":
                   errors.append(f"Home row {container_id} focused poster is missing its short, event-driven D-pad zoom")
@@ -575,7 +575,7 @@ jobs:
                   (p.findtext("left"), p.findtext("top"), p.findtext("width"), p.findtext("height"), p.findtext("info"), p.findtext("texturebg"))
                   != (("38", "319", "208", "5", "ListItem.PercentPlayed", "resume-track.png")
                       if p.findtext("visible").startswith("!") else
-                      ("38", "326", "208", "5", "ListItem.PercentPlayed", "resume-track.png"))
+                      ("34", "335", "216", "5", "ListItem.PercentPlayed", "resume-track.png"))
                   for p in focus_progresses
               ):
                   errors.append(f"Home row {container_id} resume progress geometry is inconsistent between normal and focused poster sizes")

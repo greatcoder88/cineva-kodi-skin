@@ -227,16 +227,32 @@ class HomeHeroActionTests(unittest.TestCase):
             self.assertEqual(
                 (focused_image.findtext("left"), focused_image.findtext("top"),
                  focused_image.findtext("width"), focused_image.findtext("height")),
-                ("29", "-3", "226", "339"),
+                ("26", "-6", "232", "348"),
             )
+            self.assertEqual(focused_image.findtext("bordersize"), "4")
+            self.assertEqual(focused_image.find("bordertexture").attrib.get("border"), "4")
+            focus_png = archive.read("skin.cineva/media/poster-focus.png")
+            offset = 8
+            compressed = bytearray()
+            while offset < len(focus_png):
+                length = int.from_bytes(focus_png[offset:offset + 4], "big")
+                kind = focus_png[offset + 4:offset + 8]
+                payload = focus_png[offset + 8:offset + 8 + length]
+                if kind == b"IDAT":
+                    compressed.extend(payload)
+                offset += length + 12
+            decoded = zlib.decompress(bytes(compressed))
+            stride = 1 + 8 * 4
+            self.assertEqual(decoded[stride + 1 + 1 * 4 + 3], 228)
+            self.assertEqual(decoded[3 * stride + 1 + 3 * 4 + 3], 0)
             self.assertEqual(
                 (focused_title.findtext("top"), focused_title.findtext("height")),
-                ("344", "64"),
+                ("354", "64"),
             )
             self.assertEqual(
                 (focus_accent.findtext("left"), focus_accent.findtext("top"),
                  focus_accent.findtext("width"), focus_accent.findtext("height")),
-                ("104", "418", "76", "4"),
+                ("100", "426", "84", "4"),
             )
             focus_progresses = focused.findall("./control[@type='progress']")
             self.assertEqual(len(focus_progresses), 2)
@@ -247,7 +263,7 @@ class HomeHeroActionTests(unittest.TestCase):
             self.assertEqual(
                 [(node.findtext("left"), node.findtext("top"), node.findtext("width"), node.findtext("height"))
                  for node in focus_progresses],
-                [("38", "319", "208", "5"), ("38", "326", "208", "5")],
+                [("38", "319", "208", "5"), ("34", "335", "216", "5")],
             )
 
 

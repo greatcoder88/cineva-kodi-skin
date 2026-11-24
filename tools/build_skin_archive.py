@@ -208,7 +208,7 @@ def poster_focus_png():
         pixels.append(0)  # PNG filter: None
         for x in range(width):
             edge = 1 <= x <= 6 and 1 <= y <= 6 and (x <= 2 or x >= 5 or y <= 2 or y >= 5)
-            pixels.extend((229, 9, 20, 188) if edge else (0, 0, 0, 0))
+            pixels.extend((244, 12, 26, 228) if edge else (0, 0, 0, 0))
     header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
     return (b"\x89PNG\r\n\x1a\n"
             + png_chunk(b"IHDR", header)
@@ -1196,13 +1196,18 @@ def update_xml(data, path):
         # the title below it. The 104% control geometry plus a 104% focus
         # animation gives a balanced ~108% total scale instead of double-enlarging
         # an already oversized 108% control.
-        for tag, value in (("left", 29), ("top", -3), ("width", 226), ("height", 339)):
+        for tag, value in (("left", 26), ("top", -6), ("width", 232), ("height", 348)):
             set_child_text(focused_image, tag, value)
         set_child_text(focused_image, "texture", "$INFO[ListItem.Art(poster)]")
         focused_texture = focused_image.find("texture")
         if focused_texture is None:
             raise SystemExit("Includes.xml focused poster image has no texture")
         focused_texture.set("fallback", "poster-placeholder.png")
+        focus_border = focused_image.find("bordertexture")
+        if focus_border is None:
+            raise SystemExit("Includes.xml focused poster image has no border texture")
+        focus_border.set("border", "4")
+        set_child_text(focused_image, "bordersize", 4)
         # Keep a brief, restrained zoom on the selected poster. It is
         # event-driven (D-pad focus only), not a perpetual animation.
         focus_animation = focused_image.find("./animation[@effect='zoom']")
@@ -1220,7 +1225,7 @@ def update_xml(data, path):
             focus_animation.set("tween", "sine")
             focus_animation.set("easing", "out")
         focus_animation.text = "Focus"
-        for tag, value in (("left", 38), ("width", 208), ("top", 326), ("height", 5)):
+        for tag, value in (("left", 34), ("width", 216), ("top", 335), ("height", 5)):
             set_child_text(progress, tag, value)
         if focused_label is not None and focused_label in list(focused):
             focused.remove(focused_label)
@@ -1245,7 +1250,7 @@ def update_xml(data, path):
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
             set_child_text(fallback_progress, "visible", f"!Control.HasFocus({container_id}) + ListItem.IsResumable")
             # Reserve a 64px caption area for two full lines at TV distance; compact native 2:3 posters expose more of the next shelf.
-            for tag, value in (("left", 0), ("top", 344), ("width", 285), ("height", 64), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "white")):
+            for tag, value in (("left", 0), ("top", 354), ("width", 285), ("height", 64), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
             stale_wrap = active_label.find("wrap")
             if stale_wrap is not None:
@@ -1256,7 +1261,7 @@ def update_xml(data, path):
             set_child_text(active_label, "visible", f"Control.HasFocus({container_id})")
             set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
             focus_accent = ET.Element("control", {"type": "image"})
-            for tag, value in (("left", 104), ("top", 418), ("width", 76), ("height", 4)):
+            for tag, value in (("left", 100), ("top", 426), ("width", 84), ("height", 4)):
                 set_child_text(focus_accent, tag, value)
             set_child_text(focus_accent, "texture", "focus-bar.png")
             set_child_text(focus_accent, "visible", f"Control.HasFocus({container_id})")
