@@ -80,6 +80,9 @@ class WidgetManager:
                 cleaned.append({'id': str(item.get('id') or path), 'name': name,
                                 'path': path, 'addon': str(item.get('addon', '')),
                                 'content': str(item.get('content', 'videos'))})
+            else:
+                # A corrupt/unsupported source must not shift later numbered slots.
+                cleaned.append({})
         return cleaned
 
     def save(self, registry):
