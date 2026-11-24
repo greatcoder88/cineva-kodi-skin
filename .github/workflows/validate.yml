@@ -325,6 +325,8 @@ jobs:
           normal_image = poster.find("./control[@type='image']") if poster is not None else None
           if normal_image is None or normal_image.findtext("texture") != "$INFO[ListItem.Art(poster)]":
               errors.append("Home shelves must use semantic poster art, not ambiguous thumbnail/fanart art")
+          elif (normal_image.findtext("left"), normal_image.findtext("top"), normal_image.findtext("width"), normal_image.findtext("height")) != ("12", "0", "261", "348"):
+              errors.append("Normal Home posters must use the enlarged, consistent 3:4 card artwork")
           fixture_source = pathlib.Path("tools/test-fixtures/plugin.video.pov/default.py").read_text()
           if '"poster": poster, "thumb": fanart' not in fixture_source:
               errors.append("GUI fixture must keep portrait poster art distinct from landscape thumbnail/fanart art")
