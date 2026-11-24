@@ -1219,6 +1219,49 @@ def update_xml(data, path):
                     set_child_text(button, "texturefocus", "focus-bar.png")
                     set_child_text(button, "texturenofocus", "black.png")
                     set_child_text(button, "textcolor", "white")
+    elif path in {"skin.cineva/xml/custom11117.xml", "skin.cineva/xml/custom11118.xml"}:
+        # Give catalogue pages a true selected-title hero instead of a static
+        # category heading over four compressed poster strips.
+        is_tv = path.endswith("custom11118.xml")
+        controls = root.find("controls")
+        if controls is not None:
+            page_title = "TV SHOWS" if is_tv else "MOVIES"
+            title = ET.Element("control", {"type": "label", "id": "9210"})
+            for tag, value in {
+                "left": 72, "top": 205, "width": 1120, "height": 64,
+                "font": "font26", "textcolor": "white",
+                "label": "$INFO[Container(9201).ListItem.Label]",
+                "visible": "!String.IsEmpty(Container(9201).ListItem.Label) + !Control.HasFocus(9202) + !Control.HasFocus(9203) + !Control.HasFocus(9204)",
+                "scroll": "no",
+            }.items():
+                ET.SubElement(title, tag).text = str(value)
+            fallback = ET.Element("control", {"type": "label", "id": "9211"})
+            for tag, value in {
+                "left": 72, "top": 205, "width": 1120, "height": 64,
+                "font": "font26", "textcolor": "white",
+                "label": page_title,
+                "visible": "String.IsEmpty(Container(9201).ListItem.Label)",
+            }.items():
+                ET.SubElement(fallback, tag).text = str(value)
+            meta = ET.Element("control", {"type": "label", "id": "9212"})
+            for tag, value in {
+                "left": 76, "top": 270, "width": 1100, "height": 30,
+                "font": "font10", "textcolor": "silver",
+                "label": "$INFO[Container(9201).ListItem.Year]$INFO[Container(9201).ListItem.Genre,  ￼  ]$INFO[Container(9201).ListItem.Rating,  ￼  ]",
+                "visible": "!String.IsEmpty(Container(9201).ListItem.Label)",
+            }.items():
+                ET.SubElement(meta, tag).text = str(value.replace("￼", "•"))
+            logo = ET.Element("control", {"type": "image", "id": "9213"})
+            for tag, value in {
+                "left": 72, "top": 205, "width": 850, "height": 64,
+                "texture": "$INFO[Container(9201).ListItem.Art(clearlogo)]",
+                "aspectratio": "keep",
+                "visible": "!String.IsEmpty(Container(9201).ListItem.Art(clearlogo))",
+            }.items():
+                ET.SubElement(logo, tag).text = str(value)
+            # Render hero information above the background and below focusable
+            # controls; all focus movement remains native Kodi D-pad navigation.
+            controls.extend([title, fallback, meta, logo])
     elif path == "skin.cineva/xml/custom11112.xml":
         # Search hub: keep the search action prominent and align results to the catalogue grid.
         for node in root.findall(".//control[@type='button']"):
