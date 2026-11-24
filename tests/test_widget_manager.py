@@ -207,31 +207,56 @@ class KodiManagerTests(unittest.TestCase):
 
     def test_picker_ignores_playable_files_and_only_opens_directories(self):
         manager = self.module.WidgetManager()
-        seen = {}
+        seen = {"calls": []}
         original_call = self.module.KodiRPC.call
         def fake_call(method, params=None):
+            if params["directory"].endswith("/collections/"):
+                return {"files": [
+                    {"file": "plugin://plugin.video.example/play/123", "filetype": "file", "label": "A Movie"}
+                ]}
             return {"files": [
                 {"file": "plugin://plugin.video.example/play/123", "filetype": "file", "label": "A Movie"},
                 {"file": "plugin://plugin.video.example/collections/", "filetype": "directory", "label": "Collections"}
             ]}
         self.module.KodiRPC.call = staticmethod(fake_call)
         def choose(title, choices, **kwargs):
-            seen["choices"] = choices
-            return 1
+            seen["calls"].append(list(choices))
+            return 1 if len(seen["calls"]) == 1 else 0
         manager.dialog.select = choose
         try:
             chosen = manager._browse_directory("plugin://plugin.video.example/", "plugin.video.example")
         finally:
             self.module.KodiRPC.call = original_call
-        self.assertEqual(seen["choices"], [
+        self.assertEqual(seen["calls"][0], [
             "✓  Use this folder as widget",
             "📁  Collections",
+            "←  Back"
+        ])
+        self.assertEqual(seen["calls"][1], [
+            "✓  Use this folder as widget",
             "←  Back"
         ])
         self.assertEqual(chosen, {
             "path": "plugin://plugin.video.example/collections/",
             "title": "Collections"
         })
+
+    def test_picker_rejects_self_referential_directory_links(self):
+        manager = self.module.WidgetManager()
+        original_call = self.module.KodiRPC.call
+        notices = []
+        self.module.KodiRPC.call = staticmethod(lambda *args, **kwargs: {"files": [
+            {"file": "plugin://plugin.video.example/", "filetype": "directory", "label": "Root"}
+        ]})
+        manager.dialog.select = lambda *args, **kwargs: 1
+        manager.dialog.ok = lambda title, message: notices.append(message)
+        try:
+            chosen = manager._browse_directory("plugin://plugin.video.example/", "plugin.video.example")
+        finally:
+            self.module.KodiRPC.call = original_call
+        self.assertIsNone(chosen)
+        self.assertEqual(len(notices), 1)
+        self.assertIn("already open", notices[0])
 
     def test_invalid_sources_are_filtered(self):
         FakeVFS.files["special://profile/addon_data/script.cineva.widgets/widget_registry.json"] = json.dumps({"home":[
