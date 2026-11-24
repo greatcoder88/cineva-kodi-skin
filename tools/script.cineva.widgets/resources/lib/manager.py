@@ -150,6 +150,11 @@ class WidgetManager:
         if action == 'select':
             return {'path': target, 'title': title}
         if action == 'folder':
+            normalized_target = target.rstrip('/')
+            if (normalized_target == path.rstrip('/')
+                    or any(normalized_target == parent.rstrip('/') for parent in parents)):
+                self.dialog.ok('CINÉVA', 'This add-on folder links back to a location already open.')
+                return None
             return self._browse_directory(target, addon_id, parents + [path])
         if action == 'parent' or (action == 'back' and parents):
             # Back inside a nested add-on folder should return to its parent;
