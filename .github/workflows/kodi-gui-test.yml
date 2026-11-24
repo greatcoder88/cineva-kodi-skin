@@ -322,6 +322,54 @@ jobs:
           PY
           zip -qr artifacts/cineva-expanded-source.zip skin.cineva tools/script.cineva.widgets tools/test-fixtures/plugin.video.pov tools/download_test_posters.py
 
+      - name: Validate packaged Home poster fallback
+        run: |
+          python - <<'PY'
+          import pathlib
+          import struct
+          import zlib
+          import xml.etree.ElementTree as ET
+          root = pathlib.Path("skin.cineva")
+          includes = ET.parse(root / "xml/Includes.xml").getroot()
+          names = ["CinevaPosterItem", "CinevaFocusedPosterItem"] + [
+              f"CinevaFocusedPosterItem{row}" for row in (9001, 9002, 9003, 9004)
+          ]
+          for name in names:
+              include = includes.find(f"./include[@name='{name}']")
+              if include is None:
+                  raise SystemExit(f"Missing poster include: {name}")
+              poster_images = [
+                  node for node in include.findall("./control[@type='image']")
+                  if (node.findtext("texture") or "").strip() == "$INFO[ListItem.Art(poster)]"
+              ]
+              if not poster_images or any(
+                  node.find("texture").attrib.get("fallback") != "poster-placeholder.png"
+                  for node in poster_images
+              ):
+                  raise SystemExit(f"{name} does not provide the branded missing-poster fallback")
+          data = (root / "media/poster-placeholder.png").read_bytes()
+          if data[:8] != bytes.fromhex("89504e470d0a1a0a"):
+              raise SystemExit("Branded poster fallback is not a PNG")
+          width, height = struct.unpack(">II", data[16:24])
+          if (width, height) != (342, 513):
+              raise SystemExit(f"Poster fallback must be 342x513, got {width}x{height}")
+          offset, compressed = 8, bytearray()
+          while offset < len(data):
+              length = int.from_bytes(data[offset:offset + 4], "big")
+              kind = data[offset + 4:offset + 8]
+              payload = data[offset + 8:offset + 8 + length]
+              crc = int.from_bytes(data[offset + 8 + length:offset + 12 + length], "big")
+              if zlib.crc32(kind + payload) & 0xffffffff != crc:
+                  raise SystemExit("Poster fallback PNG has a corrupt chunk CRC")
+              if kind == b"IDAT":
+                  compressed.extend(payload)
+              offset += length + 12
+          decoded = zlib.decompress(bytes(compressed))
+          if len(decoded) != (1 + width * 4) * height:
+              raise SystemExit("Poster fallback PNG pixel payload has an invalid length")
+          print("Normal and focused Home cards package the valid 342x513 branded fallback.")
+          PY
+
       - name: Install GUI runtime
         run: |
           sudo apt-get update
@@ -678,6 +726,17 @@ jobs:
             else:
               raise SystemExit(f"Home shelf Up did not focus the RESUME hero action: {state}")
             subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-actions.png"],check=True)
+            # Interstellar is intentionally missing ListItem.Art(poster) in the
+            # fixture. Its visible third card must render the crimson placeholder.
+            placeholder_signal = subprocess.run(
+              ["convert","artifacts/cineva-home-actions.png","-crop","260x340+690+420",
+               "-fx","((r>0.7)&&(g<0.2)&&(b<0.25))?1:0","-format","%[fx:mean]","info:"],
+              text=True,capture_output=True,check=True
+            )
+            placeholder_coverage = float(placeholder_signal.stdout.strip())
+            if placeholder_coverage < 0.006:
+              raise SystemExit(f"Missing-poster fallback is not visible in the real Home screenshot (crimson coverage={placeholder_coverage:.4f})")
+            print(f"Verified the branded missing-poster fallback in the first Home rail (crimson coverage={placeholder_coverage:.4f}).")
             eyebrow_signal = subprocess.run(
               ["convert","artifacts/cineva-home-actions.png","-crop","420x30+60+110",
                "-fx","((r>0.55)&&(g<0.35)&&(b<0.35))?1:0","-format","%[fx:mean]","info:"],

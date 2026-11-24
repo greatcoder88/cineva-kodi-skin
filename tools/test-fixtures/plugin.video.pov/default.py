@@ -66,7 +66,14 @@ def main():
         fanart = os.path.join(poster_dir, backdrop_name)
         if not os.path.isfile(fanart):
             raise RuntimeError("Missing landscape hero artwork: {}".format(fanart))
-        item.setArt({"poster": poster, "thumb": fanart, "fanart": fanart, "landscape": fanart})
+        artwork = {"thumb": fanart, "fanart": fanart, "landscape": fanart}
+        # Interstellar deliberately omits poster art so the Home skin fallback
+        # is exercised in the first visible rail; its landscape fanart remains.
+        if is_tv or index != 3:
+            artwork["poster"] = poster
+        else:
+            item.setProperty("Cineva.TestMissingPoster", "true")
+        item.setArt(artwork)
         # Continue Watching fixtures need real resume metadata so the skin's
         # progress strips are exercised in both normal and focused card states.
         if "in_progress" in action:
