@@ -1250,7 +1250,7 @@ def update_xml(data, path):
                 "label": "$INFO[Container(9201).ListItem.Year]$INFO[Container(9201).ListItem.Genre,  ￼  ]$INFO[Container(9201).ListItem.Rating,  ￼  ]",
                 "visible": "!String.IsEmpty(Container(9201).ListItem.Label)",
             }.items():
-                ET.SubElement(meta, tag).text = str(value.replace("￼", "•"))
+                ET.SubElement(meta, tag).text = str(value).replace("￼", "•")
             logo = ET.Element("control", {"type": "image", "id": "9213"})
             for tag, value in {
                 "left": 72, "top": 205, "width": 850, "height": 64,
