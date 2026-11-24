@@ -2,6 +2,7 @@
 """Assemble a Kodi add-on repository from the tested CINÉVA packages."""
 from __future__ import annotations
 import hashlib
+import html
 import shutil
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -29,6 +30,31 @@ def zip_directory(source: Path, destination: Path, root_name: str) -> None:
         for path in sorted(source.rglob("*")):
             if path.is_file():
                 archive.write(path, f"{root_name}/{path.relative_to(source).as_posix()}")
+
+
+def write_http_directory_index(directory: Path, title: str, entries: list[tuple[str, str]]) -> None:
+    """Write anchors that Kodi's HTTPDirectory parser can browse as folders/files.
+
+    Kodi expects each anchor's visible name to match its relative href. Keep the
+    link text literal (including the trailing slash for folders) so Add file
+    source and the repository add-on can navigate this static Pages host.
+    """
+    links = "\\n".join(
+        f'<li><a href="{html.escape(href, quote=True)}">{html.escape(label)}</a></li>'
+        for href, label in entries
+    )
+    page = (
+        "<!doctype html><html lang=\\"en\\"><head><meta charset=\\"utf-8\\">"
+        f"<title>{html.escape(title)}</title>"
+        "<meta name=\\"viewport\\" content=\\"width=device-width,initial-scale=1\\">"
+        "<style>body{margin:0;padding:2rem;background:#090b11;color:#e8eaf0;"
+        "font:16px/1.6 system-ui,sans-serif}main{max-width:760px;margin:auto}"
+        "h1{font-size:1.5rem}ul{padding-left:1.25rem}a{color:#ff5b68;text-decoration:none}"
+        "a:hover{text-decoration:underline}</style></head><body><main>"
+        f"<h1>{html.escape(title)}</h1><ul>{links}</ul>"
+        "</main></body></html>"
+    )
+    (directory / "index.html").write_text(page, encoding="utf-8")
 
 
 def main() -> None:
@@ -71,12 +97,6 @@ def main() -> None:
     (OUT / "addons.xml").write_bytes(addons_bytes)
     (OUT / "addons.xml.md5").write_text(hashlib.md5(addons_bytes).hexdigest(), encoding="ascii")
     (OUT / ".nojekyll").write_text("", encoding="ascii")
-    (OUT / "index.html").write_text(
-        "<!doctype html><meta charset=utf-8><title>CINÉVA Kodi Repository</title>"
-        "<h1>CINÉVA Kodi Repository</h1><p>Official add-on feed for Kodi 22 (Piers).</p>"
-        "<p>Install repository.cineva-0.1.0.zip from the repository download page, "
-        "then use Install from repository in Kodi.</p>", encoding="utf-8"
-    )
     repo_dir = OUT / "zips" / REPO_ID
     repo_dir.mkdir(parents=True)
     repo_addon = ET.Element("addon", {
@@ -98,6 +118,29 @@ def main() -> None:
     (repo_dir / "addon.xml").write_bytes(repo_xml)
     with ZipFile(repo_dir / f"{REPO_ID}-{REPO_VERSION}.zip", "w", ZIP_DEFLATED) as archive:
         archive.write(repo_dir / "addon.xml", f"{REPO_ID}/addon.xml")
+    repo_zip = repo_dir / f"{REPO_ID}-{REPO_VERSION}.zip"
+    # Put the installer at the source root so the standard Kodi file-source
+    # workflow is one level deep: Add source -> Install from ZIP -> Install from repo.
+    shutil.copy2(repo_zip, OUT / repo_zip.name)
+    write_http_directory_index(
+        OUT,
+        "CINÉVA Kodi Repository",
+        [(repo_zip.name, repo_zip.name), ("zips/", "zips/")],
+    )
+    package_ids = (REPO_ID, skin_id, helper_id)
+    write_http_directory_index(
+        zips,
+        "CINÉVA add-on packages",
+        [(f"{addon_id}/", f"{addon_id}/") for addon_id in package_ids],
+    )
+    for addon_id in package_ids:
+        package_dir = zips / addon_id
+        package_files = sorted(path.name for path in package_dir.glob("*.zip"))
+        write_http_directory_index(
+            package_dir,
+            f"CINÉVA {addon_id} packages",
+            [(name, name) for name in package_files],
+        )
     print(f"Repository assembled: {OUT}")
     print(f"Packages: {skin_id}-{skin_version}, {helper_id}-{helper_version}, {REPO_ID}-{REPO_VERSION}")
 
