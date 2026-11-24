@@ -104,6 +104,7 @@ jobs:
         run: |
           python - <<'PY'
           import pathlib
+          import struct
           import sys
           import zlib
           import xml.etree.ElementTree as ET
