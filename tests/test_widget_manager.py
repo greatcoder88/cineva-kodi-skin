@@ -85,6 +85,16 @@ class KodiManagerTests(unittest.TestCase):
         self.assertFalse(any("screen=search" in action or "screen=mylist" in action for action in actions))
         self.assertFalse(any(button.get("id") == "6" for button in buttons))
 
+    def test_home_navigation_uses_no_missing_dash_texture(self):
+        builder_path = ROOT / "tools/build_skin_archive.py"
+        spec = importlib.util.spec_from_file_location("cineva_builder_home_texture", builder_path)
+        builder = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(builder)
+        source = b'<window><controls><control type="button" id="1001"><texturenofocus>-</texturenofocus><label>HOME</label></control></controls></window>'
+        rendered = ET.fromstring(builder.update_xml(source, "skin.cineva/xml/Home.xml"))
+        button = rendered.find(".//control[@id='1001']")
+        self.assertIsNone(button.find("texturenofocus"))
+
     def test_widget_helper_is_not_advertised_as_a_video_plugin(self):
         addon_xml = ET.parse(ROOT / "tools/script.cineva.widgets/addon.xml").getroot()
         self.assertIsNone(addon_xml.find("./extension[@point='xbmc.python.pluginsource']"))
