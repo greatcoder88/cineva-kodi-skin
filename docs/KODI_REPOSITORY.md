@@ -22,7 +22,7 @@ Do not download the installer in a separate browser. Use Kodi's own File Manager
 1. Open **Settings → File manager → Add source**.
 2. Enter `https://greatcoder88.github.io/cineva-kodi-skin/` as the source location and name it `CINÉVA`.
 3. Open **Add-ons → Install from ZIP file → CINÉVA**.
-4. Select `repository.cineva-0.1.2.zip` at the source root.
+4. Select `repository.cineva-0.1.3.zip` at the source root.
 5. Open **Install from repository → CINÉVA Add-on Repository**.
 6. Open **Look and feel → Skin → CINÉVA** and install it. Kodi installs the Widget Helper dependency automatically.
 7. After installation, future feed refreshes provide normal Kodi add-on updates.
