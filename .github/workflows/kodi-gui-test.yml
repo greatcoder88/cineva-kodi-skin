@@ -21,9 +21,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build release ZIP and commit it when source fixes change
+      - name: Build release ZIP, verify idempotence, and commit source fixes
         run: |
           python tools/build_skin_archive.py
+          before="$(sha256sum skin.cineva-0.5.3.zip | cut -d' ' -f1)"
+          python tools/build_skin_archive.py
+          after="$(sha256sum skin.cineva-0.5.3.zip | cut -d' ' -f1)"
+          if [ "$before" != "$after" ]; then
+            echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
+            exit 1
+          fi
+          echo "Archive SHA-256 is stable across consecutive builds: $after"
           if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && ! git diff --quiet -- skin.cineva-0.5.3.zip; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

@@ -18,10 +18,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Build release ZIP from runtime source fixes (idempotence check)
+      - name: Build release ZIP and verify true idempotence
         run: |
           python tools/build_skin_archive.py
+          before="$(sha256sum skin.cineva-0.5.3.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
+          after="$(sha256sum skin.cineva-0.5.3.zip | cut -d' ' -f1)"
+          if [ "$before" != "$after" ]; then
+            echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
+            exit 1
+          fi
+          echo "Archive SHA-256 is stable across consecutive builds: $after"
       - name: Expand uploaded CINÉVA archive
         run: |
           test -s skin.cineva-0.5.3.zip

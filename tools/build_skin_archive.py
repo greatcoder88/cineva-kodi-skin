@@ -1230,16 +1230,23 @@ def update_xml(data, path):
         controls = root.find("controls")
         if controls is None:
             raise SystemExit("SkinSettings.xml is missing its controls container")
-        for stale in list(controls.findall("control")):
-            if stale.get("id") in {"6", "7", "8", "9", "10"}:
-                controls.remove(stale)
         headings = {
             "home": ("HOME WIDGETS", 96, "Cineva.Widget"),
             "movies": ("MOVIES WIDGETS", 704, "Cineva.MovieWidget"),
             "tvshows": ("TV SHOWS WIDGETS", 1312, "Cineva.ShowWidget"),
         }
-        for screen, (heading, left, string_prefix) in headings.items():
-            section = ET.Element("control", {"type": "label"})
+        generated_ids = {"6", "7", "8", "9", "10", "40", "41", "42", "43"}
+        generated_ids.update(str(control_id) for control_id in range(21, 33))
+        generated_labels = {
+            "HOME WIDGETS", "MOVIES WIDGETS", "TV SHOWS WIDGETS",
+            "Choose a slot to select, change or clear its video add-on source.",
+        }
+        for stale in list(controls.findall("control")):
+            if (stale.get("id") in generated_ids
+                    or stale.findtext("label", "") in generated_labels):
+                controls.remove(stale)
+        for screen_index, (screen, (heading, left, string_prefix)) in enumerate(headings.items()):
+            section = ET.Element("control", {"type": "label", "id": str(40 + screen_index)})
             for tag, value in (("left", left), ("top", 238), ("width", 520),
                                ("height", 42), ("font", "font18"),
                                ("textcolor", "white"), ("label", heading)):
@@ -1257,7 +1264,7 @@ def update_xml(data, path):
                     set_child_text(button, tag, value)
                 controls.append(button)
         # A concise hint explains that each action opens the add-on/folder picker.
-        hint = ET.Element("control", {"type": "label"})
+        hint = ET.Element("control", {"type": "label", "id": "43"})
         for tag, value in (("left", 96), ("top", 690), ("width", 1500),
                            ("height", 44), ("font", "font12"),
                            ("textcolor", "grey"), ("label", "Choose a slot to select, change or clear its video add-on source.")):
@@ -1461,7 +1468,7 @@ def update_xml(data, path):
                 ET.SubElement(logo, tag).text = str(value)
             # A distinct, source-aware rating chip keeps the score legible and
             # visually separate from year/genre metadata on catalogue heroes.
-            for stale_id in ("9214", "9215", "9216"):
+            for stale_id in ("9210", "9211", "9212", "9213", "9214", "9215", "9216"):
                 stale = controls.find(f"./control[@id='{stale_id}']")
                 if stale is not None:
                     controls.remove(stale)

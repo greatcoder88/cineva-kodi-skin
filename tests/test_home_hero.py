@@ -50,6 +50,36 @@ class HomeHeroActionTests(unittest.TestCase):
                     (32, 32),
                 )
 
+    def test_generated_settings_and_catalogue_hero_controls_do_not_duplicate(self):
+        with ZipFile(ARCHIVE) as archive:
+            settings = ET.fromstring(archive.read("skin.cineva/xml/SkinSettings.xml"))
+            controls = settings.find("controls")
+            expected_headings = {"HOME WIDGETS", "MOVIES WIDGETS", "TV SHOWS WIDGETS"}
+            for heading in expected_headings:
+                self.assertEqual(
+                    sum(node.findtext("label") == heading for node in controls.findall("control")),
+                    1,
+                    f"{heading} must appear exactly once",
+                )
+            slot_buttons = [
+                node for node in controls.findall("control")
+                if (node.findtext("onclick") or "").startswith(
+                    "RunScript(script.cineva.widgets,action=configure&screen="
+                )
+            ]
+            self.assertEqual(len(slot_buttons), 12)
+            self.assertEqual(len({node.get("id") for node in slot_buttons}), 12)
+
+            for path in ("skin.cineva/xml/custom11117.xml", "skin.cineva/xml/custom11118.xml"):
+                page = ET.fromstring(archive.read(path))
+                page_controls = page.find("controls")
+                for control_id in range(9210, 9217):
+                    self.assertEqual(
+                        len(page_controls.findall(f"./control[@id='{control_id}']")),
+                        1,
+                        f"{path} must contain exactly one generated hero control {control_id}",
+                    )
+
 
 if __name__ == "__main__":
     unittest.main()
