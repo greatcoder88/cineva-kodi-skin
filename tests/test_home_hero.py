@@ -151,7 +151,7 @@ class HomeHeroActionTests(unittest.TestCase):
             )
             self.assertEqual(
                 (progress.findtext("left"), progress.findtext("top"), progress.findtext("width"), progress.findtext("height")),
-                ("28", "309", "228", "5"),
+                ("28", "349", "228", "5"),
             )
             focused = includes.find("./include[@name='CinevaFocusedPosterItem9001']")
             focused_image = next(
