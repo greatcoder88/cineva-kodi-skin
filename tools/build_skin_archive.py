@@ -254,7 +254,7 @@ def imdb_logo_png():
 
 
 def poster_placeholder_png():
-    """Create cinematic abstract artwork when a provider has no poster."""
+    """Create a branded cinematic film-lens poster when a provider has no artwork."""
     width, height = 342, 513
     pixels = bytearray()
     for y in range(height):
@@ -262,14 +262,15 @@ def poster_placeholder_png():
         pixels.append(0)
         for x in range(width):
             horizontal = x / (width - 1)
-            # Deep midnight gradient with restrained crimson and blue light leaks.
-            red_glow = max(0.0, 1.0 - (((horizontal - 0.82) / 0.62) ** 2
-                                      + ((vertical - 0.48) / 0.56) ** 2)) ** 2
-            blue_glow = max(0.0, 1.0 - (((horizontal - 0.18) / 0.62) ** 2
-                                       + ((vertical - 0.22) / 0.48) ** 2)) ** 2
-            red = int(5 + 8 * horizontal + 31 * red_glow)
-            green = int(8 + 7 * (1 - vertical) + 5 * red_glow)
-            blue = int(17 + 17 * blue_glow + 10 * red_glow)
+            blue_glow = max(0.0, 1.0 - (((horizontal - 0.18) / 0.72) ** 2
+                                       + ((vertical - 0.20) / 0.56) ** 2)) ** 2
+            crimson_glow = max(0.0, 1.0 - (((horizontal - 0.82) / 0.68) ** 2
+                                          + ((vertical - 0.66) / 0.58) ** 2)) ** 2
+            lens_glow = max(0.0, 1.0 - (((horizontal - 0.50) / 0.48) ** 2
+                                       + ((vertical - 0.48) / 0.50) ** 2)) ** 2
+            red = int(5 + 8 * horizontal + 19 * crimson_glow + 8 * lens_glow)
+            green = int(7 + 7 * (1 - vertical) + 5 * blue_glow + 3 * lens_glow)
+            blue = int(17 + 19 * blue_glow + 13 * lens_glow + 8 * crimson_glow)
             pixels.extend((red, green, blue, 255))
 
     def pixel(x, y, color):
@@ -296,31 +297,87 @@ def poster_placeholder_png():
                 error += dx
                 y1 += sy
 
-    # A distant horizon and layered angular silhouettes create a film-poster
-    # composition without implying playback or pretending to be real artwork.
-    horizon = 356
-    for y in range(horizon, height):
-        fade = (y - horizon) / (height - horizon)
-        shade = int(9 + 9 * fade)
-        for x in range(width):
-            pixel(x, y, (shade + 3, shade + 5, shade + 13))
-    skyline = [
-        (0, 353), (38, 322), (70, 345), (108, 298), (143, 338),
-        (178, 310), (213, 344), (258, 292), (296, 331), (342, 307)
-    ]
-    for index in range(len(skyline) - 1):
-        x1, y1 = skyline[index]
-        x2, y2 = skyline[index + 1]
-        line(x1, y1, x2, y2, (17, 25, 39), 5)
-    # A narrow vertical shaft of light gives the art a focal point.
-    for y in range(90, 350):
-        spread = max(1, int((y - 88) * 0.035))
-        for x in range(246 - spread, 247 + spread):
-            pixel(x, y, (24, 30, 48))
-    line(246, 112, 246, 344, (76, 43, 55), 1)
-    # Fine crimson horizon accent, deliberately understated.
-    line(54, 420, 288, 420, (116, 25, 39), 2)
-    line(54, 426, 154, 426, (54, 39, 53), 1)
+    def rect(x1, y1, x2, y2, color):
+        for y in range(y1, y2 + 1):
+            for x in range(x1, x2 + 1):
+                pixel(x, y, color)
+
+    def circle(cx, cy, radius, color, thickness=2):
+        outer = radius * radius
+        inner = max(0, radius - thickness) ** 2
+        for y in range(cy - radius, cy + radius + 1):
+            for x in range(cx - radius, cx + radius + 1):
+                distance = (x - cx) ** 2 + (y - cy) ** 2
+                if inner <= distance <= outer:
+                    pixel(x, y, color)
+
+    glyphs = {
+        "C": ("01110", "10001", "10000", "10000", "10000", "10001", "01110"),
+        "I": ("11111", "00100", "00100", "00100", "00100", "00100", "11111"),
+        "N": ("10001", "11001", "10101", "10011", "10001", "10001", "10001"),
+        "E": ("11111", "10000", "10000", "11110", "10000", "10000", "11111"),
+        "V": ("10001", "10001", "10001", "10001", "01010", "01010", "00100"),
+        "A": ("01110", "10001", "10001", "11111", "10001", "10001", "10001"),
+    }
+
+    def draw_wordmark():
+        scale, gap = 2, 4
+        label = "CINEVA"
+        text_width = sum(len(glyphs[ch][0]) * scale for ch in label) + gap * (len(label) - 1)
+        x = (width - text_width) // 2
+        start_x = x
+        for ch in label:
+            rows = glyphs[ch]
+            for gy, row in enumerate(rows):
+                for gx, bit in enumerate(row):
+                    if bit == "1":
+                        for sy in range(scale):
+                            for sx in range(scale):
+                                pixel(x + gx * scale + sx, 48 + gy * scale + sy, (226, 233, 245))
+            x += len(rows[0]) * scale + gap
+        # Acute accent above the E keeps the brand mark distinctive at poster scale.
+        e_x = start_x + (5 * 3 + 4 * 3) * scale
+        line(e_x + 8, 45, e_x + 14, 39, (226, 63, 83), 2)
+        line(start_x, 70, start_x + text_width, 70, (94, 35, 53), 2)
+
+    # A quiet film-frame border and sprocket holes make the fallback read as
+    # cinematic artwork rather than a generic play button or a blank tile.
+    frame = (55, 112, 287, 382)
+    line(frame[0], frame[1], frame[2], frame[1], (56, 72, 99), 2)
+    line(frame[0], frame[3], frame[2], frame[3], (56, 72, 99), 2)
+    line(frame[0], frame[1], frame[0], frame[3], (56, 72, 99), 2)
+    line(frame[2], frame[1], frame[2], frame[3], (56, 72, 99), 2)
+    for y in range(132, 366, 36):
+        rect(63, y, 70, y + 12, (27, 38, 57))
+        rect(272, y, 279, y + 12, (27, 38, 57))
+        line(64, y + 2, 69, y + 2, (76, 49, 69), 1)
+        line(273, y + 2, 278, y + 2, (76, 49, 69), 1)
+
+    # Layered lens rings and an iris-shaped hexagon create a calm, recognizable
+    # film motif without implying that the placeholder itself is a play control.
+    circle(171, 246, 88, (37, 51, 77), 3)
+    circle(171, 246, 76, (85, 44, 64), 2)
+    circle(171, 246, 62, (43, 67, 91), 2)
+    circle(171, 246, 48, (87, 57, 77), 2)
+    outer_iris = ((171, 190), (219, 218), (219, 274), (171, 302), (123, 274), (123, 218))
+    inner_iris = ((171, 215), (197, 230), (197, 262), (171, 277), (145, 262), (145, 230))
+    for index in range(6):
+        next_index = (index + 1) % 6
+        line(*outer_iris[index], *outer_iris[next_index], (103, 55, 76), 2)
+        line(*inner_iris[index], *inner_iris[next_index], (67, 86, 111), 2)
+        line(*outer_iris[index], *inner_iris[index], (75, 53, 78), 1)
+    circle(171, 246, 22, (141, 89, 108), 2)
+    circle(171, 246, 8, (194, 154, 137), 2)
+    circle(171, 246, 3, (231, 210, 178), 1)
+
+    # Small corner ticks and a restrained crimson baseline finish the poster.
+    line(55, 112, 79, 112, (169, 40, 63), 3)
+    line(55, 112, 55, 136, (169, 40, 63), 3)
+    line(263, 382, 287, 382, (169, 40, 63), 3)
+    line(287, 358, 287, 382, (169, 40, 63), 3)
+    draw_wordmark()
+    line(68, 426, 274, 426, (116, 28, 46), 2)
+    line(68, 433, 160, 433, (53, 48, 67), 1)
 
     header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
     return (b"\x89PNG\r\n\x1a\n"
