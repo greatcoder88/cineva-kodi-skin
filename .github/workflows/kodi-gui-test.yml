@@ -34,6 +34,8 @@ jobs:
             exit 1
           fi
           echo "Archive SHA-256 is stable across consecutive builds: $after"
+          mkdir -p artifacts
+          cp skin.cineva-0.5.4.zip artifacts/
           if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.4.zip)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
