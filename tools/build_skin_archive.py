@@ -265,23 +265,34 @@ def poster_placeholder_png():
             + png_chunk(b"IEND", b""))
 
 def hero_poster_vignette_png():
-    """Fade the edges of portrait key art into a fanart-free Home hero."""
+    """Blend a fitted 2:3 poster into the 640x750 fallback hero panel."""
     width, height = 640, 750
+    # A 342x513 poster fitted to 750px height occupies 500px, centered
+    # inside the 640px panel. Fade precisely across its two vertical edges.
+    poster_width = height * 2 // 3
+    poster_left = (width - poster_width) // 2
+    poster_right = poster_left + poster_width
+    fade_width = 72
     pixels = bytearray()
     for _ in range(height):
         pixels.append(0)  # PNG filter: None
         for x in range(width):
-            horizontal = x / (width - 1)
-            left_fade = max(0.0, 1.0 - horizontal / 0.32) ** 1.8
-            right_fade = max(0.0, (horizontal - 0.72) / 0.28) ** 1.7
-            alpha = int(232 * max(left_fade, right_fade))
+            if x < poster_left or x > poster_right:
+                alpha = 232
+            elif x < poster_left + fade_width:
+                progress = (x - poster_left) / fade_width
+                alpha = int(232 * (1.0 - progress) ** 1.8)
+            elif x > poster_right - fade_width:
+                progress = (poster_right - x) / fade_width
+                alpha = int(232 * (1.0 - progress) ** 1.8)
+            else:
+                alpha = 0
             pixels.extend((5, 7, 12, alpha))
     header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
-    return (b"\x89PNG\r\n\x1a\n"
+    return (b"\\x89PNG\\r\\n\\x1a\\n"
             + png_chunk(b"IHDR", header)
             + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
             + png_chunk(b"IEND", b""))
-
 
 def set_child_text(parent, tag, value):
     node = parent.find(tag)
