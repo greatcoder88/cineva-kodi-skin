@@ -25,7 +25,7 @@ jobs:
           python tools/build_skin_archive.py
           before="$(sha256sum skin.cineva-0.5.6.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.5.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.6.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
@@ -33,8 +33,8 @@ jobs:
           echo "Archive SHA-256 is stable across consecutive builds: $after"
       - name: Expand uploaded CINÉVA archive
         run: |
-          test -s skin.cineva-0.5.5.zip
-          unzip -q skin.cineva-0.5.5.zip -d .
+          test -s skin.cineva-0.5.6.zip
+          unzip -q skin.cineva-0.5.6.zip -d .
       - name: Validate Settings-only widget configuration navigation
         run: |
           python - <<'PY'
