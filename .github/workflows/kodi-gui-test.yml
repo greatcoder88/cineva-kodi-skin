@@ -382,7 +382,7 @@ jobs:
           focus_progresses = focused_poster.findall("./control[@type='progress']") if focused_poster is not None else []
           if len(focus_progresses) != 2 or {node.findtext("visible") for node in focus_progresses} != {"!Control.HasFocus(9001) + ListItem.IsResumable", "Control.HasFocus(9001) + ListItem.IsResumable"} or any(node.findtext("texturebg") != "resume-track.png" for node in focus_progresses):
             raise SystemExit("Focused poster template must retain one charcoal-track progress strip in both focus states")
-          if any((node.findtext("left"), node.findtext("top"), node.findtext("width"), node.findtext("height")) != (("28", "349", "228", "5") if node.findtext("visible").startswith("!") else ("38", "326", "208", "5")) for node in focus_progresses):
+          if any((node.findtext("left"), node.findtext("top"), node.findtext("width"), node.findtext("height")) != (("38", "319", "208", "5") if node.findtext("visible").startswith("!") else ("38", "326", "208", "5")) for node in focus_progresses):
             raise SystemExit("Normal and focused poster progress strips must align to their respective artwork baselines")
           row_focus = ET.parse("skin.cineva/xml/Includes.xml").getroot().find("./include[@name='CinevaFocusedPosterItem9001']")
           focus_accent = next((node for node in row_focus.findall("./control[@type='image']") if node.findtext("texture") == "focus-bar.png"), None) if row_focus is not None else None
