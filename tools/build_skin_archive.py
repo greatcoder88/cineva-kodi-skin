@@ -510,7 +510,6 @@ def update_xml(data, path):
                 if labels:
                     # Title first, metadata second: separate vertical baselines.
                     set_child_text(labels[0], "top", 24)
-                    set_child_text(labels[0], "font", "font36")
                     set_child_text(labels[0], "height", 96)
                     set_child_text(labels[0], "textcolor", "white")
                     set_child_text(labels[0], "width", 1220)

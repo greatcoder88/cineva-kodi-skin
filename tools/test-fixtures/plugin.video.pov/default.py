@@ -9,7 +9,7 @@ import xbmcgui
 import xbmcplugin
 
 MOVIES = [
-    ("The Shawshank Redemption: 30th Anniversary Collector's Edition", 1994, "Drama"),
+    ("The Shawshank Redemption: Special Collector's Edition", 1994, "Drama"),
     ("The Dark Knight", 2008, "Action / Crime"),
     ("Interstellar", 2014, "Sci-Fi / Drama"),
     ("Inception", 2010, "Sci-Fi / Thriller"),
@@ -54,7 +54,7 @@ def main():
             "rating": 8.4,
             "plot": (
                 "Framed for a murder he did not commit, a banker finds hope and friendship while enduring a brutal prison sentence."
-                if title == "The Shawshank Redemption: 30th Anniversary Collector's Edition" else
+                if title == "The Shawshank Redemption: Special Collector's Edition" else
                 "A high-school chemistry teacher enters the criminal underworld, changing his family and himself forever."
                 if title == "Breaking Bad" else
                 "A richly detailed story of impossible choices, loyalty, and the consequences that follow."

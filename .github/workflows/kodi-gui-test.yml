@@ -778,10 +778,10 @@ jobs:
             while time.time() < deadline:
               state = gui()
               focused_label = state.get("currentcontrol",{}).get("label","").strip()
-              if focused_label == "The Shawshank Redemption: 30th Anniversary Collector's Edition":
+              if focused_label == "The Shawshank Redemption: Special Collector's Edition":
                 break
               time.sleep(0.5)
-            if focused_label != "The Shawshank Redemption: 30th Anniversary Collector's Edition":
+            if focused_label != "The Shawshank Redemption: Special Collector's Edition":
               raise SystemExit(f"Home shelf 9001 did not focus its first item: {state}")
             print("Home poster shelf focused on:", focused_label)
             time.sleep(0.8)
@@ -903,7 +903,7 @@ jobs:
             deadline = time.time() + 8
             while time.time() < deadline:
               state = gui()
-              if state.get("currentcontrol",{}).get("label","").strip() == "The Shawshank Redemption: 30th Anniversary Collector's Edition":
+              if state.get("currentcontrol",{}).get("label","").strip() == "The Shawshank Redemption: Special Collector's Edition":
                 break
               time.sleep(0.25)
             else:
@@ -982,7 +982,7 @@ jobs:
                 end_y = (slide.get("end", "0,0").split(",") + ["0"])[1]
                 y += int(end_y)
               return x, y
-            expected_row_labels = {2: "Breaking Bad", 3: "The Shawshank Redemption: 30th Anniversary Collector's Edition", 4: "Breaking Bad"}
+            expected_row_labels = {2: "Breaking Bad", 3: "The Shawshank Redemption: Special Collector's Edition", 4: "Breaking Bad"}
             for row_number in (2, 3, 4):
               subprocess.run(["xdotool","key","Down"],check=True)
               deadline = time.time() + 10
