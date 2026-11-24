@@ -931,7 +931,7 @@ jobs:
             # JSON-RPC can focus an invisible Kodi control. Verify the first-row
             # PLAY surface is actually painted in the framebuffer, as well as focused.
             first_play = subprocess.run(
-              ["convert","artifacts/cineva-home-actions.png","-crop","210x70+60+340",
+              ["convert","artifacts/cineva-home-actions.png","-crop","190x54+60+398",
                "-fx","((r>0.7)&&(g<0.25)&&(b<0.25))?1:0","-format","%[fx:mean]","info:"],
               text=True,capture_output=True,check=True
             )
@@ -1101,7 +1101,7 @@ jobs:
                 # Measure its actual 190x54 Home geometry, not the old white button.
                 signal = subprocess.run([
                   "convert", "artifacts/cineva-home-row2-focus.png",
-                  "-crop", "190x54+60+368",
+                  "-crop", "190x54+60+398",
                   "-fx", "((r>0.55)&&(g<0.35)&&(b<0.35))?1:0",
                   "-format", "%[fx:mean]", "info:"
                 ], text=True, capture_output=True, check=True)
