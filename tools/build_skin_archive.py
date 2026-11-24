@@ -289,7 +289,7 @@ def hero_poster_vignette_png():
                 alpha = 0
             pixels.extend((5, 7, 12, alpha))
     header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
-    return (b"\\x89PNG\\r\\n\\x1a\\n"
+    return (bytes.fromhex("89504e470d0a1a0a")
             + png_chunk(b"IHDR", header)
             + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
             + png_chunk(b"IEND", b""))
