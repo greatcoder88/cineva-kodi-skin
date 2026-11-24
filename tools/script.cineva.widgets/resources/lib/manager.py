@@ -203,6 +203,7 @@ class WidgetManager:
             screen = 'home'
         if action == 'init':
             self.save(registry)
+            xbmc.log('CINEVA_WIDGETS_INITIALIZED={}'.format(SLOT_COUNT), xbmc.LOGINFO)
             return
         if action == 'configure':
             self.configure_slot(registry, screen, int(slot))
