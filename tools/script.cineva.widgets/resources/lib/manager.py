@@ -20,6 +20,7 @@ DEFAULT_HOME = [
     {'id': 'pov:trending-tv', 'name': 'Trending TV Shows', 'path': 'plugin://plugin.video.pov/?mode=build_tvshow_list&action=tmdb_tv_trending&name=Trending%20TV%20Shows', 'addon': 'plugin.video.pov', 'content': 'videos'}
 ]
 
+
 class KodiRPC:
     @staticmethod
     def call(method, params=None):
@@ -31,6 +32,7 @@ class KodiRPC:
         except (TypeError, ValueError):
             return None
         return None if 'error' in result else result.get('result')
+
 
 class WidgetManager:
     def __init__(self):
@@ -128,10 +130,14 @@ class WidgetManager:
             target = item.get('file', '')
             if not target:
                 continue
+            # A widget must point at a directory, never at an individual
+            # playable video. Selecting a file here would create a broken shelf.
             folder = item.get('filetype') == 'directory' or target.endswith('/')
+            if not folder:
+                continue
             title = item.get('label') or item.get('title') or target.rstrip('/').split('/')[-1]
-            choices.append(('📁  ' if folder else '▶  ') + title)
-            mapping.append(('folder' if folder else 'select', target, title))
+            choices.append('📁  ' + title)
+            mapping.append(('folder', target, title))
         if parents:
             choices.append('↑  Parent folder')
             mapping.append(('parent', parents[-1], ''))
@@ -230,13 +236,12 @@ class WidgetManager:
             if action == 'configure':
                 self.configure_slot(registry, screen, index + 1)
                 return
-            if 0 <= index < SLOT_COUNT:
-                while len(registry[screen]) <= index:
-                    registry[screen].append({})
-                registry[screen][index] = {}
-                while registry[screen] and not registry[screen][-1]:
-                    registry[screen].pop()
-                self.save(registry)
+            while len(registry[screen]) <= index:
+                registry[screen].append({})
+            registry[screen][index] = {}
+            while registry[screen] and not registry[screen][-1]:
+                registry[screen].pop()
+            self.save(registry)
             return
         if action == 'list':
             xbmc.log('CINEVA_WIDGET_REGISTRY=' + json.dumps(registry, ensure_ascii=False), xbmc.LOGINFO)
