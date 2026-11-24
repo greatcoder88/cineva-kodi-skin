@@ -824,7 +824,6 @@ jobs:
             else:
               raise SystemExit(f"Home shelf Up did not focus the RESUME hero action: {state}")
             subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-actions.png"],check=True)
-            verify_wrapped_hero_fallback("artifacts/cineva-home-actions.png")
             # Interstellar is intentionally missing ListItem.Art(poster) in the
             # fixture. Its visible third card must render the crimson placeholder.
             placeholder_signal = subprocess.run(
@@ -966,6 +965,7 @@ jobs:
               if min(coverages) < 0.004:
                 raise SystemExit(f"Long text-only hero title did not render on two lines (white coverage={coverages}).")
               print(f"Verified long text-only hero title wraps cleanly across two lines (white coverage={coverages}).")
+            verify_wrapped_hero_fallback("artifacts/cineva-home-actions.png")
             def active_rail_indicator_position(row_number):
               import xml.etree.ElementTree as ET
               home_root = ET.parse("skin.cineva/xml/Home.xml").getroot()
