@@ -1024,11 +1024,11 @@ def update_xml(data, path):
             if stale.get("id") in {"6", "7", "8", "9", "10"}:
                 controls.remove(stale)
         headings = {
-            "home": ("HOME WIDGETS", 96),
-            "movies": ("MOVIES WIDGETS", 704),
-            "tvshows": ("TV SHOWS WIDGETS", 1312),
+            "home": ("HOME WIDGETS", 96, "Cineva.Widget"),
+            "movies": ("MOVIES WIDGETS", 704, "Cineva.MovieWidget"),
+            "tvshows": ("TV SHOWS WIDGETS", 1312, "Cineva.ShowWidget"),
         }
-        for screen, (heading, left) in headings.items():
+        for screen, (heading, left, string_prefix) in headings.items():
             section = ET.Element("control", {"type": "label"})
             for tag, value in (("left", left), ("top", 238), ("width", 520),
                                ("height", 42), ("font", "font18"),
@@ -1039,7 +1039,7 @@ def update_xml(data, path):
                 button = ET.Element("control", {"type": "button", "id": str(20 + (list(headings).index(screen) * 4) + slot)})
                 for tag, value in (("left", left), ("top", 300 + (slot - 1) * 82),
                                    ("width", 520), ("height", 64), ("font", "font14"),
-                                   ("label", f"EDIT WIDGET {slot}"),
+                                   ("label", f"WIDGET {slot}  ·  $INFO[Skin.String({string_prefix}{slot}.Name)]"),
                                    ("texturefocus", "focus-bar.png"),
                                    ("texturenofocus", "black.png"),
                                    ("textcolor", "white"), ("focusedcolor", "white"),
