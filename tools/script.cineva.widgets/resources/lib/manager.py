@@ -112,7 +112,8 @@ class WidgetManager:
         addons = result.get('addons', []) if isinstance(result, dict) else []
         return [a for a in addons if a.get('enabled', True) and a.get('addonid')]
 
-    def _browse_directory(self, path, addon_id):
+    def _browse_directory(self, path, addon_id, parents=None):
+        parents = list(parents or [])
         result = KodiRPC.call('Files.GetDirectory', {
             'directory': path, 'media': 'video',
             'properties': ['title', 'file', 'thumbnail', 'art', 'playcount', 'resume']})
@@ -128,6 +129,9 @@ class WidgetManager:
             title = item.get('label') or item.get('title') or target.rstrip('/').split('/')[-1]
             choices.append(('📁  ' if folder else '▶  ') + title)
             mapping.append(('folder' if folder else 'select', target, title))
+        if parents:
+            choices.append('↑  Parent folder')
+            mapping.append(('parent', parents[-1], ''))
         choices.append('←  Back')
         mapping.append(('back', '', ''))
         picked = self.dialog.select('Browse ' + addon_id, choices, useDetails=False)
@@ -137,7 +141,9 @@ class WidgetManager:
         if action == 'select':
             return {'path': target, 'title': title}
         if action == 'folder':
-            return self._browse_directory(target, addon_id)
+            return self._browse_directory(target, addon_id, parents + [path])
+        if action == 'parent':
+            return self._browse_directory(target, addon_id, parents[:-1])
         return None
 
     def choose_source(self):
@@ -169,9 +175,9 @@ class WidgetManager:
         current = items[slot - 1]
         actions = ['Choose / change source', 'Clear this widget', 'Cancel']
         if current:
-            actions.insert(0, 'Current: ' + current.get('name', 'Widget'))
+            actions.insert(0, 'Keep current: ' + current.get('name', 'Widget'))
         picked = self.dialog.select('{} · Widget {}'.format(screen.title(), slot), actions)
-        if picked < 0 or actions[picked] == 'Cancel':
+        if picked < 0 or actions[picked] == 'Cancel' or (current and picked == 0):
             return
         if actions[picked] == 'Clear this widget':
             items[slot - 1] = {}
@@ -205,11 +211,18 @@ class WidgetManager:
             self.save(registry)
             xbmc.log('CINEVA_WIDGETS_INITIALIZED={}'.format(SLOT_COUNT), xbmc.LOGINFO)
             return
-        if action == 'configure':
-            self.configure_slot(registry, screen, int(slot))
-            return
-        if action == 'clear':
-            index = int(slot) - 1
+        if action in ('configure', 'clear'):
+            try:
+                index = int(slot) - 1
+            except (TypeError, ValueError):
+                xbmc.log('CINEVA_WIDGETS: ignoring malformed slot {!r}'.format(slot), xbmc.LOGWARNING)
+                return
+            if index < 0 or index >= SLOT_COUNT:
+                xbmc.log('CINEVA_WIDGETS: ignoring out-of-range slot {!r}'.format(slot), xbmc.LOGWARNING)
+                return
+            if action == 'configure':
+                self.configure_slot(registry, screen, index + 1)
+                return
             if 0 <= index < SLOT_COUNT:
                 while len(registry[screen]) <= index:
                     registry[screen].append({})
