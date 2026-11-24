@@ -511,9 +511,13 @@ def update_xml(data, path):
                     # Title first, metadata second: separate vertical baselines.
                     set_child_text(labels[0], "top", 24)
                     set_child_text(labels[0], "font", "font36")
-                    set_child_text(labels[0], "height", 84)
+                    set_child_text(labels[0], "height", 96)
                     set_child_text(labels[0], "textcolor", "white")
                     set_child_text(labels[0], "width", 1220)
+                    set_child_text(labels[0], "font", "font24")
+                    set_child_text(labels[0], "wrapmultiline", "true")
+                    set_child_text(labels[0], "aligny", "center")
+                    set_child_text(labels[0], "align", "left")
                 if len(labels) > 1:
                     # Kodi's INFO prefix is emitted only when that field has a value.
                     # This prevents empty duration metadata from leaving doubled bullets
@@ -526,13 +530,13 @@ def update_xml(data, path):
                         f"$INFO[Container({container_id}).ListItem.Rating,  •  ]"
                     )
                     set_child_text(labels[1], "label", metadata)
-                    set_child_text(labels[1], "top", 112)
+                    set_child_text(labels[1], "top", 128)
                     set_child_text(labels[1], "height", 34)
                     set_child_text(labels[1], "font", "font10")
                     set_child_text(labels[1], "textcolor", "silver")
                 for child in group.findall("control"):
                     if child.get("type") == "textbox":
-                        set_child_text(child, "top", 166)
+                        set_child_text(child, "top", 176)
                         set_child_text(child, "height", 72)
                         set_child_text(child, "width", 900)
                         set_child_text(child, "font", "font13")

@@ -9,7 +9,7 @@ import xbmcgui
 import xbmcplugin
 
 MOVIES = [
-    ("The Shawshank Redemption", 1994, "Drama"),
+    ("The Shawshank Redemption: 30th Anniversary Collector's Edition", 1994, "Drama"),
     ("The Dark Knight", 2008, "Action / Crime"),
     ("Interstellar", 2014, "Sci-Fi / Drama"),
     ("Inception", 2010, "Sci-Fi / Thriller"),
@@ -54,7 +54,7 @@ def main():
             "rating": 8.4,
             "plot": (
                 "Framed for a murder he did not commit, a banker finds hope and friendship while enduring a brutal prison sentence."
-                if title == "The Shawshank Redemption" else
+                if title == "The Shawshank Redemption: 30th Anniversary Collector's Edition" else
                 "A high-school chemistry teacher enters the criminal underworld, changing his family and himself forever."
                 if title == "Breaking Bad" else
                 "A richly detailed story of impossible choices, loyalty, and the consequences that follow."
@@ -79,7 +79,7 @@ def main():
                 artwork["poster"] = poster
             else:
                 item.setProperty("Cineva.TestMissingPoster", "true")
-        if index == 1:
+        if index == 1 and is_tv:
             clearlogo_name = "clearlogo-tv-1.png" if is_tv else "clearlogo-movie-1.png"
             clearlogo = os.path.join(poster_dir, clearlogo_name)
             if not os.path.isfile(clearlogo):
