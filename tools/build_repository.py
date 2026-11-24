@@ -56,8 +56,10 @@ def main() -> None:
     ]
     helper_zip = zips / helper_id / f"{helper_id}-{helper_version}.zip"
     helper_zip.parent.mkdir(parents=True)
+    skin_package_dir = zips / skin_id
+    skin_package_dir.mkdir(parents=True)
     zip_directory(helper_dir, helper_zip, helper_id)
-    shutil.copy2(skin_zip, zips / skin_id / f"{skin_id}-{skin_version}.zip")
+    shutil.copy2(skin_zip, skin_package_dir / f"{skin_id}-{skin_version}.zip")
     addons = ET.Element("addons")
     for addon_id, version, package in packages:
         raw = skin_xml if addon_id == skin_id else helper_xml_path.read_bytes()
