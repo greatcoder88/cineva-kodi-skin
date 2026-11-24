@@ -151,6 +151,32 @@ class KodiManagerTests(unittest.TestCase):
         self.assertEqual(len(manager.load()["home"]), 4)
         self.assertEqual(self.builtins, [])
 
+    def test_back_from_nested_addon_folder_returns_to_parent(self):
+        manager = self.module.WidgetManager()
+        paths = []
+        responses = {
+            "plugin://plugin.video.example/": {"files": [
+                {"file": "plugin://plugin.video.example/collections/", "filetype": "directory", "label": "Collections"}
+            ]},
+            "plugin://plugin.video.example/collections/": {"files": []},
+        }
+        original_call = self.module.KodiRPC.call
+        self.module.KodiRPC.call = staticmethod(lambda method, params=None: (
+            paths.append(params["directory"]) or responses.get(params["directory"], {})
+        ))
+        selections = iter([1, 2, 0])  # Open folder, Back to parent, select root.
+        manager.dialog.select = lambda *args, **kwargs: next(selections)
+        try:
+            chosen = manager._browse_directory("plugin://plugin.video.example/", "plugin.video.example")
+        finally:
+            self.module.KodiRPC.call = original_call
+        self.assertEqual(paths, [
+            "plugin://plugin.video.example/",
+            "plugin://plugin.video.example/collections/",
+            "plugin://plugin.video.example/",
+        ])
+        self.assertEqual(chosen, {"path": "plugin://plugin.video.example/", "title": ""})
+
     def test_invalid_sources_are_filtered(self):
         FakeVFS.files["special://profile/addon_data/script.cineva.widgets/widget_registry.json"] = json.dumps({"home":[
             {"name":"Good","path":"plugin://plugin.video.good/","id":"g"},
