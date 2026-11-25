@@ -115,11 +115,28 @@ class KodiManagerTests(unittest.TestCase):
         self.assertEqual(set(buttons), {str(control_id) for control_id in range(11401, 11409)})
         self.assertEqual(buttons["11405"].findtext("onclick"), "ActivateWindow(AddonBrowser)")
         self.assertEqual(buttons["11408"].findtext("onclick"), "ActivateWindow(SkinSettings)")
-        for button in buttons.values():
+        for control_id, button in buttons.items():
             self.assertEqual(button.findtext("texturefocus"), "hero-secondary-focus.png")
             self.assertEqual(button.findtext("texturenofocus"), "hero-secondary.png")
-            for direction in ("onup", "ondown", "onleft", "onright"):
-                self.assertTrue(button.findtext(direction, "").startswith("SetFocus("))
+            numeric_id = int(control_id)
+            row, column = divmod(numeric_id - 11401, 2)
+            side_id = numeric_id + (1 if column == 0 else -1)
+            up_id = numeric_id - 2 if row > 0 else numeric_id + 6
+            down_id = numeric_id + 2 if row < 3 else numeric_id - 6
+            self.assertEqual(button.findtext("onleft"), f"SetFocus({side_id})")
+            self.assertEqual(button.findtext("onright"), f"SetFocus({side_id})")
+            self.assertEqual(button.findtext("onup"), f"SetFocus({up_id})")
+            self.assertEqual(button.findtext("ondown"), f"SetFocus({down_id})")
+
+    def test_addon_browser_defaults_focus_to_the_existing_panel(self):
+        builder_path = ROOT / "tools/build_skin_archive.py"
+        spec = importlib.util.spec_from_file_location("cineva_builder_addon_browser", builder_path)
+        builder = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(builder)
+        source = b'<window id="10040"><defaultcontrol>50</defaultcontrol><controls><control type="panel" id="3"/></controls></window>'
+        rendered = ET.fromstring(builder.update_xml(source, "skin.cineva/xml/AddonBrowser.xml"))
+        self.assertEqual(rendered.findtext("defaultcontrol"), "3")
+        self.assertEqual(rendered.find("./controls/control[@type='panel']").get("id"), "3")
 
     def test_poster_fallback_is_cinematic_art_not_a_play_icon(self):
         builder_path = ROOT / "tools/build_skin_archive.py"

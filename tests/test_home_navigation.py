@@ -5,7 +5,7 @@ from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.22.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.23.zip"
 HUB_WINDOW = "skin.cineva/xml/CinevaWidgetHub.xml"
 
 
@@ -48,11 +48,26 @@ class HomeNavigationTests(unittest.TestCase):
         self.assertEqual(buttons["11405"].findtext("onclick"), "ActivateWindow(AddonBrowser)")
         self.assertEqual(buttons["11408"].findtext("label"), "CINÉVA SKIN SETTINGS")
         self.assertEqual(buttons["11408"].findtext("onclick"), "ActivateWindow(SkinSettings)")
-        for button in buttons.values():
+        for control_id, button in buttons.items():
             self.assertEqual(button.findtext("texturefocus"), "hero-secondary-focus.png")
             self.assertEqual(button.findtext("texturenofocus"), "hero-secondary.png")
-            for direction in ("onup", "ondown", "onleft", "onright"):
-                self.assertTrue(button.findtext(direction, "").startswith("SetFocus("))
+            numeric_id = int(control_id)
+            row, column = divmod(numeric_id - 11401, 2)
+            side_id = numeric_id + (1 if column == 0 else -1)
+            up_id = numeric_id - 2 if row > 0 else numeric_id + 6
+            down_id = numeric_id + 2 if row < 3 else numeric_id - 6
+            self.assertEqual(button.findtext("onleft"), f"SetFocus({side_id})")
+            self.assertEqual(button.findtext("onright"), f"SetFocus({side_id})")
+            self.assertEqual(button.findtext("onup"), f"SetFocus({up_id})")
+            self.assertEqual(button.findtext("ondown"), f"SetFocus({down_id})")
+
+    def test_addon_browser_defaults_focus_to_its_panel(self):
+        with ZipFile(ARCHIVE) as archive:
+            addon_browser = ET.fromstring(archive.read("skin.cineva/xml/AddonBrowser.xml"))
+        panel = addon_browser.find("./controls/control[@type='panel']")
+        self.assertIsNotNone(panel)
+        self.assertEqual(panel.get("id"), "3")
+        self.assertEqual(addon_browser.findtext("defaultcontrol"), "3")
 
     def test_native_skin_settings_starts_on_the_first_widget_slot(self):
         with ZipFile(ARCHIVE) as archive:
@@ -62,8 +77,17 @@ class HomeNavigationTests(unittest.TestCase):
         self.assertEqual(set(buttons), {str(control_id) for control_id in range(21, 33)})
         self.assertNotIn("5", buttons, "overlapping legacy OPEN CINÉVA SETTINGS button must be removed")
         for button_id, button in buttons.items():
-            for direction in ("onup", "ondown", "onleft", "onright"):
-                self.assertTrue(button.findtext(direction, "").startswith("SetFocus("), f"widget slot {button_id} is missing {direction} focus routing")
+            numeric_id = int(button_id)
+            column = (numeric_id - 21) // 4
+            row = (numeric_id - 21) % 4
+            up_id = numeric_id - 1 if row > 0 else numeric_id + 3
+            down_id = numeric_id + 1 if row < 3 else numeric_id - 3
+            left_id = numeric_id - 4 if column > 0 else numeric_id + 8
+            right_id = numeric_id + 4 if column < 2 else numeric_id - 8
+            self.assertEqual(button.findtext("onup"), f"SetFocus({up_id})")
+            self.assertEqual(button.findtext("ondown"), f"SetFocus({down_id})")
+            self.assertEqual(button.findtext("onleft"), f"SetFocus({left_id})")
+            self.assertEqual(button.findtext("onright"), f"SetFocus({right_id})")
 
 
     def test_home_header_focus_uses_transparent_tabs_and_tracking_underlines(self):
