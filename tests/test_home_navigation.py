@@ -5,7 +5,7 @@ from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.20.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.21.zip"
 HUB_WINDOW = "skin.cineva/xml/CinevaWidgetHub.xml"
 
 
@@ -30,7 +30,7 @@ class HomeNavigationTests(unittest.TestCase):
         self.assertIn("1005", buttons, "Settings must occupy the reclaimed navigation slot")
         self.assertEqual(buttons["1005"].findtext("label"), "SETTINGS")
         self.assertEqual(buttons["1005"].findtext("left"), "670")
-        self.assertEqual(buttons["1005"].findtext("onclick"), "ActivateWindow(11113)")
+        self.assertEqual(buttons["1005"].findtext("onclick"), "ActivateWindow(Settings)")
         self.assertFalse(
             any((button.findtext("label") or "").strip().upper() == "MY WIDGETS"
                 for button in buttons.values())
