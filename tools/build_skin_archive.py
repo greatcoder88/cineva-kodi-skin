@@ -1075,10 +1075,20 @@ def update_xml(data, path):
                  if button.findtext("label", "").strip().upper() == "SETTINGS"),
                 None,
             )
-            if settings_button is not None:
-                settings_button.set("id", "1005")
-                set_child_text(settings_button, "left", 670)
-                set_child_text(settings_button, "width", 150)
+            if settings_button is None:
+                # Ensure clean installs always expose Kodi's dedicated Skin Settings window.
+                settings_button = ET.Element("control", {"type": "button", "id": "1005"})
+                for tag, value in (
+                    ("left", 670), ("top", 0), ("width", 150), ("height", 48),
+                    ("font", "font12"), ("label", "SETTINGS"),
+                    ("onclick", "ActivateWindow(11113)"),
+                ):
+                    set_child_text(settings_button, tag, value)
+                nav_group.append(settings_button)
+            settings_button.set("id", "1005")
+            set_child_text(settings_button, "left", 670)
+            set_child_text(settings_button, "width", 150)
+            set_child_text(settings_button, "onclick", "ActivateWindow(11113)")
             # Put the menu on the same horizontal baseline as the CINÉVA wordmark
             # instead of stacking it underneath. The right-aligned date remains
             # anchored at the far edge of the same 1080p-safe header row.
