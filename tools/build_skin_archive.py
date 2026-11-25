@@ -741,7 +741,7 @@ def update_xml(data, path):
                     set_child_text(labels[1], "height", 28)
                     set_child_text(labels[1], "font", "font10")
                     set_child_text(labels[1], "textcolor", "silver")
-                    set_child_text(labels[1], "width", 430)
+                    set_child_text(labels[1], "width", 340)
                     row_index = int(source_label.split("Container(", 1)[1].split(")", 1)[0]) - 9000
                     rating_id = 9340 + (row_index - 1) * 3
                     for old_rating in list(group.findall("control")):
@@ -751,18 +751,18 @@ def update_xml(data, path):
                     rating_bg = ET.SubElement(group, "control", {"type": "image", "id": str(rating_id)})
                     # Keep the IMDb score on the metadata baseline instead of
                     # spending a separate vertical row beneath year/duration/genre.
-                    for tag, value in (("left", 460), ("top", 126), ("width", 148), ("height", 32),
+                    for tag, value in (("left", 360), ("top", 126), ("width", 148), ("height", 32),
                                        ("texture", "rating-badge.png")):
                         set_child_text(rating_bg, tag, value)
                     set_child_text(rating_bg, "visible",
                                    f"!String.IsEmpty(Container({9000 + row_index}).ListItem.Rating)")
                     rating_logo = ET.SubElement(group, "control", {"type": "image", "id": str(rating_id + 1)})
-                    for tag, value in (("left", 468), ("top", 130), ("width", 48), ("height", 24),
+                    for tag, value in (("left", 368), ("top", 130), ("width", 48), ("height", 24),
                                        ("texture", "imdb-logo.png"),
                                        ("visible", f"!String.IsEmpty(Container({9000 + row_index}).ListItem.Rating)")):
                         set_child_text(rating_logo, tag, value)
                     rating_text = ET.SubElement(group, "control", {"type": "label", "id": str(rating_id + 2)})
-                    for tag, value in (("left", 522), ("top", 126), ("width", 84), ("height", 32),
+                    for tag, value in (("left", 422), ("top", 126), ("width", 84), ("height", 32),
                                        ("font", "font10"), ("textcolor", "FFFFD36A"),
                                        ("label", f"$INFO[Container({9000 + row_index}).ListItem.Rating]"),
                                        ("align", "left"), ("aligny", "center"),
