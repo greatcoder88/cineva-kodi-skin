@@ -26,20 +26,20 @@ jobs:
       - name: Build release ZIP, verify idempotence, and commit source fixes
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.9.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.10.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.9.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.10.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
           fi
           echo "Archive SHA-256 is stable across consecutive builds: $after"
           mkdir -p artifacts
-          cp skin.cineva-0.5.9.zip artifacts/
-          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.9.zip)" ]; then
+          cp skin.cineva-0.5.10.zip artifacts/
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.10.zip)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add skin.cineva-0.5.9.zip
+            git add skin.cineva-0.5.10.zip
             git commit -m "Build updated CINÉVA 0.5.9 skin archive"
             git push origin HEAD:main || echo "::warning::Could not push rebuilt skin ZIP; GUI test still uses the rebuilt local ZIP."
           fi
@@ -47,8 +47,8 @@ jobs:
       - name: Expand uploaded skin archive and prepare add-ons
         run: |
           mkdir -p artifacts
-          test -s skin.cineva-0.5.9.zip
-          unzip -q skin.cineva-0.5.9.zip -d .
+          test -s skin.cineva-0.5.10.zip
+          unzip -q skin.cineva-0.5.10.zip -d .
           test -f skin.cineva/addon.xml
           test -d skin.cineva/xml
           test -f skin.cineva/xml/Home.xml
@@ -138,7 +138,7 @@ jobs:
             if len(buttons) != 2 or any(button.findtext("top") != "240" for button in buttons) or [(button.findtext("left"), button.findtext("width"), button.findtext("height")) for button in buttons] != [("0", "190", "54"), ("212", "220", "54")]:
               raise SystemExit(f"Home hero {container_id} actions are not aligned beneath the synopsis")
             expected_play = (f"RunScript(script.cineva.widgets,action=play&container={container_id}"
-                             f"&path=$INFO[Container({container_id}).ListItem.File])")
+                             f"&path=$ESCINFO[Container({container_id}).ListItem.FileNameAndPath])")
             if buttons[0].findtext("onclick") != expected_play:
               raise SystemExit(f"Home hero {container_id} PLAY action does not pass the selected item's resolved URL")
             if metadata is None or metadata.findtext("label") != expected:
@@ -310,7 +310,7 @@ jobs:
             if hero_group is None or len(buttons) != 2 or [button.findtext("label") for button in buttons] != [f"$VAR[CinevaHeroAction{container_id - 9000}]", "MORE INFO"]:
               raise SystemExit(f"Home row {container_id} is missing its two nested hero actions")
             expected_play = (f"RunScript(script.cineva.widgets,action=play&container={container_id}"
-                             f"&path=$INFO[Container({container_id}).ListItem.File])")
+                             f"&path=$ESCINFO[Container({container_id}).ListItem.FileNameAndPath])")
             if buttons[0].findtext("onclick") != expected_play or [node.text for node in buttons[1].findall("onclick")] != [f"SetFocus({container_id})", "Action(Info)"]:
               raise SystemExit(f"Home row {container_id} hero actions are not wired to its selected item URL")
             if [button.findtext("texturefocus") for button in buttons] != ["hero-primary-focus.png", "hero-secondary-focus.png"] or [button.findtext("texturenofocus") for button in buttons] != ["hero-primary.png", "hero-secondary.png"] or [button.findtext("textcolor") for button in buttons] != ["white", "white"] or any(button.find("texturefocus") is None or button.find("texturefocus").attrib.get("border") != "8" or button.find("texturenofocus") is None or button.find("texturenofocus").attrib.get("border") != "8" for button in buttons):
@@ -422,11 +422,11 @@ jobs:
           if any(button.findtext("texturefocus") != "focus-bar.png" for button in search.findall(".//control[@type='button']")):
             raise SystemExit("Search hub buttons are missing the unified focus treatment")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.9":
-            raise SystemExit("Skin archive version must be 0.5.9")
+          if skin.attrib.get("version") != "0.5.10":
+            raise SystemExit("Skin archive version must be 0.5.10")
           widget = ET.parse("tools/script.cineva.widgets/addon.xml").getroot()
-          if widget.attrib.get("version") != "0.1.5":
-            raise SystemExit("Widget manager version must be 0.1.5")
+          if widget.attrib.get("version") != "0.1.6":
+            raise SystemExit("Widget manager version must be 0.1.6")
           setting = ET.parse("tools/script.cineva.widgets/resources/settings.xml").getroot().find(".//setting[@id='widget_registry']")
           if setting is None or setting.attrib.get("type") != "string":
             raise SystemExit("widget_registry must be declared as a string setting")
