@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.16.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.15.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.17.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.16.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -292,6 +292,39 @@ def rating_badge_png():
             + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
             + png_chunk(b"IEND", b""))
 
+
+def shelf_navigation_pill_png():
+    """Create a restrained glass capsule that keeps live rail cues readable over fanart."""
+    width, height = 212, 40
+    radius = 10
+    pixels = bytearray()
+    for y in range(height):
+        vertical = y / (height - 1)
+        pixels.append(0)  # PNG filter: None
+        for x in range(width):
+            dx = max(radius - x - 0.5, 0.0, x + 0.5 - (width - radius))
+            dy = max(radius - y - 0.5, 0.0, y + 0.5 - (height - radius))
+            if dx * dx + dy * dy > radius * radius:
+                pixels.extend((0, 0, 0, 0))
+                continue
+            edge = x <= 1 or x >= width - 2 or y <= 1 or y >= height - 2
+            if edge:
+                color = (83, 91, 108, 205)
+            elif x in (2, 3):
+                color = (229, 9, 32, 235)
+            elif y == 2:
+                color = (75, 82, 98, 220)
+            else:
+                shade = int(22 * (1.0 - vertical) + 12 * vertical)
+                color = (shade, shade + 2, shade + 8, 226)
+            pixels.extend(color)
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return (b"\x89PNG\r\n\x1a\n"
+            + png_chunk(b"IHDR", header)
+            + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
+            + png_chunk(b"IEND", b""))
+
+
 def imdb_logo_png():
     """Draw a compact IMDb wordmark in its familiar black-on-yellow treatment."""
     width, height = 48, 24
@@ -511,7 +544,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.16")
+        root.set("version", "0.5.17")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.7")
@@ -550,7 +583,7 @@ def update_xml(data, path):
                         child.remove(row_child)
                         # Generated shelf counters/arrows are rebuilt below; do not
                         # promote them to screen-level controls during an archive rebuild.
-                        if row_child.get("id") in {str(control_id) for control_id in range(9360, 9372)}:
+                        if row_child.get("id") in {str(control_id) for control_id in range(9360, 9376)}:
                             continue
                         # Row accents belong inside their shelf group. Older
                         # builds accidentally promoted them to screen-level
@@ -1039,18 +1072,28 @@ def update_xml(data, path):
             # Directional chevrons appear only when Kodi reports another page,
             # so the cue never suggests scrolling past the end of a short list.
             counter_id = 9360 + (index - 1) * 3
+            cue_visible = f"Control.HasFocus({9000 + index}) + !String.IsEmpty(Container({9000 + index}).ListItem.Label)"
+            # A single glass capsule gives the counter and directional hints a
+            # stable contrast surface over both dark and bright hero artwork.
+            pill = ET.Element("control", {"type": "image", "id": str(9372 + index - 1)})
+            for tag, value in (
+                ("left", 1578), ("top", -1), ("width", 212), ("height", 40),
+                ("texture", "shelf-navigation-pill.png"), ("aspectratio", "scale"),
+                ("visible", cue_visible),
+            ):
+                set_child_text(pill, tag, value)
             position = ET.Element("control", {"type": "label", "id": str(counter_id)})
             for tag, value in (
-                ("left", 1600), ("top", 0), ("width", 120), ("height", 38),
-                ("font", "font10"), ("textcolor", "silver"),
+                ("left", 1590), ("top", 0), ("width", 104), ("height", 38),
+                ("font", "font10"), ("textcolor", "white"),
                 ("label", f"$INFO[Container({9000 + index}).CurrentItem] / $INFO[Container({9000 + index}).NumItems]"),
-                ("align", "right"), ("aligny", "center"),
-                ("visible", f"Control.HasFocus({9000 + index}) + !String.IsEmpty(Container({9000 + index}).ListItem.Label)"),
+                ("align", "center"), ("aligny", "center"),
+                ("visible", cue_visible),
             ):
                 set_child_text(position, tag, value)
             previous = ET.Element("control", {"type": "label", "id": str(counter_id + 1)})
             for tag, value in (
-                ("left", 1735), ("top", 0), ("width", 28), ("height", 38),
+                ("left", 1698), ("top", 0), ("width", 30), ("height", 38),
                 ("font", "font18"), ("textcolor", "silver"),
                 ("label", "‹"), ("align", "center"), ("aligny", "center"),
                 ("visible", f"Control.HasFocus({9000 + index}) + Container({9000 + index}).HasPrevious"),
@@ -1058,13 +1101,13 @@ def update_xml(data, path):
                 set_child_text(previous, tag, value)
             following = ET.Element("control", {"type": "label", "id": str(counter_id + 2)})
             for tag, value in (
-                ("left", 1772), ("top", 0), ("width", 28), ("height", 38),
+                ("left", 1738), ("top", 0), ("width", 30), ("height", 38),
                 ("font", "font18"), ("textcolor", "FFE50914"),
                 ("label", "›"), ("align", "center"), ("aligny", "center"),
                 ("visible", f"Control.HasFocus({9000 + index}) + Container({9000 + index}).HasNext"),
             ):
                 set_child_text(following, tag, value)
-            row_group.extend((position, previous, following))
+            row_group.extend((pill, position, previous, following))
             rail_list.append(row_group)
         if first_row_index is None:
             raise SystemExit("Home.xml has no widget rows to place in the scrolling rail list")
@@ -1799,7 +1842,7 @@ def main():
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.16.zip and migration source skin.cineva-0.5.15.zip")
+        raise SystemExit("Missing skin.cineva-0.5.17.zip and migration source skin.cineva-0.5.16.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -1862,6 +1905,7 @@ def main():
                 "skin.cineva/media/hero-secondary.png": hero_action_texture_png(primary=False),
                 "skin.cineva/media/hero-secondary-focus.png": hero_action_texture_png(primary=False, focused=True),
                 "skin.cineva/media/rating-badge.png": rating_badge_png(),
+                "skin.cineva/media/shelf-navigation-pill.png": shelf_navigation_pill_png(),
                 "skin.cineva/media/imdb-logo.png": imdb_logo_png(),
                 "skin.cineva/media/poster-placeholder.png": poster_placeholder_png(),
             }
@@ -1880,8 +1924,8 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.16":
-                        addon_root.set("version", "0.5.16")
+                    if addon_root.get("version") != "0.5.17":
+                        addon_root.set("version", "0.5.17")
                         changed.append(info.filename + " (bump skin version to 0.5.16)")
                     if helper_dependency.get("version") != "0.1.7":
                         helper_dependency.set("version", "0.1.7")
@@ -1890,22 +1934,22 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.16 - Live Home shelf position and scroll cues",
-                        "- Show the focused shelf's current item and total count without adding clutter to inactive rows.",
-                        "- Reveal previous and next chevrons only when the focused shelf can scroll in that direction.",
+                        "0.5.17 - Polished live Home shelf navigation",
+                        "- Group the focused shelf counter and directional cues inside a compact glass capsule.",
+                        "- Keep the capsule hidden on inactive or empty shelves while retaining live previous/next availability.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.16 - Live Home shelf position and scroll cues"):
-                        current_entry, separator, remainder = changelog.partition("0.5.15 - Reliable empty-state D-pad entry")
+                    if changelog.startswith("0.5.17 - Polished live Home shelf navigation"):
+                        current_entry, separator, remainder = changelog.partition("0.5.16 - Live Home shelf position and scroll cues")
                         if not separator:
-                            raise SystemExit("CINÉVA 0.5.16 changelog lost its 0.5.15 history entry")
+                            raise SystemExit("CINÉVA 0.5.17 changelog lost its 0.5.16 history entry")
                         if entry != current_entry:
                             data = (entry + separator + remainder).encode("utf-8")
-                            changed.append(info.filename + " (normalize 0.5.16 Home shelf navigation changelog)")
+                            changed.append(info.filename + " (normalize 0.5.17 Home shelf navigation changelog)")
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (0.5.16 Home shelf navigation release)")
+                        changed.append(info.filename + " (0.5.17 Home shelf navigation release)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:

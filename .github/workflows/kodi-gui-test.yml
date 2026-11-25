@@ -26,29 +26,29 @@ jobs:
       - name: Build release ZIP, verify idempotence, and commit source fixes
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.16.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.17.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.16.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.17.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
           fi
           echo "Archive SHA-256 is stable across consecutive builds: $after"
           mkdir -p artifacts
-          cp skin.cineva-0.5.16.zip artifacts/
-          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.16.zip)" ]; then
+          cp skin.cineva-0.5.17.zip artifacts/
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.17.zip)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add skin.cineva-0.5.16.zip
-            git commit -m "Build updated CINÉVA 0.5.16 skin archive"
+            git add skin.cineva-0.5.17.zip
+            git commit -m "Build updated CINÉVA 0.5.17 skin archive"
             git push origin HEAD:main || echo "::warning::Could not push rebuilt skin ZIP; GUI test still uses the rebuilt local ZIP."
           fi
 
       - name: Expand uploaded skin archive and prepare add-ons
         run: |
           mkdir -p artifacts
-          test -s skin.cineva-0.5.16.zip
-          unzip -q skin.cineva-0.5.16.zip -d .
+          test -s skin.cineva-0.5.17.zip
+          unzip -q skin.cineva-0.5.17.zip -d .
           test -f skin.cineva/addon.xml
           test -d skin.cineva/xml
           test -f skin.cineva/xml/Home.xml
@@ -169,6 +169,9 @@ jobs:
             asset = Path("skin.cineva/media") .joinpath(asset_name).read_bytes()
             if asset[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(asset[16:20], "big"), int.from_bytes(asset[20:24], "big")) != (32, 32):
               raise SystemExit(f"Home CTA texture {asset_name} must be a valid 32x32 PNG")
+          shelf_pill = Path("skin.cineva/media/shelf-navigation-pill.png").read_bytes()
+          if shelf_pill[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(shelf_pill[16:20], "big"), int.from_bytes(shelf_pill[20:24], "big")) != (212, 40):
+            raise SystemExit("Home shelf navigation capsule must be a valid 212x40 PNG")
           topbar_index = next((i for i, node in enumerate(list(controls))
                                if node.tag == "include" and (node.text or "").strip() == "CinevaTopBar"), -1)
           shade_index = next((i for i, node in enumerate(list(controls))
@@ -360,12 +363,19 @@ jobs:
             container_id = 9000 + row
             cue_id = 9360 + (row - 1) * 3
             row_group = rail_list.find(f"./control[@type='group'][@id='{9060 + row}']")
+            pill = row_group.find(f"./control[@id='{9372 + row - 1}']") if row_group is not None else None
             position = row_group.find(f"./control[@id='{cue_id}']") if row_group is not None else None
             previous = row_group.find(f"./control[@id='{cue_id + 1}']") if row_group is not None else None
             following = row_group.find(f"./control[@id='{cue_id + 2}']") if row_group is not None else None
-            if position is None or (position.findtext("label"), position.findtext("visible")) != (
+            expected_cue_visible = f"Control.HasFocus({container_id}) + !String.IsEmpty(Container({container_id}).ListItem.Label)"
+            if pill is None or (pill.get("type"), pill.findtext("texture"), pill.findtext("visible"),
+                                pill.findtext("left"), pill.findtext("top"), pill.findtext("width"), pill.findtext("height")) != (
+                "image", "shelf-navigation-pill.png", expected_cue_visible, "1578", "-1", "212", "40"
+            ):
+              raise SystemExit(f"Home shelf {container_id} is missing its focused glass navigation capsule")
+            if position is None or (position.findtext("label"), position.findtext("visible"), position.findtext("left"), position.findtext("width")) != (
                 f"$INFO[Container({container_id}).CurrentItem] / $INFO[Container({container_id}).NumItems]",
-                f"Control.HasFocus({container_id}) + !String.IsEmpty(Container({container_id}).ListItem.Label)"
+                expected_cue_visible, "1590", "104"
             ):
               raise SystemExit(f"Home shelf {container_id} is missing its live position counter")
             if previous is None or (previous.findtext("label"), previous.findtext("visible")) != (
@@ -376,12 +386,12 @@ jobs:
                 "›", f"Control.HasFocus({container_id}) + Container({container_id}).HasNext"
             ):
               raise SystemExit(f"Home shelf {container_id} is missing its conditional next-page cue")
-            shelf_cue_ids.extend((position.get("id"), previous.get("id"), following.get("id")))
-            if any(controls.find(f"./control[@id='{cue_id}']") is not None
-                   for cue_id in (str(cue_id), str(cue_id + 1), str(cue_id + 2))):
+            shelf_cue_ids.extend((pill.get("id"), position.get("id"), previous.get("id"), following.get("id")))
+            if any(controls.find(f"./control[@id='{control_id}']") is not None
+                   for control_id in (pill.get("id"), position.get("id"), previous.get("id"), following.get("id"))):
               raise SystemExit(f"Home shelf {container_id} has orphaned screen-level scroll cues")
-          if len(shelf_cue_ids) != 12 or len(set(shelf_cue_ids)) != 12:
-            raise SystemExit("Home shelf position and scroll-cue control IDs must be unique across all four rows")
+          if len(shelf_cue_ids) != 16 or len(set(shelf_cue_ids)) != 16:
+            raise SystemExit("Home shelf capsule, position and scroll-cue IDs must be unique across all four rows")
           if controls.find("./control[@id='9010']") is not None:
             raise SystemExit("Obstructive floating More Widgets button is still present")
           fonts = ET.parse("skin.cineva/xml/Font.xml").getroot()
@@ -456,8 +466,8 @@ jobs:
           if any(button.findtext("texturefocus") != "focus-bar.png" for button in search.findall(".//control[@type='button']")):
             raise SystemExit("Search hub buttons are missing the unified focus treatment")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.16":
-            raise SystemExit("Skin archive version must be 0.5.16")
+          if skin.attrib.get("version") != "0.5.17":
+            raise SystemExit("Skin archive version must be 0.5.17")
           widget = ET.parse("tools/script.cineva.widgets/addon.xml").getroot()
           if widget.attrib.get("version") != "0.1.7":
             raise SystemExit("Widget manager version must be 0.1.7")
