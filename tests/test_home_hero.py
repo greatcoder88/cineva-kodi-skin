@@ -14,7 +14,7 @@ class HomeHeroActionTests(unittest.TestCase):
     def test_release_changelog_uses_real_line_breaks(self):
         with ZipFile(ARCHIVE) as archive:
             lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
-        self.assertEqual(lines[0], "0.5.12 - Full-width Home poster rails with next-card preview")
+        self.assertEqual(lines[0], "0.5.13 - Unified catalogue navigation styling")
         self.assertTrue(lines[1].startswith("- Widen all four Home shelves to an 1800px viewport"))
         self.assertTrue(lines[2].startswith("- Reveal a partial seventh poster to signal horizontal browsing"))
         self.assertEqual(lines[4], "0.5.11 - Restore Home shelf focus after playback")
