@@ -78,10 +78,16 @@ jobs:
           with ZipFile(skin_zip) as z:
               skin=ET.fromstring(z.read("skin.cineva/addon.xml"))
           dependency=skin.find("./requires/import[@addon='script.cineva.widgets']")
+          helper=next(x for x in ET.fromstring(xml).findall("addon") if x.get("id") == "script.cineva.widgets")
+          helper_version=helper.get("version")
           assert skin.get("version") == "0.5.22"
-          assert dependency is not None and dependency.get("version") == "0.1.7"
+          assert dependency is not None
+          assert tuple(map(int, dependency.get("version").split("."))) <= tuple(map(int, helper_version.split(".")))
           helper_dir=Path("tools/script.cineva.widgets")
-          helper_zip=root/"zips"/"script.cineva.widgets"/"script.cineva.widgets-0.1.7.zip"
+          helper_zip=root/"zips"/"script.cineva.widgets"/f"script.cineva.widgets-{helper_version}.zip"
+          with ZipFile(helper_zip) as z:
+              helper_manifest=ET.fromstring(z.read("script.cineva.widgets/addon.xml"))
+          assert helper_manifest.get("version") == helper_version
           expected={
               "script.cineva.widgets/"+p.relative_to(helper_dir).as_posix():p.read_bytes()
               for p in helper_dir.rglob("*") if p.is_file()
