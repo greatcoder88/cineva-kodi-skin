@@ -596,18 +596,34 @@ jobs:
           test -s "$SETTINGS"
           echo "Kodi initialized guisettings.xml ($(wc -c < "$SETTINGS") bytes)."
           kill "$FIRST_PID" 2>/dev/null || true
-          # Flatpak's launcher can exit while its app process remains alive.
-          # Stop the whole app, then wait for Kodi and its JSON-RPC listener to release.
+          # Flatpak's launcher can exit while the Kodi wrapper and app child
+          # remain. Stop the app cgroup, terminate both processes, and ignore
+          # zombies: they no longer hold the GUI or JSON-RPC listener.
           flatpak kill --user tv.kodi.Kodi 2>/dev/null || true
-          pkill -x kodi.bin 2>/dev/null || true
-          pkill -x kodi-x11 2>/dev/null || true
-          for attempt in $(seq 1 30); do
-            if ! pgrep -x kodi.bin >/dev/null && ! pgrep -x kodi-x11 >/dev/null; then break; fi
+          pkill -TERM -x kodi.bin 2>/dev/null || true
+          pkill -TERM -x kodi-x11 2>/dev/null || true
+          pkill -TERM -x kodi 2>/dev/null || true
+          kodi_processes() {
+            ps -eo pid=,stat=,comm= | awk '
+              ($3 == "kodi.bin" || $3 == "kodi-x11" || $3 == "kodi") &&
+              $2 !~ /^Z/ { print $1 }
+            '
+          }
+          for attempt in $(seq 1 12); do
+            if ! kodi_processes | grep -q .; then break; fi
             sleep 1
           done
-          if pgrep -x kodi.bin >/dev/null || pgrep -x kodi-x11 >/dev/null; then
-            echo "A first-boot Kodi process survived shutdown:"
-            ps -ef | grep -E '[k]odi.bin|[k]odi-x11'
+          if kodi_processes | grep -q .; then
+            echo "Kodi did not exit after graceful shutdown; forcing the isolated test instance down:"
+            ps -eo pid,ppid,stat,comm,args | grep -E '[k]odi(\.bin|-x11)?'
+            pkill -KILL -x kodi.bin 2>/dev/null || true
+            pkill -KILL -x kodi-x11 2>/dev/null || true
+            pkill -KILL -x kodi 2>/dev/null || true
+            sleep 2
+          fi
+          if kodi_processes | grep -q .; then
+            echo "A live first-boot Kodi process survived forced shutdown:"
+            ps -eo pid,ppid,stat,comm,args | grep -E '[k]odi(\.bin|-x11)?'
             exit 1
           fi
           # Port 9090 is Kodi's raw TCP JSON-RPC endpoint. A stale listener
