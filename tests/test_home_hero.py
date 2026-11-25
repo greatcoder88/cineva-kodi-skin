@@ -334,7 +334,8 @@ class HomeHeroActionTests(unittest.TestCase):
     def test_home_shelves_show_live_position_and_directional_scroll_cues(self):
         with ZipFile(ARCHIVE) as archive:
             home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
-            rail = home.find("./controls/control[@type='grouplist'][@id='9050']")
+            controls = home.find("controls")
+            rail = controls.find("./control[@type='grouplist'][@id='9050']")
             self.assertIsNotNone(rail)
             ids = []
             for row in range(1, 5):
@@ -363,6 +364,11 @@ class HomeHeroActionTests(unittest.TestCase):
                 ids.extend(node.get("id") for node in (position, previous, following))
             self.assertEqual(len(ids), 12)
             self.assertEqual(len(set(ids)), 12)
+            for control_id in ids:
+                self.assertIsNone(
+                    controls.find(f"./control[@id='{control_id}']"),
+                    f"Home shelf cue {control_id} must remain nested in its row group",
+                )
 
 
 if __name__ == "__main__":

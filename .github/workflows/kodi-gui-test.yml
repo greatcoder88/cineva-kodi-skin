@@ -370,6 +370,9 @@ jobs:
             ):
               raise SystemExit(f"Home shelf {container_id} is missing its conditional next-page cue")
             shelf_cue_ids.extend((position.get("id"), previous.get("id"), following.get("id")))
+            if any(controls.find(f"./control[@id='{cue_id}']") is not None
+                   for cue_id in (str(cue_id), str(cue_id + 1), str(cue_id + 2))):
+              raise SystemExit(f"Home shelf {container_id} has orphaned screen-level scroll cues")
           if len(shelf_cue_ids) != 12 or len(set(shelf_cue_ids)) != 12:
             raise SystemExit("Home shelf position and scroll-cue control IDs must be unique across all four rows")
           if controls.find("./control[@id='9010']") is not None:

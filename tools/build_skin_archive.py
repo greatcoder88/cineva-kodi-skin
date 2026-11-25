@@ -548,6 +548,10 @@ def update_xml(data, path):
                 if child.get("type") == "group" and child.get("id", "").startswith("906"):
                     for row_child in list(child.findall("control")):
                         child.remove(row_child)
+                        # Generated shelf counters/arrows are rebuilt below; do not
+                        # promote them to screen-level controls during an archive rebuild.
+                        if row_child.get("id") in {str(control_id) for control_id in range(9360, 9372)}:
+                            continue
                         # Row accents belong inside their shelf group. Older
                         # builds accidentally promoted them to screen-level
                         # controls, leaving red bars pinned to the top-left.
