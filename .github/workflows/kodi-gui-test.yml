@@ -1694,22 +1694,32 @@ jobs:
             "EDIT WIDGETS", "SEARCH", "SETTINGS",
           }
 
+          nav_orders = {
+            10000: ["HOME", "MOVIES", "TV SHOWS", "SEARCH", "SETTINGS"],
+            11117: ["HOME", "MOVIES", "TV SHOWS", "ALL MOVIES", "GENRES", "YEARS", "COLLECTIONS", "RECENT", "EDIT WIDGETS", "SEARCH"],
+            11118: ["HOME", "MOVIES", "TV SHOWS", "ALL SHOWS", "GENRES", "YEARS", "STUDIOS", "RECENT", "EDIT WIDGETS", "SEARCH"],
+          }
+
           def focus_nav(label, timeout=10):
-            # Kodi restores the catalogue window to its section tab after
-            # returning from a native library window. Walk the actual D-pad
-            # chain from that restored tab instead of assuming the old focus
-            # id survives a window transition.
+            # Kodi restores the last focused tab when returning from nested
+            # windows. Navigate in the shortest valid direction from that
+            # restored position; a right-only walk gets stuck at Home's
+            # SETTINGS endpoint when the requested destination is SEARCH.
+            target = label.upper()
             deadline = time.time() + timeout
             state = gui()
             while time.time() < deadline:
               current = state.get("currentcontrol", {}).get("label", "").strip().upper()
-              if current == label.upper():
+              if current == target:
                 return state
-              if current not in nav_labels:
-                raise SystemExit(f"Catalogue returned without a usable navigation focus: {state}")
-              press("Right")
+              window_id = state.get("currentwindow", {}).get("id")
+              order = nav_orders.get(window_id, [])
+              if current not in nav_labels or current not in order or target not in order:
+                raise SystemExit(f"Catalogue returned without a usable navigation focus for {target!r}: {state}")
+              direction = "Left" if order.index(target) < order.index(current) else "Right"
+              press(direction)
               state = gui()
-            raise SystemExit(f"Timed out moving catalogue navigation to {label!r}: {state}")
+            raise SystemExit(f"Timed out moving catalogue navigation to {target!r}: {state}")
 
           def open_native_category(page_id, label):
             focus_nav(label)
