@@ -26,29 +26,29 @@ jobs:
       - name: Build release ZIP, verify idempotence, and commit source fixes
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.26.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.27.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.26.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.27.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
           fi
           echo "Archive SHA-256 is stable across consecutive builds: $after"
           mkdir -p artifacts
-          cp skin.cineva-0.5.26.zip artifacts/
-          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.26.zip)" ]; then
+          cp skin.cineva-0.5.27.zip artifacts/
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.27.zip)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add skin.cineva-0.5.26.zip
-            git commit -m "Build updated CINÉVA 0.5.26 skin archive"
+            git add skin.cineva-0.5.27.zip
+            git commit -m "Build updated CINÉVA 0.5.27 skin archive"
             git push origin HEAD:main || echo "::warning::Could not push rebuilt skin ZIP; GUI test still uses the rebuilt local ZIP."
           fi
 
       - name: Expand uploaded skin archive and prepare add-ons
         run: |
           mkdir -p artifacts
-          test -s skin.cineva-0.5.26.zip
-          unzip -q skin.cineva-0.5.26.zip -d .
+          test -s skin.cineva-0.5.27.zip
+          unzip -q skin.cineva-0.5.27.zip -d .
           test -f skin.cineva/addon.xml
           test -d skin.cineva/xml
           test -f skin.cineva/xml/Home.xml
@@ -437,11 +437,11 @@ jobs:
               raise SystemExit(f"Home row {row_index} must resolve RESUME for in-progress sources and PLAY otherwise")
           poster = includes.find("./include[@name='CinevaPosterItem']")
           normal_image = poster.find("./control[@type='image']") if poster is not None else None
-          if poster is None or normal_image is None or (normal_image.findtext("left"), normal_image.findtext("top"), normal_image.findtext("width"), normal_image.findtext("height")) != ("35", "0", "200", "300") or poster.findtext("./control[@type='textbox']/width") != "270" or poster.findtext("./control[@type='textbox']/top") != "302" or poster.findtext("./control[@type='textbox']/height") != "58" or poster.find("./control[@type='textbox']/wrap") is not None or poster.findtext("./control[@type='textbox']/font") != "font10" or poster.findtext("./control[@type='textbox']/aligny") != "center":
+          if poster is None or normal_image is None or (normal_image.findtext("left"), normal_image.findtext("top"), normal_image.findtext("width"), normal_image.findtext("height")) != ("35", "0", "200", "300") or poster.findtext("./control[@type='textbox']/width") != "270" or poster.findtext("./control[@type='textbox']/top") != "302" or poster.findtext("./control[@type='textbox']/height") != "72" or poster.find("./control[@type='textbox']/wrap") is not None or poster.findtext("./control[@type='textbox']/font") != "font10" or poster.findtext("./control[@type='textbox']/aligny") != "center":
             raise SystemExit("Home poster and title layout is missing its larger native 2:3 poster artwork or readable title baseline")
           focused_poster = includes.find("./include[@name='CinevaFocusedPosterItem9001']")
           focused_title = next((label for label in focused_poster.findall("./control[@type='textbox']") if label.findtext("textcolor") == "white"), None) if focused_poster is not None else None
-          if focused_title is None or focused_title.findtext("font") != "font10" or focused_title.findtext("top") != "326" or focused_title.findtext("height") != "58" or focused_title.findtext("aligny") != "center" or focused_title.find("wrap") is not None :
+          if focused_title is None or focused_title.findtext("font") != "font10" or focused_title.findtext("top") != "318" or focused_title.findtext("height") != "68" or focused_title.findtext("aligny") != "center" or focused_title.find("wrap") is not None :
             raise SystemExit("Focused poster titles must sit below the focused artwork without overlap")
           focused_image = next((node for node in focused_poster.findall("./control[@type='image']") if node.findtext("visible") == "Control.HasFocus(9001)"), None) if focused_poster is not None else None
           focused_zoom = focused_image.find("./animation[@effect='zoom']") if focused_image is not None else None
@@ -487,8 +487,8 @@ jobs:
           if any(button.findtext("texturefocus") != "focus-bar.png" for button in search.findall(".//control[@type='button']")):
             raise SystemExit("Search hub buttons are missing the unified focus treatment")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.26":
-            raise SystemExit("Skin archive version must be 0.5.26")
+          if skin.attrib.get("version") != "0.5.27":
+            raise SystemExit("Skin archive version must be 0.5.27")
           widget = ET.parse("tools/script.cineva.widgets/addon.xml").getroot()
           if widget.attrib.get("version") != "0.1.8":
             raise SystemExit("Widget manager version must be 0.1.8")
@@ -1481,7 +1481,7 @@ jobs:
               print(f"Verified long text-only hero title wraps cleanly across two lines (white coverage={coverages}).")
             def verify_wrapped_poster_caption(screenshot):
               signal = subprocess.run(
-                ["convert", screenshot, "-crop", "285x64+60+820",
+                ["convert", screenshot, "-crop", "285x80+60+820",
                  "-fx", "((r>0.65)&&(g>0.65)&&(b>0.65))?1:0",
                  "-trim", "-format", "%wx%h", "info:"],
                 text=True, capture_output=True, check=True
@@ -1490,9 +1490,9 @@ jobs:
                 width, height = (int(value) for value in signal.stdout.strip().split("x"))
               except (ValueError, TypeError):
                 raise SystemExit(f"Could not measure the first poster caption: {signal.stdout!r}")
-              if height < 24:
-                raise SystemExit(f"Long poster caption is still ellipsized instead of wrapping (visible text height={height}px).")
-              print(f"Verified the long poster caption wraps into multiple lines (visible text bounds={width}x{height}).")
+              if height < 44:
+                raise SystemExit(f"Long poster caption does not expose three full lines (visible text height={height}px).")
+              print(f"Verified the long poster caption wraps across three lines (visible text bounds={width}x{height}).")
             verify_wrapped_hero_fallback("artifacts/cineva-home-actions.png")
             verify_wrapped_poster_caption("artifacts/cineva-home-actions.png")
             def active_rail_indicator_position(row_number):

@@ -7,17 +7,18 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.26.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.27.zip"
 
 
 class HomeHeroActionTests(unittest.TestCase):
     def test_release_changelog_uses_real_line_breaks(self):
         with ZipFile(ARCHIVE) as archive:
             lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
-        self.assertEqual(lines[0], "0.5.26 - Clean up Home hero progress rendering")
-        self.assertEqual(lines[1], "- Keep the Continue Watching progress bar and watched percentage in the Home hero.")
-        self.assertEqual(lines[2], "- Remove an unused overlay texture reference to avoid missing-texture warnings.")
-        self.assertEqual(lines[3], "- Preserve the synopsis, progress and Resume/Play action hierarchy.")
+        self.assertEqual(lines[0], "0.5.27 - Show complete titles in Home poster rails")
+        self.assertEqual(lines[1], "- Expand normal and focused poster captions to display long titles across three lines.")
+        self.assertEqual(lines[2], "- Keep focused captions clear of poster artwork and the row selection underline.")
+        self.assertEqual(lines[3], "- Preserve poster sizing, resume progress and D-pad shelf navigation.")
+        self.assertIn("0.5.26 - Clean up Home hero progress rendering", lines)
         self.assertIn("0.5.25 - Surface continue-watching progress in the Home hero", lines)
         self.assertIn("0.5.24 - Restore native Kodi Add-on Browser focus", lines)
         self.assertIn("0.5.23 - Complete Settings and Add-ons D-pad navigation", lines)
@@ -308,7 +309,7 @@ class HomeHeroActionTests(unittest.TestCase):
             )
             self.assertEqual(
                 (title.findtext("top"), title.findtext("height"), title.findtext("width")),
-                ("302", "58", "270"),
+                ("302", "72", "270"),
             )
             self.assertEqual(
                 (progress.findtext("left"), progress.findtext("top"), progress.findtext("width"), progress.findtext("height")),
@@ -358,7 +359,7 @@ class HomeHeroActionTests(unittest.TestCase):
             self.assertEqual(decoded[3 * stride + 1 + 3 * 4 + 3], 0)
             self.assertEqual(
                 (focused_title.findtext("top"), focused_title.findtext("height")),
-                ("326", "58"),
+                ("318", "68"),
             )
             self.assertEqual(
                 (focus_accent.findtext("left"), focus_accent.findtext("top"),
