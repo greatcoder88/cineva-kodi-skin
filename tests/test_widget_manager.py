@@ -167,12 +167,20 @@ class KodiManagerTests(unittest.TestCase):
 
     def test_skin_and_widget_helper_versions_are_upgradeable_and_consistent(self):
         helper = ET.parse(ROOT / "tools/script.cineva.widgets/addon.xml").getroot()
+        helper_version = tuple(map(int, helper.attrib["version"].split(".")))
         with ZipFile(ROOT / "skin.cineva-0.5.16.zip") as archive:
-            skin = ET.fromstring(archive.read("skin.cineva/addon.xml"))
-        dependency = skin.find("./requires/import[@addon='script.cineva.widgets']")
-        self.assertEqual(skin.attrib.get("version"), "0.5.16")
-        self.assertIsNotNone(dependency)
-        self.assertEqual(dependency.attrib.get("version"), helper.attrib["version"])
+            legacy_skin = ET.fromstring(archive.read("skin.cineva/addon.xml"))
+        legacy_dependency = legacy_skin.find("./requires/import[@addon='script.cineva.widgets']")
+        self.assertEqual(legacy_skin.attrib.get("version"), "0.5.16")
+        self.assertIsNotNone(legacy_dependency)
+        self.assertLessEqual(tuple(map(int, legacy_dependency.attrib["version"].split("."))), helper_version)
+
+        with ZipFile(ROOT / "skin.cineva-0.5.23.zip") as archive:
+            current_skin = ET.fromstring(archive.read("skin.cineva/addon.xml"))
+        current_dependency = current_skin.find("./requires/import[@addon='script.cineva.widgets']")
+        self.assertEqual(current_skin.attrib.get("version"), "0.5.23")
+        self.assertIsNotNone(current_dependency)
+        self.assertEqual(current_dependency.attrib.get("version"), helper.attrib["version"])
 
     def test_widget_helper_is_not_advertised_as_a_video_plugin(self):
         addon_xml = ET.parse(ROOT / "tools/script.cineva.widgets/addon.xml").getroot()
