@@ -511,7 +511,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.13")
+        root.set("version", "0.5.14")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.7")
@@ -1561,7 +1561,6 @@ def update_xml(data, path):
                     ("SEARCH", "ActivateWindow(11112)", 75),
                 ]
                 items = tv_items if is_tv else movie_items
-                widget_prefix = "Cineva.ShowWidget" if is_tv else "Cineva.MovieWidget"
                 empty_button_id = "12114"
                 empty_condition = " + ".join(
                     f"String.IsEmpty(Container({9200 + slot}).ListItem.Label)"
