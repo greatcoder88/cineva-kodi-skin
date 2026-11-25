@@ -1775,27 +1775,6 @@ def main():
                         playback_note = "- Route Home Resume/Play through the widget manager and Kodi Player API."
                         if playback_note not in normalized_entry:
                             normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + playback_note + chr(10) + chr(10)
-                        caption_note = "- Keep long Home poster titles readable in a full two-line caption band."
-                        if caption_note not in normalized_entry:
-                            normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + caption_note + chr(10) + chr(10)
-                        vignette_note = "- Add a soft right-edge vignette to frame bright full-bleed hero artwork."
-                        rail_note = "- Balance Home shelves with compact native 2:3 posters and a tighter vertical rhythm."
-                        if rail_note not in normalized_entry:
-                            normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + rail_note + chr(10) + chr(10)
-                        spacing_note = "- Add clear breathing room between Home shelf headings and poster artwork."
-                        playback_note = "- Route Home hero playback through Kodi's Python Player API so add-on resolvers receive the selected item URL."
-                        title_note = "- Use a bold 40px ExtraBold display face for text-only Home hero titles."
-                        catalogue_note = "- Add direct Movies and TV Shows library browsing for titles, genres, years, collections or networks, and recently added items."
-                        if title_note not in normalized_entry:
-                            normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + title_note + chr(10) + chr(10)
-                        if catalogue_note not in normalized_entry:
-                            normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + catalogue_note + chr(10) + chr(10)
-                        if spacing_note not in normalized_entry:
-                            normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + spacing_note + chr(10) + chr(10)
-                        if playback_note not in normalized_entry:
-                            normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + playback_note + chr(10) + chr(10)
-                        if vignette_note not in normalized_entry:
-                            normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + vignette_note + chr(10) + chr(10)
                         if normalized_entry != current_entry:
                             data = (normalized_entry + separator + remainder).encode("utf-8")
                             changed.append(info.filename + " (normalize 0.5.8 Home playback changelog)")
