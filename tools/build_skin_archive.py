@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.21.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.20.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.22.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.21.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -544,7 +544,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.21")
+        root.set("version", "0.5.22")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.7")
@@ -1409,6 +1409,63 @@ def update_xml(data, path):
             for child in (fallback_image, active_image, fallback_label, active_label, fallback_progress, clone_progress, focus_accent):
                 clone.append(child)
             root.append(clone)
+    elif path == "skin.cineva/xml/Settings.xml":
+        # Rebuild Kodi's real Settings landing page with visible, focusable
+        # category cards. Add-ons and native CINÉVA Skin Settings must be
+        # reachable without relying on a broken or empty secondary hub.
+        controls = root.find("controls")
+        if controls is None:
+            raise SystemExit("Settings.xml is missing its controls container")
+        root.set("id", "10004")
+        for stale in list(controls.findall("control")):
+            controls.remove(stale)
+        default = root.find("defaultcontrol")
+        if default is None:
+            default = ET.Element("defaultcontrol", {"always": "true"})
+            root.insert(0, default)
+        default.set("always", "true")
+        default.text = "11405"
+        title = ET.Element("control", {"type": "label"})
+        for tag, value in (("left", 96), ("top", 142), ("width", 1200), ("height", 72), ("font", "font30"), ("textcolor", "white"), ("label", "SETTINGS")):
+            set_child_text(title, tag, value)
+        controls.append(title)
+        subtitle = ET.Element("control", {"type": "label"})
+        for tag, value in (("left", 98), ("top", 210), ("width", 1600), ("height", 36), ("font", "font12"), ("textcolor", "silver"), ("label", "Manage Kodi, installed add-ons and CINÉVA from one place.")):
+            set_child_text(subtitle, tag, value)
+        controls.append(subtitle)
+        options = (
+            ("SYSTEM", "ActivateWindow(SystemSettings)"),
+            ("MEDIA", "ActivateWindow(MediaSettings)"),
+            ("PLAYER", "ActivateWindow(PlayerSettings)"),
+            ("INTERFACE", "ActivateWindow(InterfaceSettings)"),
+            ("ADD-ONS", "ActivateWindow(AddonBrowser)"),
+            ("PROFILES", "ActivateWindow(Profiles)"),
+            ("SYSTEM INFORMATION", "ActivateWindow(SystemInfo)"),
+            ("CINÉVA SKIN SETTINGS", "ActivateWindow(SkinSettings)"),
+        )
+        for index, (label, action) in enumerate(options):
+            row, column = divmod(index, 2)
+            control_id = 11401 + index
+            button = ET.Element("control", {"type": "button", "id": str(control_id)})
+            for tag, value in (("left", 96 + column * 864), ("top", 270 + row * 108), ("width", 800), ("height", 84), ("font", "font16"), ("label", label), ("textcolor", "silver"), ("focusedcolor", "white"), ("align", "left"), ("aligny", "center"), ("textoffsetx", 30), ("onclick", action)):
+                set_child_text(button, tag, value)
+            focused = ET.SubElement(button, "texturefocus", {"border": "8"})
+            focused.text = "hero-secondary-focus.png"
+            normal = ET.SubElement(button, "texturenofocus", {"border": "8"})
+            normal.text = "hero-secondary.png"
+            left_id = control_id + (1 if column == 0 else -1)
+            right_id = control_id + (-1 if column == 0 else 1)
+            up_id = control_id - 2 if row > 0 else control_id + 6
+            down_id = control_id + 2 if row < 3 else control_id - 6
+            set_child_text(button, "onleft", f"SetFocus({left_id})")
+            set_child_text(button, "onright", f"SetFocus({right_id})")
+            set_child_text(button, "onup", f"SetFocus({up_id})")
+            set_child_text(button, "ondown", f"SetFocus({down_id})")
+            controls.append(button)
+        hint = ET.Element("control", {"type": "label"})
+        for tag, value in (("left", 98), ("top", 724), ("width", 1700), ("height", 42), ("font", "font12"), ("textcolor", "grey"), ("label", "ADD-ONS opens Kodi's browser for installed add-ons, repositories and updates.")):
+            set_child_text(hint, tag, value)
+        controls.append(hint)
     elif path == "skin.cineva/xml/SkinSettings.xml":
         # Replace the legacy broad widget-manager links with twelve direct,
         # numbered slot actions. This makes each screen's four sources editable
@@ -1416,16 +1473,23 @@ def update_xml(data, path):
         controls = root.find("controls")
         if controls is None:
             raise SystemExit("SkinSettings.xml is missing its controls container")
+        default = root.find("defaultcontrol")
+        if default is None:
+            default = ET.Element("defaultcontrol", {"always": "true"})
+            root.insert(0, default)
+        default.set("always", "true")
+        default.text = "21"
         headings = {
             "home": ("HOME WIDGETS", 96, "Cineva.Widget"),
             "movies": ("MOVIES WIDGETS", 704, "Cineva.MovieWidget"),
             "tvshows": ("TV SHOWS WIDGETS", 1312, "Cineva.ShowWidget"),
         }
-        generated_ids = {"6", "7", "8", "9", "10", "40", "41", "42", "43"}
+        generated_ids = {"5", "6", "7", "8", "9", "10", "40", "41", "42", "43"}
         generated_ids.update(str(control_id) for control_id in range(21, 33))
         generated_labels = {
             "HOME WIDGETS", "MOVIES WIDGETS", "TV SHOWS WIDGETS",
             "Choose a slot to select, change or clear its video add-on source.",
+            "OPEN CINÉVA SETTINGS",
         }
         for stale in list(controls.findall("control")):
             if (stale.get("id") in generated_ids
@@ -1439,14 +1503,15 @@ def update_xml(data, path):
                 set_child_text(section, tag, value)
             controls.append(section)
             for slot in range(1, 5):
-                button = ET.Element("control", {"type": "button", "id": str(20 + (list(headings).index(screen) * 4) + slot)})
-                for tag, value in (("left", left), ("top", 300 + (slot - 1) * 82),
-                                   ("width", 520), ("height", 64), ("font", "font14"),
-                                   ("label", f"WIDGET {slot}  ·  $INFO[Skin.String({string_prefix}{slot}.Name)]"),
-                                   ("texturefocus", "focus-bar.png"),
-                                   ("texturenofocus", "black.png"),
-                                   ("textcolor", "white"), ("focusedcolor", "white"),
-                                   ("onclick", f"RunScript(script.cineva.widgets,action=configure&screen={screen}&slot={slot})")):
+                column = list(headings).index(screen)
+                button_id = 20 + (column * 4) + slot
+                row = slot - 1
+                up_id = button_id - 1 if row > 0 else button_id + 3
+                down_id = button_id + 1 if row < 3 else button_id - 3
+                left_id = button_id - 4 if column > 0 else button_id + 8
+                right_id = button_id + 4 if column < 2 else button_id - 8
+                button = ET.Element("control", {"type": "button", "id": str(button_id)})
+                for tag, value in (("left", left), ("top", 300 + (slot - 1) * 82), ("width", 520), ("height", 64), ("font", "font14"), ("label", f"WIDGET {slot}  ·  $INFO[Skin.String({string_prefix}{slot}.Name)]"), ("texturefocus", "focus-bar.png"), ("texturenofocus", "black.png"), ("textcolor", "white"), ("focusedcolor", "white"), ("onclick", f"RunScript(script.cineva.widgets,action=configure&screen={screen}&slot={slot})"), ("onup", f"SetFocus({up_id})"), ("ondown", f"SetFocus({down_id})"), ("onleft", f"SetFocus({left_id})"), ("onright", f"SetFocus({right_id})")):
                     set_child_text(button, tag, value)
                 controls.append(button)
         # A concise hint explains that each action opens the add-on/folder picker.
@@ -1875,7 +1940,7 @@ def main():
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.21.zip and migration source skin.cineva-0.5.20.zip")
+        raise SystemExit("Missing skin.cineva-0.5.22.zip and migration source skin.cineva-0.5.21.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -1889,6 +1954,7 @@ def main():
                 "skin.cineva/xml/DialogConfirm.xml",
                 "skin.cineva/xml/Includes.xml",
                 "skin.cineva/xml/SkinSettings.xml",
+                "skin.cineva/xml/Settings.xml",
                 "skin.cineva/xml/Font.xml",
                 "skin.cineva/xml/MyVideoNav.xml",
                 "skin.cineva/xml/DialogVideoInfo.xml",
@@ -1957,9 +2023,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.21":
-                        addon_root.set("version", "0.5.21")
-                        changed.append(info.filename + " (bump skin version to 0.5.21)")
+                    if addon_root.get("version") != "0.5.22":
+                        addon_root.set("version", "0.5.22")
+                        changed.append(info.filename + " (bump skin version to 0.5.22)")
                     if helper_dependency.get("version") != "0.1.7":
                         helper_dependency.set("version", "0.1.7")
                         changed.append(info.filename + " (require widget manager 0.1.7)")
@@ -1967,20 +2033,21 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.21 - Restore standard Kodi Settings entry point",
-                        "- Home Settings opens Kodi Settings; Skin Settings remains available inside Kodi Settings.",
-                        "- Preserve the existing navigation layout and widget configuration destinations.",
+                        "0.5.22 - Restore visible Settings and Add-ons navigation",
+                        "- Rebuild Kodi Settings with visible, D-pad focusable category cards and direct Add-on Browser access.",
+                        "- Open native CINÉVA Skin Settings directly and remove the overlapping legacy settings shortcut.",
+                        "- Give all twelve widget slots an explicit, wrap-safe D-pad focus path.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.21 - Restore standard Kodi Settings entry point"):
+                    if changelog.startswith("0.5.22 - Restore visible Settings and Add-ons navigation"):
                         pass
                     elif changelog.startswith("0.5.20 - Compact Home shelves for denser browsing"):
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.21 Settings navigation changelog)")
+                        changed.append(info.filename + " (prepend 0.5.22 Settings and Add-ons navigation changelog)")
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (0.5.21 Settings navigation release)")
+                        changed.append(info.filename + " (0.5.22 Settings and Add-ons navigation release)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:

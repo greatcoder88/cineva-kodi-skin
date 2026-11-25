@@ -7,14 +7,14 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.21.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.22.zip"
 
 
 class HomeHeroActionTests(unittest.TestCase):
     def test_release_changelog_uses_real_line_breaks(self):
         with ZipFile(ARCHIVE) as archive:
             lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
-        self.assertEqual(lines[0], "0.5.21 - Restore standard Kodi Settings entry point")
+        self.assertEqual(lines[0], "0.5.22 - Restore visible Settings and Add-ons navigation")
         self.assertEqual(lines[1], "- Home Settings opens Kodi Settings; Skin Settings remains available inside Kodi Settings.")
         self.assertEqual(lines[2], "- Preserve the existing navigation layout and widget configuration destinations.")
         self.assertIn("0.5.20 - Compact Home shelves for denser browsing", lines)

@@ -5,7 +5,7 @@ from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.21.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.22.zip"
 HUB_WINDOW = "skin.cineva/xml/CinevaWidgetHub.xml"
 
 
@@ -36,6 +36,34 @@ class HomeNavigationTests(unittest.TestCase):
                 for button in buttons.values())
         )
         self.assertNotIn("ActivateWindow(11119)", ET.tostring(home, encoding="unicode"))
+
+    def test_kodi_settings_exposes_addons_and_native_skin_settings(self):
+        with ZipFile(ARCHIVE) as archive:
+            settings = ET.fromstring(archive.read("skin.cineva/xml/Settings.xml"))
+        self.assertEqual(settings.get("id"), "10004")
+        self.assertEqual(settings.findtext("defaultcontrol"), "11405")
+        buttons = {node.get("id"): node for node in settings.findall("./controls/control[@type='button']")}
+        self.assertEqual(set(buttons), {str(control_id) for control_id in range(11401, 11409)})
+        self.assertEqual(buttons["11405"].findtext("label"), "ADD-ONS")
+        self.assertEqual(buttons["11405"].findtext("onclick"), "ActivateWindow(AddonBrowser)")
+        self.assertEqual(buttons["11408"].findtext("label"), "CINÉVA SKIN SETTINGS")
+        self.assertEqual(buttons["11408"].findtext("onclick"), "ActivateWindow(SkinSettings)")
+        for button in buttons.values():
+            self.assertEqual(button.findtext("texturefocus"), "hero-secondary-focus.png")
+            self.assertEqual(button.findtext("texturenofocus"), "hero-secondary.png")
+            for direction in ("onup", "ondown", "onleft", "onright"):
+                self.assertTrue(button.findtext(direction, "").startswith("SetFocus("))
+
+    def test_native_skin_settings_starts_on_the_first_widget_slot(self):
+        with ZipFile(ARCHIVE) as archive:
+            settings = ET.fromstring(archive.read("skin.cineva/xml/SkinSettings.xml"))
+        self.assertEqual(settings.findtext("defaultcontrol"), "21")
+        buttons = {node.get("id"): node for node in settings.findall("./controls/control[@type='button']")}
+        self.assertEqual(set(buttons), {str(control_id) for control_id in range(21, 33)})
+        self.assertNotIn("5", buttons, "overlapping legacy OPEN CINÉVA SETTINGS button must be removed")
+        for button_id, button in buttons.items():
+            for direction in ("onup", "ondown", "onleft", "onright"):
+                self.assertTrue(button.findtext(direction, "").startswith("SetFocus("), f"widget slot {button_id} is missing {direction} focus routing")
 
 
     def test_home_header_focus_uses_transparent_tabs_and_tracking_underlines(self):

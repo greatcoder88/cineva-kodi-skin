@@ -83,6 +83,8 @@ class KodiManagerTests(unittest.TestCase):
         controls = rendered.find("controls")
         buttons = controls.findall("control[@type='button']")
         self.assertEqual(len(buttons), 12)
+        self.assertEqual(rendered.findtext("defaultcontrol"), "21")
+        self.assertNotIn("5", {button.get("id") for button in buttons})
         labels = [button.findtext("label", "") for button in buttons]
         for prefix in ("Cineva.Widget", "Cineva.MovieWidget", "Cineva.ShowWidget"):
             for slot in range(1, 5):
@@ -95,6 +97,29 @@ class KodiManagerTests(unittest.TestCase):
                                     f"screen={screen}&slot={slot}" in action for action in actions))
         self.assertFalse(any("screen=search" in action or "screen=mylist" in action for action in actions))
         self.assertFalse(any(button.get("id") == "6" for button in buttons))
+        for button in buttons:
+            for direction in ("onup", "ondown", "onleft", "onright"):
+                self.assertTrue(button.findtext(direction, "").startswith("SetFocus("))
+
+    def test_settings_landing_page_exposes_addons_and_skin_settings(self):
+        builder_path = ROOT / "tools/build_skin_archive.py"
+        spec = importlib.util.spec_from_file_location("cineva_builder_settings", builder_path)
+        builder = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(builder)
+        source = (b'<window id="10004"><defaultcontrol>11401</defaultcontrol><controls>'
+                  b'<include>CinevaBackground</include><control type="label" id="1"><label>OLD</label></control>'
+                  b'<control type="button" id="11401"><label>OLD</label></control></controls></window>')
+        rendered = ET.fromstring(builder.update_xml(source, "skin.cineva/xml/Settings.xml"))
+        self.assertEqual(rendered.findtext("defaultcontrol"), "11405")
+        buttons = {node.get("id"): node for node in rendered.findall("./controls/control[@type='button']")}
+        self.assertEqual(set(buttons), {str(control_id) for control_id in range(11401, 11409)})
+        self.assertEqual(buttons["11405"].findtext("onclick"), "ActivateWindow(AddonBrowser)")
+        self.assertEqual(buttons["11408"].findtext("onclick"), "ActivateWindow(SkinSettings)")
+        for button in buttons.values():
+            self.assertEqual(button.findtext("texturefocus"), "hero-secondary-focus.png")
+            self.assertEqual(button.findtext("texturenofocus"), "hero-secondary.png")
+            for direction in ("onup", "ondown", "onleft", "onright"):
+                self.assertTrue(button.findtext(direction, "").startswith("SetFocus("))
 
     def test_poster_fallback_is_cinematic_art_not_a_play_icon(self):
         builder_path = ROOT / "tools/build_skin_archive.py"
