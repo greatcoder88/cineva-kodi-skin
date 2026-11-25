@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.20.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.19.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.21.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.21.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -1171,7 +1171,7 @@ def update_xml(data, path):
                 for tag, value in (
                     ("left", 670), ("top", 0), ("width", 150), ("height", 48),
                     ("font", "font12"), ("label", "SETTINGS"),
-                    ("onclick", "ActivateWindow(11113)"),
+                    ("onclick", "ActivateWindow(Settings)"),
                 ):
                     set_child_text(settings_button, tag, value)
                 nav_group.append(settings_button)
@@ -1966,7 +1966,7 @@ def main():
                         "",
                     ))
                     if changelog.startswith("0.5.20 - Compact Home shelves for denser browsing"):
-                        current_entry, separator, remainder = changelog.partition("0.5.19 - Refined Home navigation focus")
+                        current_entry, separator, remainder = changelog.partition("0.5.20 - Compact Home shelves for denser browsing")
                         if not separator:
                             raise SystemExit("CINÉVA 0.5.20 changelog lost its 0.5.19 history entry")
                         if entry != current_entry:
