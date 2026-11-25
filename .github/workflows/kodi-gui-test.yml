@@ -26,20 +26,20 @@ jobs:
       - name: Build release ZIP, verify idempotence, and commit source fixes
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.13.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.14.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.13.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.14.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
           fi
           echo "Archive SHA-256 is stable across consecutive builds: $after"
           mkdir -p artifacts
-          cp skin.cineva-0.5.13.zip artifacts/
-          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.13.zip)" ]; then
+          cp skin.cineva-0.5.14.zip artifacts/
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.14.zip)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add skin.cineva-0.5.13.zip
+            git add skin.cineva-0.5.14.zip
             git commit -m "Build updated CINÉVA 0.5.13 skin archive"
             git push origin HEAD:main || echo "::warning::Could not push rebuilt skin ZIP; GUI test still uses the rebuilt local ZIP."
           fi
@@ -47,8 +47,8 @@ jobs:
       - name: Expand uploaded skin archive and prepare add-ons
         run: |
           mkdir -p artifacts
-          test -s skin.cineva-0.5.13.zip
-          unzip -q skin.cineva-0.5.13.zip -d .
+          test -s skin.cineva-0.5.14.zip
+          unzip -q skin.cineva-0.5.14.zip -d .
           test -f skin.cineva/addon.xml
           test -d skin.cineva/xml
           test -f skin.cineva/xml/Home.xml
@@ -422,8 +422,8 @@ jobs:
           if any(button.findtext("texturefocus") != "focus-bar.png" for button in search.findall(".//control[@type='button']")):
             raise SystemExit("Search hub buttons are missing the unified focus treatment")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.13":
-            raise SystemExit("Skin archive version must be 0.5.13")
+          if skin.attrib.get("version") != "0.5.14":
+            raise SystemExit("Skin archive version must be 0.5.14")
           widget = ET.parse("tools/script.cineva.widgets/addon.xml").getroot()
           if widget.attrib.get("version") != "0.1.7":
             raise SystemExit("Widget manager version must be 0.1.7")
@@ -1450,9 +1450,17 @@ jobs:
           wait_for_window(11117)
           subprocess.run(["import", "-display", ":99", "-window", "root",
                           "artifacts/cineva-movies-navigation.png"], check=True)
-          # Catalogue pages default to HOME navigation so empty optional
-          # widget slots never leave the remote without a focus target.
-          wait_for_control("HOME")
+          # Empty catalogue pages land on their own active section tab.
+          wait_for_control("MOVIES")
+          press("Down")
+          wait_for_control("EDIT MOVIE WIDGETS")
+          subprocess.run(["import", "-display", ":99", "-window", "root",
+                          "artifacts/cineva-movies-empty-state.png"], check=True)
+          press("Return")
+          wait_for_window(11115)
+          press("Escape")
+          wait_for_window(11117)
+          wait_for_control("MOVIES")
           open_native_category(11117, "ALL MOVIES")
           for label in ("GENRES", "YEARS", "COLLECTIONS", "RECENT"):
             open_native_category(11117, label)
@@ -1463,7 +1471,16 @@ jobs:
           wait_for_window(11118)
           subprocess.run(["import", "-display", ":99", "-window", "root",
                           "artifacts/cineva-tvshows-navigation.png"], check=True)
-          wait_for_control("HOME")
+          wait_for_control("TV SHOWS")
+          press("Down")
+          wait_for_control("EDIT TV WIDGETS")
+          subprocess.run(["import", "-display", ":99", "-window", "root",
+                          "artifacts/cineva-tvshows-empty-state.png"], check=True)
+          press("Return")
+          wait_for_window(11116)
+          press("Escape")
+          wait_for_window(11118)
+          wait_for_control("TV SHOWS")
           open_native_category(11118, "ALL SHOWS")
           for label in ("GENRES", "YEARS", "STUDIOS", "RECENT"):
             open_native_category(11118, label)
@@ -1517,6 +1534,9 @@ jobs:
               if filename == "custom11118.xml"
               else ("12001", 11117, "92", "56")
             )
+            active_focus = "1003" if filename == "custom11118.xml" else "1002"
+            if root.findtext("defaultcontrol") != active_focus:
+              raise SystemExit(f"{filename} does not default focus to its active section tab")
             marker = nav.find("./control[@type='image'][@id='{}']".format(marker_id))
             if marker is None or (
                 marker.findtext("left"), marker.findtext("top"),
@@ -1529,18 +1549,33 @@ jobs:
                    or button.findtext("texturefocus") != "focus-bar.png"
                    for button in buttons.values()):
               raise SystemExit(f"{filename} navigation tabs do not match the transparent Home header style")
+            empty_condition = " + ".join(
+              f"String.IsEmpty(Container({9200 + slot}).ListItem.Label)"
+              for slot in range(1, 5)
+            )
+            expected_down = [(empty_condition, "SetFocus(12114)")] + [
+              (f"!String.IsEmpty(Container({9200 + slot}).ListItem.Label)",
+               f"SetFocus({9200 + slot})")
+              for slot in range(1, 5)
+            ] + [(None, "SetFocus(1009)")]
             for label, action in expected_actions.items():
               button = buttons.get(label)
               if button is None or button.findtext("onclick") != action:
                 raise SystemExit(f"{filename} is missing the working {label} library destination")
-              widget_prefix = "Cineva.ShowWidget" if filename == "custom11118.xml" else "Cineva.MovieWidget"
-              expected_down = [
-                ("!String.IsEmpty(Skin.String({}{}.Path))".format(widget_prefix, slot),
-                 "SetFocus({})".format(9200 + slot))
-                for slot in range(1, 5)
-              ] + [(None, "SetFocus(1009)")]
+            for button in buttons.values():
               if [(node.get("condition"), node.text) for node in button.findall("ondown")] != expected_down:
-                raise SystemExit(f"{filename} {label} does not skip empty widget slots and fall back to Edit Widgets")
+                raise SystemExit(f"{filename} {button.findtext('label')} does not skip empty shelves and route to the empty-state CTA")
+            cta = root.find("./controls/control[@id='12114']")
+            if cta is None or (
+                cta.findtext("label"),
+                cta.findtext("onclick"),
+                cta.findtext("visible")
+            ) != (
+                "EDIT TV WIDGETS" if filename == "custom11118.xml" else "EDIT MOVIE WIDGETS",
+                "ActivateWindow(11116)" if filename == "custom11118.xml" else "ActivateWindow(11115)",
+                empty_condition
+            ):
+              raise SystemExit(f"{filename} is missing its visible, working empty-state widget editor action")
             if len(buttons) != 10 or len({node.get("id") for node in buttons.values()}) != 10:
               raise SystemExit(f"{filename} catalogue navigation must contain ten unique controls")
           print("Verified Movies and TV Shows D-pad navigation, all nine native library categories, and Back returns in Kodi GUI.")
