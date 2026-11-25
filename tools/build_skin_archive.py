@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.9.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.8.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.10.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.9.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -913,7 +913,7 @@ def update_xml(data, path):
                     # preserves the raw tail so plugin URLs containing '&' survive.
                     set_child_text(
                         button, "onclick",
-                        f"RunScript(script.cineva.widgets,action=play&container={container_id}&path=$INFO[Container({container_id}).ListItem.File])"
+                        f"RunScript(script.cineva.widgets,action=play&container={container_id}&path=$ESCINFO[Container({container_id}).ListItem.FileNameAndPath])"
                     )
                 else:
                     set_child_text(button, "onclick", f"SetFocus({container_id})")
@@ -1755,26 +1755,41 @@ def main():
                     changed.append(info.filename + " (removed obsolete My Widgets hub)")
                     continue
                 data = source.read(info.filename)
+                if info.filename == "skin.cineva/addon.xml":
+                    addon_root = ET.fromstring(data)
+                    helper_dependency = next(
+                        (node for node in addon_root.findall("./requires/import")
+                         if node.get("addon") == "script.cineva.widgets"),
+                        None,
+                    )
+                    if helper_dependency is None:
+                        raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
+                    if addon_root.get("version") != "0.5.10":
+                        addon_root.set("version", "0.5.10")
+                        changed.append(info.filename + " (bump skin version to 0.5.10)")
+                    if helper_dependency.get("version") != "0.1.6":
+                        helper_dependency.set("version", "0.1.6")
+                        changed.append(info.filename + " (require widget manager 0.1.6)")
+                    data = ET.tostring(addon_root, encoding="UTF-8", xml_declaration=True)
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.9 - Preserve selected Home playback URLs",
-                        "- Pass the focused shelf item's resolved plugin URL into the widget manager.",
-                        "- Preserve ampersand-delimited plugin query parameters before Kodi Player playback.",
+                        "0.5.10 - Reliable URL-escaped Home playback handoff",
+                        "- Resolve the selected shelf item's full FileNameAndPath before invoking the widget manager.",
+                        "- URL-escape plugin query separators and decode the selected path exactly once.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.9 - Preserve selected Home playback URLs"):
-                        current_entry, separator, remainder = changelog.partition("0.5.8 - Reliable Home hero playback handoff")
+                    if changelog.startswith("0.5.10 - Reliable URL-escaped Home playback handoff"):
+                        current_entry, separator, remainder = changelog.partition("0.5.9 - Preserve selected Home playback URLs")
                         if not separator:
-                            raise SystemExit("CINÉVA 0.5.9 changelog lost its 0.5.8 history entry")
-                        normalized_entry = entry
-                        if normalized_entry != current_entry:
-                            data = (normalized_entry + separator + remainder).encode("utf-8")
-                            changed.append(info.filename + " (normalize 0.5.9 playback URL changelog)")
+                            raise SystemExit("CINÉVA 0.5.10 changelog lost its 0.5.9 history entry")
+                        if entry != current_entry:
+                            data = (entry + separator + remainder).encode("utf-8")
+                            changed.append(info.filename + " (normalize 0.5.10 playback handoff changelog)")
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (0.5.9 playback URL release)")
+                        changed.append(info.filename + " (0.5.10 URL-escaped playback release)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:
