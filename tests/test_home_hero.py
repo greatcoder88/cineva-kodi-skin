@@ -7,19 +7,20 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.8.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.10.zip"
 
 
 class HomeHeroActionTests(unittest.TestCase):
     def test_release_changelog_uses_real_line_breaks(self):
         with ZipFile(ARCHIVE) as archive:
             lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
-        self.assertEqual(lines[0], "0.5.8 - Reliable Home hero playback handoff")
-        self.assertTrue(lines[1].startswith("- Route Home Resume/Play through the widget manager and Kodi Player API."))
-        self.assertTrue(lines[2].startswith("- Preserve the selected shelf item's plugin URL"))
-        self.assertEqual(lines[4], "0.5.7 - Reliable remote focus and skin handoff")
-        self.assertTrue(lines[5].startswith("- Explicit left/right navigation across Home, Movies, TV Shows, Search and Settings."))
-        self.assertTrue(lines[6].startswith("- Explicit left/right focus between No and Yes in Kodi confirmation dialogs."))
+        self.assertEqual(lines[0], "0.5.10 - Reliable URL-escaped Home playback handoff")
+        self.assertTrue(lines[1].startswith("- Resolve the selected shelf item's full FileNameAndPath"))
+        self.assertTrue(lines[2].startswith("- URL-escape plugin query separators and decode the selected path exactly once."))
+        self.assertEqual(lines[4], "0.5.9 - Preserve selected Home playback URLs")
+        self.assertTrue(lines[5].startswith("- Pass the focused shelf item's resolved plugin URL into the widget manager."))
+        self.assertTrue(lines[6].startswith("- Preserve ampersand-delimited plugin query parameters before Kodi Player playback."))
+        self.assertEqual(lines[8], "0.5.8 - Reliable Home hero playback handoff")
 
     def test_all_home_heroes_use_branded_nine_slice_action_surfaces(self):
         with ZipFile(ARCHIVE) as archive:
@@ -62,7 +63,7 @@ class HomeHeroActionTests(unittest.TestCase):
                     (32, 32),
                 )
 
-    def test_hero_play_actions_activate_the_native_focused_list_item(self):
+    def test_hero_play_actions_pass_url_escaped_selected_file_paths(self):
         with ZipFile(ARCHIVE) as archive:
             home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
             for container_id, play_id in ((9001, 9111), (9002, 9113), (9003, 9115), (9004, 9117)):
@@ -70,7 +71,7 @@ class HomeHeroActionTests(unittest.TestCase):
                 self.assertIsNotNone(button, f"Missing hero Play/Resume button {play_id}")
                 self.assertEqual(
                     button.findtext("onclick"),
-                    f"RunScript(script.cineva.widgets,action=play&container={container_id})",
+                    f"RunScript(script.cineva.widgets,action=play&container={container_id}&path=$ESCINFO[Container({container_id}).ListItem.FileNameAndPath])",
                     "Hero Play/Resume must delegate the selected shelf item URL to Kodi's Player API",
                 )
 
