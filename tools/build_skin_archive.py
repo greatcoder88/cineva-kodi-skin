@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.7.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.6.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.8.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.7.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -511,10 +511,10 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.7")
+        root.set("version", "0.5.8")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
-                imp.set("version", "0.1.3")
+                imp.set("version", "0.1.4")
     elif path == "skin.cineva/xml/Home.xml":
         default = root.find("defaultcontrol")
         if default is None:
@@ -1679,11 +1679,11 @@ def update_xml(data, path):
 
 def main():
     # Start the new distributable version from the last published package once.
-    # Subsequent builds always transform 0.5.7 in place and remain byte-stable.
+    # Subsequent builds always transform 0.5.8 in place and remain byte-stable.
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.7.zip and migration source skin.cineva-0.5.6.zip")
+        raise SystemExit("Missing skin.cineva-0.5.8.zip and migration source skin.cineva-0.5.7.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -1758,8 +1758,10 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.7 - Reliable remote focus and skin handoff",
-                        "- Explicit left/right navigation across Home, Movies, TV Shows, Search and Settings.",
+                        "0.5.8 - Reliable Home hero playback handoff",
+                        "- Route Home Resume/Play through the widget manager and Kodi Player API.",
+                        "- Preserve the selected shelf item's plugin URL so video add-on resolvers receive playback requests.",
+                        "",
                         "- Explicit left/right focus between No and Yes in Kodi confirmation dialogs.",
                         "- Replace the Startup window with Home so a transparent Startup layer cannot intercept remote input.",
                         "- Keep long Home poster titles readable in a full two-line caption band.",
@@ -1767,9 +1769,12 @@ def main():
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.7 - Reliable remote focus and skin handoff"):
-                        current_entry, separator, remainder = changelog.partition("0.5.0 - Complete UI structure")
+                    if changelog.startswith("0.5.8 - Reliable Home hero playback handoff"):
+                        current_entry, separator, remainder = changelog.partition("0.5.7 - Reliable remote focus and skin handoff")
                         normalized_entry = current_entry.replace(chr(92) + "n", chr(10))
+                        playback_note = "- Route Home Resume/Play through the widget manager and Kodi Player API."
+                        if playback_note not in normalized_entry:
+                            normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + playback_note + chr(10) + chr(10)
                         caption_note = "- Keep long Home poster titles readable in a full two-line caption band."
                         if caption_note not in normalized_entry:
                             normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + caption_note + chr(10) + chr(10)
@@ -1793,7 +1798,7 @@ def main():
                             normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + vignette_note + chr(10) + chr(10)
                         if normalized_entry != current_entry:
                             data = (normalized_entry + separator + remainder).encode("utf-8")
-                            changed.append(info.filename + " (normalize 0.5.7 Home caption changelog)")
+                            changed.append(info.filename + " (normalize 0.5.8 Home playback changelog)")
                     else:
                         data = (entry + changelog).encode("utf-8")
                         changed.append(info.filename + " (0.5.6 Home rail redesign)")

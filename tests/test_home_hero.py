@@ -7,15 +7,16 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.7.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.8.zip"
 
 
 class HomeHeroActionTests(unittest.TestCase):
     def test_release_changelog_uses_real_line_breaks(self):
         with ZipFile(ARCHIVE) as archive:
             lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
-        self.assertEqual(lines[0], "0.5.7 - Reliable remote focus and skin handoff")
-        self.assertTrue(lines[1].startswith("- Explicit left/right navigation across Home, Movies, TV Shows, Search and Settings."))
+        self.assertEqual(lines[0], "0.5.8 - Reliable Home hero playback handoff")
+        self.assertTrue(lines[1].startswith("- Route Home Resume/Play through the widget manager and Kodi Player API."))
+        self.assertTrue(lines[2].startswith("- Preserve the selected shelf item's plugin URL"))
         self.assertTrue(lines[2].startswith("- Explicit left/right focus between No and Yes in Kodi confirmation dialogs."))
         self.assertTrue(lines[3].startswith("- Replace the Startup window with Home"))
         self.assertTrue(lines[4].startswith("- Keep long Home poster titles readable in a full two-line caption band."))
