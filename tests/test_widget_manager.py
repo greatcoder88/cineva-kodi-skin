@@ -154,9 +154,8 @@ class KodiManagerTests(unittest.TestCase):
             skin = ET.fromstring(archive.read("skin.cineva/addon.xml"))
         dependency = skin.find("./requires/import[@addon='script.cineva.widgets']")
         self.assertEqual(skin.attrib.get("version"), "0.5.16")
-        self.assertGreater(tuple(map(int, helper.attrib["version"].split("."))), tuple(map(int, dependency.attrib["version"].split("."))))
         self.assertIsNotNone(dependency)
-        self.assertEqual(dependency.attrib.get("version"), helper.attrib["version"])
+        self.assertLessEqual(tuple(map(int, dependency.attrib["version"].split("."))), tuple(map(int, helper.attrib["version"].split("."))))
 
     def test_widget_helper_is_not_advertised_as_a_video_plugin(self):
         addon_xml = ET.parse(ROOT / "tools/script.cineva.widgets/addon.xml").getroot()
