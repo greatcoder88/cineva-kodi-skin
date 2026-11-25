@@ -1105,10 +1105,31 @@ jobs:
                 "playback resolver; GUI state: {}. Log tail: {}"
                 .format(state, log_text()[-2500:])
               )
-            expected_play_request = "CINEVA_WIDGETS_PLAY_REQUEST container=9001 path=plugin://plugin.video.pov/?action=play&id=1"
+            expected_play_url = first_row_items[focus_position].get("file", "").strip()
+            if not expected_play_url.startswith("plugin://plugin.video.pov/"):
+              raise SystemExit(
+                f"Focused Home fixture item has no usable POV playback URL: {expected_play_url!r}"
+              )
+            expected_play_request = (
+              f"CINEVA_WIDGETS_PLAY_REQUEST container=9001 path={expected_play_url}"
+            )
+            expected_resolver_request = (
+              f"CINEVA_TEST_PLAY_RESOLVER_INVOKED url={expected_play_url}"
+            )
             if expected_play_request not in log_text():
-              raise SystemExit("Widget manager did not receive the complete selected plugin URL, including its id query parameter")
-            print("Verified Home poster-to-hero D-pad navigation and RESUME playback through plugin.video.pov.")
+              raise SystemExit(
+                "Widget manager did not receive the complete selected plugin URL: "
+                f"expected {expected_play_request!r}"
+              )
+            if expected_resolver_request not in log_text():
+              raise SystemExit(
+                "POV resolver did not receive the same complete selected plugin URL: "
+                f"expected {expected_resolver_request!r}"
+              )
+            print(
+              "Verified Home poster-to-hero D-pad navigation and RESUME playback "
+              f"for the focused item via {expected_play_url}."
+            )
             time.sleep(0.8)
             state = gui()
             if state.get("currentwindow",{}).get("id") != 10000:
