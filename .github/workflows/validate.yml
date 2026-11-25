@@ -251,8 +251,32 @@ jobs:
                   if eyebrow is None or (eyebrow.findtext("top"), eyebrow.findtext("height"), eyebrow.findtext("label"), eyebrow.findtext("visible"), eyebrow.findtext("font"), eyebrow.findtext("textcolor")) != ("0", "24", expected_label, expected_visibility, "font9", "FFE50914"):
                       errors.append(f"Home hero {container_id} is missing its source-aware {expected_label} eyebrow")
               buttons = group.findall("./control[@type='button']")
-              if len(buttons) != 2 or any(button.findtext("top") != "240" for button in buttons) or [(button.findtext("left"), button.findtext("width"), button.findtext("height")) for button in buttons] != [("0", "190", "54"), ("212", "220", "54")]:
-                  errors.append(f"Home hero {container_id} actions are not aligned beneath the synopsis")
+              progress_id = 9380 + container_id - 9001
+              caption_id = 9384 + container_id - 9001
+              expected_progress_visible = (
+                  f"String.Contains(Skin.String(Cineva.Widget{container_id - 9000}.Path),in_progress)"
+                  f" + Container({container_id}).ListItem.IsResumable"
+              )
+              hero_progress = hero_group.find(f"./control[@id='{progress_id}']")
+              progress_caption = hero_group.find(f"./control[@id='{caption_id}']")
+              if hero_progress is None or (
+                  hero_progress.get("type"), hero_progress.findtext("left"), hero_progress.findtext("top"),
+                  hero_progress.findtext("width"), hero_progress.findtext("height"), hero_progress.findtext("info"),
+                  hero_progress.findtext("visible"), hero_progress.findtext("texturebg"),
+                  hero_progress.findtext("midtexture"), hero_progress.findtext("overlaytexture")
+              ) != ("progress", "0", "234", "300", "6",
+                    f"Container({container_id}).ListItem.PercentPlayed", expected_progress_visible,
+                    "resume-track.png", "focus-bar.png", "-"):
+                  errors.append(f"Home hero {container_id} is missing its continue-watching progress bar")
+              if progress_caption is None or (
+                  progress_caption.findtext("left"), progress_caption.findtext("top"),
+                  progress_caption.findtext("width"), progress_caption.findtext("height"),
+                  progress_caption.findtext("label"), progress_caption.findtext("visible")
+              ) != ("316", "226", "210", "22",
+                    f"$INFO[Container({container_id}).ListItem.PercentPlayed]% WATCHED", expected_progress_visible):
+                  errors.append(f"Home hero {container_id} is missing its watched-percentage caption")
+              if len(buttons) != 2 or any(button.findtext("top") != "260" for button in buttons) or [(button.findtext("left"), button.findtext("width"), button.findtext("height")) for button in buttons] != [("0", "190", "54"), ("212", "220", "54")]:
+                  errors.append(f"Home hero {container_id} actions are not aligned beneath the progress strip")
               if metadata is None or metadata.findtext("label") != expected:
                   errors.append(f"Home hero {container_id} metadata must omit separators for empty fields")
               rating_id = 9340 + (container_id - 9001) * 3
