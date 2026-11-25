@@ -26,9 +26,9 @@ jobs:
       - name: Build release ZIP, verify idempotence, and commit source fixes
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.15.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.16.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.15.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.16.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
@@ -348,6 +348,30 @@ jobs:
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
               if (layout.get("width"), layout.get("height")) != ("285", "430"):
                 raise SystemExit(f"Home widget {index} poster card geometry is not the 6-up layout")
+          shelf_cue_ids = []
+          for row in range(1, 5):
+            container_id = 9000 + row
+            cue_id = 9360 + (row - 1) * 3
+            row_group = rail_list.find(f"./control[@type='group'][@id='{9060 + row}']")
+            position = row_group.find(f"./control[@id='{cue_id}']") if row_group is not None else None
+            previous = row_group.find(f"./control[@id='{cue_id + 1}']") if row_group is not None else None
+            following = row_group.find(f"./control[@id='{cue_id + 2}']") if row_group is not None else None
+            if position is None or (position.findtext("label"), position.findtext("visible")) != (
+                f"$INFO[Container({container_id}).CurrentItem] / $INFO[Container({container_id}).NumItems]",
+                f"Control.HasFocus({container_id}) + !String.IsEmpty(Container({container_id}).ListItem.Label)"
+            ):
+              raise SystemExit(f"Home shelf {container_id} is missing its live position counter")
+            if previous is None or (previous.findtext("label"), previous.findtext("visible")) != (
+                "‹", f"Control.HasFocus({container_id}) + Container({container_id}).HasPrevious"
+            ):
+              raise SystemExit(f"Home shelf {container_id} is missing its conditional previous-page cue")
+            if following is None or (following.findtext("label"), following.findtext("visible")) != (
+                "›", f"Control.HasFocus({container_id}) + Container({container_id}).HasNext"
+            ):
+              raise SystemExit(f"Home shelf {container_id} is missing its conditional next-page cue")
+            shelf_cue_ids.extend((position.get("id"), previous.get("id"), following.get("id")))
+          if len(shelf_cue_ids) != 12 or len(set(shelf_cue_ids)) != 12:
+            raise SystemExit("Home shelf position and scroll-cue control IDs must be unique across all four rows")
           if controls.find("./control[@id='9010']") is not None:
             raise SystemExit("Obstructive floating More Widgets button is still present")
           fonts = ET.parse("skin.cineva/xml/Font.xml").getroot()
@@ -916,6 +940,42 @@ jobs:
             # the dedicated RESUME/PLAY button is the explicit playback action.
             subprocess.run(["import","-display",":99","-window","root",
                             "artifacts/cineva-home-poster-focused.png"],check=True)
+            # Verify the live shelf counter and directional cues against Kodi's
+            # own container state, then capture the scrolled state before returning
+            # to the first poster for the hero-action tests.
+            first_labels = rpc("XBMC.GetInfoLabels", {"labels":[
+              "Container(9001).CurrentItem", "Container(9001).NumItems"
+            ]})
+            first_flags = rpc("XBMC.GetInfoBooleans", {"booleans":[
+              "Container(9001).HasNext", "Container(9001).HasPrevious"
+            ]})
+            def info_true(value):
+              return value is True or str(value).strip().lower() in {"true", "1"}
+            first_position = int(first_labels.get("Container(9001).CurrentItem", "0"))
+            total_items = int(first_labels.get("Container(9001).NumItems", "0"))
+            if total_items != 8 or not info_true(first_flags.get("Container(9001).HasNext")):
+              raise SystemExit(f"Home shelf 9001 did not expose its next-page cue: labels={first_labels}; flags={first_flags}")
+            for _ in range(6):
+              subprocess.run(["xdotool","key","Right"],check=True)
+              time.sleep(0.12)
+            scrolled_labels = rpc("XBMC.GetInfoLabels", {"labels":[
+              "Container(9001).CurrentItem", "Container(9001).NumItems"
+            ]})
+            scrolled_flags = rpc("XBMC.GetInfoBooleans", {"booleans":[
+              "Container(9001).HasNext", "Container(9001).HasPrevious"
+            ]})
+            scrolled_position = int(scrolled_labels.get("Container(9001).CurrentItem", "0"))
+            if scrolled_position <= first_position or not info_true(scrolled_flags.get("Container(9001).HasPrevious")):
+              raise SystemExit(f"Home shelf 9001 did not expose its previous-page cue after scrolling: labels={scrolled_labels}; flags={scrolled_flags}")
+            subprocess.run(["import","-display",":99","-window","root",
+                            "artifacts/cineva-home-shelf-scrolled.png"],check=True)
+            for _ in range(6):
+              subprocess.run(["xdotool","key","Left"],check=True)
+              time.sleep(0.12)
+            restored_labels = rpc("XBMC.GetInfoLabels", {"labels":["Container(9001).CurrentItem"]})
+            if int(restored_labels.get("Container(9001).CurrentItem", "0")) != first_position:
+              raise SystemExit(f"Home shelf did not return to its original item after scroll-cue verification: {restored_labels}")
+            print(f"Verified Home shelf position counter {first_position}/{total_items}, next cue, and previous cue after moving to {scrolled_position}.")
             subprocess.run(["xdotool","key","Up"],check=True)
             deadline = time.time() + 8
             while time.time() < deadline:

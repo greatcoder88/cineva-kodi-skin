@@ -125,10 +125,10 @@ class KodiManagerTests(unittest.TestCase):
 
     def test_skin_and_widget_helper_versions_are_upgradeable_and_consistent(self):
         helper = ET.parse(ROOT / "tools/script.cineva.widgets/addon.xml").getroot()
-        with ZipFile(ROOT / "skin.cineva-0.5.13.zip") as archive:
+        with ZipFile(ROOT / "skin.cineva-0.5.16.zip") as archive:
             skin = ET.fromstring(archive.read("skin.cineva/addon.xml"))
         dependency = skin.find("./requires/import[@addon='script.cineva.widgets']")
-        self.assertEqual(skin.attrib.get("version"), "0.5.13")
+        self.assertEqual(skin.attrib.get("version"), "0.5.16")
         self.assertEqual(helper.attrib.get("version"), "0.1.7")
         self.assertIsNotNone(dependency)
         self.assertEqual(dependency.attrib.get("version"), helper.attrib["version"])

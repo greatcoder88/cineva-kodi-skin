@@ -7,17 +7,20 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.13.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.16.zip"
 
 
 class HomeHeroActionTests(unittest.TestCase):
     def test_release_changelog_uses_real_line_breaks(self):
         with ZipFile(ARCHIVE) as archive:
             lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
-        self.assertEqual(lines[0], "0.5.13 - Unified catalogue navigation styling")
-        self.assertTrue(lines[1].startswith("- Match Movies and TV Shows navigation to Home with transparent inactive tabs"))
-        self.assertTrue(lines[2].startswith("- Widen long catalogue labels so Collections and Edit Widgets remain readable"))
+        self.assertEqual(lines[0], "0.5.16 - Live Home shelf position and scroll cues")
+        self.assertTrue(lines[1].startswith("- Show the focused shelf's current item and total count"))
+        self.assertTrue(lines[2].startswith("- Reveal previous and next chevrons only when the focused shelf can scroll"))
         history = {line for line in lines if line.startswith("0.5.")}
+        self.assertIn("0.5.15 - Reliable empty-state D-pad entry", history)
+        self.assertIn("0.5.14 - Catalogue empty states and contextual focus", history)
+        self.assertIn("0.5.13 - Unified catalogue navigation styling", history)
         self.assertIn("0.5.12 - Full-width Home poster rails with next-card preview", history)
         self.assertIn("0.5.11 - Restore Home shelf focus after playback", history)
         self.assertIn("0.5.10 - Reliable URL-escaped Home playback handoff", history)
@@ -327,6 +330,39 @@ class HomeHeroActionTests(unittest.TestCase):
                  for node in focus_progresses],
                 [("38", "319", "208", "5"), ("34", "335", "216", "5")],
             )
+
+    def test_home_shelves_show_live_position_and_directional_scroll_cues(self):
+        with ZipFile(ARCHIVE) as archive:
+            home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
+            rail = home.find("./controls/control[@type='grouplist'][@id='9050']")
+            self.assertIsNotNone(rail)
+            ids = []
+            for row in range(1, 5):
+                container_id = 9000 + row
+                counter_id = 9360 + (row - 1) * 3
+                group = rail.find(f"./control[@type='group'][@id='{9060 + row}']")
+                self.assertIsNotNone(group)
+                position = group.find(f"./control[@id='{counter_id}']")
+                previous = group.find(f"./control[@id='{counter_id + 1}']")
+                following = group.find(f"./control[@id='{counter_id + 2}']")
+                self.assertEqual(
+                    (position.findtext("label"), position.findtext("visible"),
+                     position.findtext("left"), position.findtext("width")),
+                    (f"$INFO[Container({container_id}).CurrentItem] / $INFO[Container({container_id}).NumItems]",
+                     f"Control.HasFocus({container_id}) + !String.IsEmpty(Container({container_id}).ListItem.Label)",
+                     "1600", "120"),
+                )
+                self.assertEqual(
+                    (previous.findtext("label"), previous.findtext("visible")),
+                    ("‹", f"Control.HasFocus({container_id}) + Container({container_id}).HasPrevious"),
+                )
+                self.assertEqual(
+                    (following.findtext("label"), following.findtext("visible")),
+                    ("›", f"Control.HasFocus({container_id}) + Container({container_id}).HasNext"),
+                )
+                ids.extend(node.get("id") for node in (position, previous, following))
+            self.assertEqual(len(ids), 12)
+            self.assertEqual(len(set(ids)), 12)
 
 
 if __name__ == "__main__":
