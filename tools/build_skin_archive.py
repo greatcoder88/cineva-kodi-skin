@@ -1561,11 +1561,6 @@ def update_xml(data, path):
                     ("SEARCH", "ActivateWindow(11112)", 75),
                 ]
                 items = tv_items if is_tv else movie_items
-                empty_button_id = "12114"
-                empty_condition = " + ".join(
-                    f"String.IsEmpty(Container({9200 + slot}).ListItem.Label)"
-                    for slot in range(1, 5)
-                )
                 for child in list(nav_group):
                     nav_group.remove(child)
                 x = 0
@@ -1587,18 +1582,15 @@ def update_xml(data, path):
                     )
                     for tag, value in specs:
                         ET.SubElement(button, tag).text = str(value)
-                    # Focus only shelves that actually contain an item. When
-                    # every configured slot is empty, move to the visible
-                    # empty-state action instead of focusing a zero-item list.
-                    ET.SubElement(button, "ondown", {
-                        "condition": empty_condition
-                    }).text = f"SetFocus({empty_button_id})"
+                    # Focus the first shelf that actually contains a title.
+                    # If every optional slot is empty, fall through to the
+                    # visible empty-state CTA instead of the nav utility tab.
                     for slot in range(1, 5):
                         down = ET.SubElement(button, "ondown", {
                             "condition": f"!String.IsEmpty(Container({9200 + slot}).ListItem.Label)"
                         })
                         down.text = "SetFocus({})".format(9200 + slot)
-                    ET.SubElement(button, "ondown").text = "SetFocus(1009)"
+                    ET.SubElement(button, "ondown").text = "SetFocus(12114)"
                     x += width + 10
                 # Keep the active catalogue section identifiable even while
                 # focus moves through the category rail. The same crimson
