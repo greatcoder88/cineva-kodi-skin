@@ -547,7 +547,7 @@ def update_xml(data, path):
         root.set("version", "0.5.23")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
-                imp.set("version", "0.1.7")
+                imp.set("version", "0.1.8")
     elif path == "skin.cineva/xml/Home.xml":
         default = root.find("defaultcontrol")
         if default is None:
@@ -2040,9 +2040,9 @@ def main():
                     if addon_root.get("version") != "0.5.23":
                         addon_root.set("version", "0.5.23")
                         changed.append(info.filename + " (bump skin version to 0.5.23)")
-                    if helper_dependency.get("version") != "0.1.7":
-                        helper_dependency.set("version", "0.1.7")
-                        changed.append(info.filename + " (require widget manager 0.1.7)")
+                    if helper_dependency.get("version") != "0.1.8":
+                        helper_dependency.set("version", "0.1.8")
+                        changed.append(info.filename + " (require widget manager 0.1.8)")
                     data = ET.tostring(addon_root, encoding="UTF-8", xml_declaration=True)
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
