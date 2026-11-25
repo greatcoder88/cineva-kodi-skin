@@ -129,7 +129,7 @@ class KodiManagerTests(unittest.TestCase):
             skin = ET.fromstring(archive.read("skin.cineva/addon.xml"))
         dependency = skin.find("./requires/import[@addon='script.cineva.widgets']")
         self.assertEqual(skin.attrib.get("version"), "0.5.9")
-        self.assertEqual(helper.attrib.get("version"), "0.1.5")
+        self.assertEqual(helper.attrib.get("version"), "0.1.6")
         self.assertIsNotNone(dependency)
         self.assertEqual(dependency.attrib.get("version"), helper.attrib["version"])
 
