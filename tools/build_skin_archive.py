@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.14.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.13.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.15.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.14.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -511,7 +511,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.14")
+        root.set("version", "0.5.15")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.7")
@@ -1761,11 +1761,11 @@ def update_xml(data, path):
 
 def main():
     # Start the new distributable version from the last published package once.
-    # Subsequent builds always transform 0.5.13 in place and remain byte-stable.
+    # Subsequent builds always transform 0.5.14 in place and remain byte-stable.
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.14.zip and migration source skin.cineva-0.5.13.zip")
+        raise SystemExit("Missing skin.cineva-0.5.15.zip and migration source skin.cineva-0.5.14.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -1846,9 +1846,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.14":
-                        addon_root.set("version", "0.5.14")
-                        changed.append(info.filename + " (bump skin version to 0.5.14)")
+                    if addon_root.get("version") != "0.5.15":
+                        addon_root.set("version", "0.5.15")
+                        changed.append(info.filename + " (bump skin version to 0.5.15)")
                     if helper_dependency.get("version") != "0.1.7":
                         helper_dependency.set("version", "0.1.7")
                         changed.append(info.filename + " (require widget manager 0.1.7)")
@@ -1856,22 +1856,22 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.14 - Catalogue empty states and contextual focus",
-                        "- Replace empty Movies and TV Shows pages with a guided widget setup state and a direct Edit Widgets action.",
-                        "- Default catalogue focus to the active Movies or TV Shows tab and skip widget shelves that contain no titles.",
+                        "0.5.15 - Reliable empty-state D-pad entry",
+                        "- Keep the guided Movies and TV Shows setup state visible when all four optional widget shelves are empty.",
+                        "- Route Down from the active section tab through populated shelves, then directly to the matching Edit Widgets action when none contain titles.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.14 - Catalogue empty states and contextual focus"):
-                        current_entry, separator, remainder = changelog.partition("0.5.13 - Unified catalogue navigation styling")
+                    if changelog.startswith("0.5.15 - Reliable empty-state D-pad entry"):
+                        current_entry, separator, remainder = changelog.partition("0.5.14 - Catalogue empty states and contextual focus")
                         if not separator:
-                            raise SystemExit("CINÉVA 0.5.14 changelog lost its 0.5.13 history entry")
+                            raise SystemExit("CINÉVA 0.5.15 changelog lost its 0.5.14 history entry")
                         if entry != current_entry:
                             data = (entry + separator + remainder).encode("utf-8")
-                            changed.append(info.filename + " (normalize 0.5.14 catalogue empty-state changelog)")
+                            changed.append(info.filename + " (normalize 0.5.15 catalogue empty-state changelog)")
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (0.5.14 catalogue empty-state release)")
+                        changed.append(info.filename + " (0.5.15 empty-state D-pad release)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:
