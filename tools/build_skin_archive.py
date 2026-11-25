@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.28.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.27.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.29.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.28.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -544,7 +544,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.28")
+        root.set("version", "0.5.29")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -1043,7 +1043,7 @@ def update_xml(data, path):
             controls.remove(heading)
             controls.remove(shelf)
             row_group = ET.Element("control", {"type": "group", "id": str(9060 + index)})
-            for tag, value in (("left", 0), ("top", 0), ("width", 1800), ("height", 480)):
+            for tag, value in (("left", 0), ("top", 0), ("width", 1800), ("height", 500)):
                 set_child_text(row_group, tag, value)
             play_id = 9111 + (index - 1) * 2
             next_target = 9000 + index + 1 if index < 4 else 1001
@@ -1058,7 +1058,7 @@ def update_xml(data, path):
             set_child_text(shelf, "left", 0)
             set_child_text(shelf, "top", 55)
             set_child_text(shelf, "width", 1800)
-            set_child_text(shelf, "height", 420)
+            set_child_text(shelf, "height", 440)
             # Keep the selected poster in a stable central lane while browsing.
             # Movement 3 lets the first/last items use the rail edges without
             # pinning every later selection to the far-left slot.
@@ -1069,7 +1069,7 @@ def update_xml(data, path):
             set_child_text(shelf, "ondown", f"SetFocus({next_target})")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
                 layout.set("width", "270")
-                layout.set("height", "420")
+                layout.set("height", "440")
             focused_layout = shelf.find("./focusedlayout")
             focused_include = focused_layout.find("include") if focused_layout is not None else None
             if focused_include is not None:
@@ -1332,7 +1332,7 @@ def update_xml(data, path):
         if normal_texture is None:
             raise SystemExit("Includes.xml normal poster image has no texture")
         normal_texture.set("fallback", "poster-placeholder.png")
-        for tag, value in (("left", 0), ("top", 302), ("width", 270), ("height", 84), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
+        for tag, value in (("left", 0), ("top", 302), ("width", 270), ("height", 108), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
             set_child_text(normal_label, tag, value)
         stale_visibility = normal_label.find("visible")
         if stale_visibility is not None:
@@ -1418,8 +1418,8 @@ def update_xml(data, path):
             set_child_text(active_image, "visible", f"Control.HasFocus({container_id})")
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
             set_child_text(fallback_progress, "visible", f"!Control.HasFocus({container_id}) + ListItem.IsResumable")
-            # Reserve an 84px focused caption area for three full lines at TV distance, ending above the row underline.
-            for tag, value in (("left", 0), ("top", 318), ("width", 270), ("height", 84), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "white")):
+            # Reserve an 108px focused caption area for three full lines at TV distance, ending above the row underline.
+            for tag, value in (("left", 0), ("top", 316), ("width", 270), ("height", 108), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
             stale_wrap = active_label.find("wrap")
             if stale_wrap is not None:
@@ -1430,7 +1430,7 @@ def update_xml(data, path):
             set_child_text(active_label, "visible", f"Control.HasFocus({container_id})")
             set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
             focus_accent = ET.Element("control", {"type": "image"})
-            for tag, value in (("left", 95), ("top", 410), ("width", 80), ("height", 4)):
+            for tag, value in (("left", 95), ("top", 430), ("width", 80), ("height", 4)):
                 set_child_text(focus_accent, tag, value)
             set_child_text(focus_accent, "texture", "focus-bar.png")
             set_child_text(focus_accent, "visible", f"Control.HasFocus({container_id})")
@@ -1988,11 +1988,11 @@ def update_xml(data, path):
 
 def main():
     # Start the new distributable version from the last published package once.
-    # Subsequent builds always transform 0.5.26 in place and remain byte-stable.
+    # Subsequent builds always transform 0.5.28 in place and remain byte-stable.
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.28.zip and migration source skin.cineva-0.5.27.zip")
+        raise SystemExit("Missing skin.cineva-0.5.29.zip and migration source skin.cineva-0.5.28.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -2076,9 +2076,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.28":
-                        addon_root.set("version", "0.5.28")
-                        changed.append(info.filename + " (bump skin version to 0.5.28)")
+                    if addon_root.get("version") != "0.5.29":
+                        addon_root.set("version", "0.5.29")
+                        changed.append(info.filename + " (bump skin version to 0.5.29)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2086,21 +2086,21 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.28 - Give Home poster titles room for three complete lines",
-                        "- Give normal and focused poster captions enough height to show three complete lines.",
-                        "- Extend poster cards and shelf rows while keeping captions clear of artwork and focus accents.",
-                        "- Preserve poster artwork, resume progress, shelf previews and D-pad navigation.",
+                        "0.5.29 - Fix three-line Home poster caption clipping",
+                        "- Give normal and focused poster titles 108px of vertical space for three full lines.",
+                        "- Extend each Home row and move the focus accent below the expanded caption.",
+                        "- Preserve poster artwork, resume progress, next-shelf previews and D-pad navigation.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.28 - Give Home poster titles room for three complete lines"):
+                    if changelog.startswith("0.5.29 - Fix three-line Home poster caption clipping"):
                         pass
-                    elif changelog.startswith("0.5.26 - Clean up Home hero progress rendering"):
+                    elif changelog.startswith("0.5.28 - Give Home poster titles room for three complete lines"):
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.28 complete Home poster caption spacing changelog)")
+                        changed.append(info.filename + " (prepend 0.5.29 three-line Home poster caption fix changelog)")
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (0.5.28 complete Home poster caption spacing release)")
+                        changed.append(info.filename + " (0.5.29 three-line Home poster caption fix release)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:
