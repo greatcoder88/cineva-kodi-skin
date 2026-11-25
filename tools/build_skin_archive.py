@@ -1158,27 +1158,35 @@ def update_xml(data, path):
             )
             if widget_hub is not None:
                 nav_group.remove(widget_hub)
-            # Find Settings by meaning rather than its old ID: after the first
-            # build it already owns 1005, so rerunning the builder must preserve it.
+            # Normalize the reclaimed slot deterministically. Older source ZIPs
+            # can contain a stale control with ID 1005 as well as a Skin Settings
+            # button; Kodi and XML lookups then resolve the wrong one.
+            nav_buttons = nav_group.findall("./control[@type='button']")
             settings_button = next(
-                (button for button in nav_group.findall("./control[@type='button']")
-                 if button.findtext("label", "").strip().upper() == "SETTINGS"),
+                (button for button in nav_buttons
+                 if button.findtext("label", "").strip().upper() == "SETTINGS"
+                 or button.findtext("onclick", "").strip() == "ActivateWindow(Settings)"),
                 None,
             )
             if settings_button is None:
-                # Create the Skin Settings destination when absent in the source ZIP.
-                settings_button = ET.Element("control", {"type": "button", "id": "1005"})
-                for tag, value in (
-                    ("left", 670), ("top", 0), ("width", 150), ("height", 48),
-                    ("font", "font12"), ("label", "SETTINGS"),
-                    ("onclick", "ActivateWindow(Settings)"),
-                ):
-                    set_child_text(settings_button, tag, value)
+                settings_button = ET.Element("control", {"type": "button"})
                 nav_group.append(settings_button)
+            for duplicate in list(nav_buttons):
+                if duplicate is not settings_button and (
+                    duplicate.get("id") in {"1005", "1006"}
+                    or duplicate.findtext("label", "").strip().upper() == "SETTINGS"
+                    or duplicate.findtext("onclick", "").strip() == "ActivateWindow(Settings)"
+                    or "ActivateWindow(11119)" in duplicate.findtext("onclick", "")
+                ):
+                    nav_group.remove(duplicate)
             settings_button.set("id", "1005")
-            set_child_text(settings_button, "left", 670)
-            set_child_text(settings_button, "width", 150)
-            set_child_text(settings_button, "onclick", "ActivateWindow(Settings)")
+            settings_button.set("type", "button")
+            for tag, value in (
+                ("left", 670), ("top", 0), ("width", 150), ("height", 48),
+                ("font", "font12"), ("label", "SETTINGS"),
+                ("onclick", "ActivateWindow(Settings)"),
+            ):
+                set_child_text(settings_button, tag, value)
             # Put the menu on the same horizontal baseline as the CINÉVA wordmark
             # instead of stacking it underneath. The right-aligned date remains
             # anchored at the far edge of the same 1080p-safe header row.
