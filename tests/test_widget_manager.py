@@ -170,16 +170,20 @@ class KodiManagerTests(unittest.TestCase):
         manager.run(action="play", container="not-a-number", path="plugin://plugin.video.pov/?action=play&id=1")
         self.assertEqual(self.played, [])
 
-    def test_entrypoint_preserves_ampersands_inside_selected_plugin_urls(self):
+    def test_entrypoint_preserves_raw_and_encoded_selected_plugin_urls(self):
         helper_root = ROOT / "tools/script.cineva.widgets"
         if str(helper_root) not in sys.path:
             sys.path.insert(0, str(helper_root))
         spec = importlib.util.spec_from_file_location("cineva_widget_entry_test", helper_root / "default.py")
         entry = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(entry)
-        raw = "action=play&container=9001&path=plugin%3A%2F%2Fplugin.video.pov%2F%3Faction%3Dplay%26id%3D1"
-        self.assertEqual(entry._args(["default.py", raw])["path"],
-                         "plugin://plugin.video.pov/?action=play&id=1")
+        expected = "plugin://plugin.video.pov/?action=play&id=1"
+        # This is the exact shape Kodi emits for the current Home $ESCINFO[]
+        # argument: nested ampersands remain raw inside the final path value.
+        raw = "action=play&container=9001&path=" + expected
+        self.assertEqual(entry._args(["default.py", raw])["path"], expected)
+        encoded = "action=play&container=9001&path=plugin%3A%2F%2Fplugin.video.pov%2F%3Faction%3Dplay%26id%3D1"
+        self.assertEqual(entry._args(["default.py", encoded])["path"], expected)
 
     def test_packaged_home_play_buttons_pass_the_selected_item_url(self):
         with ZipFile(ROOT / "skin.cineva-0.5.10.zip") as archive:
