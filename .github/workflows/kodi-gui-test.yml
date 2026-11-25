@@ -1293,14 +1293,40 @@ jobs:
             subprocess.run(["xdotool", "key", key], check=True)
             time.sleep(0.18)
 
+          nav_labels = {
+            "HOME", "MOVIES", "TV SHOWS", "ALL MOVIES", "ALL SHOWS",
+            "GENRES", "YEARS", "COLLECTIONS", "STUDIOS", "RECENT",
+            "EDIT WIDGETS", "SEARCH",
+          }
+
+          def focus_nav(label, timeout=10):
+            # Kodi restores the catalogue window to its section tab after
+            # returning from a native library window. Walk the actual D-pad
+            # chain from that restored tab instead of assuming the old focus
+            # id survives a window transition.
+            deadline = time.time() + timeout
+            state = gui()
+            while time.time() < deadline:
+              current = state.get("currentcontrol", {}).get("label", "").strip().upper()
+              if current == label.upper():
+                return state
+              if current not in nav_labels:
+                raise SystemExit(f"Catalogue returned without a usable navigation focus: {state}")
+              press("Right")
+              state = gui()
+            raise SystemExit(f"Timed out moving catalogue navigation to {label!r}: {state}")
+
           def open_native_category(page_id, label):
-            wait_for_control(label)
+            focus_nav(label)
             press("Return")
             wait_for_window(10025)
             print(f"Opened native Kodi library destination {label!r} from window {page_id}.")
             press("Escape")
-            wait_for_window(page_id)
-            print(f"Back returned to catalogue window {page_id} after {label!r}.")
+            state = wait_for_window(page_id)
+            restored = state.get("currentcontrol", {}).get("label", "").strip().upper()
+            if restored not in nav_labels:
+              raise SystemExit(f"Back returned to catalogue window {page_id} without D-pad focus: {state}")
+            print(f"Back returned to catalogue window {page_id} after {label!r}; focus restored to {restored}.")
 
           # Home -> Movies using the actual remote focus chain.
           press("Down")
@@ -1314,27 +1340,19 @@ jobs:
           # Catalogue pages default to HOME navigation so empty optional
           # widget slots never leave the remote without a focus target.
           wait_for_control("HOME")
-          for _ in range(3):
-            press("Right")
           open_native_category(11117, "ALL MOVIES")
           for label in ("GENRES", "YEARS", "COLLECTIONS", "RECENT"):
-            press("Right")
             open_native_category(11117, label)
 
           # Movies -> TV Shows, then exercise the TV-specific library nodes.
-          for _ in range(5):
-            press("Left")
-          wait_for_control("TV SHOWS")
+          focus_nav("TV SHOWS")
           press("Return")
           wait_for_window(11118)
           subprocess.run(["import", "-display", ":99", "-window", "root",
                           "artifacts/cineva-tvshows-navigation.png"], check=True)
           wait_for_control("HOME")
-          for _ in range(3):
-            press("Right")
           open_native_category(11118, "ALL SHOWS")
           for label in ("GENRES", "YEARS", "STUDIOS", "RECENT"):
-            press("Right")
             open_native_category(11118, label)
 
           # Verify the category rails still expose a complete, unique set of
