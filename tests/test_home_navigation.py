@@ -98,6 +98,23 @@ class HomeNavigationTests(unittest.TestCase):
                 self.assertEqual(len({button.get("id") for button in buttons.values()}), 10)
 
 
+    def test_catalogue_pages_keep_focus_with_empty_optional_widget_slots(self):
+        with ZipFile(ARCHIVE) as archive:
+            for filename, page_title in (
+                ("custom11117.xml", "MOVIES"),
+                ("custom11118.xml", "TV SHOWS"),
+            ):
+                root = ET.fromstring(archive.read(f"skin.cineva/xml/{filename}"))
+                self.assertEqual(root.findtext("defaultcontrol"), "1001", filename)
+                self.assertIsNone(root.find("onload"), filename)
+                title_nodes = [
+                    node for node in root.findall("./controls/control[@type='label']")
+                    if node.findtext("label", "").strip().upper() == page_title
+                ]
+                self.assertEqual(len(title_nodes), 1, filename)
+                self.assertEqual(title_nodes[0].get("id"), "9211", filename)
+
+
     def test_custom_window_xml_ids_use_kodis_home_relative_offset(self):
         # Kodi's custom-window loader registers WINDOW_HOME + the XML id.
         # Thus custom11117.xml must declare id=1117 to become window 11117.

@@ -1489,6 +1489,21 @@ def update_xml(data, path):
                     set_child_text(button, "texturenofocus", "black.png")
                     set_child_text(button, "textcolor", "white")
     elif path in {"skin.cineva/xml/custom11117.xml", "skin.cineva/xml/custom11118.xml"}:
+        # Catalogue widget slots are optional. Always land on the top navigation
+        # so an empty screen still has a valid D-pad focus target and can reach
+        # category destinations or Edit Widgets without relying on a list item.
+        default = root.find("defaultcontrol")
+        if default is None:
+            default = ET.Element("defaultcontrol")
+            root.insert(0, default)
+        default.set("always", "true")
+        default.text = "1001"
+        # The old page-level onload tried to seed Movie/TV widgets with a long
+        # semicolon-separated action string. Kodi's SplitParams rejects the
+        # unquoted plugin URL/labels, so leave optional slots genuinely empty.
+        stale_onload = root.find("onload")
+        if stale_onload is not None:
+            root.remove(stale_onload)
         # Give catalogue pages a true selected-title hero instead of a static
         # category heading over four compressed poster strips.
         is_tv = path.endswith("custom11118.xml")
@@ -1562,6 +1577,11 @@ def update_xml(data, path):
                     x += width + 10
                 nav_group.set("width", "1776")
             page_title = "TV SHOWS" if is_tv else "MOVIES"
+            # The original static page heading duplicates the generated
+            # no-selection fallback below. Keep exactly one title treatment.
+            for stale_title in list(controls.findall("./control[@type='label']")):
+                if stale_title.get("id") is None and stale_title.findtext("label", "").strip().upper() == page_title:
+                    controls.remove(stale_title)
             title = ET.Element("control", {"type": "label", "id": "9210"})
             for tag, value in {
                 "left": 72, "top": 205, "width": 1120, "height": 64,

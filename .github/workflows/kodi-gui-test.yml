@@ -1311,7 +1311,8 @@ jobs:
           wait_for_window(11117)
           subprocess.run(["import", "-display", ":99", "-window", "root",
                           "artifacts/cineva-movies-navigation.png"], check=True)
-          press("Up")
+          # Catalogue pages default to HOME navigation so empty optional
+          # widget slots never leave the remote without a focus target.
           wait_for_control("HOME")
           for _ in range(3):
             press("Right")
@@ -1328,7 +1329,6 @@ jobs:
           wait_for_window(11118)
           subprocess.run(["import", "-display", ":99", "-window", "root",
                           "artifacts/cineva-tvshows-navigation.png"], check=True)
-          press("Up")
           wait_for_control("HOME")
           for _ in range(3):
             press("Right")
