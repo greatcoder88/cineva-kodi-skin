@@ -7,17 +7,18 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.24.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.25.zip"
 
 
 class HomeHeroActionTests(unittest.TestCase):
     def test_release_changelog_uses_real_line_breaks(self):
         with ZipFile(ARCHIVE) as archive:
             lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
-        self.assertEqual(lines[0], "0.5.24 - Restore native Kodi Add-on Browser focus")
-        self.assertEqual(lines[1], "- Bind the Add-on Browser to Kodi's native list container control 50.")
-        self.assertEqual(lines[2], "- Declare view 50 so installed add-ons and repository categories receive D-pad focus.")
-        self.assertEqual(lines[3], "- Preserve the CINÉVA Settings landing page and Kodi's native add-on management.")
+        self.assertEqual(lines[0], "0.5.25 - Surface continue-watching progress in the Home hero")
+        self.assertEqual(lines[1], "- Add a per-item progress bar and watched percentage beneath the synopsis.")
+        self.assertEqual(lines[2], "- Keep the progress strip scoped to continue-watching widgets and resumable items.")
+        self.assertEqual(lines[3], "- Move hero actions down to preserve a clear synopsis, progress and action hierarchy.")
+        self.assertIn("0.5.24 - Restore native Kodi Add-on Browser focus", lines)
         self.assertIn("0.5.23 - Complete Settings and Add-ons D-pad navigation", lines)
         self.assertIn("0.5.20 - Compact Home shelves for denser browsing", lines)
         history = {line for line in lines if line.startswith("0.5.")}
@@ -53,7 +54,7 @@ class HomeHeroActionTests(unittest.TestCase):
                 self.assertEqual(
                     [(button.findtext("left"), button.findtext("top"),
                       button.findtext("width"), button.findtext("height")) for button in buttons],
-                    [("0", "240", "190", "54"), ("212", "240", "220", "54")],
+                    [("0", "260", "190", "54"), ("212", "260", "220", "54")],
                 )
                 self.assertEqual(
                     [button.findtext("texturefocus") for button in buttons],
@@ -188,6 +189,42 @@ class HomeHeroActionTests(unittest.TestCase):
                 self.assertEqual(
                     (score.findtext("left"), score.findtext("top"), score.findtext("width"), score.findtext("height")),
                     ("422", "126", "84", "32"),
+                )
+
+    def test_continue_watching_hero_exposes_item_progress_and_watched_percentage(self):
+        with ZipFile(ARCHIVE) as archive:
+            home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
+            controls = home.find("controls")
+            for index, container_id in enumerate((9001, 9002, 9003, 9004), start=1):
+                play_id = 9111 + (index - 1) * 2
+                hero = next(
+                    group for group in controls.findall("control")
+                    if group.get("type") == "group"
+                    and group.find(f"./control[@id='{play_id}']") is not None
+                )
+                expected_visible = (
+                    f"String.Contains(Skin.String(Cineva.Widget{index}.Path),in_progress)"
+                    f" + Container({container_id}).ListItem.IsResumable"
+                )
+                progress = hero.find(f"./control[@id='{9380 + index - 1}']")
+                caption = hero.find(f"./control[@id='{9384 + index - 1}']")
+                self.assertIsNotNone(progress)
+                self.assertIsNotNone(caption)
+                self.assertEqual(
+                    (progress.get("type"), progress.findtext("left"), progress.findtext("top"),
+                     progress.findtext("width"), progress.findtext("height"), progress.findtext("info"),
+                     progress.findtext("visible"), progress.findtext("texturebg"),
+                     progress.findtext("midtexture"), progress.findtext("overlaytexture")),
+                    ("progress", "0", "234", "300", "6",
+                     f"Container({container_id}).ListItem.PercentPlayed", expected_visible,
+                     "resume-track.png", "focus-bar.png", "-"),
+                )
+                self.assertEqual(
+                    (caption.get("type"), caption.findtext("left"), caption.findtext("top"),
+                     caption.findtext("width"), caption.findtext("height"), caption.findtext("font"),
+                     caption.findtext("textcolor"), caption.findtext("label"), caption.findtext("visible")),
+                    ("label", "316", "226", "210", "22", "font9", "silver",
+                     f"$INFO[Container({container_id}).ListItem.PercentPlayed]% WATCHED", expected_visible),
                 )
 
     def test_home_has_soft_right_edge_vignette_for_full_bleed_hero_art(self):

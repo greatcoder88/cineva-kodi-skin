@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.24.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.23.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.25.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.24.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -544,7 +544,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.24")
+        root.set("version", "0.5.25")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -875,7 +875,8 @@ def update_xml(data, path):
             for old_control in list(hero_group.findall("control")):
                 if old_control.get("id") in {
                     *(str(eyebrow_base_id + offset) for offset in range(3)),
-                    str(9190 + (container_id - 9001)), str(play_id), str(info_id)
+                    str(9190 + (container_id - 9001)), str(play_id), str(info_id),
+                    str(9380 + row_index - 1), str(9384 + row_index - 1)
                 }:
                     hero_group.remove(old_control)
             source_path = f"Skin.String(Cineva.Widget{row_index}.Path)"
@@ -921,6 +922,36 @@ def update_xml(data, path):
             ET.SubElement(
                 clearlogo, "aspectratio", {"align": "left", "aligny": "center"}
             ).text = "keep"
+            # Continue-watching widgets get a second, larger progress cue in the
+            # hero itself. Keep it tied to the selected item and hide it for
+            # trending/collection sources or non-resumable entries.
+            progress_visible = (
+                f"String.Contains(Skin.String(Cineva.Widget{row_index}.Path),in_progress)"
+                f" + Container({container_id}).ListItem.IsResumable"
+            )
+            hero_progress = ET.SubElement(
+                hero_group, "control", {"type": "progress", "id": str(9380 + row_index - 1)}
+            )
+            for tag, value in (
+                ("left", 0), ("top", 234), ("width", 300), ("height", 6),
+                ("info", f"Container({container_id}).ListItem.PercentPlayed"),
+                ("visible", progress_visible),
+                ("texturebg", "resume-track.png"),
+                ("midtexture", "focus-bar.png"),
+                ("overlaytexture", "-"),
+            ):
+                set_child_text(hero_progress, tag, value)
+            progress_caption = ET.SubElement(
+                hero_group, "control", {"type": "label", "id": str(9384 + row_index - 1)}
+            )
+            for tag, value in (
+                ("left", 316), ("top", 226), ("width", 210), ("height", 22),
+                ("font", "font9"), ("textcolor", "silver"),
+                ("label", f"$INFO[Container({container_id}).ListItem.PercentPlayed]% WATCHED"),
+                ("visible", progress_visible),
+                ("align", "left"), ("aligny", "center"),
+            ):
+                set_child_text(progress_caption, tag, value)
             # Use a consistent crimson primary action and a restrained dark secondary
             # surface. Nine-slice textures preserve rounded corners at 1080p and 4K.
             for button_id, label, left, width, surface in (
@@ -930,7 +961,7 @@ def update_xml(data, path):
                 button = ET.SubElement(hero_group, "control",
                                        {"type": "button", "id": str(button_id)})
                 for tag, value in (
-                    ("left", left), ("top", 240), ("width", width), ("height", 54),
+                    ("left", left), ("top", 260), ("width", width), ("height", 54),
                     ("label", label), ("font", "font10"),
                     ("onup", f"SetFocus({nav_target})"),
                     ("ondown", f"SetFocus({container_id})"),
@@ -1958,11 +1989,11 @@ def update_xml(data, path):
 
 def main():
     # Start the new distributable version from the last published package once.
-    # Subsequent builds always transform 0.5.23 in place and remain byte-stable.
+    # Subsequent builds always transform 0.5.24 in place and remain byte-stable.
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.24.zip and migration source skin.cineva-0.5.23.zip")
+        raise SystemExit("Missing skin.cineva-0.5.25.zip and migration source skin.cineva-0.5.24.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -2046,9 +2077,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.24":
-                        addon_root.set("version", "0.5.24")
-                        changed.append(info.filename + " (bump skin version to 0.5.24)")
+                    if addon_root.get("version") != "0.5.25":
+                        addon_root.set("version", "0.5.25")
+                        changed.append(info.filename + " (bump skin version to 0.5.25)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2056,21 +2087,21 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.24 - Restore native Kodi Add-on Browser focus",
-                        "- Bind the Add-on Browser to Kodi's native list container control 50.",
-                        "- Declare view 50 so installed add-ons and repository categories receive D-pad focus.",
-                        "- Preserve the CINÉVA Settings landing page and Kodi's native add-on management.",
+                        "0.5.25 - Surface continue-watching progress in the Home hero",
+                        "- Add a per-item progress bar and watched percentage beneath the synopsis.",
+                        "- Keep the progress strip scoped to continue-watching widgets and resumable items.",
+                        "- Move hero actions down to preserve a clear synopsis, progress and action hierarchy.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.24 - Restore native Kodi Add-on Browser focus"):
+                    if changelog.startswith("0.5.25 - Surface continue-watching progress in the Home hero"):
                         pass
-                    elif changelog.startswith("0.5.23 - Complete Settings and Add-ons D-pad navigation"):
+                    elif changelog.startswith("0.5.24 - Restore native Kodi Add-on Browser focus"):
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.24 native Add-on Browser focus changelog)")
+                        changed.append(info.filename + " (prepend 0.5.25 Home hero progress changelog)")
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (0.5.24 native Add-on Browser focus release)")
+                        changed.append(info.filename + " (0.5.25 Home hero progress release)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:
