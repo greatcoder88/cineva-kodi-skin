@@ -15,8 +15,9 @@ class HomeHeroActionTests(unittest.TestCase):
         with ZipFile(ARCHIVE) as archive:
             lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
         self.assertEqual(lines[0], "0.5.21 - Restore standard Kodi Settings entry point")
-        self.assertTrue(lines[1].startswith("- Reduce Home poster cards to a readable native 2:3 200×300 layout."))
-        self.assertTrue(lines[2].startswith("- Tighten shelf spacing and card widths to reveal more titles across and below the first rail."))
+        self.assertEqual(lines[1], "- Home Settings opens Kodi Settings; Skin Settings remains available inside Kodi Settings.")
+        self.assertEqual(lines[2], "- Preserve the existing navigation layout and widget configuration destinations.")
+        self.assertIn("0.5.20 - Compact Home shelves for denser browsing", lines)
         history = {line for line in lines if line.startswith("0.5.")}
         self.assertIn("0.5.19 - Refined Home navigation focus", history)
         self.assertIn("0.5.18 - Centered Home shelf focus for continuous browsing", history)
