@@ -125,7 +125,7 @@ class KodiManagerTests(unittest.TestCase):
 
     def test_skin_and_widget_helper_versions_are_upgradeable_and_consistent(self):
         helper = ET.parse(ROOT / "tools/script.cineva.widgets/addon.xml").getroot()
-        with ZipFile(ROOT / "skin.cineva-0.5.9.zip") as archive:
+        with ZipFile(ROOT / "skin.cineva-0.5.10.zip") as archive:
             skin = ET.fromstring(archive.read("skin.cineva/addon.xml"))
         dependency = skin.find("./requires/import[@addon='script.cineva.widgets']")
         self.assertEqual(skin.attrib.get("version"), "0.5.9")
@@ -177,18 +177,18 @@ class KodiManagerTests(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("cineva_widget_entry_test", helper_root / "default.py")
         entry = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(entry)
-        raw = "action=play&container=9001&path=plugin://plugin.video.pov/?action=play&id=1"
+        raw = "action=play&container=9001&path=plugin%3A%2F%2Fplugin.video.pov%2F%3Faction%3Dplay%26id%3D1"
         self.assertEqual(entry._args(["default.py", raw])["path"],
                          "plugin://plugin.video.pov/?action=play&id=1")
 
     def test_packaged_home_play_buttons_pass_the_selected_item_url(self):
-        with ZipFile(ROOT / "skin.cineva-0.5.9.zip") as archive:
+        with ZipFile(ROOT / "skin.cineva-0.5.10.zip") as archive:
             home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
         for index, container_id in enumerate((9001, 9002, 9003, 9004)):
             button_id = 9111 + index * 2
             button = home.find(f".//control[@id='{button_id}']")
             expected = (f"RunScript(script.cineva.widgets,action=play&container={container_id}"
-                        f"&path=$INFO[Container({container_id}).ListItem.File])")
+                        f"&path=$ESCINFO[Container({container_id}).ListItem.FileNameAndPath])")
             self.assertIsNotNone(button)
             self.assertEqual(button.findtext("onclick"), expected)
 
