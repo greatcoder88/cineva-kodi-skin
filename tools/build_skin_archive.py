@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.23.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.22.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.24.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.23.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -544,7 +544,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.23")
+        root.set("version", "0.5.24")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -1410,18 +1410,27 @@ def update_xml(data, path):
                 clone.append(child)
             root.append(clone)
     elif path == "skin.cineva/xml/AddonBrowser.xml":
-        # The Add-on Browser's only focusable control is the panel itself.
-        # The legacy defaultcontrol=50 points nowhere and leaves D-pad focus lost.
+        # Kodi's native Add-on Browser is a media window. Its directory items
+        # are delivered to the view container with id 50; an arbitrary id=3
+        # panel cannot receive the browser list and leaves remote focus nowhere.
         controls = root.find("controls")
         panel = controls.find("./control[@type='panel']") if controls is not None else None
-        if panel is None or not panel.get("id"):
-            raise SystemExit("AddonBrowser.xml is missing its focusable panel")
+        if panel is None:
+            raise SystemExit("AddonBrowser.xml is missing its native list panel")
+        panel.set("id", "50")
+        views = root.find("views")
+        if views is None:
+            views = ET.Element("views")
+            default = root.find("defaultcontrol")
+            insert_at = list(root).index(default) + 1 if default is not None else 0
+            root.insert(insert_at, views)
+        views.text = "50"
         default = root.find("defaultcontrol")
         if default is None:
             default = ET.Element("defaultcontrol", {"always": "true"})
             root.insert(0, default)
         default.set("always", "true")
-        default.text = panel.get("id")
+        default.text = "50"
     elif path == "skin.cineva/xml/Settings.xml":
         # Rebuild Kodi's real Settings landing page with visible, focusable
         # category cards. Add-ons and native CINÉVA Skin Settings must be
@@ -1949,11 +1958,11 @@ def update_xml(data, path):
 
 def main():
     # Start the new distributable version from the last published package once.
-    # Subsequent builds always transform 0.5.20 in place and remain byte-stable.
+    # Subsequent builds always transform 0.5.23 in place and remain byte-stable.
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.23.zip and migration source skin.cineva-0.5.22.zip")
+        raise SystemExit("Missing skin.cineva-0.5.24.zip and migration source skin.cineva-0.5.23.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -2037,9 +2046,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.23":
-                        addon_root.set("version", "0.5.23")
-                        changed.append(info.filename + " (bump skin version to 0.5.23)")
+                    if addon_root.get("version") != "0.5.24":
+                        addon_root.set("version", "0.5.24")
+                        changed.append(info.filename + " (bump skin version to 0.5.24)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2047,21 +2056,21 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.23 - Complete Settings and Add-ons D-pad navigation",
-                        "- Route both horizontal directions to the paired Settings category and preserve vertical grid wrap.",
-                        "- Focus the Add-on Browser panel itself and open native CINÉVA Skin Settings directly.",
-                        "- Keep all twelve widget slots on an explicit, wrap-safe D-pad focus path.",
+                        "0.5.24 - Restore native Kodi Add-on Browser focus",
+                        "- Bind the Add-on Browser to Kodi's native list container control 50.",
+                        "- Declare view 50 so installed add-ons and repository categories receive D-pad focus.",
+                        "- Preserve the CINÉVA Settings landing page and Kodi's native add-on management.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.23 - Complete Settings and Add-ons D-pad navigation"):
+                    if changelog.startswith("0.5.24 - Restore native Kodi Add-on Browser focus"):
                         pass
-                    elif changelog.startswith("0.5.20 - Compact Home shelves for denser browsing"):
+                    elif changelog.startswith("0.5.23 - Complete Settings and Add-ons D-pad navigation"):
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.23 Settings and Add-ons D-pad navigation changelog)")
+                        changed.append(info.filename + " (prepend 0.5.24 native Add-on Browser focus changelog)")
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (0.5.23 Settings and Add-ons D-pad navigation release)")
+                        changed.append(info.filename + " (0.5.24 native Add-on Browser focus release)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:

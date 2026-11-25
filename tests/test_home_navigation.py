@@ -5,7 +5,7 @@ from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.23.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.24.zip"
 HUB_WINDOW = "skin.cineva/xml/CinevaWidgetHub.xml"
 
 
@@ -61,13 +61,15 @@ class HomeNavigationTests(unittest.TestCase):
             self.assertEqual(button.findtext("onup"), f"SetFocus({up_id})")
             self.assertEqual(button.findtext("ondown"), f"SetFocus({down_id})")
 
-    def test_addon_browser_defaults_focus_to_its_panel(self):
+    def test_addon_browser_uses_kodis_native_media_window_view(self):
         with ZipFile(ARCHIVE) as archive:
             addon_browser = ET.fromstring(archive.read("skin.cineva/xml/AddonBrowser.xml"))
         panel = addon_browser.find("./controls/control[@type='panel']")
         self.assertIsNotNone(panel)
-        self.assertEqual(panel.get("id"), "3")
-        self.assertEqual(addon_browser.findtext("defaultcontrol"), "3")
+        self.assertEqual(panel.get("id"), "50")
+        self.assertEqual(addon_browser.findtext("defaultcontrol"), "50")
+        self.assertEqual(addon_browser.findtext("views"), "50")
+        self.assertIsNone(addon_browser.find("./controls/control[@type='panel'][@id='3']"))
 
     def test_native_skin_settings_starts_on_the_first_widget_slot(self):
         with ZipFile(ARCHIVE) as archive:

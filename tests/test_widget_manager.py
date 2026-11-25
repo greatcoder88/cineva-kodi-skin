@@ -128,15 +128,16 @@ class KodiManagerTests(unittest.TestCase):
             self.assertEqual(button.findtext("onup"), f"SetFocus({up_id})")
             self.assertEqual(button.findtext("ondown"), f"SetFocus({down_id})")
 
-    def test_addon_browser_defaults_focus_to_the_existing_panel(self):
+    def test_addon_browser_uses_kodis_native_container_id_50(self):
         builder_path = ROOT / "tools/build_skin_archive.py"
         spec = importlib.util.spec_from_file_location("cineva_builder_addon_browser", builder_path)
         builder = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(builder)
-        source = b'<window id="10040"><defaultcontrol>50</defaultcontrol><controls><control type="panel" id="3"/></controls></window>'
+        source = b'<window id="10040"><defaultcontrol>3</defaultcontrol><controls><control type="panel" id="3"/></controls></window>'
         rendered = ET.fromstring(builder.update_xml(source, "skin.cineva/xml/AddonBrowser.xml"))
-        self.assertEqual(rendered.findtext("defaultcontrol"), "3")
-        self.assertEqual(rendered.find("./controls/control[@type='panel']").get("id"), "3")
+        self.assertEqual(rendered.findtext("defaultcontrol"), "50")
+        self.assertEqual(rendered.findtext("views"), "50")
+        self.assertEqual(rendered.find("./controls/control[@type='panel']").get("id"), "50")
 
     def test_poster_fallback_is_cinematic_art_not_a_play_icon(self):
         builder_path = ROOT / "tools/build_skin_archive.py"
@@ -175,10 +176,10 @@ class KodiManagerTests(unittest.TestCase):
         self.assertIsNotNone(legacy_dependency)
         self.assertLessEqual(tuple(map(int, legacy_dependency.attrib["version"].split("."))), helper_version)
 
-        with ZipFile(ROOT / "skin.cineva-0.5.23.zip") as archive:
+        with ZipFile(ROOT / "skin.cineva-0.5.24.zip") as archive:
             current_skin = ET.fromstring(archive.read("skin.cineva/addon.xml"))
         current_dependency = current_skin.find("./requires/import[@addon='script.cineva.widgets']")
-        self.assertEqual(current_skin.attrib.get("version"), "0.5.23")
+        self.assertEqual(current_skin.attrib.get("version"), "0.5.24")
         self.assertIsNotNone(current_dependency)
         self.assertEqual(current_dependency.attrib.get("version"), helper.attrib["version"])
 

@@ -7,17 +7,18 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.23.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.24.zip"
 
 
 class HomeHeroActionTests(unittest.TestCase):
     def test_release_changelog_uses_real_line_breaks(self):
         with ZipFile(ARCHIVE) as archive:
             lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
-        self.assertEqual(lines[0], "0.5.23 - Complete Settings and Add-ons D-pad navigation")
-        self.assertEqual(lines[1], "- Route both horizontal directions to the paired Settings category and preserve vertical grid wrap.")
-        self.assertEqual(lines[2], "- Focus the Add-on Browser panel itself and open native CINÉVA Skin Settings directly.")
-        self.assertEqual(lines[3], "- Keep all twelve widget slots on an explicit, wrap-safe D-pad focus path.")
+        self.assertEqual(lines[0], "0.5.24 - Restore native Kodi Add-on Browser focus")
+        self.assertEqual(lines[1], "- Bind the Add-on Browser to Kodi's native list container control 50.")
+        self.assertEqual(lines[2], "- Declare view 50 so installed add-ons and repository categories receive D-pad focus.")
+        self.assertEqual(lines[3], "- Preserve the CINÉVA Settings landing page and Kodi's native add-on management.")
+        self.assertIn("0.5.23 - Complete Settings and Add-ons D-pad navigation", lines)
         self.assertIn("0.5.20 - Compact Home shelves for denser browsing", lines)
         history = {line for line in lines if line.startswith("0.5.")}
         self.assertIn("0.5.19 - Refined Home navigation focus", history)
