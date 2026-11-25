@@ -103,7 +103,7 @@ jobs:
           hero_meta = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Year]" in c.findtext("label", "")), None) if hero_group is not None else None
           hero_eyebrow = hero_group.find("./control[@id='9300']") if hero_group is not None else None
           hero_logo = hero_group.find("./control[@id='9190']") if hero_group is not None else None
-          if hero_group is None or hero_group.findtext("top") != "118" or hero_group.findtext("height") != "318" or hero_title is None or (hero_title.findtext("top"), hero_title.findtext("height"), hero_title.findtext("font"), hero_title.findtext("width"), hero_title.findtext("wrapmultiline"), hero_title.findtext("aligny")) != ("36", "82", "font22", "1200", "true", "center") or hero_meta is None or (hero_meta.findtext("top"), hero_meta.findtext("height"), hero_meta.findtext("font"), hero_meta.findtext("textcolor"), hero_meta.findtext("width")) != ("128", "28", "font10", "silver", "430") or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("172", "56", "font13") or hero_eyebrow is None or (hero_eyebrow.findtext("top"), hero_eyebrow.findtext("height"), hero_eyebrow.findtext("label"), hero_eyebrow.findtext("visible"), hero_eyebrow.findtext("font"), hero_eyebrow.findtext("textcolor")) != ("0", "24", "CONTINUE WATCHING", "String.Contains(Skin.String(Cineva.Widget1.Path),in_progress)", "font9", "FFE50914") or hero_logo is None or (hero_logo.findtext("top"), hero_logo.findtext("height"), hero_logo.findtext("width")) != ("36", "70", "900"):
+          if hero_group is None or hero_group.findtext("top") != "118" or hero_group.findtext("height") != "318" or hero_title is None or (hero_title.findtext("top"), hero_title.findtext("height"), hero_title.findtext("font"), hero_title.findtext("width"), hero_title.findtext("wrapmultiline"), hero_title.findtext("aligny")) != ("36", "82", "font22", "1200", "true", "center") or hero_meta is None or (hero_meta.findtext("top"), hero_meta.findtext("height"), hero_meta.findtext("font"), hero_meta.findtext("textcolor"), hero_meta.findtext("width")) != ("128", "28", "font10", "silver", "340") or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("172", "56", "font13") or hero_eyebrow is None or (hero_eyebrow.findtext("top"), hero_eyebrow.findtext("height"), hero_eyebrow.findtext("label"), hero_eyebrow.findtext("visible"), hero_eyebrow.findtext("font"), hero_eyebrow.findtext("textcolor")) != ("0", "24", "CONTINUE WATCHING", "String.Contains(Skin.String(Cineva.Widget1.Path),in_progress)", "font9", "FFE50914") or hero_logo is None or (hero_logo.findtext("top"), hero_logo.findtext("height"), hero_logo.findtext("width")) != ("36", "70", "900"):
             raise SystemExit("Home hero eyebrow, title/clearlogo, metadata and synopsis must occupy separate, title-safe vertical bands")
           if hero_title.findtext("visible") != "String.IsEmpty(Container(9001).ListItem.Art(clearlogo))" or hero_logo is None or (hero_logo.findtext("left"), hero_logo.findtext("top"), hero_logo.findtext("width"), hero_logo.findtext("height"), hero_logo.findtext("texture"), hero_logo.findtext("visible")) != ("0", "36", "900", "70", "$INFO[Container(9001).ListItem.Art(clearlogo)]", "!String.IsEmpty(Container(9001).ListItem.Art(clearlogo))") or hero_logo.find("aspectratio") is None or hero_logo.find("aspectratio").attrib != {"align": "left", "aligny": "center"} or hero_logo.findtext("aspectratio") != "keep":
             raise SystemExit("Home hero must prefer provider clearlogo artwork and retain a text-title fallback")
@@ -144,12 +144,12 @@ jobs:
             rating_logo = group.find(f"./control[@id='{rating_id + 1}']")
             rating_text = group.find(f"./control[@id='{rating_id + 2}']")
             if (rating_bg is None or rating_bg.findtext("texture") != "rating-badge.png"
-                or (rating_bg.findtext("left"), rating_bg.findtext("top"), rating_bg.findtext("width"), rating_bg.findtext("height")) != ("460", "126", "148", "32")
+                or (rating_bg.findtext("left"), rating_bg.findtext("top"), rating_bg.findtext("width"), rating_bg.findtext("height")) != ("360", "126", "148", "32")
                 or rating_logo is None or rating_logo.findtext("texture") != "imdb-logo.png"
-                or (rating_logo.findtext("left"), rating_logo.findtext("top"), rating_logo.findtext("width"), rating_logo.findtext("height")) != ("468", "130", "48", "24")
+                or (rating_logo.findtext("left"), rating_logo.findtext("top"), rating_logo.findtext("width"), rating_logo.findtext("height")) != ("368", "130", "48", "24")
                 or rating_text is None or "ListItem.Rating" not in rating_text.findtext("label", "")
                 or "★" in rating_text.findtext("label", "")
-                or (rating_text.findtext("left"), rating_text.findtext("top"), rating_text.findtext("width"), rating_text.findtext("height")) != ("522", "126", "84", "32")):
+                or (rating_text.findtext("left"), rating_text.findtext("top"), rating_text.findtext("width"), rating_text.findtext("height")) != ("422", "126", "84", "32")):
               raise SystemExit(f"Home hero {container_id} must render an IMDb-branded score chip and separate rating value")
           rating_control_ids = [node.get("id") for node in home.iter()
                                 if node.get("id") in {str(value) for value in range(9340, 9352)}]
@@ -971,7 +971,7 @@ jobs:
             # The IMDb chip now shares the metadata baseline at the right edge
             # of the text column; assert the actual rendered yellow wordmark there.
             inline_rating = subprocess.run(
-              ["convert","artifacts/cineva-home-actions.png","-crop","148x32+522+244",
+              ["convert","artifacts/cineva-home-actions.png","-crop","148x32+422+244",
                "-fx","((r>0.72)&&(g>0.40)&&(b<0.38))?1:0","-format","%[fx:mean]","info:"],
               text=True,capture_output=True,check=True
             )
