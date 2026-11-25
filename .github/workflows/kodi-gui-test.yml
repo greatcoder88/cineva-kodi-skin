@@ -922,9 +922,11 @@ jobs:
             ]
             hero_fanart_by_row = {}
             first_row_items = None
+            row_items_by_number = {}
             for row, path in enumerate(paths, 1):
               directory = rpc("Files.GetDirectory", {"directory":path,"media":"video","properties":["title","file","thumbnail","art"]})
               items = directory.get("files",[]) if isinstance(directory,dict) else []
+              row_items_by_number[row] = items
               if row == 1:
                 first_row_items = items
               posters = [item.get("thumbnail") or (item.get("art") or {}).get("poster") or (item.get("art") or {}).get("thumb") for item in items]
@@ -1309,11 +1311,11 @@ jobs:
             deadline = time.time() + 8
             while time.time() < deadline:
               state = gui()
-              if state.get("currentcontrol",{}).get("label","").strip() == "The Shawshank Redemption: Special Collector's Edition":
+              if state.get("currentcontrol",{}).get("label","").strip() == expected_focus_label:
                 break
               time.sleep(0.25)
             else:
-              raise SystemExit(f"Hero action Down did not return to the selected poster: {state}")
+              raise SystemExit(f"Hero action Down did not return to the selected poster {expected_focus_label!r}: {state}")
             # Move through every row; the grouplist must scroll the lower shelves into view.
             def verify_lower_row_bottom_clear(screenshot, row_name):
               signal = subprocess.run(
@@ -1403,7 +1405,33 @@ jobs:
                 end_y = (slide.get("end", "0,0").split(",") + ["0"])[1]
                 y += int(end_y)
               return x, y
-            expected_row_labels = {2: "Breaking Bad", 3: "The Shawshank Redemption: Special Collector's Edition", 4: "Breaking Bad"}
+            # Derive every row's initial focus from the packaged fixed-list
+            # focusposition and the corresponding POV fixture directory.
+            expected_row_labels = {}
+            for row_number in (2, 3, 4):
+              row_group = home_root.find(
+                f"./controls/control[@type='grouplist'][@id='9050']/control[@type='group'][@id='{9060 + row_number}']"
+              )
+              row_shelf = row_group.find(
+                f"./control[@type='fixedlist'][@id='{9000 + row_number}']"
+              ) if row_group is not None else None
+              row_items = row_items_by_number.get(row_number, [])
+              if row_shelf is None or not row_items:
+                raise SystemExit(f"Could not derive configured Home focus for row {row_number}")
+              row_focus_position = int(row_shelf.findtext("focusposition", "0"))
+              if not 0 <= row_focus_position < len(row_items):
+                raise SystemExit(
+                  f"Home row {row_number} focusposition {row_focus_position} "
+                  f"is outside its {len(row_items)} fixture items"
+                )
+              row_label = row_items[row_focus_position].get("label", "").strip()
+              if not row_label:
+                raise SystemExit(f"Home row {row_number} focusposition resolves to an empty label")
+              expected_row_labels[row_number] = row_label
+              print(
+                f"Expected Home row {row_number} focus: "
+                f"item {row_focus_position + 1}/{len(row_items)} — {row_label}"
+              )
             for row_number in (2, 3, 4):
               subprocess.run(["xdotool","key","Down"],check=True)
               deadline = time.time() + 10
@@ -1502,11 +1530,14 @@ jobs:
                 deadline = time.time() + 8
                 while time.time() < deadline:
                   state = gui()
-                  if state.get("currentcontrol",{}).get("label","").strip() == "Breaking Bad":
+                  if state.get("currentcontrol",{}).get("label","").strip() == expected_row_labels[2]:
                     break
                   time.sleep(0.25)
                 else:
-                  raise SystemExit(f"Row-2 More Info Down did not return to its poster: {state}")
+                  raise SystemExit(
+                    f"Row-2 More Info Down did not return to its selected poster "
+                    f"{expected_row_labels[2]!r}: {state}"
+                  )
               if row_number == 4:
                 time.sleep(0.8)
                 subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row4-scroll.png"],check=True)
