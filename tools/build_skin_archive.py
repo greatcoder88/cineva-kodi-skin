@@ -544,7 +544,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.20")
+        root.set("version", "0.5.21")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.7")
@@ -1178,7 +1178,7 @@ def update_xml(data, path):
             settings_button.set("id", "1005")
             set_child_text(settings_button, "left", 670)
             set_child_text(settings_button, "width", 150)
-            set_child_text(settings_button, "onclick", "ActivateWindow(11113)")
+            set_child_text(settings_button, "onclick", "ActivateWindow(Settings)")
             # Put the menu on the same horizontal baseline as the CINÉVA wordmark
             # instead of stacking it underneath. The right-aligned date remains
             # anchored at the far edge of the same 1080p-safe header row.
@@ -1863,11 +1863,11 @@ def update_xml(data, path):
 
 def main():
     # Start the new distributable version from the last published package once.
-    # Subsequent builds always transform 0.5.19 in place and remain byte-stable.
+    # Subsequent builds always transform 0.5.20 in place and remain byte-stable.
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.20.zip and migration source skin.cineva-0.5.19.zip")
+        raise SystemExit("Missing skin.cineva-0.5.21.zip and migration source skin.cineva-0.5.20.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -1949,9 +1949,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.20":
-                        addon_root.set("version", "0.5.20")
-                        changed.append(info.filename + " (bump skin version to 0.5.20)")
+                    if addon_root.get("version") != "0.5.21":
+                        addon_root.set("version", "0.5.21")
+                        changed.append(info.filename + " (bump skin version to 0.5.21)")
                     if helper_dependency.get("version") != "0.1.7":
                         helper_dependency.set("version", "0.1.7")
                         changed.append(info.filename + " (require widget manager 0.1.7)")

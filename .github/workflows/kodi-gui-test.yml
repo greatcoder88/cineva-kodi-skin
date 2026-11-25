@@ -26,29 +26,29 @@ jobs:
       - name: Build release ZIP, verify idempotence, and commit source fixes
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.20.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.21.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.20.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.21.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
           fi
           echo "Archive SHA-256 is stable across consecutive builds: $after"
           mkdir -p artifacts
-          cp skin.cineva-0.5.20.zip artifacts/
-          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.20.zip)" ]; then
+          cp skin.cineva-0.5.21.zip artifacts/
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.21.zip)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add skin.cineva-0.5.20.zip
-            git commit -m "Build updated CINÉVA 0.5.20 skin archive"
+            git add skin.cineva-0.5.21.zip
+            git commit -m "Build updated CINÉVA 0.5.21 skin archive"
             git push origin HEAD:main || echo "::warning::Could not push rebuilt skin ZIP; GUI test still uses the rebuilt local ZIP."
           fi
 
       - name: Expand uploaded skin archive and prepare add-ons
         run: |
           mkdir -p artifacts
-          test -s skin.cineva-0.5.20.zip
-          unzip -q skin.cineva-0.5.20.zip -d .
+          test -s skin.cineva-0.5.21.zip
+          unzip -q skin.cineva-0.5.21.zip -d .
           test -f skin.cineva/addon.xml
           test -d skin.cineva/xml
           test -f skin.cineva/xml/Home.xml
@@ -69,7 +69,7 @@ jobs:
           if any((b.findtext("label", "").strip().upper() == "MY WIDGETS" or "ActivateWindow(11119)" in b.findtext("onclick", "")) for b in nav_buttons):
             raise SystemExit("Home must not expose a separate My Widgets destination; widget slots belong in Skin Settings")
           settings = nav_group.find("./control[@id='1005']")
-          if settings is None or (settings.findtext("label"), settings.findtext("left"), settings.findtext("width"), settings.findtext("onclick")) != ("SETTINGS", "670", "150", "ActivateWindow(11113)"):
+          if settings is None or (settings.findtext("label"), settings.findtext("left"), settings.findtext("width"), settings.findtext("onclick")) != ("SETTINGS", "670", "150", "ActivateWindow(Settings)"):
             raise SystemExit("Home navigation must place the single Settings destination in the reclaimed final slot")
           if nav_group.find("./control[@id='1006']") is not None:
             raise SystemExit("Obsolete navigation control 1006 must not remain")
@@ -466,8 +466,8 @@ jobs:
           if any(button.findtext("texturefocus") != "focus-bar.png" for button in search.findall(".//control[@type='button']")):
             raise SystemExit("Search hub buttons are missing the unified focus treatment")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.20":
-            raise SystemExit("Skin archive version must be 0.5.20")
+          if skin.attrib.get("version") != "0.5.21":
+            raise SystemExit("Skin archive version must be 0.5.21")
           widget = ET.parse("tools/script.cineva.widgets/addon.xml").getroot()
           if widget.attrib.get("version") != "0.1.7":
             raise SystemExit("Widget manager version must be 0.1.7")
@@ -1784,9 +1784,11 @@ jobs:
           wait_for_window(10000)
           focus_nav("SETTINGS")
           press("Return")
-          wait_for_window(11113)
+          wait_for_window(10025)
           subprocess.run(["import", "-display", ":99", "-window", "root",
                           "artifacts/cineva-settings-navigation.png"], check=True)
+          press("Escape")
+          wait_for_window(10000)
 
           # Verify the category rails still expose a complete, unique set of
           # focusable actions in the packaged XML used by this Kodi process.

@@ -7,14 +7,14 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.20.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.21.zip"
 
 
 class HomeHeroActionTests(unittest.TestCase):
     def test_release_changelog_uses_real_line_breaks(self):
         with ZipFile(ARCHIVE) as archive:
             lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
-        self.assertEqual(lines[0], "0.5.20 - Compact Home shelves for denser browsing")
+        self.assertEqual(lines[0], "0.5.21 - Restore standard Kodi Settings entry point")
         self.assertTrue(lines[1].startswith("- Reduce Home poster cards to a readable native 2:3 200×300 layout."))
         self.assertTrue(lines[2].startswith("- Tighten shelf spacing and card widths to reveal more titles across and below the first rail."))
         history = {line for line in lines if line.startswith("0.5.")}
