@@ -1355,10 +1355,12 @@ jobs:
           for label in ("GENRES", "YEARS", "STUDIOS", "RECENT"):
             open_native_category(11118, label)
 
-          # Verify Home Search and Settings resolve to their registered custom windows.
+          # TV Shows was opened from Movies, so Back returns through Movies to Home.
+          press("Escape")
+          wait_for_window(11117)
           press("Escape")
           wait_for_window(10000)
-          wait_for_control("HOME")
+          # Home may restore its previous MOVIES/TV SHOWS tab; walk right to Search.
           focus_nav("SEARCH")
           press("Return")
           wait_for_window(11112)
