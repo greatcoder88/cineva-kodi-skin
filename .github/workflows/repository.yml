@@ -40,7 +40,7 @@ jobs:
           assert hashlib.md5(xml).hexdigest() == (root / "addons.xml.md5").read_text().strip()
           ids = {x.get("id") for x in ET.fromstring(xml).findall("addon")}
           assert ids == {"skin.cineva", "script.cineva.widgets"}, ids
-          repo_zip = root / "repository.cineva-0.1.3.zip"
+          repo_zip = root / "repository.cineva-0.1.4.zip"
           assert repo_zip.is_file(), "root-level repository installer missing"
           with ZipFile(repo_zip) as z:
               addon = ET.fromstring(z.read("repository.cineva/addon.xml"))
@@ -66,7 +66,7 @@ jobs:
                       self.links.append((self.href, "".join(self.label).strip())); self.href=None
           def links(path):
               p=Links(); p.feed(path.read_text()); return set(p.links)
-          assert ("repository.cineva-0.1.3.zip","repository.cineva-0.1.3.zip") in links(root/"index.html")
+          assert ("repository.cineva-0.1.4.zip","repository.cineva-0.1.4.zip") in links(root/"index.html")
           assert ("zips/","zips/") in links(root/"index.html")
           for addon_id in ("repository.cineva","skin.cineva","script.cineva.widgets"):
               folder=root/"zips"/addon_id
