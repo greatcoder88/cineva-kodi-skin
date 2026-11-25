@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.13.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.12.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.14.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.13.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -1512,7 +1512,9 @@ def update_xml(data, path):
             default = ET.Element("defaultcontrol")
             root.insert(0, default)
         default.set("always", "true")
-        default.text = "1001"
+        is_tv = path.endswith("custom11118.xml")
+        page_focus_id = "1003" if is_tv else "1002"
+        default.text = page_focus_id
         # The old page-level onload tried to seed Movie/TV widgets with a long
         # semicolon-separated action string. Kodi's SplitParams rejects the
         # unquoted plugin URL/labels, so leave optional slots genuinely empty.
@@ -1521,7 +1523,6 @@ def update_xml(data, path):
             root.remove(stale_onload)
         # Give catalogue pages a true selected-title hero instead of a static
         # category heading over four compressed poster strips.
-        is_tv = path.endswith("custom11118.xml")
         controls = root.find("controls")
         if controls is not None:
             # Replace the three-link utility strip with a real catalogue
@@ -1560,6 +1561,12 @@ def update_xml(data, path):
                     ("SEARCH", "ActivateWindow(11112)", 75),
                 ]
                 items = tv_items if is_tv else movie_items
+                widget_prefix = "Cineva.ShowWidget" if is_tv else "Cineva.MovieWidget"
+                empty_button_id = "12114"
+                empty_condition = " + ".join(
+                    f"String.IsEmpty(Container({9200 + slot}).ListItem.Label)"
+                    for slot in range(1, 5)
+                )
                 for child in list(nav_group):
                     nav_group.remove(child)
                 x = 0
@@ -1581,12 +1588,15 @@ def update_xml(data, path):
                     )
                     for tag, value in specs:
                         ET.SubElement(button, tag).text = str(value)
-                    # Skip empty widget slots when moving down from the rail;
-                    # if every slot is empty, land on Edit Widgets instead.
-                    widget_prefix = "Cineva.ShowWidget" if is_tv else "Cineva.MovieWidget"
+                    # Focus only shelves that actually contain an item. When
+                    # every configured slot is empty, move to the visible
+                    # empty-state action instead of focusing a zero-item list.
+                    ET.SubElement(button, "ondown", {
+                        "condition": empty_condition
+                    }).text = f"SetFocus({empty_button_id})"
                     for slot in range(1, 5):
                         down = ET.SubElement(button, "ondown", {
-                            "condition": "!String.IsEmpty(Skin.String({}{}.Path))".format(widget_prefix, slot)
+                            "condition": f"!String.IsEmpty(Container({9200 + slot}).ListItem.Label)"
                         })
                         down.text = "SetFocus({})".format(9200 + slot)
                     ET.SubElement(button, "ondown").text = "SetFocus(1009)"
@@ -1673,9 +1683,71 @@ def update_xml(data, path):
                                ("align", "left"), ("aligny", "center"),
                                ("visible", "!String.IsEmpty(Container(9201).ListItem.Rating)")):
                 ET.SubElement(rating_text, tag).text = str(value)
-            # Render hero information above the background and below focusable
-            # controls; all focus movement remains native Kodi D-pad navigation.
-            controls.extend([title, fallback, meta, logo, rating_bg, rating_logo, rating_text])
+            # A real empty state replaces the dead black catalogue page when
+            # none of the four optional widget slots returns a title. The CTA
+            # is reachable with Down from the active section tab and returns
+            # focus to that tab with Up/Left/Right.
+            empty_state_ids = {"12110", "12111", "12112", "12113", "12114"}
+            for stale in list(controls.findall("control")):
+                if stale.get("id") in empty_state_ids:
+                    controls.remove(stale)
+            empty_state_condition = " + ".join(
+                f"String.IsEmpty(Container({9200 + slot}).ListItem.Label)"
+                for slot in range(1, 5)
+            )
+            empty_eyebrow = ET.Element("control", {"type": "label", "id": "12111"})
+            for tag, value in {
+                "left": 460, "top": 402, "width": 1000, "height": 24,
+                "font": "font9", "textcolor": "FFE50914",
+                "label": "YOUR MOVIE SPACE" if not is_tv else "YOUR TV SPACE",
+                "align": "center", "aligny": "center",
+                "visible": empty_state_condition,
+            }.items():
+                ET.SubElement(empty_eyebrow, tag).text = str(value)
+            empty_title = ET.Element("control", {"type": "label", "id": "12112"})
+            for tag, value in {
+                "left": 400, "top": 438, "width": 1120, "height": 70,
+                "font": "font26", "textcolor": "white",
+                "label": "Build your movie hub" if not is_tv else "Build your series hub",
+                "align": "center", "aligny": "center",
+                "visible": empty_state_condition,
+            }.items():
+                ET.SubElement(empty_title, tag).text = str(value)
+            empty_body = ET.Element("control", {"type": "label", "id": "12113"})
+            for tag, value in {
+                "left": 540, "top": 510, "width": 840, "height": 64,
+                "font": "font13", "textcolor": "silver",
+                "label": "Choose up to four widgets from an installed video add-on, library node or playlist to fill this screen.",
+                "align": "center", "aligny": "center", "wrapmultiline": "true",
+                "visible": empty_state_condition,
+            }.items():
+                ET.SubElement(empty_body, tag).text = str(value)
+            empty_button = ET.Element("control", {"type": "button", "id": "12114"})
+            empty_action = "ActivateWindow(11116)" if is_tv else "ActivateWindow(11115)"
+            empty_label = "EDIT TV WIDGETS" if is_tv else "EDIT MOVIE WIDGETS"
+            for tag, value in (
+                ("left", 800), ("top", 608), ("width", 320), ("height", 54),
+                ("label", empty_label), ("font", "font12"),
+                ("onclick", empty_action),
+                ("onup", f"SetFocus({page_focus_id})"),
+                ("ondown", f"SetFocus({page_focus_id})"),
+                ("onleft", f"SetFocus({page_focus_id})"),
+                ("onright", f"SetFocus({page_focus_id})"),
+                ("texturefocus", "hero-primary-focus.png"),
+                ("texturenofocus", "hero-primary.png"),
+                ("textcolor", "white"), ("focusedcolor", "white"),
+                ("align", "center"), ("aligny", "center"),
+                ("visible", empty_state_condition),
+            ):
+                ET.SubElement(empty_button, tag).text = str(value)
+            empty_button.find("texturefocus").set("border", "8")
+            empty_button.find("texturenofocus").set("border", "8")
+            # Render hero information and the empty-state CTA above the
+            # background, below the navigation, with native Kodi focus.
+            controls.extend([
+                title, fallback, meta, logo, rating_bg, rating_logo, rating_text,
+                empty_eyebrow, empty_title, empty_body, empty_button,
+            ])
     elif path in {"skin.cineva/xml/custom11115.xml", "skin.cineva/xml/custom11116.xml"}:
         for node in root.findall(".//control[@type='label']"):
             if node.findtext("label", "").strip() == "किसी भी इंस्टॉल किए हुए वीडियो ऐड-ऑन, लाइब्रेरी नोड या प्लेलिस्ट से विजेट चुनें। None चुनकर विजेट हटाया जा सकता है।":
@@ -1698,11 +1770,11 @@ def update_xml(data, path):
 
 def main():
     # Start the new distributable version from the last published package once.
-    # Subsequent builds always transform 0.5.12 in place and remain byte-stable.
+    # Subsequent builds always transform 0.5.13 in place and remain byte-stable.
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.13.zip and migration source skin.cineva-0.5.12.zip")
+        raise SystemExit("Missing skin.cineva-0.5.14.zip and migration source skin.cineva-0.5.13.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -1783,9 +1855,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.13":
-                        addon_root.set("version", "0.5.13")
-                        changed.append(info.filename + " (bump skin version to 0.5.13)")
+                    if addon_root.get("version") != "0.5.14":
+                        addon_root.set("version", "0.5.14")
+                        changed.append(info.filename + " (bump skin version to 0.5.14)")
                     if helper_dependency.get("version") != "0.1.7":
                         helper_dependency.set("version", "0.1.7")
                         changed.append(info.filename + " (require widget manager 0.1.7)")
@@ -1793,22 +1865,22 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.13 - Unified catalogue navigation styling",
-                        "- Match Movies and TV Shows navigation to Home with transparent inactive tabs and a persistent crimson active-section underline.",
-                        "- Widen long catalogue labels so Collections and Edit Widgets remain readable without truncation.",
+                        "0.5.14 - Catalogue empty states and contextual focus",
+                        "- Replace empty Movies and TV Shows pages with a guided widget setup state and a direct Edit Widgets action.",
+                        "- Default catalogue focus to the active Movies or TV Shows tab and skip widget shelves that contain no titles.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.13 - Unified catalogue navigation styling"):
-                        current_entry, separator, remainder = changelog.partition("0.5.12 - Full-width Home poster rails with next-card preview")
+                    if changelog.startswith("0.5.14 - Catalogue empty states and contextual focus"):
+                        current_entry, separator, remainder = changelog.partition("0.5.13 - Unified catalogue navigation styling")
                         if not separator:
-                            raise SystemExit("CINÉVA 0.5.13 changelog lost its 0.5.12 history entry")
+                            raise SystemExit("CINÉVA 0.5.14 changelog lost its 0.5.13 history entry")
                         if entry != current_entry:
                             data = (entry + separator + remainder).encode("utf-8")
-                            changed.append(info.filename + " (normalize 0.5.13 catalogue navigation changelog)")
+                            changed.append(info.filename + " (normalize 0.5.14 catalogue empty-state changelog)")
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (0.5.13 unified catalogue navigation release)")
+                        changed.append(info.filename + " (0.5.14 catalogue empty-state release)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:
