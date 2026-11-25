@@ -1959,22 +1959,22 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.20 - Refined Home navigation focus",
-                        "- Keep the Home header transparent while moving between navigation tabs.",
-                        "- Replace full-button crimson blocks with compact, clearly tracked focus underlines.",
+                        "0.5.20 - Compact Home shelves for denser browsing",
+                        "- Reduce Home poster cards to a readable native 2:3 200×300 layout.",
+                        "- Tighten shelf spacing and card widths to reveal more titles across and below the first rail.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.20 - Refined Home navigation focus"):
-                        current_entry, separator, remainder = changelog.partition("0.5.19 - Centered Home shelf focus for continuous browsing")
+                    if changelog.startswith("0.5.20 - Compact Home shelves for denser browsing"):
+                        current_entry, separator, remainder = changelog.partition("0.5.19 - Refined Home navigation focus")
                         if not separator:
                             raise SystemExit("CINÉVA 0.5.20 changelog lost its 0.5.19 history entry")
                         if entry != current_entry:
                             data = (entry + separator + remainder).encode("utf-8")
-                            changed.append(info.filename + " (normalize 0.5.20 Home navigation changelog)")
+                            changed.append(info.filename + " (normalize 0.5.20 Home shelf changelog)")
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (0.5.20 Home navigation release)")
+                        changed.append(info.filename + " (0.5.20 Home shelf density release)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:
