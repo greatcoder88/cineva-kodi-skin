@@ -1141,7 +1141,7 @@ jobs:
                 # Measure its actual 190x54 Home geometry, not the old white button.
                 signal = subprocess.run([
                   "convert", "artifacts/cineva-home-row2-focus.png",
-                  "-crop", "190x54+60+378",
+                  "-crop", "190x54+60+358",
                   "-fx", "((r>0.55)&&(g<0.35)&&(b<0.35))?1:0",
                   "-format", "%[fx:mean]", "info:"
                 ], text=True, capture_output=True, check=True)
