@@ -69,6 +69,14 @@ def main() -> None:
     helper_version = helper_root.attrib["version"]
     skin_root = ET.fromstring(skin_xml)
     skin_version = skin_root.attrib["version"]
+    expected_skin_version = "0.5.21"
+    if skin_version != expected_skin_version:
+        raise SystemExit(
+            f"Skin archive manifest version is {skin_version!r}; "
+            f"expected {expected_skin_version!r}. Rebuild the release archive first."
+        )
+    if skin_zip.name != f"{skin_id}-{skin_version}.zip":
+        raise SystemExit(f"Skin archive filename/version mismatch: {skin_zip.name}")
     packages = [
         (skin_id, skin_version, skin_zip),
         (helper_id, helper_version, None),
@@ -78,7 +86,9 @@ def main() -> None:
     skin_package_dir = zips / skin_id
     skin_package_dir.mkdir(parents=True)
     zip_directory(helper_dir, helper_zip, helper_id)
-    shutil.copy2(skin_zip, skin_package_dir / f"{skin_id}-{skin_version}.zip")
+    # Preserve the exact tested release archive name; do not silently publish
+    # a differently-versioned package based on stale manifest metadata.
+    shutil.copy2(skin_zip, skin_package_dir / skin_zip.name)
     addons = ET.Element("addons")
     for addon_id, version, package in packages:
         raw = skin_xml if addon_id == skin_id else helper_xml_path.read_bytes()
