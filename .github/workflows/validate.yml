@@ -171,10 +171,9 @@ jobs:
               for button in buttons:
                   downs = button.findall("ondown")
                   expected = [
-                      (empty_condition, "SetFocus(12114)"),
                       *[(f"!String.IsEmpty(Container({9200 + slot}).ListItem.Label)",
                          f"SetFocus({9200 + slot})") for slot in range(1, 5)],
-                      (None, "SetFocus(1009)"),
+                      (None, "SetFocus(12114)"),
                   ]
                   if [(node.get("condition"), node.text) for node in downs] != expected:
                       errors.append(f"{filename}: {button.findtext('label')} does not skip empty shelves and focus the empty-state action")
