@@ -557,17 +557,37 @@ jobs:
           nav = next((g for g in controls.findall("control") if g.get("type") == "group" and g.find("./control[@id='1001']") is not None), None)
           if nav is None or (nav.findtext("left"), nav.findtext("top"), nav.findtext("width"), nav.findtext("height")) != ("280", "32", "1080", "48"):
               errors.append("Home navigation must share the horizontal brand/date baseline")
-          if nav is None or any(button.findtext("focusedcolor") != "white" or button.findtext("texturefocus") != "focus-bar.png" for button in nav.findall("./control[@type='button']")):
-              errors.append("Home navigation buttons need visible explicit textures and text color")
+          if nav is None or any(
+              button.findtext("focusedcolor") != "white"
+              or button.find("texturefocus") is not None
+              or button.find("texturenofocus") is not None
+              for button in nav.findall("./control[@type='button']")
+          ):
+              errors.append("Home navigation tabs must remain transparent in both focus states")
           if nav is not None:
               expected_down = {"1001": "9111", "1002": "9115", "1003": "9117"}
               for button_id, target_id in expected_down.items():
                   button = nav.find(f"./control[@id='{button_id}']")
                   if button is None or button.findtext("ondown") != f"SetFocus({target_id})":
                       errors.append(f"Home navigation button {button_id} does not enter its matching hero actions")
-              active_marker = nav.find("./control[@id='9201']")
-              if active_marker is None or active_marker.findtext("texture") != "focus-bar.png" or active_marker.findtext("visible") != "Window.IsActive(home)":
-                  errors.append("Home navigation must retain its active-section marker after focus moves into the shelves")
+              home_marker_visible = "Window.IsActive(home) + " + " + ".join(
+                  f"!Control.HasFocus({control_id})" for control_id in (1002, 1003, 1004, 1005)
+              )
+              expected_markers = {
+                  "9201": ("34", "42", "62", "4", "focus-bar.png", home_marker_visible),
+                  "9202": ("194", "42", "62", "4", "focus-bar.png", "Control.HasFocus(1002)"),
+                  "9203": ("373", "42", "74", "4", "focus-bar.png", "Control.HasFocus(1003)"),
+                  "9204": ("554", "42", "62", "4", "focus-bar.png", "Control.HasFocus(1004)"),
+                  "9205": ("714", "42", "62", "4", "focus-bar.png", "Control.HasFocus(1005)"),
+              }
+              for marker_id, expected in expected_markers.items():
+                  marker = nav.find(f"./control[@type='image'][@id='{marker_id}']")
+                  if marker is None or (
+                      marker.findtext("left"), marker.findtext("top"),
+                      marker.findtext("width"), marker.findtext("height"),
+                      marker.findtext("texture"), marker.findtext("visible")
+                  ) != expected:
+                      errors.append(f"Home navigation focus marker {marker_id} is missing or malformed")
           if controls.find("./control[@id='9010']") is not None:
               errors.append("Floating More Widgets button still obscures the fourth shelf")
           fonts = ET.parse(root / "xml/Font.xml").getroot()
