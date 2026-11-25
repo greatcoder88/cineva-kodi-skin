@@ -7,17 +7,18 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.25.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.26.zip"
 
 
 class HomeHeroActionTests(unittest.TestCase):
     def test_release_changelog_uses_real_line_breaks(self):
         with ZipFile(ARCHIVE) as archive:
             lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
-        self.assertEqual(lines[0], "0.5.25 - Surface continue-watching progress in the Home hero")
-        self.assertEqual(lines[1], "- Add a per-item progress bar and watched percentage beneath the synopsis.")
-        self.assertEqual(lines[2], "- Keep the progress strip scoped to continue-watching widgets and resumable items.")
-        self.assertEqual(lines[3], "- Move hero actions down to preserve a clear synopsis, progress and action hierarchy.")
+        self.assertEqual(lines[0], "0.5.26 - Clean up Home hero progress rendering")
+        self.assertEqual(lines[1], "- Keep the Continue Watching progress bar and watched percentage in the Home hero.")
+        self.assertEqual(lines[2], "- Remove an unused overlay texture reference to avoid missing-texture warnings.")
+        self.assertEqual(lines[3], "- Preserve the synopsis, progress and Resume/Play action hierarchy.")
+        self.assertIn("0.5.25 - Surface continue-watching progress in the Home hero", lines)
         self.assertIn("0.5.24 - Restore native Kodi Add-on Browser focus", lines)
         self.assertIn("0.5.23 - Complete Settings and Add-ons D-pad navigation", lines)
         self.assertIn("0.5.20 - Compact Home shelves for denser browsing", lines)
@@ -210,14 +211,15 @@ class HomeHeroActionTests(unittest.TestCase):
                 caption = hero.find(f"./control[@id='{9384 + index - 1}']")
                 self.assertIsNotNone(progress)
                 self.assertIsNotNone(caption)
+                self.assertIsNone(progress.find("overlaytexture"))
                 self.assertEqual(
                     (progress.get("type"), progress.findtext("left"), progress.findtext("top"),
                      progress.findtext("width"), progress.findtext("height"), progress.findtext("info"),
                      progress.findtext("visible"), progress.findtext("texturebg"),
-                     progress.findtext("midtexture"), progress.findtext("overlaytexture")),
+                     progress.findtext("midtexture")),
                     ("progress", "0", "234", "300", "6",
                      f"Container({container_id}).ListItem.PercentPlayed", expected_visible,
-                     "resume-track.png", "focus-bar.png", "-"),
+                     "resume-track.png", "focus-bar.png"),
                 )
                 self.assertEqual(
                     (caption.get("type"), caption.findtext("left"), caption.findtext("top"),

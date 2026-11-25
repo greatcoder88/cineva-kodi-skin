@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.25.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.24.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.26.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.25.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -544,7 +544,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.25")
+        root.set("version", "0.5.26")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -938,7 +938,6 @@ def update_xml(data, path):
                 ("visible", progress_visible),
                 ("texturebg", "resume-track.png"),
                 ("midtexture", "focus-bar.png"),
-                ("overlaytexture", "-"),
             ):
                 set_child_text(hero_progress, tag, value)
             progress_caption = ET.SubElement(
@@ -1989,11 +1988,11 @@ def update_xml(data, path):
 
 def main():
     # Start the new distributable version from the last published package once.
-    # Subsequent builds always transform 0.5.24 in place and remain byte-stable.
+    # Subsequent builds always transform 0.5.25 in place and remain byte-stable.
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.25.zip and migration source skin.cineva-0.5.24.zip")
+        raise SystemExit("Missing skin.cineva-0.5.26.zip and migration source skin.cineva-0.5.25.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -2077,9 +2076,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.25":
-                        addon_root.set("version", "0.5.25")
-                        changed.append(info.filename + " (bump skin version to 0.5.25)")
+                    if addon_root.get("version") != "0.5.26":
+                        addon_root.set("version", "0.5.26")
+                        changed.append(info.filename + " (bump skin version to 0.5.26)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2087,21 +2086,21 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.25 - Surface continue-watching progress in the Home hero",
-                        "- Add a per-item progress bar and watched percentage beneath the synopsis.",
-                        "- Keep the progress strip scoped to continue-watching widgets and resumable items.",
-                        "- Move hero actions down to preserve a clear synopsis, progress and action hierarchy.",
+                        "0.5.26 - Clean up Home hero progress rendering",
+                        "- Keep the Continue Watching progress bar and watched percentage in the Home hero.",
+                        "- Remove an unused overlay texture reference to avoid missing-texture warnings.",
+                        "- Preserve the synopsis, progress and Resume/Play action hierarchy.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.25 - Surface continue-watching progress in the Home hero"):
+                    if changelog.startswith("0.5.26 - Clean up Home hero progress rendering"):
                         pass
-                    elif changelog.startswith("0.5.24 - Restore native Kodi Add-on Browser focus"):
+                    elif changelog.startswith("0.5.25 - Surface continue-watching progress in the Home hero"):
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.25 Home hero progress changelog)")
+                        changed.append(info.filename + " (prepend 0.5.26 Home hero progress cleanup changelog)")
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (0.5.25 Home hero progress release)")
+                        changed.append(info.filename + " (0.5.26 Home hero progress cleanup release)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:
