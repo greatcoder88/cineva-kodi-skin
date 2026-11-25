@@ -257,8 +257,8 @@ jobs:
                   f"String.Contains(Skin.String(Cineva.Widget{container_id - 9000}.Path),in_progress)"
                   f" + Container({container_id}).ListItem.IsResumable"
               )
-              hero_progress = hero_group.find(f"./control[@id='{progress_id}']")
-              progress_caption = hero_group.find(f"./control[@id='{caption_id}']")
+              hero_progress = group.find(f"./control[@id='{progress_id}']")
+              progress_caption = group.find(f"./control[@id='{caption_id}']")
               if hero_progress is None or (
                   hero_progress.get("type"), hero_progress.findtext("left"), hero_progress.findtext("top"),
                   hero_progress.findtext("width"), hero_progress.findtext("height"), hero_progress.findtext("info"),
