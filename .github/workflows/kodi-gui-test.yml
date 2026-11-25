@@ -905,12 +905,38 @@ jobs:
             if focused_label != "The Shawshank Redemption: Special Collector's Edition":
               raise SystemExit(f"Home shelf 9001 did not focus its first item: {state}")
             print("Home poster shelf focused on:", focused_label)
-            # Save the exact focused state, then send a real X11 Return key.
-            # Kodi's JSON-RPC Input.Select returned successfully in the previous
-            # iteration but did not dispatch this list item's plugin URL; xdotool
-            # exercises the same keyboard/remote activation path as a Fire TV OK.
+            # Save the exact focused poster state, then follow the visible
+            # hero actions with real D-pad keys. Poster focus selects the title;
+            # the dedicated RESUME/PLAY button is the explicit playback action.
             subprocess.run(["import","-display",":99","-window","root",
                             "artifacts/cineva-home-poster-focused.png"],check=True)
+            subprocess.run(["xdotool","key","Up"],check=True)
+            deadline = time.time() + 8
+            while time.time() < deadline:
+              state = gui()
+              if state.get("currentcontrol",{}).get("label","").strip().upper() == "RESUME":
+                break
+              time.sleep(0.25)
+            else:
+              raise SystemExit(f"Poster Up did not focus the RESUME hero action: {state}")
+            subprocess.run(["xdotool","key","Right"],check=True)
+            deadline = time.time() + 8
+            while time.time() < deadline:
+              state = gui()
+              if state.get("currentcontrol",{}).get("label","").strip().upper() == "MORE INFO":
+                break
+              time.sleep(0.25)
+            else:
+              raise SystemExit(f"Hero Right did not focus MORE INFO: {state}")
+            subprocess.run(["xdotool","key","Left"],check=True)
+            deadline = time.time() + 8
+            while time.time() < deadline:
+              state = gui()
+              if state.get("currentcontrol",{}).get("label","").strip().upper() == "RESUME":
+                break
+              time.sleep(0.25)
+            else:
+              raise SystemExit(f"Hero Left did not return focus to RESUME: {state}")
             subprocess.run(["xdotool","key","Return"],check=True)
             playback_deadline = time.time() + 12
             while time.time() < playback_deadline:
@@ -920,11 +946,11 @@ jobs:
             else:
               state = gui()
               raise SystemExit(
-                "A real Return key on the focused Home movie poster did not invoke "
-                "the video add-on playback resolver; GUI state: {}. Log tail: {}"
+                "The focused Home RESUME/PLAY action did not invoke the video add-on "
+                "playback resolver; GUI state: {}. Log tail: {}"
                 .format(state, log_text()[-2500:])
               )
-            print("Verified Return on a Home poster reached plugin.video.pov playback resolver.")
+            print("Verified Home poster-to-hero D-pad navigation and RESUME playback through plugin.video.pov.")
             time.sleep(0.8)
             state = gui()
             if state.get("currentwindow",{}).get("id") != 10000:
