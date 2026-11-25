@@ -82,7 +82,7 @@ jobs:
           helper_version=helper.get("version")
           assert skin.get("version") == "0.5.23"
           assert dependency is not None
-          assert tuple(map(int, dependency.get("version").split("."))) <= tuple(map(int, helper_version.split(".")))
+          assert dependency.get("version") == helper_version
           helper_dir=Path("tools/script.cineva.widgets")
           helper_zip=root/"zips"/"script.cineva.widgets"/f"script.cineva.widgets-{helper_version}.zip"
           with ZipFile(helper_zip) as z:
