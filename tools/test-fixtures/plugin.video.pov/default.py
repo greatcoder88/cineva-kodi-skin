@@ -34,6 +34,13 @@ def main():
     handle = int(sys.argv[1])
     query = parse_qs(sys.argv[2].lstrip("?")) if len(sys.argv) > 2 else {}
     action = query.get("action", [""])[-1]
+    # Every fixture movie points at this add-on's /play route. Log the handoff
+    # before returning an unresolved result so GUI automation can prove that a
+    # poster SELECT reached the add-on resolver without requiring a stream.
+    if sys.argv[0].rstrip("/").endswith("/play"):
+        xbmc.log("CINEVA_TEST_PLAY_RESOLVER_INVOKED", xbmc.LOGINFO)
+        xbmcplugin.setResolvedUrl(handle, False, xbmcgui.ListItem())
+        return
     is_tv = "tv" in action or "tvshow" in action
     records = SHOWS if is_tv else MOVIES
     addon_path = xbmcaddon.Addon().getAddonInfo("path")

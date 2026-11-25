@@ -889,6 +889,21 @@ jobs:
             if focused_label != "The Shawshank Redemption: Special Collector's Edition":
               raise SystemExit(f"Home shelf 9001 did not focus its first item: {state}")
             print("Home poster shelf focused on:", focused_label)
+            # Selecting a playable poster must dispatch its plugin:// URL to the
+            # owning video add-on. This exercises Kodi's activation path rather
+            # than only checking artwork and focus.
+            rpc("Input.Select")
+            playback_deadline = time.time() + 12
+            while time.time() < playback_deadline:
+              if "CINEVA_TEST_PLAY_RESOLVER_INVOKED" in log_text():
+                break
+              time.sleep(0.25)
+            else:
+              raise SystemExit(
+                "Selecting a Home movie poster did not invoke the video add-on "
+                "playback resolver; the widget is visually populated but not playable"
+              )
+            print("Verified poster activation reached plugin.video.pov playback resolver.")
             time.sleep(0.8)
             subprocess.run(["import","-display",":99","-window","root",f"artifacts/cineva-home-cycle-{cycle}.png"],check=True)
             if cycle == 1:
