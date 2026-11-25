@@ -83,12 +83,11 @@ class HomeNavigationTests(unittest.TestCase):
                     self.assertEqual(button.findtext("label"), label)
                     self.assertEqual(button.findtext("onclick"), action)
                     down_actions = button.findall("ondown")
-                    widget_prefix = "Cineva.ShowWidget" if filename == "custom11118.xml" else "Cineva.MovieWidget"
                     self.assertEqual(
                         [(node.get("condition"), node.text) for node in down_actions],
                         [
-                            ("!String.IsEmpty(Skin.String({}{}.Path))".format(widget_prefix, slot),
-                             "SetFocus({})".format(9200 + slot))
+                            (f"!String.IsEmpty(Container({9200 + slot}).ListItem.Label)",
+                             f"SetFocus({9200 + slot})")
                             for slot in range(1, 5)
                         ] + [(None, "SetFocus(1009)")],
                     )
@@ -106,7 +105,8 @@ class HomeNavigationTests(unittest.TestCase):
                 ("custom11118.xml", "TV SHOWS"),
             ):
                 root = ET.fromstring(archive.read(f"skin.cineva/xml/{filename}"))
-                self.assertEqual(root.findtext("defaultcontrol"), "1001", filename)
+                expected_default = "1002" if filename == "custom11117.xml" else "1003"
+                self.assertEqual(root.findtext("defaultcontrol"), expected_default, filename)
                 self.assertIsNone(root.find("onload"), filename)
                 title_nodes = [
                     node for node in root.findall("./controls/control[@type='label']")
