@@ -73,7 +73,24 @@ jobs:
               assert files, f"missing ZIP in {folder}"
               found=links(folder/"index.html")
               assert all((f.name,f.name) in found for f in files), (addon_id,found)
-          print("CINÉVA feed URLs, installer ZIP, checksums and browsable indexes validated.")
+          skin_zip=root/"zips"/"skin.cineva"/"skin.cineva-0.5.11.zip"
+          with ZipFile(skin_zip) as z:
+              skin=ET.fromstring(z.read("skin.cineva/addon.xml"))
+          dependency=skin.find("./requires/import[@addon='script.cineva.widgets']")
+          assert skin.get("version") == "0.5.11"
+          assert dependency is not None and dependency.get("version") == "0.1.7"
+          helper_dir=Path("tools/script.cineva.widgets")
+          helper_zip=root/"zips"/"script.cineva.widgets"/"script.cineva.widgets-0.1.7.zip"
+          expected={
+              "script.cineva.widgets/"+p.relative_to(helper_dir).as_posix():p.read_bytes()
+              for p in helper_dir.rglob("*") if p.is_file()
+          }
+          with ZipFile(helper_zip) as z:
+              packaged={name for name in z.namelist() if not name.endswith("/")}
+              assert packaged == set(expected), (packaged, set(expected))
+              for name, data in expected.items():
+                  assert z.read(name) == data, f"packaged helper differs from source: {name}"
+          print("CINÉVA feed, skin/helper dependency versions, and every packaged helper source file validated byte-for-byte.")
           PY
       - name: Publish browsable repository to GitHub Pages branch
         uses: peaceiris/actions-gh-pages@v4

@@ -125,11 +125,11 @@ class KodiManagerTests(unittest.TestCase):
 
     def test_skin_and_widget_helper_versions_are_upgradeable_and_consistent(self):
         helper = ET.parse(ROOT / "tools/script.cineva.widgets/addon.xml").getroot()
-        with ZipFile(ROOT / "skin.cineva-0.5.10.zip") as archive:
+        with ZipFile(ROOT / "skin.cineva-0.5.11.zip") as archive:
             skin = ET.fromstring(archive.read("skin.cineva/addon.xml"))
         dependency = skin.find("./requires/import[@addon='script.cineva.widgets']")
-        self.assertEqual(skin.attrib.get("version"), "0.5.10")
-        self.assertEqual(helper.attrib.get("version"), "0.1.6")
+        self.assertEqual(skin.attrib.get("version"), "0.5.11")
+        self.assertEqual(helper.attrib.get("version"), "0.1.7")
         self.assertIsNotNone(dependency)
         self.assertEqual(dependency.attrib.get("version"), helper.attrib["version"])
 
@@ -161,6 +161,15 @@ class KodiManagerTests(unittest.TestCase):
         path = "plugin://plugin.video.pov/?action=play&id=1"
         self.module.WidgetManager().run(action="play", container="9002", path=path)
         self.assertEqual(self.played, [path])
+        self.assertEqual(self.builtins, ["SetFocus(9002)"])
+
+    def test_play_action_restores_focus_for_all_home_shelves(self):
+        path = "plugin://plugin.video.pov/?action=play&id=1"
+        for container_id in (9001, 9002, 9003, 9004):
+            self.builtins.clear()
+            self.module.WidgetManager().run(action="play", container=str(container_id), path=path)
+            self.assertEqual(self.builtins, [f"SetFocus({container_id})"])
+        self.assertEqual(self.played, [path] * 4)
 
     def test_play_action_rejects_invalid_container_empty_and_unexpanded_info_labels(self):
         manager = self.module.WidgetManager()
@@ -186,7 +195,7 @@ class KodiManagerTests(unittest.TestCase):
         self.assertEqual(entry._args(["default.py", encoded])["path"], expected)
 
     def test_packaged_home_play_buttons_pass_the_selected_item_url(self):
-        with ZipFile(ROOT / "skin.cineva-0.5.10.zip") as archive:
+        with ZipFile(ROOT / "skin.cineva-0.5.11.zip") as archive:
             home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
         for index, container_id in enumerate((9001, 9002, 9003, 9004)):
             button_id = 9111 + index * 2

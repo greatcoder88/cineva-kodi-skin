@@ -253,6 +253,9 @@ class WidgetManager:
             xbmc.log('CINEVA_WIDGETS_PLAY_REQUEST container={} path={}'.format(container_id, play_path),
                      xbmc.LOGINFO)
             xbmc.Player().play(play_path)
+            # Keep the originating shelf selected when Kodi returns from a
+            # plugin resolver that does not start media (and after playback ends).
+            xbmc.executebuiltin('SetFocus({})'.format(container_id))
             return
 
         registry = self.load()
