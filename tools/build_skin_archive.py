@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.17.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.16.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.18.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.17.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -544,7 +544,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.17")
+        root.set("version", "0.5.18")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.7")
@@ -1029,6 +1029,11 @@ def update_xml(data, path):
             set_child_text(shelf, "top", 60)
             set_child_text(shelf, "width", 1800)
             set_child_text(shelf, "height", 430)
+            # Keep the selected poster in a stable central lane while browsing.
+            # Movement 3 lets the first/last items use the rail edges without
+            # pinning every later selection to the far-left slot.
+            set_child_text(shelf, "focusposition", 3)
+            set_child_text(shelf, "movement", 3)
             set_child_text(shelf, "itemgap", 14)
             set_child_text(shelf, "onup", f"SetFocus({play_id})")
             set_child_text(shelf, "ondown", f"SetFocus({next_target})")
@@ -1842,7 +1847,7 @@ def main():
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.17.zip and migration source skin.cineva-0.5.16.zip")
+        raise SystemExit("Missing skin.cineva-0.5.18.zip and migration source skin.cineva-0.5.17.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -1924,9 +1929,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.17":
-                        addon_root.set("version", "0.5.17")
-                        changed.append(info.filename + " (bump skin version to 0.5.16)")
+                    if addon_root.get("version") != "0.5.18":
+                        addon_root.set("version", "0.5.18")
+                        changed.append(info.filename + " (bump skin version to 0.5.18)")
                     if helper_dependency.get("version") != "0.1.7":
                         helper_dependency.set("version", "0.1.7")
                         changed.append(info.filename + " (require widget manager 0.1.7)")
@@ -1934,22 +1939,22 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.17 - Polished live Home shelf navigation",
-                        "- Group the focused shelf counter and directional cues inside a compact glass capsule.",
-                        "- Keep the capsule hidden on inactive or empty shelves while retaining live previous/next availability.",
+                        "0.5.18 - Centered Home shelf focus for continuous browsing",
+                        "- Keep the selected poster in a stable central lane as each Home shelf scrolls.",
+                        "- Preserve nearby poster context with edge-aware movement at the beginning and end of every rail.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.17 - Polished live Home shelf navigation"):
-                        current_entry, separator, remainder = changelog.partition("0.5.16 - Live Home shelf position and scroll cues")
+                    if changelog.startswith("0.5.18 - Centered Home shelf focus for continuous browsing"):
+                        current_entry, separator, remainder = changelog.partition("0.5.17 - Polished live Home shelf navigation")
                         if not separator:
-                            raise SystemExit("CINÉVA 0.5.17 changelog lost its 0.5.16 history entry")
+                            raise SystemExit("CINÉVA 0.5.18 changelog lost its 0.5.17 history entry")
                         if entry != current_entry:
                             data = (entry + separator + remainder).encode("utf-8")
-                            changed.append(info.filename + " (normalize 0.5.17 Home shelf navigation changelog)")
+                            changed.append(info.filename + " (normalize 0.5.18 Home shelf browsing changelog)")
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (0.5.17 Home shelf navigation release)")
+                        changed.append(info.filename + " (0.5.18 Home shelf browsing release)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:

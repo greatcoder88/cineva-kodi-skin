@@ -7,17 +7,18 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.17.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.18.zip"
 
 
 class HomeHeroActionTests(unittest.TestCase):
     def test_release_changelog_uses_real_line_breaks(self):
         with ZipFile(ARCHIVE) as archive:
             lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
-        self.assertEqual(lines[0], "0.5.17 - Polished live Home shelf navigation")
-        self.assertTrue(lines[1].startswith("- Group the focused shelf counter and directional cues"))
-        self.assertTrue(lines[2].startswith("- Keep the capsule hidden on inactive or empty shelves"))
+        self.assertEqual(lines[0], "0.5.18 - Centered Home shelf focus for continuous browsing")
+        self.assertTrue(lines[1].startswith("- Keep the selected poster in a stable central lane"))
+        self.assertTrue(lines[2].startswith("- Preserve nearby poster context with edge-aware movement"))
         history = {line for line in lines if line.startswith("0.5.")}
+        self.assertIn("0.5.17 - Polished live Home shelf navigation", history)
         self.assertIn("0.5.16 - Live Home shelf position and scroll cues", history)
         self.assertIn("0.5.15 - Reliable empty-state D-pad entry", history)
         self.assertIn("0.5.14 - Catalogue empty states and contextual focus", history)
@@ -331,6 +332,22 @@ class HomeHeroActionTests(unittest.TestCase):
                  for node in focus_progresses],
                 [("38", "319", "208", "5"), ("34", "335", "216", "5")],
             )
+
+    def test_home_shelves_keep_focus_in_a_stable_browsing_lane(self):
+        with ZipFile(ARCHIVE) as archive:
+            home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
+            rail = home.find("./controls/control[@type='grouplist'][@id='9050']")
+            self.assertIsNotNone(rail)
+            for row in range(1, 5):
+                shelf = rail.find(
+                    f"./control[@type='group'][@id='{9060 + row}']"
+                    f"/control[@type='fixedlist'][@id='{9000 + row}']"
+                )
+                self.assertIsNotNone(shelf, f"Home shelf {row} is missing")
+                self.assertEqual(shelf.findtext("focusposition"), "3",
+                                 f"Home shelf {row} must keep focus in the central browsing lane")
+                self.assertEqual(shelf.findtext("movement"), "3",
+                                 f"Home shelf {row} must retain edge-aware movement")
 
     def test_home_shelves_show_live_position_and_directional_scroll_cues(self):
         with ZipFile(ARCHIVE) as archive:
