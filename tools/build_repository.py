@@ -69,7 +69,7 @@ def main() -> None:
     helper_version = helper_root.attrib["version"]
     skin_root = ET.fromstring(skin_xml)
     skin_version = skin_root.attrib["version"]
-    expected_skin_version = "0.5.28"
+    expected_skin_version = "0.5.29"
     if skin_version != expected_skin_version:
         raise SystemExit(
             f"Skin archive manifest version is {skin_version!r}; "
