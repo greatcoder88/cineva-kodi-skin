@@ -425,8 +425,8 @@ jobs:
                   errors.append(f"Home row {container_id} must retain its text title only when clearlogo art is absent")
               if clearlogo is None or clearlogo.get("type") != "image" or (clearlogo.findtext("left"), clearlogo.findtext("top"), clearlogo.findtext("width"), clearlogo.findtext("height"), clearlogo.findtext("texture"), clearlogo.findtext("visible")) != ("0", "36", "900", "70", f"$INFO[{clearlogo_info}]", f"!String.IsEmpty({clearlogo_info})") or aspect is None or aspect.attrib != {"align": "left", "aligny": "center"} or aspect.text != "keep":
                   errors.append(f"Home row {container_id} is missing its title-slot clearlogo image and proportional sizing")
-              if buttons[0].findtext("onclick") != f"PlayMedia($INFO[Container({container_id}).ListItem.File])":
-                  errors.append(f"Home row {container_id} PLAY action is not bound to its selected item")
+              if [node.text for node in buttons[0].findall("onclick")] != [f"SetFocus({container_id})", "Action(Select)"]:
+                  errors.append(f"Home row {container_id} PLAY action does not activate its selected shelf item")
               if [node.text for node in buttons[1].findall("onclick")] != [f"SetFocus({container_id})", "Action(Info)"]:
                   errors.append(f"Home row {container_id} MORE INFO action is not bound to its selected item")
               if [button.findtext("texturefocus") for button in buttons] != ["hero-primary-focus.png", "hero-secondary-focus.png"] or [button.findtext("texturenofocus") for button in buttons] != ["hero-primary.png", "hero-secondary.png"] or [button.findtext("textcolor") for button in buttons] != ["white", "white"] or any(button.find("texturefocus") is None or button.find("texturefocus").attrib.get("border") != "8" or button.find("texturenofocus") is None or button.find("texturenofocus").attrib.get("border") != "8" for button in buttons):
