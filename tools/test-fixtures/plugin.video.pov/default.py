@@ -38,7 +38,7 @@ def main():
     # before returning an unresolved result so GUI automation can prove that a
     # poster SELECT reached the add-on resolver without requiring a stream.
     if sys.argv[0].rstrip("/").endswith("/play"):
-        xbmc.log("CINEVA_TEST_PLAY_RESOLVER_INVOKED", xbmc.LOGINFO)
+        xbmc.log("CINEVA_TEST_PLAY_RESOLVER_INVOKED url={}".format(sys.argv[0]), xbmc.LOGINFO)
         xbmcplugin.setResolvedUrl(handle, False, xbmcgui.ListItem())
         return
     is_tv = "tv" in action or "tvshow" in action
