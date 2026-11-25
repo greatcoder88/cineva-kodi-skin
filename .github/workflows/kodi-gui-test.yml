@@ -1557,11 +1557,11 @@ jobs:
               f"String.IsEmpty(Container({9200 + slot}).ListItem.Label)"
               for slot in range(1, 5)
             )
-            expected_down = [(empty_condition, "SetFocus(12114)")] + [
+            expected_down = [
               (f"!String.IsEmpty(Container({9200 + slot}).ListItem.Label)",
                f"SetFocus({9200 + slot})")
               for slot in range(1, 5)
-            ] + [(None, "SetFocus(1009)")]
+            ] + [(None, "SetFocus(12114)")]
             for label, action in expected_actions.items():
               button = buttons.get(label)
               if button is None or button.findtext("onclick") != action:
