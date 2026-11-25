@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.8.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.7.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.9.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.8.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -511,10 +511,10 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.8")
+        root.set("version", "0.5.9")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
-                imp.set("version", "0.1.4")
+                imp.set("version", "0.1.5")
     elif path == "skin.cineva/xml/Home.xml":
         default = root.find("defaultcontrol")
         if default is None:
@@ -908,12 +908,12 @@ def update_xml(data, path):
                 button.find("texturefocus").set("border", "8")
                 button.find("texturenofocus").set("border", "8")
                 if button_id == play_id:
-                    # RunScript hands playback to Kodi's Python Player API. Kodi's
-                    # skin action parser does not resolve PlayMedia($INFO[...])
-                    # here, and changing focus before Action(Select) can race.
+                    # Resolve the selected list item's file in the skin context,
+                    # then pass it as the final RunScript argument. The helper
+                    # preserves the raw tail so plugin URLs containing '&' survive.
                     set_child_text(
                         button, "onclick",
-                        f"RunScript(script.cineva.widgets,action=play&container={container_id})"
+                        f"RunScript(script.cineva.widgets,action=play&container={container_id}&path=$INFO[Container({container_id}).ListItem.File])"
                     )
                 else:
                     set_child_text(button, "onclick", f"SetFocus({container_id})")
@@ -1679,11 +1679,11 @@ def update_xml(data, path):
 
 def main():
     # Start the new distributable version from the last published package once.
-    # Subsequent builds always transform 0.5.8 in place and remain byte-stable.
+    # Subsequent builds always transform 0.5.9 in place and remain byte-stable.
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.8.zip and migration source skin.cineva-0.5.7.zip")
+        raise SystemExit("Missing skin.cineva-0.5.9.zip and migration source skin.cineva-0.5.8.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -1758,27 +1758,23 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.8 - Reliable Home hero playback handoff",
-                        "- Route Home Resume/Play through the widget manager and Kodi Player API.",
-                        "- Preserve the selected shelf item's plugin URL so video add-on resolvers receive playback requests.",
+                        "0.5.9 - Preserve selected Home playback URLs",
+                        "- Pass the focused shelf item's resolved plugin URL into the widget manager.",
+                        "- Preserve ampersand-delimited plugin query parameters before Kodi Player playback.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.8 - Reliable Home hero playback handoff"):
-                        current_entry, separator, remainder = changelog.partition("0.5.7 - Reliable remote focus and skin handoff")
+                    if changelog.startswith("0.5.9 - Preserve selected Home playback URLs"):
+                        current_entry, separator, remainder = changelog.partition("0.5.8 - Reliable Home hero playback handoff")
                         if not separator:
-                            raise SystemExit("CINÉVA 0.5.8 changelog lost its 0.5.7 history entry")
-                        # Replace the whole current release entry with its canonical
-                        # source form. Earlier 0.5.8 attempts appended old 0.5.7
-                        # bullets to this section; normalizing the complete block
-                        # makes consecutive package builds byte-for-byte stable.
+                            raise SystemExit("CINÉVA 0.5.9 changelog lost its 0.5.8 history entry")
                         normalized_entry = entry
                         if normalized_entry != current_entry:
                             data = (normalized_entry + separator + remainder).encode("utf-8")
-                            changed.append(info.filename + " (normalize 0.5.8 Home playback changelog)")
+                            changed.append(info.filename + " (normalize 0.5.9 playback URL changelog)")
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (0.5.8 Home playback release)")
+                        changed.append(info.filename + " (0.5.9 playback URL release)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:

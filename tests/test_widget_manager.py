@@ -125,11 +125,11 @@ class KodiManagerTests(unittest.TestCase):
 
     def test_skin_and_widget_helper_versions_are_upgradeable_and_consistent(self):
         helper = ET.parse(ROOT / "tools/script.cineva.widgets/addon.xml").getroot()
-        with ZipFile(ROOT / "skin.cineva-0.5.8.zip") as archive:
+        with ZipFile(ROOT / "skin.cineva-0.5.9.zip") as archive:
             skin = ET.fromstring(archive.read("skin.cineva/addon.xml"))
         dependency = skin.find("./requires/import[@addon='script.cineva.widgets']")
-        self.assertEqual(skin.attrib.get("version"), "0.5.8")
-        self.assertEqual(helper.attrib.get("version"), "0.1.4")
+        self.assertEqual(skin.attrib.get("version"), "0.5.9")
+        self.assertEqual(helper.attrib.get("version"), "0.1.5")
         self.assertIsNotNone(dependency)
         self.assertEqual(dependency.attrib.get("version"), helper.attrib["version"])
 
@@ -157,19 +157,40 @@ class KodiManagerTests(unittest.TestCase):
         finally:
             self.module.xbmc.executeJSONRPC = original
 
-    def test_play_action_uses_selected_container_item_with_kodi_player(self):
+    def test_play_action_uses_the_resolved_selected_plugin_url(self):
         path = "plugin://plugin.video.pov/?action=play&id=1"
-        self.info_labels["Container(9002).ListItem.File"] = path
-        self.module.WidgetManager().run(action="play", container="9002")
+        self.module.WidgetManager().run(action="play", container="9002", path=path)
         self.assertEqual(self.played, [path])
 
-    def test_play_action_rejects_invalid_container_and_empty_item(self):
-        self.info_labels["Container(9001).ListItem.File"] = ""
+    def test_play_action_rejects_invalid_container_empty_and_unexpanded_info_labels(self):
         manager = self.module.WidgetManager()
-        manager.run(action="play", container="9999")
-        manager.run(action="play", container="9001")
-        manager.run(action="play", container="not-a-number")
+        manager.run(action="play", container="9999", path="plugin://plugin.video.pov/?action=play&id=1")
+        manager.run(action="play", container="9001", path="")
+        manager.run(action="play", container="9001", path="Container(9001).ListItem.File")
+        manager.run(action="play", container="not-a-number", path="plugin://plugin.video.pov/?action=play&id=1")
         self.assertEqual(self.played, [])
+
+    def test_entrypoint_preserves_ampersands_inside_selected_plugin_urls(self):
+        helper_root = ROOT / "tools/script.cineva.widgets"
+        if str(helper_root) not in sys.path:
+            sys.path.insert(0, str(helper_root))
+        spec = importlib.util.spec_from_file_location("cineva_widget_entry_test", helper_root / "default.py")
+        entry = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(entry)
+        raw = "action=play&container=9001&path=plugin://plugin.video.pov/?action=play&id=1"
+        self.assertEqual(entry._args(["default.py", raw])["path"],
+                         "plugin://plugin.video.pov/?action=play&id=1")
+
+    def test_packaged_home_play_buttons_pass_the_selected_item_url(self):
+        with ZipFile(ROOT / "skin.cineva-0.5.9.zip") as archive:
+            home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
+        for index, container_id in enumerate((9001, 9002, 9003, 9004)):
+            button_id = 9111 + index * 2
+            button = home.find(f".//control[@id='{button_id}']")
+            expected = (f"RunScript(script.cineva.widgets,action=play&container={container_id}"
+                        f"&path=$INFO[Container({container_id}).ListItem.File])")
+            self.assertIsNotNone(button)
+            self.assertEqual(button.findtext("onclick"), expected)
 
     def test_screens_are_only_home_movies_tvshows(self):
         self.assertEqual(set(self.module.SCREENS), {"home", "movies", "tvshows"})

@@ -11,7 +11,7 @@ CINÉVA is an independent, remote-first cinematic Kodi skin. Kodi video add-ons 
 
 ## Product surface
 
-- Cinematic Home hero driven by the focused item, with a bold 40px ExtraBold text-title fallback, clearlogo support and fanart/poster fallback.
+- Cinematic Home hero driven by the focused item, with a bold 40px ExtraBold text-title fallback, clearlogo support, fanart/poster fallback and a selected-item plugin URL playback handoff.
 - Four configurable widget slots on each of Home, Movies and TV Shows.
 - Movies and TV Shows catalogue rails with direct Kodi library shortcuts for titles, genres, years, movie sets, TV studios and recently added items; D-pad left/right paths are explicit.
 - First-install Home defaults: Continue Watching Movies, In Progress Shows, Trending Movies and Trending TV Shows (POV paths).
@@ -42,7 +42,7 @@ GitHub Actions validates XML/assets/package structure, unit tests the widget man
 
 ## Release status
 
-**Not yet certified production-ready.** The merged main branch has passed the current automated checks and Linux Kodi Piers GUI smoke test. The remaining release gates are:
+**Not yet certified production-ready.** Automated checks and the Linux Kodi Piers GUI smoke test provide useful regression coverage, but neither certifies every add-on or physical device. The remaining release gates are:
 
 1. Interactive Kodi validation of all 12 slots: browse, select, replace, clear, persistence, restart and intentionally empty slots.
 2. Real POV and Umbrella validation on the exact installed add-on versions, including their directory responses and resulting shelf rendering.
@@ -53,7 +53,7 @@ A Linux GUI pass is useful evidence, not a substitute for these checks. Do not p
 
 ## Repository layout
 
-- `skin.cineva-0.5.8.zip` — distributable skin package.
+- `skin.cineva-0.5.9.zip` — distributable skin package.
 - `tools/build_skin_archive.py` — deterministic package builder and source patcher.
 - `tools/script.cineva.widgets/` — per-screen widget source picker.
 - `tests/` and `.github/workflows/` — automated validation.

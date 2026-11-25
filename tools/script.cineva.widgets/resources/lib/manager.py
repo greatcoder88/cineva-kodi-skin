@@ -232,7 +232,7 @@ class WidgetManager:
                 return
             self.configure_slot(registry, screen, picked + 1)
 
-    def run(self, action='manage', screen='home', slot=1, container='9001'):
+    def run(self, action='manage', screen='home', slot=1, container='9001', path=''):
         if action == 'play':
             try:
                 container_id = int(container)
@@ -244,15 +244,15 @@ class WidgetManager:
                 xbmc.log('CINEVA_WIDGETS: ignoring out-of-range playback container {}'.format(container_id),
                          xbmc.LOGWARNING)
                 return
-            label = 'Container({}).ListItem.File'.format(container_id)
-            path = (xbmc.getInfoLabel(label) or '').strip()
-            if not path:
-                xbmc.log('CINEVA_WIDGETS: no playable item in container {}'.format(container_id),
+            play_path = str(path or '').strip()
+            if (not play_path or play_path.startswith('Container(')
+                    or '.ListItem.File' in play_path):
+                xbmc.log('CINEVA_WIDGETS: no resolved playable URL for container {}'.format(container_id),
                          xbmc.LOGWARNING)
                 return
-            xbmc.log('CINEVA_WIDGETS_PLAY_REQUEST container={} path={}'.format(container_id, path),
+            xbmc.log('CINEVA_WIDGETS_PLAY_REQUEST container={} path={}'.format(container_id, play_path),
                      xbmc.LOGINFO)
-            xbmc.Player().play(path)
+            xbmc.Player().play(play_path)
             return
 
         registry = self.load()
