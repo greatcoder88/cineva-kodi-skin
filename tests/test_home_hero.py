@@ -61,6 +61,19 @@ class HomeHeroActionTests(unittest.TestCase):
                     (32, 32),
                 )
 
+    def test_hero_play_actions_activate_the_native_focused_list_item(self):
+        with ZipFile(ARCHIVE) as archive:
+            home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
+            for container_id, play_id in ((9001, 9111), (9002, 9113), (9003, 9115), (9004, 9117)):
+                button = home.find(f".//control[@id='{play_id}']")
+                self.assertIsNotNone(button, f"Missing hero Play/Resume button {play_id}")
+                self.assertEqual(
+                    [node.text for node in button.findall("onclick")],
+                    [f"SetFocus({container_id})", "Action(Select)"],
+                    "Hero Play/Resume must activate the matching native shelf item, "
+                    "not call an unsupported PlayMedia GUI action",
+                )
+
     def test_generated_settings_and_catalogue_hero_controls_do_not_duplicate(self):
         with ZipFile(ARCHIVE) as archive:
             settings = ET.fromstring(archive.read("skin.cineva/xml/SkinSettings.xml"))

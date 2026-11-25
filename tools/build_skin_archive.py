@@ -908,8 +908,15 @@ def update_xml(data, path):
                 button.find("texturefocus").set("border", "8")
                 button.find("texturenofocus").set("border", "8")
                 if button_id == play_id:
-                    set_child_text(button, "onclick",
-                                   f"PlayMedia($INFO[Container({container_id}).ListItem.File])")
+                    # The Home hero button is a visual shortcut to the focused
+                    # poster, not a separate player command. PlayMedia() is not
+                    # accepted by Kodi's GUI action parser in this button
+                    # context (it logs "no such action 'playmedia()'"). Reuse
+                    # the exact native list-item activation path: focus the
+                    # corresponding shelf, then dispatch Select. This preserves
+                    # plugin:// playback, resume handling, and provider resolvers.
+                    set_child_text(button, "onclick", f"SetFocus({container_id})")
+                    ET.SubElement(button, "onclick").text = "Action(Select)"
                 else:
                     set_child_text(button, "onclick", f"SetFocus({container_id})")
                     ET.SubElement(button, "onclick").text = "Action(Info)"
