@@ -1533,7 +1533,6 @@ def update_xml(data, path):
                         ("label", label), ("font", "font10"), ("onclick", action),
                         ("onleft", "SetFocus({})".format(1001 + max(0, index - 1))),
                         ("onright", "SetFocus({})".format(1001 + min(len(items) - 1, index + 1))),
-                        ("ondown", "SetFocus(9201)"),
                         ("texturefocus", "focus-bar.png"),
                         ("texturenofocus", "black.png"),
                         ("textcolor", "silver"), ("focusedcolor", "white"),
@@ -1541,6 +1540,15 @@ def update_xml(data, path):
                     )
                     for tag, value in specs:
                         ET.SubElement(button, tag).text = str(value)
+                    # Skip empty widget slots when moving down from the rail;
+                    # if every slot is empty, land on Edit Widgets instead.
+                    widget_prefix = "Cineva.ShowWidget" if is_tv else "Cineva.MovieWidget"
+                    for slot in range(1, 5):
+                        down = ET.SubElement(button, "ondown", {
+                            "condition": "!String.IsEmpty(Skin.String({}{}.Path))".format(widget_prefix, slot)
+                        })
+                        down.text = "SetFocus({})".format(9200 + slot)
+                    ET.SubElement(button, "ondown").text = "SetFocus(1009)"
                     x += width + 10
                 nav_group.set("width", "1776")
             page_title = "TV SHOWS" if is_tv else "MOVIES"
