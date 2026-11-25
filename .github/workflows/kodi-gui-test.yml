@@ -556,14 +556,45 @@ jobs:
           Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset > /tmp/xvfb.log 2>&1 &
           echo $! > /tmp/xvfb.pid
           sleep 2
-          # First boot: allow Kodi to create a valid, version-specific guisettings.xml.
-          flatpak run --user tv.kodi.Kodi//beta --standalone > /tmp/kodi-firstboot.log 2>&1 &
-          FIRST_PID=$!
-          for i in $(seq 1 45); do
-            test -s "$HOME/.var/app/tv.kodi.Kodi/data/userdata/guisettings.xml" && break
-            sleep 2
-          done
-          test -s "$HOME/.var/app/tv.kodi.Kodi/data/userdata/guisettings.xml" || (echo "Kodi did not create guisettings.xml"; exit 1)
+          # First boot: explicitly use X11 under Xvfb and retain diagnostics.
+          # Some Kodi beta builds choose Wayland automatically when launched
+          # through Flatpak; that leaves the Xvfb GUI profile uninitialized.
+          USERDATA="$HOME/.var/app/tv.kodi.Kodi/data/userdata"
+          SETTINGS="$USERDATA/guisettings.xml"
+          mkdir -p "$USERDATA"
+          boot_kodi_once() {
+            local attempt="$1"
+            echo "Starting Kodi first-boot attempt $attempt on X11..."
+            flatpak run --user tv.kodi.Kodi//beta --standalone --windowing=x11 \
+              > "/tmp/kodi-firstboot-$attempt.log" 2>&1 &
+            FIRST_PID=$!
+            for i in $(seq 1 60); do
+              test -s "$SETTINGS" && return 0
+              if ! kill -0 "$FIRST_PID" 2>/dev/null && ! pgrep -x kodi.bin >/dev/null; then
+                echo "Kodi first-boot launcher exited before creating guisettings.xml."
+                break
+              fi
+              sleep 2
+            done
+            return 1
+          }
+          if ! boot_kodi_once 1; then
+            echo "First boot did not initialize the profile; collecting diagnostics and retrying."
+            cat /tmp/kodi-firstboot-1.log || true
+            flatpak kill --user tv.kodi.Kodi 2>/dev/null || true
+            pkill -x kodi.bin 2>/dev/null || true
+            pkill -x kodi-x11 2>/dev/null || true
+            sleep 3
+            if ! boot_kodi_once 2; then
+              echo "Kodi did not create guisettings.xml after two X11 startup attempts."
+              cat /tmp/kodi-firstboot-2.log || true
+              ps -ef | grep -E '[k]odi|[X]vfb' || true
+              find "$HOME/.var/app/tv.kodi.Kodi" -maxdepth 6 -type f -printf '%p %s bytes\\n' 2>/dev/null | tail -80 || true
+              exit 1
+            fi
+          fi
+          test -s "$SETTINGS"
+          echo "Kodi initialized guisettings.xml ($(wc -c < "$SETTINGS") bytes)."
           kill "$FIRST_PID" 2>/dev/null || true
           # Flatpak's launcher can exit while its app process remains alive.
           # Stop the whole app, then wait for Kodi and its JSON-RPC listener to release.
@@ -1376,6 +1407,8 @@ jobs:
         run: |
           mkdir -p artifacts
           cp /tmp/kodi-stdout.log artifacts/ 2>/dev/null || true
+          cp /tmp/kodi-firstboot-1.log artifacts/ 2>/dev/null || true
+          cp /tmp/kodi-firstboot-2.log artifacts/ 2>/dev/null || true
           cp /tmp/xvfb.log artifacts/ 2>/dev/null || true
           LOG="$(find "$HOME/.var/app/tv.kodi.Kodi" -type f -name kodi.log -print -quit 2>/dev/null || true)"
           if [ -n "$LOG" ]; then
