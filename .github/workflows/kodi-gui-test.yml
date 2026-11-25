@@ -1335,8 +1335,14 @@ jobs:
               button = buttons.get(label)
               if button is None or button.findtext("onclick") != action:
                 raise SystemExit(f"{filename} is missing the working {label} library destination")
-              if button.findtext("ondown") != "SetFocus(9201)":
-                raise SystemExit(f"{filename} {label} does not route Down into its widget shelf")
+              widget_prefix = "Cineva.ShowWidget" if filename == "custom11118.xml" else "Cineva.MovieWidget"
+              expected_down = [
+                ("!String.IsEmpty(Skin.String({}{}.Path))".format(widget_prefix, slot),
+                 "SetFocus({})".format(9200 + slot))
+                for slot in range(1, 5)
+              ] + [(None, "SetFocus(1009)")]
+              if [(node.get("condition"), node.text) for node in button.findall("ondown")] != expected_down:
+                raise SystemExit(f"{filename} {label} does not skip empty widget slots and fall back to Edit Widgets")
             if len(buttons) != 10 or len({node.get("id") for node in buttons.values()}) != 10:
               raise SystemExit(f"{filename} catalogue navigation must contain ten unique controls")
           print("Verified Movies and TV Shows D-pad navigation, all nine native library categories, and Back returns in Kodi GUI.")
