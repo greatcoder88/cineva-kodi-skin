@@ -81,7 +81,16 @@ class HomeNavigationTests(unittest.TestCase):
                     button = buttons[control_id]
                     self.assertEqual(button.findtext("label"), label)
                     self.assertEqual(button.findtext("onclick"), action)
-                    self.assertEqual(button.findtext("ondown"), "SetFocus(9201)")
+                    down_actions = button.findall("ondown")
+                    widget_prefix = "Cineva.ShowWidget" if filename == "custom11118.xml" else "Cineva.MovieWidget"
+                    self.assertEqual(
+                        [(node.get("condition"), node.text) for node in down_actions],
+                        [
+                            ("!String.IsEmpty(Skin.String({}{}.Path))".format(widget_prefix, slot),
+                             "SetFocus({})".format(9200 + slot))
+                            for slot in range(1, 5)
+                        ] + [(None, "SetFocus(1009)")],
+                    )
                     self.assertEqual(button.findtext("onleft"),
                                      "SetFocus({})".format(1001 + max(0, index - 1)))
                     self.assertEqual(button.findtext("onright"),
