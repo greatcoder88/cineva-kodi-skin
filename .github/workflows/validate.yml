@@ -23,9 +23,9 @@ jobs:
       - name: Build release ZIP and verify true idempotence
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.20.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.21.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.20.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.21.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
@@ -33,8 +33,8 @@ jobs:
           echo "Archive SHA-256 is stable across consecutive builds: $after"
       - name: Expand uploaded CINÉVA archive
         run: |
-          test -s skin.cineva-0.5.20.zip
-          unzip -q skin.cineva-0.5.20.zip -d .
+          test -s skin.cineva-0.5.21.zip
+          unzip -q skin.cineva-0.5.21.zip -d .
       - name: Validate Settings-only widget configuration navigation
         run: |
           python - <<'PY'
@@ -48,7 +48,7 @@ jobs:
           if any(b.findtext("label", "").strip().upper() == "MY WIDGETS" or "ActivateWindow(11119)" in b.findtext("onclick", "") for b in buttons):
               raise SystemExit("Separate My Widgets destination must not appear in Home navigation")
           settings = nav.find("./control[@id='1005']")
-          if settings is None or (settings.findtext("label"), settings.findtext("left"), settings.findtext("width"), settings.findtext("onclick")) != ("SETTINGS", "670", "150", "ActivateWindow(11113)"):
+          if settings is None or (settings.findtext("label"), settings.findtext("left"), settings.findtext("width"), settings.findtext("onclick")) != ("SETTINGS", "670", "150", "ActivateWindow(Settings)"):
               raise SystemExit("Settings must occupy the reclaimed Home navigation slot")
           if nav.find("./control[@id='1006']") is not None:
               raise SystemExit("Obsolete Home navigation control 1006 remains")
