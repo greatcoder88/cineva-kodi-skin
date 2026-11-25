@@ -142,21 +142,22 @@ class HomeHeroActionTests(unittest.TestCase):
                 badge = hero.find(f"./control[@id='{rating_id}']")
                 logo = hero.find(f"./control[@id='{rating_id + 1}']")
                 score = hero.find(f"./control[@id='{rating_id + 2}']")
-                self.assertEqual(metadata.findtext("width"), "430")
+                self.assertEqual(metadata.findtext("width"), "340")
                 self.assertEqual(metadata.findtext("top"), "128")
+                self.assertEqual(int(badge.findtext("left")) - int(metadata.findtext("width")), 20)
                 plot = hero.find("./control[@type='textbox']")
                 self.assertEqual((plot.findtext("top"), plot.findtext("height")), ("172", "56"))
                 self.assertEqual(
                     (badge.findtext("left"), badge.findtext("top"), badge.findtext("width"), badge.findtext("height")),
-                    ("460", "126", "148", "32"),
+                    ("360", "126", "148", "32"),
                 )
                 self.assertEqual(
                     (logo.findtext("left"), logo.findtext("top"), logo.findtext("width"), logo.findtext("height")),
-                    ("468", "130", "48", "24"),
+                    ("368", "130", "48", "24"),
                 )
                 self.assertEqual(
                     (score.findtext("left"), score.findtext("top"), score.findtext("width"), score.findtext("height")),
-                    ("522", "126", "84", "32"),
+                    ("422", "126", "84", "32"),
                 )
 
     def test_home_has_soft_right_edge_vignette_for_full_bleed_hero_art(self):
