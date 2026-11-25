@@ -910,6 +910,10 @@ jobs:
             else:
               raise SystemExit(f"Cycle {cycle}: skin stayed on Startup instead of Home: {state}")
             print("Home window active:", state.get("currentwindow"))
+            # Capture the actual Home rendering after the Keep Skin dialog closes,
+            # before any navigation changes the selected poster or active control.
+            subprocess.run(["import","-display",":99","-window","root",
+                            "artifacts/cineva-home-initial.png"],check=True)
             paths = [
               "plugin://plugin.video.pov/?mode=build_movie_list&action=in_progress_movies&name=Continue%20Watching%20Movies",
               "plugin://plugin.video.pov/?mode=build_tvshow_list&action=in_progress_tvshows&name=Continue%20Watching%20TV%20Shows",
@@ -917,9 +921,12 @@ jobs:
               "plugin://plugin.video.pov/?mode=build_tvshow_list&action=tmdb_tv_trending&name=Trending%20TV%20Shows",
             ]
             hero_fanart_by_row = {}
+            first_row_items = None
             for row, path in enumerate(paths, 1):
               directory = rpc("Files.GetDirectory", {"directory":path,"media":"video","properties":["title","file","thumbnail","art"]})
               items = directory.get("files",[]) if isinstance(directory,dict) else []
+              if row == 1:
+                first_row_items = items
               posters = [item.get("thumbnail") or (item.get("art") or {}).get("poster") or (item.get("art") or {}).get("thumb") for item in items]
               fanarts = [(item.get("art") or {}).get("fanart") for item in items]
               poster_count = sum(1 for poster in posters if poster)
@@ -942,18 +949,38 @@ jobs:
                 )
             if hero_fanart_by_row.get(1) == hero_fanart_by_row.get(2):
               raise SystemExit("Movie and TV Home rows share the same hero fanart; dynamic hero switching cannot be visually verified")
+            # The shelf intentionally opens with its configured focusposition,
+            # not item zero. Derive the expected title from the packaged XML and
+            # the fixture directory so this GUI assertion follows the real UI.
+            import xml.etree.ElementTree as ET
+            home_root = ET.parse(source / "xml" / "Home.xml").getroot()
+            home_rail = home_root.find("./controls/control[@type='grouplist'][@id='9050']")
+            first_row = home_rail.find("./control[@type='group'][@id='9061']") if home_rail is not None else None
+            home_shelf = first_row.find("./control[@type='fixedlist'][@id='9001']") if first_row is not None else None
+            if first_row_items is None or home_shelf is None:
+              raise SystemExit("Could not derive initial Home focus from the packaged first shelf")
+            focus_position = int(home_shelf.findtext("focusposition", "0"))
+            if not 0 <= focus_position < len(first_row_items):
+              raise SystemExit(f"Home shelf focusposition {focus_position} is outside its {len(first_row_items)} fixture items")
+            expected_focus_label = first_row_items[focus_position].get("label", "").strip()
+            if not expected_focus_label:
+              raise SystemExit(f"Home shelf focusposition {focus_position} resolves to an empty fixture label")
+            print(f"Expected initial Home poster focus: item {focus_position + 1}/{len(first_row_items)} — {expected_focus_label}")
             rpc("Input.Down")  # Home navigation -> PLAY action
-            rpc("Input.Down")  # PLAY action -> first poster
+            rpc("Input.Down")  # PLAY action -> configured centered poster
             deadline = time.time() + 12
             focused_label = ""
             while time.time() < deadline:
               state = gui()
               focused_label = state.get("currentcontrol",{}).get("label","").strip()
-              if focused_label == "The Shawshank Redemption: Special Collector's Edition":
+              if focused_label == expected_focus_label:
                 break
               time.sleep(0.5)
-            if focused_label != "The Shawshank Redemption: Special Collector's Edition":
-              raise SystemExit(f"Home shelf 9001 did not focus its first item: {state}")
+            if focused_label != expected_focus_label:
+              raise SystemExit(
+                f"Home shelf 9001 did not focus its configured item "
+                f"{focus_position + 1}/{len(first_row_items)} ({expected_focus_label!r}): {state}"
+              )
             print("Home poster shelf focused on:", focused_label)
             # Save the exact focused poster state, then follow the visible
             # hero actions with real D-pad keys. Poster focus selects the title;
@@ -962,19 +989,19 @@ jobs:
                             "artifacts/cineva-home-poster-focused.png"],check=True)
             # Verify the live shelf counter and directional cues against Kodi's
             # own container state, then capture the scrolled state before returning
-            # to the first poster for the hero-action tests.
-            first_labels = rpc("XBMC.GetInfoLabels", {"labels":[
+            # to the originally focused poster for the hero-action tests.
+            initial_labels = rpc("XBMC.GetInfoLabels", {"labels":[
               "Container(9001).CurrentItem", "Container(9001).NumItems"
             ]})
-            first_flags = rpc("XBMC.GetInfoBooleans", {"booleans":[
+            initial_flags = rpc("XBMC.GetInfoBooleans", {"booleans":[
               "Container(9001).HasNext", "Container(9001).HasPrevious"
             ]})
             def info_true(value):
               return value is True or str(value).strip().lower() in {"true", "1"}
-            first_position = int(first_labels.get("Container(9001).CurrentItem", "0"))
-            total_items = int(first_labels.get("Container(9001).NumItems", "0"))
-            if total_items != 8 or not info_true(first_flags.get("Container(9001).HasNext")):
-              raise SystemExit(f"Home shelf 9001 did not expose its next-page cue: labels={first_labels}; flags={first_flags}")
+            initial_position = int(initial_labels.get("Container(9001).CurrentItem", "0"))
+            total_items = int(initial_labels.get("Container(9001).NumItems", "0"))
+            if total_items != 8 or not info_true(initial_flags.get("Container(9001).HasNext")):
+              raise SystemExit(f"Home shelf 9001 did not expose its next-page cue: labels={initial_labels}; flags={initial_flags}")
             for _ in range(6):
               subprocess.run(["xdotool","key","Right"],check=True)
               time.sleep(0.12)
@@ -985,7 +1012,7 @@ jobs:
               "Container(9001).HasNext", "Container(9001).HasPrevious"
             ]})
             scrolled_position = int(scrolled_labels.get("Container(9001).CurrentItem", "0"))
-            if scrolled_position <= first_position or not info_true(scrolled_flags.get("Container(9001).HasPrevious")):
+            if scrolled_position <= initial_position or not info_true(scrolled_flags.get("Container(9001).HasPrevious")):
               raise SystemExit(f"Home shelf 9001 did not expose its previous-page cue after scrolling: labels={scrolled_labels}; flags={scrolled_flags}")
             subprocess.run(["import","-display",":99","-window","root",
                             "artifacts/cineva-home-shelf-scrolled.png"],check=True)
@@ -1014,9 +1041,9 @@ jobs:
               subprocess.run(["xdotool","key","Left"],check=True)
               time.sleep(0.12)
             restored_labels = rpc("XBMC.GetInfoLabels", {"labels":["Container(9001).CurrentItem"]})
-            if int(restored_labels.get("Container(9001).CurrentItem", "0")) != first_position:
+            if int(restored_labels.get("Container(9001).CurrentItem", "0")) != initial_position:
               raise SystemExit(f"Home shelf did not return to its original item after scroll-cue verification: {restored_labels}")
-            print(f"Verified Home shelf position counter {first_position}/{total_items}, next cue, and previous cue after moving to {scrolled_position}.")
+            print(f"Verified Home shelf position counter {initial_position}/{total_items}, next cue, and previous cue after moving to {scrolled_position}.")
             subprocess.run(["xdotool","key","Up"],check=True)
             deadline = time.time() + 8
             while time.time() < deadline:
