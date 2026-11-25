@@ -14,7 +14,7 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 ARCHIVE = ROOT / "skin.cineva-0.5.21.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.21.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.20.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -1959,16 +1959,16 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.20 - Compact Home shelves for denser browsing",
-                        "- Reduce Home poster cards to a readable native 2:3 200×300 layout.",
-                        "- Tighten shelf spacing and card widths to reveal more titles across and below the first rail.",
+                        "0.5.21 - Restore standard Kodi Settings entry point",
+                        "- Home Settings opens Kodi Settings; Skin Settings remains available inside Kodi Settings.",
+                        "- Preserve the existing navigation layout and widget configuration destinations.",
                         "",
                         "",
                     ))
                     if changelog.startswith("0.5.20 - Compact Home shelves for denser browsing"):
                         current_entry, separator, remainder = changelog.partition("0.5.20 - Compact Home shelves for denser browsing")
                         if not separator:
-                            raise SystemExit("CINÉVA 0.5.20 changelog lost its 0.5.19 history entry")
+                            raise SystemExit("CINÉVA 0.5.21 changelog lost its 0.5.20 history entry")
                         if entry != current_entry:
                             data = (entry + separator + remainder).encode("utf-8")
                             changed.append(info.filename + " (normalize 0.5.20 Home shelf changelog)")
