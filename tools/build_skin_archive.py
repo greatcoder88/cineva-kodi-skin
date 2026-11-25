@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.12.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.11.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.13.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.12.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -511,7 +511,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.12")
+        root.set("version", "0.5.13")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.7")
@@ -1539,24 +1539,24 @@ def update_xml(data, path):
                     ("HOME", "ActivateWindow(Home)", 70),
                     ("MOVIES", "ActivateWindow(11117)", 80),
                     ("TV SHOWS", "ActivateWindow(11118)", 95),
-                    ("ALL MOVIES", "ActivateWindow(Videos,videodb://movies/titles/,return)", 110),
+                    ("ALL MOVIES", "ActivateWindow(Videos,videodb://movies/titles/,return)", 125),
                     ("GENRES", "ActivateWindow(Videos,videodb://movies/genres/,return)", 75),
                     ("YEARS", "ActivateWindow(Videos,videodb://movies/years/,return)", 70),
-                    ("COLLECTIONS", "ActivateWindow(Videos,videodb://movies/sets/,return)", 110),
+                    ("COLLECTIONS", "ActivateWindow(Videos,videodb://movies/sets/,return)", 130),
                     ("RECENT", "ActivateWindow(Videos,videodb://movies/recentlyaddedmovies/,return)", 75),
-                    ("EDIT WIDGETS", "ActivateWindow(11115)", 115),
+                    ("EDIT WIDGETS", "ActivateWindow(11115)", 140),
                     ("SEARCH", "ActivateWindow(11112)", 75),
                 ]
                 tv_items = [
                     ("HOME", "ActivateWindow(Home)", 70),
                     ("MOVIES", "ActivateWindow(11117)", 80),
                     ("TV SHOWS", "ActivateWindow(11118)", 95),
-                    ("ALL SHOWS", "ActivateWindow(Videos,videodb://tvshows/titles/,return)", 110),
+                    ("ALL SHOWS", "ActivateWindow(Videos,videodb://tvshows/titles/,return)", 125),
                     ("GENRES", "ActivateWindow(Videos,videodb://tvshows/genres/,return)", 75),
                     ("YEARS", "ActivateWindow(Videos,videodb://tvshows/years/,return)", 70),
-                    ("STUDIOS", "ActivateWindow(Videos,videodb://tvshows/studios/,return)", 85),
+                    ("STUDIOS", "ActivateWindow(Videos,videodb://tvshows/studios/,return)", 90),
                     ("RECENT", "ActivateWindow(Videos,videodb://tvshows/recentlyaddedepisodes/,return)", 75),
-                    ("EDIT WIDGETS", "ActivateWindow(11116)", 115),
+                    ("EDIT WIDGETS", "ActivateWindow(11116)", 140),
                     ("SEARCH", "ActivateWindow(11112)", 75),
                 ]
                 items = tv_items if is_tv else movie_items
@@ -1574,7 +1574,8 @@ def update_xml(data, path):
                         ("onleft", "SetFocus({})".format(1001 + max(0, index - 1))),
                         ("onright", "SetFocus({})".format(1001 + min(len(items) - 1, index + 1))),
                         ("texturefocus", "focus-bar.png"),
-                        ("texturenofocus", "black.png"),
+                        # Match Home: inactive tabs have no solid black button tile.
+                        ("texturenofocus", "-"),
                         ("textcolor", "silver"), ("focusedcolor", "white"),
                         ("align", "center"), ("aligny", "center"),
                     )
@@ -1590,6 +1591,24 @@ def update_xml(data, path):
                         down.text = "SetFocus({})".format(9200 + slot)
                     ET.SubElement(button, "ondown").text = "SetFocus(1009)"
                     x += width + 10
+                # Keep the active catalogue section identifiable even while
+                # focus moves through the category rail. The same crimson
+                # underline is used by the Home header's active-tab marker.
+                marker_id, marker_left, marker_width, active_window = (
+                    (12002, 183, 69, 11118) if is_tv else (12001, 92, 56, 11117)
+                )
+                marker = ET.SubElement(nav_group, "control", {
+                    "type": "image", "id": str(marker_id)
+                })
+                for tag, value in (
+                    ("left", marker_left), ("top", 42), ("width", marker_width),
+                    ("height", 4), ("texture", "focus-bar.png"),
+                    ("visible", "Window.IsActive({})".format(active_window)),
+                ):
+                    ET.SubElement(marker, tag).text = str(value)
+                # The dash texture is a deliberate transparent/no-texture
+                # state, not a missing file. Remove it after constructing tabs.
+                remove_missing_no_focus_textures(root)
                 for tag, value in (("left", 280), ("top", 32), ("width", 1080), ("height", 48)):
                     set_child_text(nav_group, tag, value)
             page_title = "TV SHOWS" if is_tv else "MOVIES"
@@ -1679,11 +1698,11 @@ def update_xml(data, path):
 
 def main():
     # Start the new distributable version from the last published package once.
-    # Subsequent builds always transform 0.5.11 in place and remain byte-stable.
+    # Subsequent builds always transform 0.5.12 in place and remain byte-stable.
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.12.zip and migration source skin.cineva-0.5.11.zip")
+        raise SystemExit("Missing skin.cineva-0.5.13.zip and migration source skin.cineva-0.5.12.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -1764,9 +1783,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.12":
-                        addon_root.set("version", "0.5.12")
-                        changed.append(info.filename + " (bump skin version to 0.5.12)")
+                    if addon_root.get("version") != "0.5.13":
+                        addon_root.set("version", "0.5.13")
+                        changed.append(info.filename + " (bump skin version to 0.5.13)")
                     if helper_dependency.get("version") != "0.1.7":
                         helper_dependency.set("version", "0.1.7")
                         changed.append(info.filename + " (require widget manager 0.1.7)")
@@ -1774,22 +1793,22 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.12 - Full-width Home poster rails with next-card preview",
-                        "- Widen all four Home shelves to an 1800px viewport with balanced 60px side margins.",
-                        "- Reveal a partial seventh poster to signal horizontal browsing without shrinking poster artwork.",
+                        "0.5.13 - Unified catalogue navigation styling",
+                        "- Match Movies and TV Shows navigation to Home with transparent inactive tabs and a persistent crimson active-section underline.",
+                        "- Widen long catalogue labels so Collections and Edit Widgets remain readable without truncation.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.12 - Full-width Home poster rails with next-card preview"):
-                        current_entry, separator, remainder = changelog.partition("0.5.11 - Restore Home shelf focus after playback")
+                    if changelog.startswith("0.5.13 - Unified catalogue navigation styling"):
+                        current_entry, separator, remainder = changelog.partition("0.5.12 - Full-width Home poster rails with next-card preview")
                         if not separator:
-                            raise SystemExit("CINÉVA 0.5.12 changelog lost its 0.5.11 history entry")
+                            raise SystemExit("CINÉVA 0.5.13 changelog lost its 0.5.12 history entry")
                         if entry != current_entry:
                             data = (entry + separator + remainder).encode("utf-8")
-                            changed.append(info.filename + " (normalize 0.5.12 full-width Home rails changelog)")
+                            changed.append(info.filename + " (normalize 0.5.13 catalogue navigation changelog)")
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (0.5.12 full-width Home rails release)")
+                        changed.append(info.filename + " (0.5.13 unified catalogue navigation release)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:

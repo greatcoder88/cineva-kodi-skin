@@ -50,7 +50,7 @@ def write_http_directory_index(directory: Path, title: str, entries: list[tuple[
 
 
 def main() -> None:
-    skin_zip = ROOT / "skin.cineva-0.5.12.zip"
+    skin_zip = ROOT / "skin.cineva-0.5.13.zip"
     helper_dir = ROOT / "tools/script.cineva.widgets"
     if not skin_zip.is_file():
         raise SystemExit("Build the skin ZIP before assembling the repository.")

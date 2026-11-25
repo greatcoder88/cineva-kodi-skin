@@ -5,7 +5,7 @@ from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.10.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.13.zip"
 HUB_WINDOW = "skin.cineva/xml/CinevaWidgetHub.xml"
 
 
@@ -133,6 +133,38 @@ class HomeNavigationTests(unittest.TestCase):
                 )
                 buttons = nav.findall("./control[@type='button']")
                 self.assertEqual(len(buttons), 10, filename)
+                expected_widths = {
+                    "ALL MOVIES": 125, "ALL SHOWS": 125,
+                    "COLLECTIONS": 130, "STUDIOS": 90, "EDIT WIDGETS": 140,
+                }
+                for button in buttons:
+                    self.assertEqual(button.findtext("texturefocus"), "focus-bar.png")
+                    self.assertIsNone(button.find("texturenofocus"),
+                                      "inactive catalogue tabs must remain transparent")
+                    label = button.findtext("label")
+                    if label in expected_widths:
+                        self.assertEqual(int(button.findtext("width")),
+                                         expected_widths[label], label)
+                marker_id, active_window, marker_left, marker_width = (
+                    ("12001", 11117, 92, 56)
+                    if filename == "custom11117.xml"
+                    else ("12002", 11118, 183, 69)
+                )
+                marker = nav.find(f"./control[@type='image'][@id='{marker_id}']")
+                self.assertIsNotNone(marker, filename)
+                self.assertEqual(
+                    (marker.findtext("left"), marker.findtext("top"),
+                     marker.findtext("width"), marker.findtext("height"),
+                     marker.findtext("texture"), marker.findtext("visible")),
+                    (str(marker_left), "42", str(marker_width), "4",
+                     "focus-bar.png", f"Window.IsActive({active_window})"),
+                    filename,
+                )
+                self.assertLessEqual(
+                    max(int(button.findtext("left")) + int(button.findtext("width"))
+                        for button in buttons),
+                    1080,
+                )
                 self.assertTrue(all(button.findtext("font") == "font12" for button in buttons))
                 self.assertLessEqual(
                     max(int(button.findtext("left")) + int(button.findtext("width")) for button in buttons),

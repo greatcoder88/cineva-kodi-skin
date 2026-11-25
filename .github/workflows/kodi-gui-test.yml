@@ -26,29 +26,29 @@ jobs:
       - name: Build release ZIP, verify idempotence, and commit source fixes
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.12.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.13.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.12.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.13.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
           fi
           echo "Archive SHA-256 is stable across consecutive builds: $after"
           mkdir -p artifacts
-          cp skin.cineva-0.5.12.zip artifacts/
-          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.12.zip)" ]; then
+          cp skin.cineva-0.5.13.zip artifacts/
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.13.zip)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add skin.cineva-0.5.12.zip
-            git commit -m "Build updated CINÉVA 0.5.12 skin archive"
+            git add skin.cineva-0.5.13.zip
+            git commit -m "Build updated CINÉVA 0.5.13 skin archive"
             git push origin HEAD:main || echo "::warning::Could not push rebuilt skin ZIP; GUI test still uses the rebuilt local ZIP."
           fi
 
       - name: Expand uploaded skin archive and prepare add-ons
         run: |
           mkdir -p artifacts
-          test -s skin.cineva-0.5.12.zip
-          unzip -q skin.cineva-0.5.12.zip -d .
+          test -s skin.cineva-0.5.13.zip
+          unzip -q skin.cineva-0.5.13.zip -d .
           test -f skin.cineva/addon.xml
           test -d skin.cineva/xml
           test -f skin.cineva/xml/Home.xml
@@ -422,8 +422,8 @@ jobs:
           if any(button.findtext("texturefocus") != "focus-bar.png" for button in search.findall(".//control[@type='button']")):
             raise SystemExit("Search hub buttons are missing the unified focus treatment")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.12":
-            raise SystemExit("Skin archive version must be 0.5.12")
+          if skin.attrib.get("version") != "0.5.13":
+            raise SystemExit("Skin archive version must be 0.5.13")
           widget = ET.parse("tools/script.cineva.widgets/addon.xml").getroot()
           if widget.attrib.get("version") != "0.1.7":
             raise SystemExit("Widget manager version must be 0.1.7")
@@ -1512,6 +1512,23 @@ jobs:
                        if node.get("type") == "group"
                        and node.find("./control[@id='1001']") is not None)
             buttons = {node.findtext("label"): node for node in nav.findall("./control[@type='button']")}
+            marker_id, active_window, marker_left, marker_width = (
+              ("12002", 11118, "183", "69")
+              if filename == "custom11118.xml"
+              else ("12001", 11117, "92", "56")
+            )
+            marker = nav.find("./control[@type='image'][@id='{}']".format(marker_id))
+            if marker is None or (
+                marker.findtext("left"), marker.findtext("top"),
+                marker.findtext("width"), marker.findtext("height"),
+                marker.findtext("texture"), marker.findtext("visible")
+            ) != (marker_left, "42", marker_width, "4", "focus-bar.png",
+                  "Window.IsActive({})".format(active_window)):
+              raise SystemExit(f"{filename} is missing its active-section crimson underline")
+            if any(button.find("texturenofocus") is not None
+                   or button.findtext("texturefocus") != "focus-bar.png"
+                   for button in buttons.values()):
+              raise SystemExit(f"{filename} navigation tabs do not match the transparent Home header style")
             for label, action in expected_actions.items():
               button = buttons.get(label)
               if button is None or button.findtext("onclick") != action:
