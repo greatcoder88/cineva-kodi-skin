@@ -11,12 +11,9 @@ def _args(argv=None):
         return {}
     raw = argv[1].lstrip('?')
     args = {key: values[-1] for key, values in parse_qs(raw).items()}
-    # A selected plugin URL is the final argument and can itself contain '&'
-    # query parameters. parse_qs would split those into unrelated arguments;
-    # preserve the untouched tail after our explicit path delimiter.
-    marker = '&path='
-    if marker in raw:
-        args['path'] = raw.split(marker, 1)[1]
+    # Home passes the selected FileNameAndPath through Kodi's $ESCINFO[]
+    # expansion. The URL-escaped separators stay inside this argument; parse_qs
+    # decodes the selected plugin URL once without splitting its query parameters.
     return args
 
 
