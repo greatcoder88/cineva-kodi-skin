@@ -1484,6 +1484,65 @@ def update_xml(data, path):
         is_tv = path.endswith("custom11118.xml")
         controls = root.find("controls")
         if controls is not None:
+            # Replace the three-link utility strip with a real catalogue
+            # navigation rail. Every category opens Kodi's native video
+            # database node, so browsing works without a provider-specific
+            # add-on and retains Kodi's normal Back/history behavior.
+            nav_group = next(
+                (node for node in controls.findall("control")
+                 if node.get("type") == "group"
+                 and node.find("./control[@id='1001']") is not None),
+                None,
+            )
+            if nav_group is not None:
+                movie_items = [
+                    ("HOME", "ActivateWindow(Home)", 100),
+                    ("MOVIES", "ActivateWindow(11117)", 130),
+                    ("TV SHOWS", "ActivateWindow(11118)", 145),
+                    ("ALL MOVIES", "ActivateWindow(Videos,videodb://movies/titles/,return)", 150),
+                    ("GENRES", "ActivateWindow(Videos,videodb://movies/genres/,return)", 120),
+                    ("YEARS", "ActivateWindow(Videos,videodb://movies/years/,return)", 105),
+                    ("COLLECTIONS", "ActivateWindow(Videos,videodb://movies/sets/,return)", 160),
+                    ("RECENT", "ActivateWindow(Videos,videodb://movies/recentlyaddedmovies/,return)", 125),
+                    ("EDIT WIDGETS", "ActivateWindow(11115)", 175),
+                    ("SEARCH", "ActivateWindow(11112)", 115),
+                ]
+                tv_items = [
+                    ("HOME", "ActivateWindow(Home)", 100),
+                    ("MOVIES", "ActivateWindow(11117)", 130),
+                    ("TV SHOWS", "ActivateWindow(11118)", 145),
+                    ("ALL SHOWS", "ActivateWindow(Videos,videodb://tvshows/titles/,return)", 150),
+                    ("GENRES", "ActivateWindow(Videos,videodb://tvshows/genres/,return)", 120),
+                    ("YEARS", "ActivateWindow(Videos,videodb://tvshows/years/,return)", 105),
+                    ("NETWORKS", "ActivateWindow(Videos,videodb://tvshows/studios/,return)", 160),
+                    ("RECENT", "ActivateWindow(Videos,videodb://tvshows/recentlyaddedepisodes/,return)", 125),
+                    ("EDIT WIDGETS", "ActivateWindow(11116)", 175),
+                    ("SEARCH", "ActivateWindow(11112)", 115),
+                ]
+                items = tv_items if is_tv else movie_items
+                for child in list(nav_group):
+                    nav_group.remove(child)
+                x = 0
+                for index, (label, action, width) in enumerate(items):
+                    control_id = 1001 + index
+                    button = ET.SubElement(nav_group, "control", {
+                        "type": "button", "id": str(control_id)
+                    })
+                    specs = (
+                        ("left", x), ("top", 0), ("width", width), ("height", 44),
+                        ("label", label), ("font", "font10"), ("onclick", action),
+                        ("onleft", "SetFocus({})".format(1001 + max(0, index - 1))),
+                        ("onright", "SetFocus({})".format(1001 + min(len(items) - 1, index + 1))),
+                        ("ondown", "SetFocus(9201)"),
+                        ("texturefocus", "focus-bar.png"),
+                        ("texturenofocus", "black.png"),
+                        ("textcolor", "silver"), ("focusedcolor", "white"),
+                        ("align", "center"), ("aligny", "center"),
+                    )
+                    for tag, value in specs:
+                        ET.SubElement(button, tag).text = str(value)
+                    x += width + 10
+                nav_group.set("width", "1776")
             page_title = "TV SHOWS" if is_tv else "MOVIES"
             title = ET.Element("control", {"type": "label", "id": "9210"})
             for tag, value in {
@@ -1656,8 +1715,11 @@ def main():
                             normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + rail_note + chr(10) + chr(10)
                         spacing_note = "- Add clear breathing room between Home shelf headings and poster artwork."
                         title_note = "- Use a bold 40px ExtraBold display face for text-only Home hero titles."
+                        catalogue_note = "- Add direct Movies and TV Shows library browsing for titles, genres, years, collections or networks, and recently added items."
                         if title_note not in normalized_entry:
                             normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + title_note + chr(10) + chr(10)
+                        if catalogue_note not in normalized_entry:
+                            normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + catalogue_note + chr(10) + chr(10)
                         if spacing_note not in normalized_entry:
                             normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + spacing_note + chr(10) + chr(10)
                         if vignette_note not in normalized_entry:
