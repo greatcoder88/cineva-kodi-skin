@@ -89,7 +89,7 @@ class HomeNavigationTests(unittest.TestCase):
                             (f"!String.IsEmpty(Container({9200 + slot}).ListItem.Label)",
                              f"SetFocus({9200 + slot})")
                             for slot in range(1, 5)
-                        ] + [(None, "SetFocus(1009)")],
+                        ] + [(None, "SetFocus(12114)")],
                     )
                     self.assertEqual(button.findtext("onleft"),
                                      "SetFocus({})".format(1001 + max(0, index - 1)))
