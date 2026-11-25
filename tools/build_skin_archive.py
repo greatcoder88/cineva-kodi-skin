@@ -1965,16 +1965,14 @@ def main():
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.20 - Compact Home shelves for denser browsing"):
-                        current_entry, separator, remainder = changelog.partition("0.5.20 - Compact Home shelves for denser browsing")
-                        if not separator:
-                            raise SystemExit("CINÉVA 0.5.21 changelog lost its 0.5.20 history entry")
-                        if entry != current_entry:
-                            data = (entry + separator + remainder).encode("utf-8")
-                            changed.append(info.filename + " (normalize 0.5.20 Home shelf changelog)")
+                    if changelog.startswith("0.5.21 - Restore standard Kodi Settings entry point"):
+                        pass
+                    elif changelog.startswith("0.5.20 - Compact Home shelves for denser browsing"):
+                        data = (entry + changelog).encode("utf-8")
+                        changed.append(info.filename + " (prepend 0.5.21 Settings navigation changelog)")
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (0.5.20 Home shelf density release)")
+                        changed.append(info.filename + " (0.5.21 Settings navigation release)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:
