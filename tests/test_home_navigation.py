@@ -98,5 +98,19 @@ class HomeNavigationTests(unittest.TestCase):
                 self.assertEqual(len({button.get("id") for button in buttons.values()}), 10)
 
 
+    def test_custom_window_xml_ids_use_kodis_home_relative_offset(self):
+        # Kodi's custom-window loader registers WINDOW_HOME + the XML id.
+        # Thus custom11117.xml must declare id=1117 to become window 11117.
+        with ZipFile(ARCHIVE) as archive:
+            for window_id in range(11111, 11119):
+                path = f"skin.cineva/xml/custom{window_id}.xml"
+                root = ET.fromstring(archive.read(path))
+                self.assertEqual(
+                    root.get("id"),
+                    str(window_id - 10000),
+                    f"{path} must use the XML id offset expected by Kodi",
+                )
+
+
 if __name__ == "__main__":
     unittest.main()

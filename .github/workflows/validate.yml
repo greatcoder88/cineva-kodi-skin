@@ -142,8 +142,8 @@ jobs:
                   tree = ET.parse(path)
                   if path.parent.name == "xml" and path.name.startswith("custom"):
                       wid = tree.getroot().attrib.get("id")
-                      if wid and path.stem != "custom" + wid:
-                          errors.append(f"{path}: custom window filename/id mismatch")
+                      if wid and path.stem != "custom" + str(int(wid) + 10000):
+                          errors.append(f"{path}: custom window filename/id offset mismatch")
               except ET.ParseError as exc:
                   errors.append(f"{path}: {exc}")
           home = ET.parse(root / "xml/Home.xml").getroot()

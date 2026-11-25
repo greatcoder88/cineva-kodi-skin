@@ -16,6 +16,14 @@ ROOT = Path(__file__).resolve().parents[1]
 ARCHIVE = ROOT / "skin.cineva-0.5.7.zip"
 LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.6.zip"
 
+# Kodi adds WINDOW_HOME (10000) to every custom window XML id.
+# The external ActivateWindow IDs therefore use the 111xx range, while the
+# <window id> values inside these files must be the corresponding 11xx offset.
+CUSTOM_WINDOW_IDS = {
+    f"skin.cineva/xml/custom{window_id}.xml": window_id - 10000
+    for window_id in range(11111, 11119)
+}
+
 
 def fetch_asset(url, attempts=5):
     """Fetch a pinned build asset with bounded retries for transient GitHub/CDN errors."""
@@ -500,6 +508,8 @@ def remove_missing_no_focus_textures(root):
 
 def update_xml(data, path):
     root = ET.fromstring(data)
+    if path in CUSTOM_WINDOW_IDS:
+        root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
         root.set("version", "0.5.7")
         for imp in root.findall("./requires/import"):
