@@ -17,10 +17,16 @@ class HomeHeroActionTests(unittest.TestCase):
         self.assertEqual(lines[0], "0.5.13 - Unified catalogue navigation styling")
         self.assertTrue(lines[1].startswith("- Match Movies and TV Shows navigation to Home with transparent inactive tabs"))
         self.assertTrue(lines[2].startswith("- Widen long catalogue labels so Collections and Edit Widgets remain readable"))
-        self.assertEqual(lines[4], "0.5.11 - Restore Home shelf focus after playback")
-        self.assertTrue(lines[5].startswith("- Return remote focus to the originating Home shelf"))
-        self.assertTrue(lines[6].startswith("- Preserve the selected title context when a resolver returns"))
-        self.assertEqual(lines[8], "0.5.10 - Reliable URL-escaped Home playback handoff")
+        history = {line for line in lines if line.startswith("0.5.")}
+        self.assertIn("0.5.12 - Full-width Home poster rails with next-card preview", history)
+        self.assertIn("0.5.11 - Restore Home shelf focus after playback", history)
+        self.assertIn("0.5.10 - Reliable URL-escaped Home playback handoff", history)
+        index_12 = lines.index("0.5.12 - Full-width Home poster rails with next-card preview")
+        self.assertTrue(lines[index_12 + 1].startswith("- Widen all four Home shelves to an 1800px viewport"))
+        self.assertTrue(lines[index_12 + 2].startswith("- Reveal a partial seventh poster to signal horizontal browsing"))
+        index_11 = lines.index("0.5.11 - Restore Home shelf focus after playback")
+        self.assertTrue(lines[index_11 + 1].startswith("- Return remote focus to the originating Home shelf"))
+        self.assertTrue(lines[index_11 + 2].startswith("- Preserve the selected title context when a resolver returns"))
 
     def test_all_home_heroes_use_branded_nine_slice_action_surfaces(self):
         with ZipFile(ARCHIVE) as archive:
