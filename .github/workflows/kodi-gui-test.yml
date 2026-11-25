@@ -967,10 +967,10 @@ jobs:
               )
               return float(signal.stdout.strip())
             hero_progress_red = red_coverage("artifacts/cineva-home-initial.png", "300x6+60+352")
-          if hero_progress_red < 0.35:
-            raise SystemExit(f"Continue Watching hero progress bar is not visibly rendered (crimson coverage={hero_progress_red:.4f})")
-          print(f"Verified the Home hero resume progress bar in the live Kodi screenshot (crimson coverage={hero_progress_red:.4f}).")
-          home_tab_red = red_coverage("artifacts/cineva-home-initial.png", "130x48+280+32")
+            if hero_progress_red < 0.35:
+              raise SystemExit(f"Continue Watching hero progress bar is not visibly rendered (crimson coverage={hero_progress_red:.4f})")
+            print(f"Verified the Home hero resume progress bar in the live Kodi screenshot (crimson coverage={hero_progress_red:.4f}).")
+            home_tab_red = red_coverage("artifacts/cineva-home-initial.png", "130x48+280+32")
             home_line_red = red_coverage("artifacts/cineva-home-initial.png", "62x4+314+74")
             if home_tab_red > 0.12 or home_line_red < 0.75:
               raise SystemExit(
