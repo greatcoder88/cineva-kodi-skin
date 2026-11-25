@@ -567,50 +567,6 @@ def update_xml(data, path):
         if controls is None:
             raise SystemExit("Home.xml is missing its controls container")
         remove_missing_no_focus_textures(root)
-        # Home navigation stays transparent when focused. The previous focus
-        # texture was a solid red tile stretched across the entire tab; use
-        # compact crimson underlines instead so the hero artwork remains visible.
-        nav_group = next(
-            (group for group in controls.findall("control")
-             if group.get("type") == "group"
-             and group.find("./control[@id='1001']") is not None),
-            None,
-        )
-        if nav_group is None:
-            raise SystemExit("Home navigation group is missing")
-        nav_buttons = {
-            button.get("id"): button
-            for button in nav_group.findall("./control[@type='button']")
-        }
-        if set(nav_buttons) != {str(control_id) for control_id in range(1001, 1006)}:
-            raise SystemExit("Home navigation must contain the five expected top-level tabs")
-        for button in nav_buttons.values():
-            for texture_tag in ("texturefocus", "texturenofocus"):
-                texture_node = button.find(texture_tag)
-                if texture_node is not None:
-                    button.remove(texture_node)
-            set_child_text(button, "focusedcolor", "white")
-        for marker_id in range(9201, 9206):
-            previous_marker = nav_group.find(f"./control[@id='{marker_id}']")
-            if previous_marker is not None:
-                nav_group.remove(previous_marker)
-        home_marker_visible = "Window.IsActive(home) + " + " + ".join(
-            f"!Control.HasFocus({control_id})" for control_id in (1002, 1003, 1004, 1005)
-        )
-        marker_specs = (
-            ("9201", 34, 62, home_marker_visible),
-            ("9202", 194, 62, "Control.HasFocus(1002)"),
-            ("9203", 373, 74, "Control.HasFocus(1003)"),
-            ("9204", 554, 62, "Control.HasFocus(1004)"),
-            ("9205", 714, 62, "Control.HasFocus(1005)"),
-        )
-        for marker_id, left, width, visible in marker_specs:
-            marker = ET.SubElement(nav_group, "control", {"type": "image", "id": marker_id})
-            for tag, value in (
-                ("left", left), ("top", 42), ("width", width), ("height", 4),
-                ("texture", "focus-bar.png"), ("visible", visible),
-            ):
-                set_child_text(marker, tag, value)
         # The archive builder runs twice in CI. Unwrap an existing rail grouplist
         # before rebuilding it so the transformation remains idempotent.
         previous_rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
@@ -1238,21 +1194,41 @@ def update_xml(data, path):
                     set_child_text(button, "onright", f"SetFocus({nav_ids[min(len(nav_ids) - 1, position + 1)]})")
                 if button.get("id") in action_targets:
                     set_child_text(button, "ondown", f"SetFocus({action_targets[button.get('id')]})")
-                for tag, value in (("texturefocus", "focus-bar.png"), ("texturenofocus", "-"), ("textcolor", "silver"), ("focusedcolor", "white"), ("align", "center"), ("aligny", "center")):
+                # Leave both button textures absent: a stretched focus texture
+                # paints a solid crimson rectangle across the whole tab.
+                for texture_tag in ("texturefocus", "texturenofocus"):
+                    texture_node = button.find(texture_tag)
+                    if texture_node is not None:
+                        button.remove(texture_node)
+                for tag, value in (("textcolor", "silver"), ("focusedcolor", "white"), ("align", "center"), ("aligny", "center")):
                     set_child_text(button, tag, value)
                 set_child_text(button, "font", "font12")
                 set_child_text(button, "height", 48)
-            # Keep a persistent red section marker under HOME even after focus
-            # moves into the catalogue, so users never lose their location.
-            old_marker = nav_group.find("./control[@id='9201']")
-            if old_marker is not None:
-                nav_group.remove(old_marker)
-            active_marker = ET.Element("control", {"type": "image", "id": "9201"})
-            for tag, value in (("left", 34), ("top", 42), ("width", 62), ("height", 4)):
-                set_child_text(active_marker, tag, value)
-            set_child_text(active_marker, "texture", "focus-bar.png")
-            set_child_text(active_marker, "visible", "Window.IsActive(home)")
-            nav_group.append(active_marker)
+            # Track D-pad focus with a compact underline. Home remains marked
+            # while browsing its shelves; moving to another header tab transfers
+            # the underline to that tab instead of filling its full rectangle.
+            for marker_id in range(9201, 9206):
+                old_marker = nav_group.find(f"./control[@id='{marker_id}']")
+                if old_marker is not None:
+                    nav_group.remove(old_marker)
+            home_marker_visible = "Window.IsActive(home) + " + " + ".join(
+                f"!Control.HasFocus({control_id})" for control_id in (1002, 1003, 1004, 1005)
+            )
+            marker_specs = (
+                ("9201", 34, 62, home_marker_visible),
+                ("9202", 194, 62, "Control.HasFocus(1002)"),
+                ("9203", 373, 74, "Control.HasFocus(1003)"),
+                ("9204", 554, 62, "Control.HasFocus(1004)"),
+                ("9205", 714, 62, "Control.HasFocus(1005)"),
+            )
+            for marker_id, left, width, visible in marker_specs:
+                marker = ET.Element("control", {"type": "image", "id": marker_id})
+                for tag, value in (
+                    ("left", left), ("top", 42), ("width", width), ("height", 4),
+                    ("texture", "focus-bar.png"), ("visible", visible),
+                ):
+                    set_child_text(marker, tag, value)
+                nav_group.append(marker)
         # The top navigation already has a My Widgets destination. The extra
         # floating button obscured the fourth shelf and is intentionally removed.
         for control in list(controls):
