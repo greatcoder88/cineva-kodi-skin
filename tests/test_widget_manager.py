@@ -125,10 +125,10 @@ class KodiManagerTests(unittest.TestCase):
 
     def test_skin_and_widget_helper_versions_are_upgradeable_and_consistent(self):
         helper = ET.parse(ROOT / "tools/script.cineva.widgets/addon.xml").getroot()
-        with ZipFile(ROOT / "skin.cineva-0.5.11.zip") as archive:
+        with ZipFile(ROOT / "skin.cineva-0.5.12.zip") as archive:
             skin = ET.fromstring(archive.read("skin.cineva/addon.xml"))
         dependency = skin.find("./requires/import[@addon='script.cineva.widgets']")
-        self.assertEqual(skin.attrib.get("version"), "0.5.11")
+        self.assertEqual(skin.attrib.get("version"), "0.5.12")
         self.assertEqual(helper.attrib.get("version"), "0.1.7")
         self.assertIsNotNone(dependency)
         self.assertEqual(dependency.attrib.get("version"), helper.attrib["version"])
@@ -195,7 +195,7 @@ class KodiManagerTests(unittest.TestCase):
         self.assertEqual(entry._args(["default.py", encoded])["path"], expected)
 
     def test_packaged_home_play_buttons_pass_the_selected_item_url(self):
-        with ZipFile(ROOT / "skin.cineva-0.5.11.zip") as archive:
+        with ZipFile(ROOT / "skin.cineva-0.5.12.zip") as archive:
             home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
         for index, container_id in enumerate((9001, 9002, 9003, 9004)):
             button_id = 9111 + index * 2

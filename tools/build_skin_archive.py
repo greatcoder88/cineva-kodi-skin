@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.11.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.10.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.12.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.11.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -511,7 +511,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.11")
+        root.set("version", "0.5.12")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.7")
@@ -944,7 +944,7 @@ def update_xml(data, path):
         # Each row is a single grouplist child so its non-focusable heading cannot
         # intercept Up from the nested fixedlist before the shelf's explicit route.
         rail_list = ET.Element("control", {"type": "grouplist", "id": "9050"})
-        for tag, value in (("left", 105), ("top", 444), ("width", 1710), ("height", 670)):
+        for tag, value in (("left", 60), ("top", 444), ("width", 1800), ("height", 670)):
             set_child_text(rail_list, tag, value)
         set_child_text(rail_list, "orientation", "vertical")
         set_child_text(rail_list, "itemgap", 12)
@@ -976,7 +976,7 @@ def update_xml(data, path):
             controls.remove(heading)
             controls.remove(shelf)
             row_group = ET.Element("control", {"type": "group", "id": str(9060 + index)})
-            for tag, value in (("left", 0), ("top", 0), ("width", 1710), ("height", 506)):
+            for tag, value in (("left", 0), ("top", 0), ("width", 1800), ("height", 506)):
                 set_child_text(row_group, tag, value)
             play_id = 9111 + (index - 1) * 2
             next_target = 9000 + index + 1 if index < 4 else 1001
@@ -990,7 +990,7 @@ def update_xml(data, path):
             set_child_text(heading, "font", "font18")
             set_child_text(shelf, "left", 0)
             set_child_text(shelf, "top", 60)
-            set_child_text(shelf, "width", 1710)
+            set_child_text(shelf, "width", 1800)
             set_child_text(shelf, "height", 430)
             set_child_text(shelf, "itemgap", 14)
             set_child_text(shelf, "onup", f"SetFocus({play_id})")
@@ -1679,11 +1679,11 @@ def update_xml(data, path):
 
 def main():
     # Start the new distributable version from the last published package once.
-    # Subsequent builds always transform 0.5.10 in place and remain byte-stable.
+    # Subsequent builds always transform 0.5.11 in place and remain byte-stable.
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.11.zip and migration source skin.cineva-0.5.10.zip")
+        raise SystemExit("Missing skin.cineva-0.5.12.zip and migration source skin.cineva-0.5.11.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -1764,9 +1764,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.11":
-                        addon_root.set("version", "0.5.11")
-                        changed.append(info.filename + " (bump skin version to 0.5.11)")
+                    if addon_root.get("version") != "0.5.12":
+                        addon_root.set("version", "0.5.12")
+                        changed.append(info.filename + " (bump skin version to 0.5.12)")
                     if helper_dependency.get("version") != "0.1.7":
                         helper_dependency.set("version", "0.1.7")
                         changed.append(info.filename + " (require widget manager 0.1.7)")
@@ -1774,22 +1774,22 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.11 - Restore Home shelf focus after playback",
-                        "- Return remote focus to the originating Home shelf after invoking a selected plugin URL.",
-                        "- Preserve the selected title context when a resolver returns without starting media.",
+                        "0.5.12 - Full-width Home poster rails with next-card preview",
+                        "- Widen all four Home shelves to an 1800px viewport with balanced 60px side margins.",
+                        "- Reveal a partial seventh poster to signal horizontal browsing without shrinking poster artwork.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.11 - Restore Home shelf focus after playback"):
-                        current_entry, separator, remainder = changelog.partition("0.5.10 - Reliable URL-escaped Home playback handoff")
+                    if changelog.startswith("0.5.12 - Full-width Home poster rails with next-card preview"):
+                        current_entry, separator, remainder = changelog.partition("0.5.11 - Restore Home shelf focus after playback")
                         if not separator:
-                            raise SystemExit("CINÉVA 0.5.11 changelog lost its 0.5.10 history entry")
+                            raise SystemExit("CINÉVA 0.5.12 changelog lost its 0.5.11 history entry")
                         if entry != current_entry:
                             data = (entry + separator + remainder).encode("utf-8")
-                            changed.append(info.filename + " (normalize 0.5.11 playback focus changelog)")
+                            changed.append(info.filename + " (normalize 0.5.12 full-width Home rails changelog)")
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (0.5.11 playback focus release)")
+                        changed.append(info.filename + " (0.5.12 full-width Home rails release)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:

@@ -7,20 +7,20 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.10.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.12.zip"
 
 
 class HomeHeroActionTests(unittest.TestCase):
     def test_release_changelog_uses_real_line_breaks(self):
         with ZipFile(ARCHIVE) as archive:
             lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
-        self.assertEqual(lines[0], "0.5.10 - Reliable URL-escaped Home playback handoff")
-        self.assertTrue(lines[1].startswith("- Resolve the selected shelf item's full FileNameAndPath"))
-        self.assertTrue(lines[2].startswith("- URL-escape plugin query separators and decode the selected path exactly once."))
-        self.assertEqual(lines[4], "0.5.9 - Preserve selected Home playback URLs")
-        self.assertTrue(lines[5].startswith("- Pass the focused shelf item's resolved plugin URL into the widget manager."))
-        self.assertTrue(lines[6].startswith("- Preserve ampersand-delimited plugin query parameters before Kodi Player playback."))
-        self.assertEqual(lines[8], "0.5.8 - Reliable Home hero playback handoff")
+        self.assertEqual(lines[0], "0.5.12 - Full-width Home poster rails with next-card preview")
+        self.assertTrue(lines[1].startswith("- Widen all four Home shelves to an 1800px viewport"))
+        self.assertTrue(lines[2].startswith("- Reveal a partial seventh poster to signal horizontal browsing"))
+        self.assertEqual(lines[4], "0.5.11 - Restore Home shelf focus after playback")
+        self.assertTrue(lines[5].startswith("- Return remote focus to the originating Home shelf"))
+        self.assertTrue(lines[6].startswith("- Preserve the selected title context when a resolver returns"))
+        self.assertEqual(lines[8], "0.5.10 - Reliable URL-escaped Home playback handoff")
 
     def test_all_home_heroes_use_branded_nine_slice_action_surfaces(self):
         with ZipFile(ARCHIVE) as archive:
@@ -224,13 +224,15 @@ class HomeHeroActionTests(unittest.TestCase):
             rail = controls.find("./control[@type='grouplist'][@id='9050']")
             self.assertEqual(
                 (rail.findtext("left"), rail.findtext("top"), rail.findtext("width"), rail.findtext("height")),
-                ("105", "444", "1710", "670"),
+                ("60", "444", "1800", "670"),
             )
             first_row_height = 506
             visible_next_shelf_preview = (
                 1080 - int(rail.findtext("top")) - first_row_height - int(rail.findtext("itemgap"))
             )
             self.assertEqual(visible_next_shelf_preview, 118)
+            visible_next_poster_peek = int(rail.findtext("width")) - 6 * 285 - 32
+            self.assertEqual(visible_next_poster_peek, 58)
             for row in range(1, 5):
                 group = rail.find(f"./control[@type='group'][@id='{9060 + row}']")
                 shelf = group.find(f"./control[@type='fixedlist'][@id='{9000 + row}']")

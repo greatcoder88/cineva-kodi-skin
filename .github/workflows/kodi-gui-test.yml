@@ -26,29 +26,29 @@ jobs:
       - name: Build release ZIP, verify idempotence, and commit source fixes
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.11.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.12.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.11.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.12.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
           fi
           echo "Archive SHA-256 is stable across consecutive builds: $after"
           mkdir -p artifacts
-          cp skin.cineva-0.5.11.zip artifacts/
-          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.11.zip)" ]; then
+          cp skin.cineva-0.5.12.zip artifacts/
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.12.zip)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add skin.cineva-0.5.11.zip
-            git commit -m "Build updated CINÉVA 0.5.11 skin archive"
+            git add skin.cineva-0.5.12.zip
+            git commit -m "Build updated CINÉVA 0.5.12 skin archive"
             git push origin HEAD:main || echo "::warning::Could not push rebuilt skin ZIP; GUI test still uses the rebuilt local ZIP."
           fi
 
       - name: Expand uploaded skin archive and prepare add-ons
         run: |
           mkdir -p artifacts
-          test -s skin.cineva-0.5.11.zip
-          unzip -q skin.cineva-0.5.11.zip -d .
+          test -s skin.cineva-0.5.12.zip
+          unzip -q skin.cineva-0.5.12.zip -d .
           test -f skin.cineva/addon.xml
           test -d skin.cineva/xml
           test -f skin.cineva/xml/Home.xml
@@ -277,7 +277,7 @@ jobs:
           if overlay_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(overlay_data[16:20], "big"), int.from_bytes(overlay_data[20:24], "big")) != (1920, 440):
             raise SystemExit("Packaged hero contrast texture is missing or has the wrong dimensions")
           rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
-          if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("105", "444", "1710", "670") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "180"):
+          if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("60", "444", "1800", "670") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "180"):
             raise SystemExit("Home rails are missing their vertical scrolling viewport")
           lower_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118))
           lower_slide = rail_list.find("./animation[@effect='slide']") if rail_list is not None else None
@@ -422,8 +422,8 @@ jobs:
           if any(button.findtext("texturefocus") != "focus-bar.png" for button in search.findall(".//control[@type='button']")):
             raise SystemExit("Search hub buttons are missing the unified focus treatment")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.11":
-            raise SystemExit("Skin archive version must be 0.5.11")
+          if skin.attrib.get("version") != "0.5.12":
+            raise SystemExit("Skin archive version must be 0.5.12")
           widget = ET.parse("tools/script.cineva.widgets/addon.xml").getroot()
           if widget.attrib.get("version") != "0.1.7":
             raise SystemExit("Widget manager version must be 0.1.7")
@@ -1013,6 +1013,22 @@ jobs:
               if progress_signal < 0.20:
                 raise SystemExit(f"Continue Watching progress bars are not visibly rendered in the Home screenshot (crimson coverage={progress_signal:.4f})")
               print(f"Verified live Continue Watching progress bars in the Home screenshot (crimson coverage={progress_signal:.4f}, y={progress_y}).")
+              # The 1800px rail should expose a sliver of poster seven at the right edge.
+              preview_x = progress_x + 6 * 285 + 32
+              preview_width = progress_x + progress_width - preview_x
+              preview_y = sum(int(node.findtext("top", "0")) for node in (rail, first_row, shelf))
+              if preview_width < 50:
+                raise SystemExit(f"Home rail does not expose the next poster preview (visible width={preview_width}px)")
+              preview = subprocess.run(
+                ["convert", f"artifacts/cineva-home-cycle-{cycle}.png",
+                 "-crop", f"{preview_width}x330+{preview_x}+{preview_y}",
+                 "-colorspace", "gray", "-format", "%[fx:standard_deviation]", "info:"],
+                text=True, capture_output=True, check=True
+              )
+              preview_detail = float(preview.stdout.strip())
+              if preview_detail < 0.025:
+                raise SystemExit(f"Next Home poster is not visibly previewed at the right edge (detail={preview_detail:.4f})")
+              print(f"Verified the seventh Home poster peeks into the 1800px shelf (visible width={preview_width}px, detail={preview_detail:.4f}).")
             subprocess.run(["xdotool","key","Up"],check=True)
             deadline = time.time() + 8
             while time.time() < deadline:
@@ -1187,7 +1203,7 @@ jobs:
               print(f"Verified long text-only hero title wraps cleanly across two lines (white coverage={coverages}).")
             def verify_wrapped_poster_caption(screenshot):
               signal = subprocess.run(
-                ["convert", screenshot, "-crop", "285x64+105+820",
+                ["convert", screenshot, "-crop", "285x64+60+820",
                  "-fx", "((r>0.65)&&(g>0.65)&&(b>0.65))?1:0",
                  "-trim", "-format", "%wx%h", "info:"],
                 text=True, capture_output=True, check=True
