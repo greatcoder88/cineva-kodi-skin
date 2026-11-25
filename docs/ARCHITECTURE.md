@@ -4,6 +4,10 @@
 
 Kodi video add-ons and library nodes own content retrieval. They populate Kodi ListItems and properties. CINÉVA owns navigation, layout, focus behavior and presentation only. No direct Trakt/TMDb/MDBList/Real-Debrid API integration belongs in the skin.
 
+## Catalogue navigation
+
+Movies and TV Shows expose a shared, remote-first navigation rail. The rail links Home, both catalogue screens, Search and the relevant widget editor, plus direct Kodi video-database nodes. Movies provide titles, genres, years, sets and recently added movies; TV Shows provide titles, genres, years, studios/networks and recently added episodes. These destinations use Kodi's native Video window and database URLs rather than hard-coded third-party plug-in routes, so Kodi retains its own folder history and Back behavior. A category may be empty when the local Kodi library has no matching content; provider-backed shelves remain independently configurable.
+
 ## Widget configuration model
 
 Widgets are configured from CINÉVA Skin Settings, not from a separate My Widgets destination. Home, Movies and TV Shows each expose four numbered widget slots to match the current renderer. Each slot can be selected, changed or cleared independently.
