@@ -13,6 +13,7 @@ CINÉVA is an independent, remote-first cinematic Kodi skin. Kodi video add-ons 
 
 - Cinematic Home hero driven by the focused item, with a bold 40px ExtraBold text-title fallback, clearlogo support and fanart/poster fallback.
 - Four configurable widget slots on each of Home, Movies and TV Shows.
+- Movies and TV Shows catalogue rails with direct Kodi library shortcuts for titles, genres, years, movie sets, TV studios and recently added items; D-pad left/right paths are explicit.
 - First-install Home defaults: Continue Watching Movies, In Progress Shows, Trending Movies and Trending TV Shows (POV paths).
 - Per-screen widget selection from enabled Kodi video add-ons using the widget manager's folder picker.
 - Balanced native 2:3 Home poster shelves with two-line captions, resume progress and a stronger 110% crimson D-pad selection state.
