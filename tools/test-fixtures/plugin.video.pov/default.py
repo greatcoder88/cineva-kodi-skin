@@ -34,11 +34,12 @@ def main():
     handle = int(sys.argv[1])
     query = parse_qs(sys.argv[2].lstrip("?")) if len(sys.argv) > 2 else {}
     action = query.get("action", [""])[-1]
-    # Every fixture movie points at this add-on's /play route. Log the handoff
-    # before returning an unresolved result so GUI automation can prove that a
-    # poster SELECT reached the add-on resolver without requiring a stream.
-    if sys.argv[0].rstrip("/").endswith("/play"):
-        xbmc.log("CINEVA_TEST_PLAY_RESOLVER_INVOKED url={}".format(sys.argv[0]), xbmc.LOGINFO)
+    # Kodi invokes default.py with the add-on root in sys.argv[0]; nested
+    # plugin:// paths are not preserved there. Route playback explicitly via
+    # the query string so a real poster SELECT reaches this resolver.
+    if action == "play" or sys.argv[0].rstrip("/").endswith("/play"):
+        invoked_url = "{}{}".format(sys.argv[0], sys.argv[2] if len(sys.argv) > 2 else "")
+        xbmc.log("CINEVA_TEST_PLAY_RESOLVER_INVOKED url={}".format(invoked_url), xbmc.LOGINFO)
         xbmcplugin.setResolvedUrl(handle, False, xbmcgui.ListItem())
         return
     is_tv = "tv" in action or "tvshow" in action
@@ -51,7 +52,7 @@ def main():
         poster = os.path.join(poster_dir, "{}-{}.jpg".format(poster_kind, index))
         if not os.path.isfile(poster):
             raise RuntimeError("Missing downloaded poster artwork: {}".format(poster))
-        play_url = "plugin://plugin.video.pov/play?id={}".format(index)
+        play_url = "plugin://plugin.video.pov/?action=play&id={}".format(index)
         item = xbmcgui.ListItem(label=title, path=play_url)
         item.setInfo("video", {
             "title": title,
