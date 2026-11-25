@@ -1810,20 +1810,52 @@ jobs:
           deadline = time.time() + 10
           while time.time() < deadline:
             addons_state = gui()
-            if (addons_state.get("currentwindow", {}).get("id") == 10040
-                and addons_state.get("currentcontrol", {}).get("id") == 50):
+            current_label = addons_state.get("currentcontrol", {}).get("label", "").strip()
+            if addons_state.get("currentwindow", {}).get("id") == 10040 and current_label:
               break
             time.sleep(0.2)
           else:
-            raise SystemExit(f"Add-on Browser did not focus Kodi native view 50: {addons_state}")
-          time.sleep(1)
-          addon_items = rpc("XBMC.GetInfoLabels", {"labels":["Container(50).NumItems"]})
+            raise SystemExit(f"Kodi Add-on Browser opened without a focused control: {addons_state}")
+          # GUI.GetProperties exposes the focused control label but does not
+          # expose its numeric control ID. Verify native view 50 through Kodi's
+          # own container labels and prove D-pad movement changes its selection.
+          def addon_view_state():
+            return rpc("XBMC.GetInfoLabels", {
+              "labels":["Container(50).NumItems", "Container(50).CurrentItem"]
+            })
+          addon_items = addon_view_state()
           addon_item_count = int(addon_items.get("Container(50).NumItems", "0"))
           if addon_item_count < 1:
             raise SystemExit(f"Kodi Add-on Browser view 50 has no populated directory items: {addon_items}; GUI={addons_state}")
+          initial_addon_item = int(addon_items.get("Container(50).CurrentItem", "-1"))
+          if addon_item_count > 1 and initial_addon_item < 0:
+            raise SystemExit(f"Kodi Add-on Browser view 50 has no valid selected item: {addon_items}; GUI={addons_state}")
+          if addon_item_count > 1:
+            press("Down")
+            deadline = time.time() + 5
+            moved_addon_item = initial_addon_item
+            while time.time() < deadline:
+              moved_state = addon_view_state()
+              moved_addon_item = int(moved_state.get("Container(50).CurrentItem", "-1"))
+              if moved_addon_item != initial_addon_item:
+                break
+              time.sleep(0.2)
+            if moved_addon_item == initial_addon_item:
+              raise SystemExit(f"D-pad Down did not move the native Add-on Browser view 50 selection: before={addon_items}; after={moved_state}; GUI={gui()}")
+            press("Up")
+            deadline = time.time() + 5
+            restored_addon_item = moved_addon_item
+            while time.time() < deadline:
+              restored_state = addon_view_state()
+              restored_addon_item = int(restored_state.get("Container(50).CurrentItem", "-1"))
+              if restored_addon_item == initial_addon_item:
+                break
+              time.sleep(0.2)
+            if restored_addon_item != initial_addon_item:
+              raise SystemExit(f"D-pad Up did not restore the native Add-on Browser view 50 selection: expected={initial_addon_item}; after={restored_state}; GUI={gui()}")
           subprocess.run(["import", "-display", ":99", "-window", "root",
                           "artifacts/cineva-addons-navigation.png"], check=True)
-          print(f"Opened Kodi Add-on Browser on native view 50 with {addon_item_count} visible directory items.")
+          print(f"Opened Kodi Add-on Browser on native view 50 with {addon_item_count} directory items; D-pad selection movement verified.")
           press("Escape")
           wait_for_window(10004)
           wait_for_control("ADD-ONS")
