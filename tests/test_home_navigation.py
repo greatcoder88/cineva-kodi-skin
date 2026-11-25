@@ -30,7 +30,7 @@ class HomeNavigationTests(unittest.TestCase):
         self.assertIn("1005", buttons, "Settings must occupy the reclaimed navigation slot")
         self.assertEqual(buttons["1005"].findtext("label"), "SETTINGS")
         self.assertEqual(buttons["1005"].findtext("left"), "670")
-        self.assertEqual(buttons["1005"].findtext("onclick"), "ActivateWindow(1113)")
+        self.assertEqual(buttons["1005"].findtext("onclick"), "ActivateWindow(11113)")
         self.assertFalse(
             any((button.findtext("label") or "").strip().upper() == "MY WIDGETS"
                 for button in buttons.values())
@@ -114,6 +114,43 @@ class HomeNavigationTests(unittest.TestCase):
                 ]
                 self.assertEqual(len(title_nodes), 1, filename)
                 self.assertEqual(title_nodes[0].get("id"), "9211", filename)
+
+
+    def test_catalogue_navigation_matches_home_header_geometry(self):
+        with ZipFile(ARCHIVE) as archive:
+            for filename in ("custom11117.xml", "custom11118.xml"):
+                root = ET.fromstring(archive.read(f"skin.cineva/xml/{filename}"))
+                nav = next(
+                    node for node in root.findall("./controls/control")
+                    if node.get("type") == "group"
+                    and node.find("./control[@id='1001']") is not None
+                )
+                self.assertEqual(
+                    (nav.findtext("left"), nav.findtext("top"),
+                     nav.findtext("width"), nav.findtext("height")),
+                    ("280", "32", "1080", "48"),
+                    filename,
+                )
+                buttons = nav.findall("./control[@type='button']")
+                self.assertEqual(len(buttons), 10, filename)
+                self.assertTrue(all(button.findtext("font") == "font12" for button in buttons))
+                self.assertLessEqual(
+                    max(int(button.findtext("left")) + int(button.findtext("width")) for button in buttons),
+                    1080,
+                )
+
+    def test_visible_skin_labels_are_english_only(self):
+        with ZipFile(ARCHIVE) as archive:
+            for filename in archive.namelist():
+                if not filename.startswith("skin.cineva/xml/") or not filename.endswith(".xml"):
+                    continue
+                root = ET.fromstring(archive.read(filename))
+                for label in root.findall(".//label"):
+                    value = label.text or ""
+                    self.assertFalse(
+                        any("\\u0900" <= character <= "\\u097F" for character in value),
+                        f"{filename} contains non-English visible label text: {value!r}",
+                    )
 
 
     def test_custom_window_xml_ids_use_kodis_home_relative_offset(self):

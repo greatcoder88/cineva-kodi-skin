@@ -1084,14 +1084,14 @@ def update_xml(data, path):
                 for tag, value in (
                     ("left", 670), ("top", 0), ("width", 150), ("height", 48),
                     ("font", "font12"), ("label", "SETTINGS"),
-                    ("onclick", "ActivateWindow(1113)"),
+                    ("onclick", "ActivateWindow(11113)"),
                 ):
                     set_child_text(settings_button, tag, value)
                 nav_group.append(settings_button)
             settings_button.set("id", "1005")
             set_child_text(settings_button, "left", 670)
             set_child_text(settings_button, "width", 150)
-            set_child_text(settings_button, "onclick", "ActivateWindow(1113)")
+            set_child_text(settings_button, "onclick", "ActivateWindow(11113)")
             # Put the menu on the same horizontal baseline as the CINÉVA wordmark
             # instead of stacking it underneath. The right-aligned date remains
             # anchored at the far edge of the same 1080p-safe header row.
@@ -1531,28 +1531,28 @@ def update_xml(data, path):
             )
             if nav_group is not None:
                 movie_items = [
-                    ("HOME", "ActivateWindow(Home)", 100),
-                    ("MOVIES", "ActivateWindow(11117)", 130),
-                    ("TV SHOWS", "ActivateWindow(11118)", 145),
-                    ("ALL MOVIES", "ActivateWindow(Videos,videodb://movies/titles/,return)", 150),
-                    ("GENRES", "ActivateWindow(Videos,videodb://movies/genres/,return)", 120),
-                    ("YEARS", "ActivateWindow(Videos,videodb://movies/years/,return)", 105),
-                    ("COLLECTIONS", "ActivateWindow(Videos,videodb://movies/sets/,return)", 160),
-                    ("RECENT", "ActivateWindow(Videos,videodb://movies/recentlyaddedmovies/,return)", 125),
-                    ("EDIT WIDGETS", "ActivateWindow(11115)", 175),
-                    ("SEARCH", "ActivateWindow(11112)", 115),
+                    ("HOME", "ActivateWindow(Home)", 70),
+                    ("MOVIES", "ActivateWindow(11117)", 80),
+                    ("TV SHOWS", "ActivateWindow(11118)", 95),
+                    ("ALL MOVIES", "ActivateWindow(Videos,videodb://movies/titles/,return)", 110),
+                    ("GENRES", "ActivateWindow(Videos,videodb://movies/genres/,return)", 75),
+                    ("YEARS", "ActivateWindow(Videos,videodb://movies/years/,return)", 70),
+                    ("COLLECTIONS", "ActivateWindow(Videos,videodb://movies/sets/,return)", 110),
+                    ("RECENT", "ActivateWindow(Videos,videodb://movies/recentlyaddedmovies/,return)", 75),
+                    ("EDIT WIDGETS", "ActivateWindow(11115)", 115),
+                    ("SEARCH", "ActivateWindow(11112)", 75),
                 ]
                 tv_items = [
-                    ("HOME", "ActivateWindow(Home)", 100),
-                    ("MOVIES", "ActivateWindow(11117)", 130),
-                    ("TV SHOWS", "ActivateWindow(11118)", 145),
-                    ("ALL SHOWS", "ActivateWindow(Videos,videodb://tvshows/titles/,return)", 150),
-                    ("GENRES", "ActivateWindow(Videos,videodb://tvshows/genres/,return)", 120),
-                    ("YEARS", "ActivateWindow(Videos,videodb://tvshows/years/,return)", 105),
-                    ("STUDIOS", "ActivateWindow(Videos,videodb://tvshows/studios/,return)", 160),
-                    ("RECENT", "ActivateWindow(Videos,videodb://tvshows/recentlyaddedepisodes/,return)", 125),
-                    ("EDIT WIDGETS", "ActivateWindow(11116)", 175),
-                    ("SEARCH", "ActivateWindow(11112)", 115),
+                    ("HOME", "ActivateWindow(Home)", 70),
+                    ("MOVIES", "ActivateWindow(11117)", 80),
+                    ("TV SHOWS", "ActivateWindow(11118)", 95),
+                    ("ALL SHOWS", "ActivateWindow(Videos,videodb://tvshows/titles/,return)", 110),
+                    ("GENRES", "ActivateWindow(Videos,videodb://tvshows/genres/,return)", 75),
+                    ("YEARS", "ActivateWindow(Videos,videodb://tvshows/years/,return)", 70),
+                    ("STUDIOS", "ActivateWindow(Videos,videodb://tvshows/studios/,return)", 85),
+                    ("RECENT", "ActivateWindow(Videos,videodb://tvshows/recentlyaddedepisodes/,return)", 75),
+                    ("EDIT WIDGETS", "ActivateWindow(11116)", 115),
+                    ("SEARCH", "ActivateWindow(11112)", 75),
                 ]
                 items = tv_items if is_tv else movie_items
                 for child in list(nav_group):
@@ -1565,7 +1565,7 @@ def update_xml(data, path):
                     })
                     specs = (
                         ("left", x), ("top", 0), ("width", width), ("height", 44),
-                        ("label", label), ("font", "font10"), ("onclick", action),
+                        ("label", label), ("font", "font12"), ("onclick", action),
                         ("onleft", "SetFocus({})".format(1001 + max(0, index - 1))),
                         ("onright", "SetFocus({})".format(1001 + min(len(items) - 1, index + 1))),
                         ("texturefocus", "focus-bar.png"),
@@ -1585,7 +1585,8 @@ def update_xml(data, path):
                         down.text = "SetFocus({})".format(9200 + slot)
                     ET.SubElement(button, "ondown").text = "SetFocus(1009)"
                     x += width + 10
-                nav_group.set("width", "1776")
+                for tag, value in (("left", 280), ("top", 32), ("width", 1080), ("height", 48)):
+                    set_child_text(nav_group, tag, value)
             page_title = "TV SHOWS" if is_tv else "MOVIES"
             # The original static page heading duplicates the generated
             # no-selection fallback below. Keep exactly one title treatment.
@@ -1651,8 +1652,18 @@ def update_xml(data, path):
             # Render hero information above the background and below focusable
             # controls; all focus movement remains native Kodi D-pad navigation.
             controls.extend([title, fallback, meta, logo, rating_bg, rating_logo, rating_text])
+    elif path in {"skin.cineva/xml/custom11115.xml", "skin.cineva/xml/custom11116.xml"}:
+        for node in root.findall(".//control[@type='label']"):
+            if node.findtext("label", "").strip() == "किसी भी इंस्टॉल किए हुए वीडियो ऐड-ऑन, लाइब्रेरी नोड या प्लेलिस्ट से विजेट चुनें। None चुनकर विजेट हटाया जा सकता है।":
+                set_child_text(
+                    node, "label",
+                    "Choose a widget from an installed video add-on, library node, or playlist. Select None to clear the slot."
+                )
     elif path == "skin.cineva/xml/custom11112.xml":
         # Search hub: keep the search action prominent and align results to the catalogue grid.
+        for node in root.findall(".//control[@type='label']"):
+            if node.findtext("label", "").strip() == "अपना वीडियो ऐड-ऑन चुनें और उसका सर्च इंटरफ़ेस खोलें।":
+                set_child_text(node, "label", "Choose a video add-on to open its search interface.")
         for node in root.findall(".//control[@type='button']"):
             set_child_text(node, "texturefocus", "focus-bar.png")
             set_child_text(node, "texturenofocus", "black.png")
