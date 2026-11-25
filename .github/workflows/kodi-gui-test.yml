@@ -1033,11 +1033,32 @@ jobs:
             focused_slot = max(range(6), key=lambda slot: focus_lane[slot])
             if focus_lane[focused_slot] < 0.015 or focused_slot < 2:
               raise SystemExit(
-                f"Scrolled Home focus is not in the central browsing lane: "
+                f"Scrolled Home focus is not in the visible browsing lane: "
                 f"slot={focused_slot}, signals={focus_lane}"
               )
-            print(f"Verified selected poster remains in Home browsing lane slot {focused_slot + 1}/6 after scrolling.")
-            for _ in range(6):
+            if scrolled_position == total_items and focused_slot != 5:
+              raise SystemExit(
+                f"Last Home item should settle at the right rail edge: "
+                f"position={scrolled_position}/{total_items}, slot={focused_slot + 1}/6"
+              )
+            if scrolled_position < total_items and focused_slot > 4:
+              raise SystemExit(
+                f"Home focus left its central lane before reaching the final item: "
+                f"position={scrolled_position}/{total_items}, slot={focused_slot + 1}/6"
+              )
+            print(
+              f"Verified selected poster in Home browsing lane slot "
+              f"{focused_slot + 1}/6 at position {scrolled_position}/{total_items}."
+            )
+            # The rightward probe may clamp at the final item before all six
+            # key presses are consumed. Return only the distance Kodi actually moved.
+            steps_back = scrolled_position - initial_position
+            if steps_back <= 0:
+              raise SystemExit(
+                f"Home shelf did not advance far enough to test restoration: "
+                f"initial={initial_position}, scrolled={scrolled_position}"
+              )
+            for _ in range(steps_back):
               subprocess.run(["xdotool","key","Left"],check=True)
               time.sleep(0.12)
             restored_labels = rpc("XBMC.GetInfoLabels", {"labels":["Container(9001).CurrentItem"]})
