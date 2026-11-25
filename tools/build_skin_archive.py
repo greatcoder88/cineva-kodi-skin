@@ -1762,11 +1762,6 @@ def main():
                         "- Route Home Resume/Play through the widget manager and Kodi Player API.",
                         "- Preserve the selected shelf item's plugin URL so video add-on resolvers receive playback requests.",
                         "",
-                        "- Explicit left/right focus between No and Yes in Kodi confirmation dialogs.",
-                        "- Replace the Startup window with Home so a transparent Startup layer cannot intercept remote input.",
-                        "- Keep long Home poster titles readable in a full two-line caption band.",
-        "- Use a bold 40px ExtraBold display face for text-only Home hero titles.",
-                        "",
                         "",
                     ))
                     if changelog.startswith("0.5.8 - Reliable Home hero playback handoff"):
@@ -1780,7 +1775,7 @@ def main():
                             changed.append(info.filename + " (normalize 0.5.8 Home playback changelog)")
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (0.5.6 Home rail redesign)")
+                        changed.append(info.filename + " (0.5.8 Home playback release)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:
