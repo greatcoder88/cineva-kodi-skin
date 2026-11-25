@@ -647,7 +647,7 @@ jobs:
           normal_title = poster.find("./control[@type='textbox']") if poster is not None else None
           focused_poster = includes.find("./include[@name='CinevaFocusedPosterItem']")
           focused_title = next((node for node in focused_poster.findall("./control") if node.get("type") in {"label", "textbox"}), None) if focused_poster is not None else None
-          if poster is None or poster.findtext("./control[@type='image']/height") != "300" or normal_title is None or (normal_title.findtext("width"), normal_title.findtext("top"), normal_title.findtext("height"), normal_title.findtext("font"), normal_title.findtext("aligny")) != ("270", "302", "58", "font10", "center") or normal_title.find("wrap") is not None:
+          if poster is None or poster.findtext("./control[@type='image']/height") != "300" or normal_title is None or (normal_title.findtext("width"), normal_title.findtext("top"), normal_title.findtext("height"), normal_title.findtext("font"), normal_title.findtext("aligny")) != ("270", "302", "72", "font10", "center") or normal_title.find("wrap") is not None:
               errors.append("Poster image and normal title geometry is not the redesigned large-card layout")
           normal_image = poster.find("./control[@type='image']") if poster is not None else None
           if normal_image is None or normal_image.findtext("texture") != "$INFO[ListItem.Art(poster)]":
@@ -686,7 +686,7 @@ jobs:
                   errors.append(f"Home row {container_id} focused poster is missing its red selection accent")
               if len(focus_labels) != 2 or focus_labels[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_labels[1].findtext("visible") != f"Control.HasFocus({container_id})":
                   errors.append(f"Home row {container_id} must keep exactly one correctly styled title visible")
-              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width"), focus_labels[1].findtext("aligny")) != ("font10", "326", "58", "270", "center") or focus_labels[1].find("wrap") is not None:
+              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width"), focus_labels[1].findtext("aligny")) != ("font10", "318", "68", "270", "center") or focus_labels[1].find("wrap") is not None:
                   errors.append(f"Home row {container_id} focused title must use the compact, multiline card-title treatment")
               zoom = focus_images[1].find("./animation[@effect='zoom']") if len(focus_images) > 1 else None
               if len(focus_images) > 1 and (focus_images[1].findtext("left"), focus_images[1].findtext("top"), focus_images[1].findtext("width"), focus_images[1].findtext("height")) != ("29", "-4", "212", "318"):
