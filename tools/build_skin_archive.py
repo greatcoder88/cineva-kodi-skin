@@ -1514,7 +1514,7 @@ def update_xml(data, path):
                     ("ALL SHOWS", "ActivateWindow(Videos,videodb://tvshows/titles/,return)", 150),
                     ("GENRES", "ActivateWindow(Videos,videodb://tvshows/genres/,return)", 120),
                     ("YEARS", "ActivateWindow(Videos,videodb://tvshows/years/,return)", 105),
-                    ("NETWORKS", "ActivateWindow(Videos,videodb://tvshows/studios/,return)", 160),
+                    ("STUDIOS", "ActivateWindow(Videos,videodb://tvshows/studios/,return)", 160),
                     ("RECENT", "ActivateWindow(Videos,videodb://tvshows/recentlyaddedepisodes/,return)", 125),
                     ("EDIT WIDGETS", "ActivateWindow(11116)", 175),
                     ("SEARCH", "ActivateWindow(11112)", 115),
