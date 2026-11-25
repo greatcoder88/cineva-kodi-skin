@@ -511,10 +511,10 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.9")
+        root.set("version", "0.5.10")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
-                imp.set("version", "0.1.5")
+                imp.set("version", "0.1.6")
     elif path == "skin.cineva/xml/Home.xml":
         default = root.find("defaultcontrol")
         if default is None:
