@@ -41,27 +41,27 @@ class HomeNavigationTests(unittest.TestCase):
         expected = {
             "custom11117.xml": {
                 "1001": ("HOME", "ActivateWindow(Home)"),
-                "1002": ("MOVIES", "ActivateWindow(11117)"),
-                "1003": ("TV SHOWS", "ActivateWindow(11118)"),
+                "1002": ("MOVIES", "ActivateWindow(1117)"),
+                "1003": ("TV SHOWS", "ActivateWindow(1118)"),
                 "1004": ("ALL MOVIES", "ActivateWindow(Videos,videodb://movies/titles/,return)"),
                 "1005": ("GENRES", "ActivateWindow(Videos,videodb://movies/genres/,return)"),
                 "1006": ("YEARS", "ActivateWindow(Videos,videodb://movies/years/,return)"),
                 "1007": ("COLLECTIONS", "ActivateWindow(Videos,videodb://movies/sets/,return)"),
                 "1008": ("RECENT", "ActivateWindow(Videos,videodb://movies/recentlyaddedmovies/,return)"),
-                "1009": ("EDIT WIDGETS", "ActivateWindow(11115)"),
-                "1010": ("SEARCH", "ActivateWindow(11112)"),
+                "1009": ("EDIT WIDGETS", "ActivateWindow(1115)"),
+                "1010": ("SEARCH", "ActivateWindow(1112)"),
             },
             "custom11118.xml": {
                 "1001": ("HOME", "ActivateWindow(Home)"),
-                "1002": ("MOVIES", "ActivateWindow(11117)"),
-                "1003": ("TV SHOWS", "ActivateWindow(11118)"),
+                "1002": ("MOVIES", "ActivateWindow(1117)"),
+                "1003": ("TV SHOWS", "ActivateWindow(1118)"),
                 "1004": ("ALL SHOWS", "ActivateWindow(Videos,videodb://tvshows/titles/,return)"),
                 "1005": ("GENRES", "ActivateWindow(Videos,videodb://tvshows/genres/,return)"),
                 "1006": ("YEARS", "ActivateWindow(Videos,videodb://tvshows/years/,return)"),
                 "1007": ("STUDIOS", "ActivateWindow(Videos,videodb://tvshows/studios/,return)"),
                 "1008": ("RECENT", "ActivateWindow(Videos,videodb://tvshows/recentlyaddedepisodes/,return)"),
-                "1009": ("EDIT WIDGETS", "ActivateWindow(11116)"),
-                "1010": ("SEARCH", "ActivateWindow(11112)"),
+                "1009": ("EDIT WIDGETS", "ActivateWindow(1116)"),
+                "1010": ("SEARCH", "ActivateWindow(1112)"),
             },
         }
         with ZipFile(ARCHIVE) as archive:
@@ -77,6 +77,7 @@ class HomeNavigationTests(unittest.TestCase):
                     for node in nav.findall("./control[@type='button']")
                 }
                 self.assertEqual(set(buttons), set(actions), filename)
+                self.assertEqual(root.get("id"), "1117" if filename == "custom11117.xml" else "1118")
                 for index, (control_id, (label, action)) in enumerate(actions.items()):
                     button = buttons[control_id]
                     self.assertEqual(button.findtext("label"), label)

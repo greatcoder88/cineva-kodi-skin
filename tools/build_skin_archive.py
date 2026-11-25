@@ -3,6 +3,7 @@
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 import os
+import re
 import struct
 import tempfile
 import time
@@ -500,6 +501,12 @@ def remove_missing_no_focus_textures(root):
 
 def update_xml(data, path):
     root = ET.fromstring(data)
+    # Kodi resolves custom11117.xml as runtime window 1117.
+    # The leading namespace digit belongs to the filename, not the XML ID.
+    if path.startswith("skin.cineva/xml/custom111") and path.endswith(".xml"):
+        suffix = Path(path).stem.removeprefix("custom")
+        if len(suffix) == 5 and suffix.startswith("1") and suffix.isdigit():
+            root.set("id", suffix[1:])
     if path == "skin.cineva/addon.xml":
         root.set("version", "0.5.7")
         for imp in root.findall("./requires/import"):
@@ -1618,7 +1625,13 @@ def update_xml(data, path):
             set_child_text(node, "texturenofocus", "black.png")
             set_child_text(node, "textcolor", "white")
             set_child_text(node, "focusedcolor", "white")
-    return ET.tostring(root, encoding="UTF-8", xml_declaration=True)
+    rendered = ET.tostring(root, encoding="UTF-8", xml_declaration=True).decode("utf-8")
+    for custom_id in range(11111, 11119):
+        rendered = rendered.replace(
+            f"ActivateWindow({custom_id})",
+            f"ActivateWindow({str(custom_id)[1:]})",
+        )
+    return rendered.encode("UTF-8")
 
 
 def main():
@@ -1645,7 +1658,12 @@ def main():
                 "skin.cineva/xml/MyVideoNav.xml",
                 "skin.cineva/xml/DialogVideoInfo.xml",
                 "skin.cineva/xml/VideoOSD.xml",
+                "skin.cineva/xml/custom11111.xml",
                 "skin.cineva/xml/custom11112.xml",
+                "skin.cineva/xml/custom11113.xml",
+                "skin.cineva/xml/custom11114.xml",
+                "skin.cineva/xml/custom11115.xml",
+                "skin.cineva/xml/custom11116.xml",
                 "skin.cineva/xml/custom11117.xml",
                 "skin.cineva/xml/custom11118.xml",
                 "skin.cineva/xml/Startup.xml",

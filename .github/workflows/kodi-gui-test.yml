@@ -1308,7 +1308,7 @@ jobs:
           press("Right")
           wait_for_control("MOVIES")
           press("Return")
-          wait_for_window(11117)
+          wait_for_window(1117)
           subprocess.run(["import", "-display", ":99", "-window", "root",
                           "artifacts/cineva-movies-navigation.png"], check=True)
           press("Up")
@@ -1325,7 +1325,7 @@ jobs:
             press("Left")
           wait_for_control("TV SHOWS")
           press("Return")
-          wait_for_window(11118)
+          wait_for_window(1118)
           subprocess.run(["import", "-display", ":99", "-window", "root",
                           "artifacts/cineva-tvshows-navigation.png"], check=True)
           press("Up")
