@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.19.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.18.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.20.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.19.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -544,7 +544,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.19")
+        root.set("version", "0.5.20")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.7")
@@ -1013,7 +1013,7 @@ def update_xml(data, path):
             controls.remove(heading)
             controls.remove(shelf)
             row_group = ET.Element("control", {"type": "group", "id": str(9060 + index)})
-            for tag, value in (("left", 0), ("top", 0), ("width", 1800), ("height", 506)):
+            for tag, value in (("left", 0), ("top", 0), ("width", 1800), ("height", 472)):
                 set_child_text(row_group, tag, value)
             play_id = 9111 + (index - 1) * 2
             next_target = 9000 + index + 1 if index < 4 else 1001
@@ -1026,9 +1026,9 @@ def update_xml(data, path):
             set_child_text(heading, "height", 38)
             set_child_text(heading, "font", "font18")
             set_child_text(shelf, "left", 0)
-            set_child_text(shelf, "top", 60)
+            set_child_text(shelf, "top", 55)
             set_child_text(shelf, "width", 1800)
-            set_child_text(shelf, "height", 430)
+            set_child_text(shelf, "height", 400)
             # Keep the selected poster in a stable central lane while browsing.
             # Movement 3 lets the first/last items use the rail edges without
             # pinning every later selection to the far-left slot.
@@ -1038,8 +1038,8 @@ def update_xml(data, path):
             set_child_text(shelf, "onup", f"SetFocus({play_id})")
             set_child_text(shelf, "ondown", f"SetFocus({next_target})")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
-                layout.set("width", "285")
-                layout.set("height", "430")
+                layout.set("width", "270")
+                layout.set("height", "400")
             focused_layout = shelf.find("./focusedlayout")
             focused_include = focused_layout.find("include") if focused_layout is not None else None
             if focused_include is not None:
@@ -1281,10 +1281,10 @@ def update_xml(data, path):
         if focused_label is None:
             focused_label = ET.fromstring(ET.tostring(normal_label, encoding="unicode"))
         # Kodi label controls ellipsize long card titles despite wrapmultiline.
-        # Textboxes wrap naturally inside a 64px caption area with room for two lines.
+        # Textboxes wrap naturally inside a 58px caption area with room for two lines.
         normal_label.set("type", "textbox")
         focused_label.set("type", "textbox")
-        for tag, value in (("left", 32), ("top", 0), ("width", 220), ("height", 330)):
+        for tag, value in (("left", 35), ("top", 0), ("width", 200), ("height", 300)):
             set_child_text(normal_image, tag, value)
         # Use the semantic poster key for every shelf state. Providers often map
         # thumb to landscape fanart, which makes inactive cards turn into short,
@@ -1294,7 +1294,7 @@ def update_xml(data, path):
         if normal_texture is None:
             raise SystemExit("Includes.xml normal poster image has no texture")
         normal_texture.set("fallback", "poster-placeholder.png")
-        for tag, value in (("left", 0), ("top", 332), ("width", 285), ("height", 64), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
+        for tag, value in (("left", 0), ("top", 302), ("width", 270), ("height", 58), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
             set_child_text(normal_label, tag, value)
         stale_visibility = normal_label.find("visible")
         if stale_visibility is not None:
@@ -1316,7 +1316,7 @@ def update_xml(data, path):
         if normal_progress is None:
             normal_progress = ET.fromstring(ET.tostring(progress, encoding="unicode"))
             normal.append(normal_progress)
-        for tag, value in (("left", 38), ("top", 319), ("width", 208), ("height", 5)):
+        for tag, value in (("left", 40), ("top", 289), ("width", 190), ("height", 5)):
             set_child_text(normal_progress, tag, value)
         set_child_text(normal_progress, "info", "ListItem.PercentPlayed")
         set_child_text(normal_progress, "visible", "ListItem.IsResumable")
@@ -1327,7 +1327,7 @@ def update_xml(data, path):
         # the title below it. The 104% control geometry plus a 104% focus
         # animation gives a balanced ~108% total scale instead of double-enlarging
         # an already oversized 108% control.
-        for tag, value in (("left", 26), ("top", -6), ("width", 232), ("height", 348)):
+        for tag, value in (("left", 29), ("top", -4), ("width", 212), ("height", 318)):
             set_child_text(focused_image, tag, value)
         set_child_text(focused_image, "texture", "$INFO[ListItem.Art(poster)]")
         focused_texture = focused_image.find("texture")
@@ -1356,7 +1356,7 @@ def update_xml(data, path):
             focus_animation.set("tween", "sine")
             focus_animation.set("easing", "out")
         focus_animation.text = "Focus"
-        for tag, value in (("left", 34), ("width", 216), ("top", 335), ("height", 5)):
+        for tag, value in (("left", 34), ("width", 202), ("top", 302), ("height", 5)):
             set_child_text(progress, tag, value)
         if focused_label is not None and focused_label in list(focused):
             focused.remove(focused_label)
@@ -1380,8 +1380,8 @@ def update_xml(data, path):
             set_child_text(active_image, "visible", f"Control.HasFocus({container_id})")
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
             set_child_text(fallback_progress, "visible", f"!Control.HasFocus({container_id}) + ListItem.IsResumable")
-            # Reserve a 64px caption area for two full lines at TV distance; compact native 2:3 posters expose more of the next shelf.
-            for tag, value in (("left", 0), ("top", 354), ("width", 285), ("height", 64), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "white")):
+            # Reserve a 58px caption area for two full lines at TV distance; compact native 2:3 posters expose more of the next shelf.
+            for tag, value in (("left", 0), ("top", 326), ("width", 270), ("height", 58), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
             stale_wrap = active_label.find("wrap")
             if stale_wrap is not None:
@@ -1392,7 +1392,7 @@ def update_xml(data, path):
             set_child_text(active_label, "visible", f"Control.HasFocus({container_id})")
             set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
             focus_accent = ET.Element("control", {"type": "image"})
-            for tag, value in (("left", 100), ("top", 426), ("width", 84), ("height", 4)):
+            for tag, value in (("left", 95), ("top", 390), ("width", 80), ("height", 4)):
                 set_child_text(focus_accent, tag, value)
             set_child_text(focus_accent, "texture", "focus-bar.png")
             set_child_text(focus_accent, "visible", f"Control.HasFocus({container_id})")
@@ -1863,11 +1863,11 @@ def update_xml(data, path):
 
 def main():
     # Start the new distributable version from the last published package once.
-    # Subsequent builds always transform 0.5.18 in place and remain byte-stable.
+    # Subsequent builds always transform 0.5.19 in place and remain byte-stable.
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.19.zip and migration source skin.cineva-0.5.18.zip")
+        raise SystemExit("Missing skin.cineva-0.5.20.zip and migration source skin.cineva-0.5.19.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -1949,9 +1949,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.19":
-                        addon_root.set("version", "0.5.19")
-                        changed.append(info.filename + " (bump skin version to 0.5.19)")
+                    if addon_root.get("version") != "0.5.20":
+                        addon_root.set("version", "0.5.20")
+                        changed.append(info.filename + " (bump skin version to 0.5.20)")
                     if helper_dependency.get("version") != "0.1.7":
                         helper_dependency.set("version", "0.1.7")
                         changed.append(info.filename + " (require widget manager 0.1.7)")
@@ -1959,22 +1959,22 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.19 - Refined Home navigation focus",
+                        "0.5.20 - Refined Home navigation focus",
                         "- Keep the Home header transparent while moving between navigation tabs.",
                         "- Replace full-button crimson blocks with compact, clearly tracked focus underlines.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.19 - Refined Home navigation focus"):
-                        current_entry, separator, remainder = changelog.partition("0.5.18 - Centered Home shelf focus for continuous browsing")
+                    if changelog.startswith("0.5.20 - Refined Home navigation focus"):
+                        current_entry, separator, remainder = changelog.partition("0.5.19 - Centered Home shelf focus for continuous browsing")
                         if not separator:
-                            raise SystemExit("CINÉVA 0.5.19 changelog lost its 0.5.18 history entry")
+                            raise SystemExit("CINÉVA 0.5.20 changelog lost its 0.5.19 history entry")
                         if entry != current_entry:
                             data = (entry + separator + remainder).encode("utf-8")
-                            changed.append(info.filename + " (normalize 0.5.19 Home navigation changelog)")
+                            changed.append(info.filename + " (normalize 0.5.20 Home navigation changelog)")
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (0.5.19 Home navigation release)")
+                        changed.append(info.filename + " (0.5.20 Home navigation release)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:

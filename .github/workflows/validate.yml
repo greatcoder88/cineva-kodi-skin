@@ -23,9 +23,9 @@ jobs:
       - name: Build release ZIP and verify true idempotence
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.19.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.20.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.19.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.20.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
@@ -33,8 +33,8 @@ jobs:
           echo "Archive SHA-256 is stable across consecutive builds: $after"
       - name: Expand uploaded CINÉVA archive
         run: |
-          test -s skin.cineva-0.5.19.zip
-          unzip -q skin.cineva-0.5.19.zip -d .
+          test -s skin.cineva-0.5.20.zip
+          unzip -q skin.cineva-0.5.20.zip -d .
       - name: Validate Settings-only widget configuration navigation
         run: |
           python - <<'PY'
@@ -510,13 +510,13 @@ jobs:
               shelf = next((child for child in row_controls
                             if child.get("type") == "fixedlist"
                             and child.get("id") == str(9000 + index)), None)
-              if row_group is None or row_group.get("type") != "group" or row_group.get("id") != str(9060 + index) or row_group.findtext("height") != "506":
+              if row_group is None or row_group.get("type") != "group" or row_group.get("id") != str(9060 + index) or row_group.findtext("height") != "472":
                   errors.append(f"Home widget {index} must be one grouped row inside the scrolling viewport")
               if heading is None or heading.get("type") != "label" or heading.findtext("label") != f"$INFO[Skin.String(Cineva.Widget{index}.Name)]" or (heading.findtext("top"), heading.findtext("height")) != ("0", "38") or heading.findtext("font") != "font18":
                   errors.append(f"Home widget {index} heading is missing from its row group")
               if row_accent is None or row_accent.get("type") != "image" or (row_accent.findtext("left"), row_accent.findtext("top"), row_accent.findtext("width"), row_accent.findtext("height")) != ("0", "42", "58", "3") or row_accent.findtext("texture") != "focus-bar.png" or row_accent.findtext("visible") != f"Control.HasFocus({9000 + index})":
                   errors.append(f"Home widget {index} is missing its active-rail accent")
-              if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("60", "430") or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
+              if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("55", "400") or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
                   errors.append(f"Home widget {index} shelf geometry or upward focus route is incorrect")
               cue_id = 9360 + (index - 1) * 3
               position = row_group.find(f"./control[@id='{cue_id}']") if row_group is not None else None
@@ -552,7 +552,7 @@ jobs:
                   if shelf.findtext("ondown") != expected_down or row_group.findtext("ondown") != expected_down:
                       errors.append(f"Home widget {index} shelf cannot move down to the next row")
                   for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
-                      if (layout.get("width"), layout.get("height")) != ("285", "430"):
+                      if (layout.get("width"), layout.get("height")) != ("270", "400"):
                           errors.append(f"Home widget {index} poster cards do not use the 6-up rail geometry")
           nav = next((g for g in controls.findall("control") if g.get("type") == "group" and g.find("./control[@id='1001']") is not None), None)
           if nav is None or (nav.findtext("left"), nav.findtext("top"), nav.findtext("width"), nav.findtext("height")) != ("280", "32", "1080", "48"):
@@ -623,12 +623,12 @@ jobs:
           normal_title = poster.find("./control[@type='textbox']") if poster is not None else None
           focused_poster = includes.find("./include[@name='CinevaFocusedPosterItem']")
           focused_title = next((node for node in focused_poster.findall("./control") if node.get("type") in {"label", "textbox"}), None) if focused_poster is not None else None
-          if poster is None or poster.findtext("./control[@type='image']/height") != "330" or normal_title is None or (normal_title.findtext("width"), normal_title.findtext("top"), normal_title.findtext("height"), normal_title.findtext("font"), normal_title.findtext("aligny")) != ("285", "332", "64", "font10", "center") or normal_title.find("wrap") is not None:
+          if poster is None or poster.findtext("./control[@type='image']/height") != "300" or normal_title is None or (normal_title.findtext("width"), normal_title.findtext("top"), normal_title.findtext("height"), normal_title.findtext("font"), normal_title.findtext("aligny")) != ("270", "302", "58", "font10", "center") or normal_title.find("wrap") is not None:
               errors.append("Poster image and normal title geometry is not the redesigned large-card layout")
           normal_image = poster.find("./control[@type='image']") if poster is not None else None
           if normal_image is None or normal_image.findtext("texture") != "$INFO[ListItem.Art(poster)]":
               errors.append("Home shelves must use semantic poster art, not ambiguous thumbnail/fanart art")
-          elif (normal_image.findtext("left"), normal_image.findtext("top"), normal_image.findtext("width"), normal_image.findtext("height")) != ("32", "0", "220", "330"):
+          elif (normal_image.findtext("left"), normal_image.findtext("top"), normal_image.findtext("width"), normal_image.findtext("height")) != ("35", "0", "200", "300"):
               errors.append("Normal Home posters must use the larger native 2:3 poster artwork")
           fixture_source = pathlib.Path("tools/test-fixtures/plugin.video.pov/default.py").read_text()
           if (
@@ -640,7 +640,7 @@ jobs:
           if normal_title is None or normal_title.findtext("visible") != "!ListItem.IsSelected":
               errors.append("Normal poster title must yield to the row-aware selected-item title")
           normal_progress = poster.find("./control[@type='progress']") if poster is not None else None
-          if normal_progress is None or (normal_progress.findtext("left"), normal_progress.findtext("top"), normal_progress.findtext("width"), normal_progress.findtext("height"), normal_progress.findtext("info"), normal_progress.findtext("visible"), normal_progress.findtext("texturebg")) != ("38", "319", "208", "5", "ListItem.PercentPlayed", "ListItem.IsResumable", "resume-track.png"):
+          if normal_progress is None or (normal_progress.findtext("left"), normal_progress.findtext("top"), normal_progress.findtext("width"), normal_progress.findtext("height"), normal_progress.findtext("info"), normal_progress.findtext("visible"), normal_progress.findtext("texturebg")) != ("40", "289", "190", "5", "ListItem.PercentPlayed", "ListItem.IsResumable", "resume-track.png"):
               errors.append("Every resumable poster must show its thin red progress strip, even when not focused")
           if focused_title is not None:
               errors.append("Base focused poster template must not retain an unused title layer")
@@ -658,14 +658,14 @@ jobs:
                   errors.append(f"Home row {container_id} must show a normal poster when inactive and focus artwork only when active")
               elif any(image.findtext("texture") != "$INFO[ListItem.Art(poster)]" for image in focus_images[:2]):
                   errors.append(f"Home row {container_id} must use semantic portrait poster art in both focus states")
-              elif (focus_images[2].findtext("texture"), focus_images[2].findtext("visible"), focus_images[2].findtext("left"), focus_images[2].findtext("top"), focus_images[2].findtext("width"), focus_images[2].findtext("height")) != ("focus-bar.png", f"Control.HasFocus({container_id})", "100", "426", "84", "4"):
+              elif (focus_images[2].findtext("texture"), focus_images[2].findtext("visible"), focus_images[2].findtext("left"), focus_images[2].findtext("top"), focus_images[2].findtext("width"), focus_images[2].findtext("height")) != ("focus-bar.png", f"Control.HasFocus({container_id})", "95", "390", "80", "4"):
                   errors.append(f"Home row {container_id} focused poster is missing its red selection accent")
               if len(focus_labels) != 2 or focus_labels[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_labels[1].findtext("visible") != f"Control.HasFocus({container_id})":
                   errors.append(f"Home row {container_id} must keep exactly one correctly styled title visible")
-              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width"), focus_labels[1].findtext("aligny")) != ("font10", "354", "64", "285", "center") or focus_labels[1].find("wrap") is not None:
+              elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width"), focus_labels[1].findtext("aligny")) != ("font10", "326", "58", "270", "center") or focus_labels[1].find("wrap") is not None:
                   errors.append(f"Home row {container_id} focused title must use the compact, multiline card-title treatment")
               zoom = focus_images[1].find("./animation[@effect='zoom']") if len(focus_images) > 1 else None
-              if len(focus_images) > 1 and (focus_images[1].findtext("left"), focus_images[1].findtext("top"), focus_images[1].findtext("width"), focus_images[1].findtext("height")) != ("26", "-6", "232", "348"):
+              if len(focus_images) > 1 and (focus_images[1].findtext("left"), focus_images[1].findtext("top"), focus_images[1].findtext("width"), focus_images[1].findtext("height")) != ("29", "-4", "212", "318"):
                   errors.append(f"Home row {container_id} focused artwork must stop above its title baseline")
               if zoom is None or (zoom.get("start"), zoom.get("end"), zoom.get("time"), zoom.get("tween"), zoom.get("easing")) != ("100", "104", "160", "sine", "out") or zoom.text != "Focus":
                   errors.append(f"Home row {container_id} focused poster is missing its short, event-driven D-pad zoom")
@@ -677,9 +677,9 @@ jobs:
                   errors.append(f"Home row {container_id} must show one resumable progress strip in both inactive and active card states")
               elif any(
                   (p.findtext("left"), p.findtext("top"), p.findtext("width"), p.findtext("height"), p.findtext("info"), p.findtext("texturebg"))
-                  != (("38", "319", "208", "5", "ListItem.PercentPlayed", "resume-track.png")
+                  != (("40", "289", "190", "5", "ListItem.PercentPlayed", "resume-track.png")
                       if p.findtext("visible").startswith("!") else
-                      ("34", "335", "216", "5", "ListItem.PercentPlayed", "resume-track.png"))
+                      ("34", "302", "202", "5", "ListItem.PercentPlayed", "resume-track.png"))
                   for p in focus_progresses
               ):
                   errors.append(f"Home row {container_id} resume progress geometry is inconsistent between normal and focused poster sizes")
@@ -705,8 +705,8 @@ jobs:
           if any(button.findtext("texturefocus") != "focus-bar.png" for button in search.findall(".//control[@type='button']")):
               errors.append("Search hub buttons are missing the unified focus treatment")
           skin = ET.parse(root / "addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.19":
-              errors.append("Skin ZIP version is not 0.5.19")
+          if skin.attrib.get("version") != "0.5.20":
+              errors.append("Skin ZIP version is not 0.5.20")
           settings = ET.parse("tools/script.cineva.widgets/resources/settings.xml").getroot()
           registry = settings.find(".//setting[@id='widget_registry']")
           if registry is None or registry.attrib.get("type") != "string":
