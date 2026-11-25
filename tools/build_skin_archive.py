@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.18.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.17.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.19.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.18.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -544,7 +544,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.18")
+        root.set("version", "0.5.19")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.7")
@@ -567,6 +567,50 @@ def update_xml(data, path):
         if controls is None:
             raise SystemExit("Home.xml is missing its controls container")
         remove_missing_no_focus_textures(root)
+        # Home navigation stays transparent when focused. The previous focus
+        # texture was a solid red tile stretched across the entire tab; use
+        # compact crimson underlines instead so the hero artwork remains visible.
+        nav_group = next(
+            (group for group in controls.findall("control")
+             if group.get("type") == "group"
+             and group.find("./control[@id='1001']") is not None),
+            None,
+        )
+        if nav_group is None:
+            raise SystemExit("Home navigation group is missing")
+        nav_buttons = {
+            button.get("id"): button
+            for button in nav_group.findall("./control[@type='button']")
+        }
+        if set(nav_buttons) != {str(control_id) for control_id in range(1001, 1006)}:
+            raise SystemExit("Home navigation must contain the five expected top-level tabs")
+        for button in nav_buttons.values():
+            for texture_tag in ("texturefocus", "texturenofocus"):
+                texture_node = button.find(texture_tag)
+                if texture_node is not None:
+                    button.remove(texture_node)
+            set_child_text(button, "focusedcolor", "white")
+        for marker_id in range(9201, 9206):
+            previous_marker = nav_group.find(f"./control[@id='{marker_id}']")
+            if previous_marker is not None:
+                nav_group.remove(previous_marker)
+        home_marker_visible = "Window.IsActive(home) + " + " + ".join(
+            f"!Control.HasFocus({control_id})" for control_id in (1002, 1003, 1004, 1005)
+        )
+        marker_specs = (
+            ("9201", 34, 62, home_marker_visible),
+            ("9202", 194, 62, "Control.HasFocus(1002)"),
+            ("9203", 373, 74, "Control.HasFocus(1003)"),
+            ("9204", 554, 62, "Control.HasFocus(1004)"),
+            ("9205", 714, 62, "Control.HasFocus(1005)"),
+        )
+        for marker_id, left, width, visible in marker_specs:
+            marker = ET.SubElement(nav_group, "control", {"type": "image", "id": marker_id})
+            for tag, value in (
+                ("left", left), ("top", 42), ("width", width), ("height", 4),
+                ("texture", "focus-bar.png"), ("visible", visible),
+            ):
+                set_child_text(marker, tag, value)
         # The archive builder runs twice in CI. Unwrap an existing rail grouplist
         # before rebuilding it so the transformation remains idempotent.
         previous_rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
@@ -1843,11 +1887,11 @@ def update_xml(data, path):
 
 def main():
     # Start the new distributable version from the last published package once.
-    # Subsequent builds always transform 0.5.15 in place and remain byte-stable.
+    # Subsequent builds always transform 0.5.18 in place and remain byte-stable.
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.18.zip and migration source skin.cineva-0.5.17.zip")
+        raise SystemExit("Missing skin.cineva-0.5.19.zip and migration source skin.cineva-0.5.18.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -1929,9 +1973,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.18":
-                        addon_root.set("version", "0.5.18")
-                        changed.append(info.filename + " (bump skin version to 0.5.18)")
+                    if addon_root.get("version") != "0.5.19":
+                        addon_root.set("version", "0.5.19")
+                        changed.append(info.filename + " (bump skin version to 0.5.19)")
                     if helper_dependency.get("version") != "0.1.7":
                         helper_dependency.set("version", "0.1.7")
                         changed.append(info.filename + " (require widget manager 0.1.7)")
@@ -1939,22 +1983,22 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.18 - Centered Home shelf focus for continuous browsing",
-                        "- Keep the selected poster in a stable central lane as each Home shelf scrolls.",
-                        "- Preserve nearby poster context with edge-aware movement at the beginning and end of every rail.",
+                        "0.5.19 - Refined Home navigation focus",
+                        "- Keep the Home header transparent while moving between navigation tabs.",
+                        "- Replace full-button crimson blocks with compact, clearly tracked focus underlines.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.18 - Centered Home shelf focus for continuous browsing"):
-                        current_entry, separator, remainder = changelog.partition("0.5.17 - Polished live Home shelf navigation")
+                    if changelog.startswith("0.5.19 - Refined Home navigation focus"):
+                        current_entry, separator, remainder = changelog.partition("0.5.18 - Centered Home shelf focus for continuous browsing")
                         if not separator:
-                            raise SystemExit("CINÉVA 0.5.18 changelog lost its 0.5.17 history entry")
+                            raise SystemExit("CINÉVA 0.5.19 changelog lost its 0.5.18 history entry")
                         if entry != current_entry:
                             data = (entry + separator + remainder).encode("utf-8")
-                            changed.append(info.filename + " (normalize 0.5.18 Home shelf browsing changelog)")
+                            changed.append(info.filename + " (normalize 0.5.19 Home navigation changelog)")
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (0.5.18 Home shelf browsing release)")
+                        changed.append(info.filename + " (0.5.19 Home navigation release)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:

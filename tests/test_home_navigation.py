@@ -5,7 +5,7 @@ from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.18.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.19.zip"
 HUB_WINDOW = "skin.cineva/xml/CinevaWidgetHub.xml"
 
 
@@ -36,6 +36,47 @@ class HomeNavigationTests(unittest.TestCase):
                 for button in buttons.values())
         )
         self.assertNotIn("ActivateWindow(11119)", ET.tostring(home, encoding="unicode"))
+
+
+    def test_home_header_focus_uses_transparent_tabs_and_tracking_underlines(self):
+        with ZipFile(ARCHIVE) as archive:
+            home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
+        nav = next(
+            node for node in home.findall("./controls/control")
+            if node.get("type") == "group"
+            and node.find("./control[@id='1001']") is not None
+        )
+        buttons = {
+            button.get("id"): button
+            for button in nav.findall("./control[@type='button']")
+        }
+        self.assertEqual(set(buttons), {str(control_id) for control_id in range(1001, 1006)})
+        for button in buttons.values():
+            self.assertIsNone(button.find("texturefocus"),
+                              "Home tabs must not become solid red blocks when focused")
+            self.assertIsNone(button.find("texturenofocus"),
+                              "Home tabs must remain transparent when unfocused")
+            self.assertEqual(button.findtext("focusedcolor"), "white")
+        home_visible = "Window.IsActive(home) + " + " + ".join(
+            f"!Control.HasFocus({control_id})" for control_id in (1002, 1003, 1004, 1005)
+        )
+        expected = {
+            "9201": ("34", "42", "62", "4", "focus-bar.png", home_visible),
+            "9202": ("194", "42", "62", "4", "focus-bar.png", "Control.HasFocus(1002)"),
+            "9203": ("373", "42", "74", "4", "focus-bar.png", "Control.HasFocus(1003)"),
+            "9204": ("554", "42", "62", "4", "focus-bar.png", "Control.HasFocus(1004)"),
+            "9205": ("714", "42", "62", "4", "focus-bar.png", "Control.HasFocus(1005)"),
+        }
+        for marker_id, geometry in expected.items():
+            marker = nav.find(f"./control[@type='image'][@id='{marker_id}']")
+            self.assertIsNotNone(marker, f"Home navigation is missing focus marker {marker_id}")
+            self.assertEqual(
+                (marker.findtext("left"), marker.findtext("top"),
+                 marker.findtext("width"), marker.findtext("height"),
+                 marker.findtext("texture"), marker.findtext("visible")),
+                geometry,
+                f"Home navigation focus marker {marker_id} has incorrect geometry or visibility",
+            )
 
 
     def test_movies_and_tv_catalogue_navigation_exposes_real_library_destinations(self):

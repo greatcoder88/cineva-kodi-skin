@@ -26,29 +26,29 @@ jobs:
       - name: Build release ZIP, verify idempotence, and commit source fixes
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.18.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.19.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.18.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.19.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
           fi
           echo "Archive SHA-256 is stable across consecutive builds: $after"
           mkdir -p artifacts
-          cp skin.cineva-0.5.18.zip artifacts/
-          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.18.zip)" ]; then
+          cp skin.cineva-0.5.19.zip artifacts/
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.19.zip)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add skin.cineva-0.5.18.zip
-            git commit -m "Build updated CINÉVA 0.5.18 skin archive"
+            git add skin.cineva-0.5.19.zip
+            git commit -m "Build updated CINÉVA 0.5.19 skin archive"
             git push origin HEAD:main || echo "::warning::Could not push rebuilt skin ZIP; GUI test still uses the rebuilt local ZIP."
           fi
 
       - name: Expand uploaded skin archive and prepare add-ons
         run: |
           mkdir -p artifacts
-          test -s skin.cineva-0.5.18.zip
-          unzip -q skin.cineva-0.5.18.zip -d .
+          test -s skin.cineva-0.5.19.zip
+          unzip -q skin.cineva-0.5.19.zip -d .
           test -f skin.cineva/addon.xml
           test -d skin.cineva/xml
           test -f skin.cineva/xml/Home.xml
@@ -466,8 +466,8 @@ jobs:
           if any(button.findtext("texturefocus") != "focus-bar.png" for button in search.findall(".//control[@type='button']")):
             raise SystemExit("Search hub buttons are missing the unified focus treatment")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.18":
-            raise SystemExit("Skin archive version must be 0.5.17")
+          if skin.attrib.get("version") != "0.5.19":
+            raise SystemExit("Skin archive version must be 0.5.19")
           widget = ET.parse("tools/script.cineva.widgets/addon.xml").getroot()
           if widget.attrib.get("version") != "0.1.7":
             raise SystemExit("Widget manager version must be 0.1.7")
@@ -477,8 +477,31 @@ jobs:
           nav = next((g for g in controls.findall("control") if g.get("type") == "group" and g.find("./control[@id='1001']") is not None), None)
           if nav is None or (nav.findtext("left"), nav.findtext("top"), nav.findtext("width"), nav.findtext("height")) != ("280", "32", "1080", "48"):
             raise SystemExit("Home navigation must share the horizontal brand/date baseline")
-          if nav is None or any(button.findtext("focusedcolor") != "white" or button.findtext("texturefocus") != "focus-bar.png" for button in nav.findall("./control[@type='button']")):
-            raise SystemExit("Home navigation buttons need visible explicit textures and text color")
+          if nav is None or any(
+            button.findtext("focusedcolor") != "white"
+            or button.find("texturefocus") is not None
+            or button.find("texturenofocus") is not None
+            for button in nav.findall("./control[@type='button']")
+          ):
+            raise SystemExit("Home navigation tabs must remain transparent in both focus states")
+          expected_home_marker_visible = "Window.IsActive(home) + " + " + ".join(
+            f"!Control.HasFocus({control_id})" for control_id in (1002, 1003, 1004, 1005)
+          )
+          expected_nav_markers = {
+            "9201": ("34", "42", "62", "4", "focus-bar.png", expected_home_marker_visible),
+            "9202": ("194", "42", "62", "4", "focus-bar.png", "Control.HasFocus(1002)"),
+            "9203": ("373", "42", "74", "4", "focus-bar.png", "Control.HasFocus(1003)"),
+            "9204": ("554", "42", "62", "4", "focus-bar.png", "Control.HasFocus(1004)"),
+            "9205": ("714", "42", "62", "4", "focus-bar.png", "Control.HasFocus(1005)"),
+          }
+          for marker_id, expected in expected_nav_markers.items():
+            marker = nav.find(f"./control[@type='image'][@id='{marker_id}']") if nav is not None else None
+            if marker is None or (
+              marker.findtext("left"), marker.findtext("top"),
+              marker.findtext("width"), marker.findtext("height"),
+              marker.findtext("texture"), marker.findtext("visible")
+            ) != expected:
+              raise SystemExit(f"Home navigation focus marker {marker_id} is missing or malformed")
           print("Packaged Home, dialog, Startup and settings schema validated.")
           PY
           zip -qr artifacts/cineva-expanded-source.zip skin.cineva tools/script.cineva.widgets tools/test-fixtures/plugin.video.pov tools/download_test_posters.py
@@ -914,6 +937,62 @@ jobs:
             # before any navigation changes the selected poster or active control.
             subprocess.run(["import","-display",":99","-window","root",
                             "artifacts/cineva-home-initial.png"],check=True)
+            def red_coverage(image_path, crop):
+              signal = subprocess.run(
+                ["convert", image_path, "-crop", crop,
+                 "-fx", "((r>0.7)&&(g<0.12)&&(b<0.12))?1:0",
+                 "-format", "%[fx:mean]", "info:"],
+                text=True, capture_output=True, check=True
+              )
+              return float(signal.stdout.strip())
+            home_tab_red = red_coverage("artifacts/cineva-home-initial.png", "130x48+280+32")
+            home_line_red = red_coverage("artifacts/cineva-home-initial.png", "62x4+314+74")
+            if home_tab_red > 0.12 or home_line_red < 0.75:
+              raise SystemExit(
+                f"Home tab focus must be an underline, not a filled red block: "
+                f"tab={home_tab_red:.4f}, underline={home_line_red:.4f}"
+              )
+            deadline = time.time() + 8
+            while time.time() < deadline:
+              state = gui()
+              if state.get("currentcontrol", {}).get("label", "").strip().upper() == "HOME":
+                break
+              time.sleep(0.2)
+            else:
+              raise SystemExit(f"Home did not retain initial navigation focus: {state}")
+            rpc("Input.Right")
+            deadline = time.time() + 8
+            while time.time() < deadline:
+              state = gui()
+              if state.get("currentcontrol", {}).get("label", "").strip().upper() == "MOVIES":
+                break
+              time.sleep(0.2)
+            else:
+              raise SystemExit(f"Home navigation Right did not focus Movies: {state}")
+            subprocess.run(["import","-display",":99","-window","root",
+                            "artifacts/cineva-home-nav-movies-focused.png"],check=True)
+            movies_tab_red = red_coverage("artifacts/cineva-home-nav-movies-focused.png", "160x48+425+32")
+            movies_line_red = red_coverage("artifacts/cineva-home-nav-movies-focused.png", "62x4+474+74")
+            stale_home_line = red_coverage("artifacts/cineva-home-nav-movies-focused.png", "62x4+314+74")
+            if movies_tab_red > 0.12 or movies_line_red < 0.75 or stale_home_line > 0.10:
+              raise SystemExit(
+                f"Movies focus underline did not track D-pad focus cleanly: "
+                f"tab={movies_tab_red:.4f}, movies={movies_line_red:.4f}, home={stale_home_line:.4f}"
+              )
+            rpc("Input.Left")
+            deadline = time.time() + 8
+            while time.time() < deadline:
+              state = gui()
+              if state.get("currentcontrol", {}).get("label", "").strip().upper() == "HOME":
+                break
+              time.sleep(0.2)
+            else:
+              raise SystemExit(f"Home navigation Left did not restore Home focus: {state}")
+            print(
+              f"Verified underline-only Home navigation focus in Kodi screenshots "
+              f"(Home tab={home_tab_red:.4f}, Home underline={home_line_red:.4f}, "
+              f"Movies underline={movies_line_red:.4f})."
+            )
             paths = [
               "plugin://plugin.video.pov/?mode=build_movie_list&action=in_progress_movies&name=Continue%20Watching%20Movies",
               "plugin://plugin.video.pov/?mode=build_tvshow_list&action=in_progress_tvshows&name=Continue%20Watching%20TV%20Shows",

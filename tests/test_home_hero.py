@@ -7,17 +7,18 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.18.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.19.zip"
 
 
 class HomeHeroActionTests(unittest.TestCase):
     def test_release_changelog_uses_real_line_breaks(self):
         with ZipFile(ARCHIVE) as archive:
             lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
-        self.assertEqual(lines[0], "0.5.18 - Centered Home shelf focus for continuous browsing")
-        self.assertTrue(lines[1].startswith("- Keep the selected poster in a stable central lane"))
-        self.assertTrue(lines[2].startswith("- Preserve nearby poster context with edge-aware movement"))
+        self.assertEqual(lines[0], "0.5.19 - Refined Home navigation focus")
+        self.assertTrue(lines[1].startswith("- Keep the Home header transparent while moving between navigation tabs."))
+        self.assertTrue(lines[2].startswith("- Replace full-button crimson blocks with compact, clearly tracked focus underlines."))
         history = {line for line in lines if line.startswith("0.5.")}
+        self.assertIn("0.5.18 - Centered Home shelf focus for continuous browsing", history)
         self.assertIn("0.5.17 - Polished live Home shelf navigation", history)
         self.assertIn("0.5.16 - Live Home shelf position and scroll cues", history)
         self.assertIn("0.5.15 - Reliable empty-state D-pad entry", history)
