@@ -58,7 +58,7 @@ class HomeNavigationTests(unittest.TestCase):
                 "1004": ("ALL SHOWS", "ActivateWindow(Videos,videodb://tvshows/titles/,return)"),
                 "1005": ("GENRES", "ActivateWindow(Videos,videodb://tvshows/genres/,return)"),
                 "1006": ("YEARS", "ActivateWindow(Videos,videodb://tvshows/years/,return)"),
-                "1007": ("NETWORKS", "ActivateWindow(Videos,videodb://tvshows/studios/,return)"),
+                "1007": ("STUDIOS", "ActivateWindow(Videos,videodb://tvshows/studios/,return)"),
                 "1008": ("RECENT", "ActivateWindow(Videos,videodb://tvshows/recentlyaddedepisodes/,return)"),
                 "1009": ("EDIT WIDGETS", "ActivateWindow(11116)"),
                 "1010": ("SEARCH", "ActivateWindow(11112)"),
