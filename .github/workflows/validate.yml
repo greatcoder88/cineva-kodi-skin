@@ -645,8 +645,8 @@ jobs:
           if any(button.findtext("texturefocus") != "focus-bar.png" for button in search.findall(".//control[@type='button']")):
               errors.append("Search hub buttons are missing the unified focus treatment")
           skin = ET.parse(root / "addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.13":
-              errors.append("Skin ZIP version is not 0.5.13")
+          if skin.attrib.get("version") != "0.5.14":
+              errors.append("Skin ZIP version is not 0.5.14")
           settings = ET.parse("tools/script.cineva.widgets/resources/settings.xml").getroot()
           registry = settings.find(".//setting[@id='widget_registry']")
           if registry is None or registry.attrib.get("type") != "string":
