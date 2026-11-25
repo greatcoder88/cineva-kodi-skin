@@ -28,6 +28,7 @@
 - [x] Run automated Python/unit checks.
 - [x] Launch Kodi Piers in CI, verify CINÉVA becomes the active skin through JSON-RPC, and capture GUI screenshots.
 - [x] Verify the deterministic fixture's Home hero, dynamic fanart, poster fallback, shelf scrolling, lower-row safe area and selected D-pad paths.
+- [x] Add direct Movies and TV Shows navigation to Kodi library titles, genres, years, movie sets, TV studios and recently added items, with explicit left/right focus and a down path into the first widget shelf.
 - [x] Enlarge Home poster rails to native 2:3 240×360 artwork, tighten the gutters, align two-line captions and resume progress, and retain a visible next-shelf preview; verified in Kodi GUI screenshots.
 - [ ] Complete interactive Skin Settings and widget-picker testing in Kodi.
 - [ ] Test Movies and TV Shows screens with populated and empty sources.
