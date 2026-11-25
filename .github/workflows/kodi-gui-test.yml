@@ -309,8 +309,10 @@ jobs:
             buttons = hero_group.findall("./control[@type='button']") if hero_group is not None else []
             if hero_group is None or len(buttons) != 2 or [button.findtext("label") for button in buttons] != [f"$VAR[CinevaHeroAction{container_id - 9000}]", "MORE INFO"]:
               raise SystemExit(f"Home row {container_id} is missing its two nested hero actions")
-            if buttons[0].findtext("onclick") != f"RunScript(script.cineva.widgets,action=play&container={container_id})" or [node.text for node in buttons[1].findall("onclick")] != [f"SetFocus({container_id})", "Action(Info)"]:
-              raise SystemExit(f"Home row {container_id} hero actions are not wired to its selected item")
+            expected_play = (f"RunScript(script.cineva.widgets,action=play&container={container_id}"
+                             f"&path=$INFO[Container({container_id}).ListItem.File])")
+            if buttons[0].findtext("onclick") != expected_play or [node.text for node in buttons[1].findall("onclick")] != [f"SetFocus({container_id})", "Action(Info)"]:
+              raise SystemExit(f"Home row {container_id} hero actions are not wired to its selected item URL")
             if [button.findtext("texturefocus") for button in buttons] != ["hero-primary-focus.png", "hero-secondary-focus.png"] or [button.findtext("texturenofocus") for button in buttons] != ["hero-primary.png", "hero-secondary.png"] or [button.findtext("textcolor") for button in buttons] != ["white", "white"] or any(button.find("texturefocus") is None or button.find("texturefocus").attrib.get("border") != "8" or button.find("texturenofocus") is None or button.find("texturenofocus").attrib.get("border") != "8" for button in buttons):
               raise SystemExit(f"Home row {container_id} hero actions are missing their branded nine-slice focus surfaces")
             row_group = rail_list.find(f"./control[@type='group'][@id='{9060 + container_id - 9000}']") if rail_list is not None else None
