@@ -40,7 +40,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add skin.cineva-0.5.14.zip
-            git commit -m "Build updated CINÉVA 0.5.13 skin archive"
+            git commit -m "Build updated CINÉVA 0.5.14 skin archive"
             git push origin HEAD:main || echo "::warning::Could not push rebuilt skin ZIP; GUI test still uses the rebuilt local ZIP."
           fi
 
