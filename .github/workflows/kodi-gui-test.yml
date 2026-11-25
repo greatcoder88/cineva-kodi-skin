@@ -1237,6 +1237,110 @@ jobs:
               if changed_pixels < 5000:
                 raise SystemExit(f"Home hero fanart did not visibly change between movie and TV rails (changed pixels={changed_pixels})")
               print(f"Verified dynamic Home hero artwork changed across movie/TV rails: {changed_pixels} pixels differ.")
+          # Exercise the new catalogue navigation in the real Kodi GUI,
+          # not only through XML assertions. Every category must open Kodi's
+          # native Video database window and Escape must return to its caller.
+          def wait_for_control(label, timeout=10):
+            deadline = time.time() + timeout
+            while time.time() < deadline:
+              state = gui()
+              if state.get("currentcontrol", {}).get("label", "").strip().upper() == label.upper():
+                return state
+              time.sleep(0.2)
+            raise SystemExit(f"Timed out waiting for focused navigation control {label!r}: {state}")
+
+          def wait_for_window(window_id, timeout=12):
+            deadline = time.time() + timeout
+            while time.time() < deadline:
+              state = gui()
+              if state.get("currentwindow", {}).get("id") == window_id:
+                return state
+              time.sleep(0.25)
+            raise SystemExit(f"Timed out waiting for Kodi window {window_id}: {state}")
+
+          def press(key):
+            subprocess.run(["xdotool", "key", key], check=True)
+            time.sleep(0.18)
+
+          def open_native_category(page_id, label):
+            wait_for_control(label)
+            press("Return")
+            wait_for_window(10025)
+            print(f"Opened native Kodi library destination {label!r} from window {page_id}.")
+            press("Escape")
+            wait_for_window(page_id)
+            print(f"Back returned to catalogue window {page_id} after {label!r}.")
+
+          # Home -> Movies using the actual remote focus chain.
+          press("Down")
+          wait_for_control("HOME")
+          press("Right")
+          wait_for_control("MOVIES")
+          press("Return")
+          wait_for_window(11117)
+          subprocess.run(["import", "-display", ":99", "-window", "root",
+                          "artifacts/cineva-movies-navigation.png"], check=True)
+          press("Up")
+          wait_for_control("HOME")
+          for _ in range(3):
+            press("Right")
+          open_native_category(11117, "ALL MOVIES")
+          for label in ("GENRES", "YEARS", "COLLECTIONS", "RECENT"):
+            press("Right")
+            open_native_category(11117, label)
+
+          # Movies -> TV Shows, then exercise the TV-specific library nodes.
+          for _ in range(5):
+            press("Left")
+          wait_for_control("TV SHOWS")
+          press("Return")
+          wait_for_window(11118)
+          subprocess.run(["import", "-display", ":99", "-window", "root",
+                          "artifacts/cineva-tvshows-navigation.png"], check=True)
+          press("Up")
+          wait_for_control("HOME")
+          for _ in range(3):
+            press("Right")
+          open_native_category(11118, "ALL SHOWS")
+          for label in ("GENRES", "YEARS", "STUDIOS", "RECENT"):
+            press("Right")
+            open_native_category(11118, label)
+
+          # Verify the category rails still expose a complete, unique set of
+          # focusable actions in the packaged XML used by this Kodi process.
+          import xml.etree.ElementTree as ET
+          expected_catalogue = {
+            "custom11117.xml": {
+              "ALL MOVIES": "ActivateWindow(Videos,videodb://movies/titles/,return)",
+              "GENRES": "ActivateWindow(Videos,videodb://movies/genres/,return)",
+              "YEARS": "ActivateWindow(Videos,videodb://movies/years/,return)",
+              "COLLECTIONS": "ActivateWindow(Videos,videodb://movies/sets/,return)",
+              "RECENT": "ActivateWindow(Videos,videodb://movies/recentlyaddedmovies/,return)",
+            },
+            "custom11118.xml": {
+              "ALL SHOWS": "ActivateWindow(Videos,videodb://tvshows/titles/,return)",
+              "GENRES": "ActivateWindow(Videos,videodb://tvshows/genres/,return)",
+              "YEARS": "ActivateWindow(Videos,videodb://tvshows/years/,return)",
+              "STUDIOS": "ActivateWindow(Videos,videodb://tvshows/studios/,return)",
+              "RECENT": "ActivateWindow(Videos,videodb://tvshows/recentlyaddedepisodes/,return)",
+            },
+          }
+          for filename, expected_actions in expected_catalogue.items():
+            root = ET.parse("skin.cineva/xml/" + filename).getroot()
+            nav = next(node for node in root.findall("./controls/control")
+                       if node.get("type") == "group"
+                       and node.find("./control[@id='1001']") is not None)
+            buttons = {node.findtext("label"): node for node in nav.findall("./control[@type='button']")}
+            for label, action in expected_actions.items():
+              button = buttons.get(label)
+              if button is None or button.findtext("onclick") != action:
+                raise SystemExit(f"{filename} is missing the working {label} library destination")
+              if button.findtext("ondown") != "SetFocus(9201)":
+                raise SystemExit(f"{filename} {label} does not route Down into its widget shelf")
+            if len(buttons) != 10 or len({node.get("id") for node in buttons.values()}) != 10:
+              raise SystemExit(f"{filename} catalogue navigation must contain ten unique controls")
+          print("Verified Movies and TV Shows D-pad navigation, all nine native library categories, and Back returns in Kodi GUI.")
+
           logs = log_text()
           if "EXCEPTION: Invalid setting type" in logs:
             raise SystemExit("GUI test found a widget settings type error")
