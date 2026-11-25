@@ -35,7 +35,7 @@ class HomeHeroActionTests(unittest.TestCase):
                 self.assertEqual(
                     [(button.findtext("left"), button.findtext("top"),
                       button.findtext("width"), button.findtext("height")) for button in buttons],
-                    [("0", "260", "190", "54"), ("212", "260", "220", "54")],
+                    [("0", "240", "190", "54"), ("212", "240", "220", "54")],
                 )
                 self.assertEqual(
                     [button.findtext("texturefocus") for button in buttons],
@@ -123,7 +123,7 @@ class HomeHeroActionTests(unittest.TestCase):
                 )
 
 
-    def test_hero_metadata_rating_and_synopsis_form_a_left_aligned_stack(self):
+    def test_hero_metadata_and_inline_rating_precede_synopsis(self):
         with ZipFile(ARCHIVE) as archive:
             home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
             controls = home.find("controls")
@@ -145,18 +145,18 @@ class HomeHeroActionTests(unittest.TestCase):
                 self.assertEqual(metadata.findtext("width"), "430")
                 self.assertEqual(metadata.findtext("top"), "128")
                 plot = hero.find("./control[@type='textbox']")
-                self.assertEqual((plot.findtext("top"), plot.findtext("height")), ("194", "56"))
+                self.assertEqual((plot.findtext("top"), plot.findtext("height")), ("172", "56"))
                 self.assertEqual(
                     (badge.findtext("left"), badge.findtext("top"), badge.findtext("width"), badge.findtext("height")),
-                    ("0", "158", "148", "32"),
+                    ("460", "126", "148", "32"),
                 )
                 self.assertEqual(
                     (logo.findtext("left"), logo.findtext("top"), logo.findtext("width"), logo.findtext("height")),
-                    ("8", "162", "48", "24"),
+                    ("468", "130", "48", "24"),
                 )
                 self.assertEqual(
                     (score.findtext("left"), score.findtext("top"), score.findtext("width"), score.findtext("height")),
-                    ("62", "158", "84", "32"),
+                    ("522", "126", "84", "32"),
                 )
 
     def test_home_has_soft_right_edge_vignette_for_full_bleed_hero_art(self):
