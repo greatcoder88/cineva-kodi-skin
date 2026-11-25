@@ -94,6 +94,10 @@ def main():
                 raise RuntimeError("Missing generated clearlogo artwork: {}".format(clearlogo))
             artwork["clearlogo"] = clearlogo
         item.setArt(artwork)
+        # Kodi requires this flag before a non-folder plugin item is activated.
+        # Without it, Select can expose the context menu instead of invoking
+        # the plugin:// playback resolver from a Home shelf.
+        item.setProperty("IsPlayable", "true")
         # Continue Watching fixtures need real resume metadata so the skin's
         # progress strips are exercised in both normal and focused card states.
         if "in_progress" in action:
