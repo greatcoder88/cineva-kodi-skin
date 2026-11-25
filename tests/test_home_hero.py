@@ -17,9 +17,9 @@ class HomeHeroActionTests(unittest.TestCase):
         self.assertEqual(lines[0], "0.5.8 - Reliable Home hero playback handoff")
         self.assertTrue(lines[1].startswith("- Route Home Resume/Play through the widget manager and Kodi Player API."))
         self.assertTrue(lines[2].startswith("- Preserve the selected shelf item's plugin URL"))
-        self.assertTrue(lines[2].startswith("- Explicit left/right focus between No and Yes in Kodi confirmation dialogs."))
-        self.assertTrue(lines[3].startswith("- Replace the Startup window with Home"))
-        self.assertTrue(lines[4].startswith("- Keep long Home poster titles readable in a full two-line caption band."))
+        self.assertEqual(lines[4], "0.5.7 - Reliable remote focus and skin handoff")
+        self.assertTrue(lines[5].startswith("- Explicit left/right navigation across Home, Movies, TV Shows, Search and Settings."))
+        self.assertTrue(lines[6].startswith("- Explicit left/right focus between No and Yes in Kodi confirmation dialogs."))
 
     def test_all_home_heroes_use_branded_nine_slice_action_surfaces(self):
         with ZipFile(ARCHIVE) as archive:

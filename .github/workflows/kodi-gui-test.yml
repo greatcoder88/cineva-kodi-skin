@@ -419,8 +419,8 @@ jobs:
           if skin.attrib.get("version") != "0.5.8":
             raise SystemExit("Skin archive version must be 0.5.8")
           widget = ET.parse("tools/script.cineva.widgets/addon.xml").getroot()
-          if widget.attrib.get("version") != "0.1.3":
-            raise SystemExit("Widget manager version must be 0.1.3")
+          if widget.attrib.get("version") != "0.1.4":
+            raise SystemExit("Widget manager version must be 0.1.4")
           setting = ET.parse("tools/script.cineva.widgets/resources/settings.xml").getroot().find(".//setting[@id='widget_registry']")
           if setting is None or setting.attrib.get("type") != "string":
             raise SystemExit("widget_registry must be declared as a string setting")

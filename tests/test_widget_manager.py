@@ -6,6 +6,7 @@ import struct
 import types
 import unittest
 import xml.etree.ElementTree as ET
+from zipfile import ZipFile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 MANAGER = ROOT / "tools/script.cineva.widgets/resources/lib/manager.py"
@@ -121,6 +122,16 @@ class KodiManagerTests(unittest.TestCase):
         movies = root.find(".//control[@id='1002']")
         self.assertIsNone(home.find("texturenofocus"))
         self.assertEqual(movies.findtext("texturenofocus"), "black.png")
+
+    def test_skin_and_widget_helper_versions_are_upgradeable_and_consistent(self):
+        helper = ET.parse(ROOT / "tools/script.cineva.widgets/addon.xml").getroot()
+        with ZipFile(ROOT / "skin.cineva-0.5.8.zip") as archive:
+            skin = ET.fromstring(archive.read("skin.cineva/addon.xml"))
+        dependency = skin.find("./requires/import[@addon='script.cineva.widgets']")
+        self.assertEqual(skin.attrib.get("version"), "0.5.8")
+        self.assertEqual(helper.attrib.get("version"), "0.1.4")
+        self.assertIsNotNone(dependency)
+        self.assertEqual(dependency.attrib.get("version"), helper.attrib["version"])
 
     def test_widget_helper_is_not_advertised_as_a_video_plugin(self):
         addon_xml = ET.parse(ROOT / "tools/script.cineva.widgets/addon.xml").getroot()
