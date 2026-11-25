@@ -1754,7 +1754,7 @@ def main():
                         changed.append(info.filename)
                     data = generated
                     written_assets.add(info.filename)
-                if info.filename in required:
+                if info.filename in required or info.filename in CUSTOM_WINDOW_IDS:
                     updated = update_xml(data, info.filename)
                     if updated != data:
                         changed.append(info.filename)
