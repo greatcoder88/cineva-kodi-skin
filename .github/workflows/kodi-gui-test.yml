@@ -1448,10 +1448,10 @@ jobs:
           wait_for_control("MOVIES")
           press("Return")
           wait_for_window(11117)
-          subprocess.run(["import", "-display", ":99", "-window", "root",
-                          "artifacts/cineva-movies-navigation.png"], check=True)
           # Empty catalogue pages land on their own active section tab.
           wait_for_control("MOVIES")
+          subprocess.run(["import", "-display", ":99", "-window", "root",
+                          "artifacts/cineva-movies-navigation.png"], check=True)
           press("Down")
           wait_for_control("EDIT MOVIE WIDGETS")
           subprocess.run(["import", "-display", ":99", "-window", "root",
@@ -1460,6 +1460,8 @@ jobs:
           wait_for_window(11115)
           press("Escape")
           wait_for_window(11117)
+          if gui().get("currentcontrol", {}).get("label", "").strip().upper() == "EDIT MOVIE WIDGETS":
+            press("Up")
           wait_for_control("MOVIES")
           open_native_category(11117, "ALL MOVIES")
           for label in ("GENRES", "YEARS", "COLLECTIONS", "RECENT"):
@@ -1469,9 +1471,9 @@ jobs:
           focus_nav("TV SHOWS")
           press("Return")
           wait_for_window(11118)
+          wait_for_control("TV SHOWS")
           subprocess.run(["import", "-display", ":99", "-window", "root",
                           "artifacts/cineva-tvshows-navigation.png"], check=True)
-          wait_for_control("TV SHOWS")
           press("Down")
           wait_for_control("EDIT TV WIDGETS")
           subprocess.run(["import", "-display", ":99", "-window", "root",
@@ -1480,6 +1482,8 @@ jobs:
           wait_for_window(11116)
           press("Escape")
           wait_for_window(11118)
+          if gui().get("currentcontrol", {}).get("label", "").strip().upper() == "EDIT TV WIDGETS":
+            press("Up")
           wait_for_control("TV SHOWS")
           open_native_category(11118, "ALL SHOWS")
           for label in ("GENRES", "YEARS", "STUDIOS", "RECENT"):
