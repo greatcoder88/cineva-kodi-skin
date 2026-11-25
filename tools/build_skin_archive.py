@@ -1766,10 +1766,13 @@ def main():
                     ))
                     if changelog.startswith("0.5.8 - Reliable Home hero playback handoff"):
                         current_entry, separator, remainder = changelog.partition("0.5.7 - Reliable remote focus and skin handoff")
-                        normalized_entry = current_entry.replace(chr(92) + "n", chr(10))
-                        playback_note = "- Route Home Resume/Play through the widget manager and Kodi Player API."
-                        if playback_note not in normalized_entry:
-                            normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + playback_note + chr(10) + chr(10)
+                        if not separator:
+                            raise SystemExit("CINÉVA 0.5.8 changelog lost its 0.5.7 history entry")
+                        # Replace the whole current release entry with its canonical
+                        # source form. Earlier 0.5.8 attempts appended old 0.5.7
+                        # bullets to this section; normalizing the complete block
+                        # makes consecutive package builds byte-for-byte stable.
+                        normalized_entry = entry
                         if normalized_entry != current_entry:
                             data = (normalized_entry + separator + remainder).encode("utf-8")
                             changed.append(info.filename + " (normalize 0.5.8 Home playback changelog)")
