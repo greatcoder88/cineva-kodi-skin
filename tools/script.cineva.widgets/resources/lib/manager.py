@@ -232,7 +232,29 @@ class WidgetManager:
                 return
             self.configure_slot(registry, screen, picked + 1)
 
-    def run(self, action='manage', screen='home', slot=1):
+    def run(self, action='manage', screen='home', slot=1, container='9001'):
+        if action == 'play':
+            try:
+                container_id = int(container)
+            except (TypeError, ValueError):
+                xbmc.log('CINEVA_WIDGETS: ignoring malformed playback container {!r}'.format(container),
+                         xbmc.LOGWARNING)
+                return
+            if container_id not in (9001, 9002, 9003, 9004):
+                xbmc.log('CINEVA_WIDGETS: ignoring out-of-range playback container {}'.format(container_id),
+                         xbmc.LOGWARNING)
+                return
+            label = 'Container({}).ListItem.File'.format(container_id)
+            path = (xbmc.getInfoLabel(label) or '').strip()
+            if not path:
+                xbmc.log('CINEVA_WIDGETS: no playable item in container {}'.format(container_id),
+                         xbmc.LOGWARNING)
+                return
+            xbmc.log('CINEVA_WIDGETS_PLAY_REQUEST container={} path={}'.format(container_id, path),
+                     xbmc.LOGINFO)
+            xbmc.Player().play(path)
+            return
+
         registry = self.load()
         if screen not in SCREENS:
             screen = 'home'

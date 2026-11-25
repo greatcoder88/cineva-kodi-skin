@@ -14,4 +14,7 @@ if __name__ == '__main__':
     screen = args.get('screen', 'home')
     if screen not in SCREENS:
         screen = 'home'
-    WidgetManager().run(args.get('action', 'manage'), screen, args.get('slot', '1'))
+    WidgetManager().run(
+        args.get('action', 'manage'), screen, args.get('slot', '1'),
+        args.get('container', '9001')
+    )

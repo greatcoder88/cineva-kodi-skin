@@ -908,11 +908,13 @@ def update_xml(data, path):
                 button.find("texturefocus").set("border", "8")
                 button.find("texturenofocus").set("border", "8")
                 if button_id == play_id:
-                    # Invoke Kodi's playback builtin directly with the selected
-                    # shelf item's plugin:// URL. Action(Select) is unsafe here:
-                    # the focus change and selection can race, leaving Kodi in
-                    # the item's context menu instead of calling its resolver.
-                    set_child_text(button, "onclick", f"PlayMedia($INFO[Container({container_id}).ListItem.File])")
+                    # RunScript hands playback to Kodi's Python Player API. Kodi's
+                    # skin action parser does not resolve PlayMedia($INFO[...])
+                    # here, and changing focus before Action(Select) can race.
+                    set_child_text(
+                        button, "onclick",
+                        f"RunScript(script.cineva.widgets,action=play&container={container_id})"
+                    )
                 else:
                     set_child_text(button, "onclick", f"SetFocus({container_id})")
                     ET.SubElement(button, "onclick").text = "Action(Info)"
@@ -1776,6 +1778,7 @@ def main():
                         if rail_note not in normalized_entry:
                             normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + rail_note + chr(10) + chr(10)
                         spacing_note = "- Add clear breathing room between Home shelf headings and poster artwork."
+                        playback_note = "- Route Home hero playback through Kodi's Python Player API so add-on resolvers receive the selected item URL."
                         title_note = "- Use a bold 40px ExtraBold display face for text-only Home hero titles."
                         catalogue_note = "- Add direct Movies and TV Shows library browsing for titles, genres, years, collections or networks, and recently added items."
                         if title_note not in normalized_entry:
@@ -1784,6 +1787,8 @@ def main():
                             normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + catalogue_note + chr(10) + chr(10)
                         if spacing_note not in normalized_entry:
                             normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + spacing_note + chr(10) + chr(10)
+                        if playback_note not in normalized_entry:
+                            normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + playback_note + chr(10) + chr(10)
                         if vignette_note not in normalized_entry:
                             normalized_entry = normalized_entry.rstrip(chr(10)) + chr(10) + vignette_note + chr(10) + chr(10)
                         if normalized_entry != current_entry:

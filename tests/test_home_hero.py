@@ -68,10 +68,9 @@ class HomeHeroActionTests(unittest.TestCase):
                 button = home.find(f".//control[@id='{play_id}']")
                 self.assertIsNotNone(button, f"Missing hero Play/Resume button {play_id}")
                 self.assertEqual(
-                    [node.text for node in button.findall("onclick")],
-                    [f"SetFocus({container_id})", "Action(Select)"],
-                    "Hero Play/Resume must activate the matching native shelf item, "
-                    "not call an unsupported PlayMedia GUI action",
+                    button.findtext("onclick"),
+                    f"RunScript(script.cineva.widgets,action=play&container={container_id})",
+                    "Hero Play/Resume must delegate the selected shelf item URL to Kodi's Player API",
                 )
 
     def test_generated_settings_and_catalogue_hero_controls_do_not_duplicate(self):

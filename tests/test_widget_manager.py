@@ -40,10 +40,17 @@ class KodiManagerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.builtins = []
+        cls.info_labels = {}
+        cls.played = []
         xbmc = types.ModuleType("xbmc")
         xbmc.LOGINFO, xbmc.LOGWARNING = 1, 2
         xbmc.executeJSONRPC = lambda payload: json.dumps({"result": {"addons": []}})
         xbmc.executebuiltin = lambda command: cls.builtins.append(command)
+        xbmc.getInfoLabel = lambda label: cls.info_labels.get(label, "")
+        class FakePlayer:
+            def play(self, path):
+                cls.played.append(path)
+        xbmc.Player = FakePlayer
         xbmc.getCondVisibility = lambda condition: True
         xbmc.log = lambda *args: None
         addon_mod = types.ModuleType("xbmcaddon")
@@ -62,6 +69,8 @@ class KodiManagerTests(unittest.TestCase):
     def setUp(self):
         FakeVFS.files.clear()
         self.builtins.clear()
+        self.info_labels.clear()
+        self.played.clear()
 
     def test_skin_settings_exposes_twelve_numbered_widget_slots(self):
         builder_path = ROOT / "tools/build_skin_archive.py"
@@ -136,6 +145,20 @@ class KodiManagerTests(unittest.TestCase):
             self.assertIsNone(self.module.KodiRPC.call('Addons.GetAddons'))
         finally:
             self.module.xbmc.executeJSONRPC = original
+
+    def test_play_action_uses_selected_container_item_with_kodi_player(self):
+        path = "plugin://plugin.video.pov/?action=play&id=1"
+        self.info_labels["Container(9002).ListItem.File"] = path
+        self.module.WidgetManager().run(action="play", container="9002")
+        self.assertEqual(self.played, [path])
+
+    def test_play_action_rejects_invalid_container_and_empty_item(self):
+        self.info_labels["Container(9001).ListItem.File"] = ""
+        manager = self.module.WidgetManager()
+        manager.run(action="play", container="9999")
+        manager.run(action="play", container="9001")
+        manager.run(action="play", container="not-a-number")
+        self.assertEqual(self.played, [])
 
     def test_screens_are_only_home_movies_tvshows(self):
         self.assertEqual(set(self.module.SCREENS), {"home", "movies", "tvshows"})
