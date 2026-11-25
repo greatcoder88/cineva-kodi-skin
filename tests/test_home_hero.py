@@ -15,8 +15,8 @@ class HomeHeroActionTests(unittest.TestCase):
         with ZipFile(ARCHIVE) as archive:
             lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
         self.assertEqual(lines[0], "0.5.13 - Unified catalogue navigation styling")
-        self.assertTrue(lines[1].startswith("- Widen all four Home shelves to an 1800px viewport"))
-        self.assertTrue(lines[2].startswith("- Reveal a partial seventh poster to signal horizontal browsing"))
+        self.assertTrue(lines[1].startswith("- Match Movies and TV Shows navigation to Home with transparent inactive tabs"))
+        self.assertTrue(lines[2].startswith("- Widen long catalogue labels so Collections and Edit Widgets remain readable"))
         self.assertEqual(lines[4], "0.5.11 - Restore Home shelf focus after playback")
         self.assertTrue(lines[5].startswith("- Return remote focus to the originating Home shelf"))
         self.assertTrue(lines[6].startswith("- Preserve the selected title context when a resolver returns"))
