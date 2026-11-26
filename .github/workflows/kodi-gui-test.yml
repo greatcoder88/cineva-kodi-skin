@@ -1275,19 +1275,18 @@ jobs:
             # unwinding the plugin directory. Follow the native Back action
             # until the originating Home window is restored; never assume a
             # single Back closes both the plugin path and its window.
-            returned_home = gui()
-            for back_attempt in range(3):
-              if returned_home.get("currentwindow", {}).get("id") == 10000:
-                break
-              rpc("Input.Back")
-              deadline = time.time() + 5
-              while time.time() < deadline:
-                returned_home = gui()
-                if returned_home.get("currentwindow", {}).get("id") == 10000:
-                  break
-                time.sleep(0.2)
+            # MyVideoNav exposes an explicit BACK button (control 49) whose
+            # PreviousMenu action restores the calling Home window. Input.Back
+            # instead walks Kodi's plugin parent-directory stack and can remain
+            # inside Videos, so exercise the actual on-screen navigation action.
+            press("Up")
+            back_state = wait_for_control("BACK")
+            if back_state.get("currentwindow", {}).get("id") != 10025:
+              raise SystemExit(f"POV directory BACK control was not focused in MyVideoNav: {back_state}")
+            press("Return")
+            returned_home = wait_for_window(10000)
             if returned_home.get("currentwindow", {}).get("id") != 10000:
-              raise SystemExit(f"Back from Home VIEW ALL did not restore Home after three native Back actions: {returned_home}")
+              raise SystemExit(f"MyVideoNav BACK action did not restore the calling Home window: {returned_home}")
             if returned_home.get("currentcontrol", {}).get("label", "").strip().upper() == "VIEW ALL":
               press("Down")
             deadline = time.time() + 5
