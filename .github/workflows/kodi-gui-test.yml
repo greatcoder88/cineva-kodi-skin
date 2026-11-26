@@ -26,29 +26,29 @@ jobs:
       - name: Build release ZIP, verify idempotence, and commit source fixes
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.30.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.31.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.30.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.31.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
           fi
           echo "Archive SHA-256 is stable across consecutive builds: $after"
           mkdir -p artifacts
-          cp skin.cineva-0.5.30.zip artifacts/
-          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.30.zip)" ]; then
+          cp skin.cineva-0.5.31.zip artifacts/
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.31.zip)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add skin.cineva-0.5.30.zip
-            git commit -m "Build updated CINÉVA 0.5.30 skin archive"
+            git add skin.cineva-0.5.31.zip
+            git commit -m "Build updated CINÉVA 0.5.31 skin archive"
             git push origin HEAD:main || echo "::warning::Could not push rebuilt skin ZIP; GUI test still uses the rebuilt local ZIP."
           fi
 
       - name: Expand uploaded skin archive and prepare add-ons
         run: |
           mkdir -p artifacts
-          test -s skin.cineva-0.5.30.zip
-          unzip -q skin.cineva-0.5.30.zip -d .
+          test -s skin.cineva-0.5.31.zip
+          unzip -q skin.cineva-0.5.31.zip -d .
           test -f skin.cineva/addon.xml
           test -d skin.cineva/xml
           test -f skin.cineva/xml/Home.xml
@@ -103,7 +103,7 @@ jobs:
           hero_meta = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Year]" in c.findtext("label", "")), None) if hero_group is not None else None
           hero_eyebrow = hero_group.find("./control[@id='9300']") if hero_group is not None else None
           hero_logo = hero_group.find("./control[@id='9190']") if hero_group is not None else None
-          if hero_group is None or hero_group.findtext("top") != "118" or hero_group.findtext("height") != "318" or hero_title is None or (hero_title.findtext("top"), hero_title.findtext("height"), hero_title.findtext("font"), hero_title.findtext("width"), hero_title.findtext("wrapmultiline"), hero_title.findtext("aligny")) != ("36", "82", "font22", "1200", "true", "center") or hero_meta is None or (hero_meta.findtext("top"), hero_meta.findtext("height"), hero_meta.findtext("font"), hero_meta.findtext("textcolor"), hero_meta.findtext("width")) != ("128", "28", "font10", "silver", "340") or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("172", "56", "font13") or hero_eyebrow is None or (hero_eyebrow.findtext("top"), hero_eyebrow.findtext("height"), hero_eyebrow.findtext("label"), hero_eyebrow.findtext("visible"), hero_eyebrow.findtext("font"), hero_eyebrow.findtext("textcolor")) != ("0", "24", "CONTINUE WATCHING", "String.Contains(Skin.String(Cineva.Widget1.Path),in_progress)", "font9", "FFE50914") or hero_logo is None or (hero_logo.findtext("top"), hero_logo.findtext("height"), hero_logo.findtext("width")) != ("36", "70", "900"):
+          if hero_group is None or hero_group.findtext("top") != "118" or hero_group.findtext("height") != "318" or hero_title is None or (hero_title.findtext("top"), hero_title.findtext("height"), hero_title.findtext("font"), hero_title.findtext("width"), hero_title.findtext("wrapmultiline"), hero_title.findtext("aligny")) != ("36", "82", "font22", "1200", "true", "center") or hero_meta is None or (hero_meta.findtext("top"), hero_meta.findtext("height"), hero_meta.findtext("font"), hero_meta.findtext("textcolor"), hero_meta.findtext("width")) != ("128", "28", "font10", "silver", "400") or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("172", "56", "font13") or hero_eyebrow is None or (hero_eyebrow.findtext("top"), hero_eyebrow.findtext("height"), hero_eyebrow.findtext("label"), hero_eyebrow.findtext("visible"), hero_eyebrow.findtext("font"), hero_eyebrow.findtext("textcolor")) != ("0", "24", "CONTINUE WATCHING", "String.Contains(Skin.String(Cineva.Widget1.Path),in_progress)", "font9", "FFE50914") or hero_logo is None or (hero_logo.findtext("top"), hero_logo.findtext("height"), hero_logo.findtext("width")) != ("36", "70", "900"):
             raise SystemExit("Home hero eyebrow, title/clearlogo, metadata and synopsis must occupy separate, title-safe vertical bands")
           if hero_title.findtext("visible") != "String.IsEmpty(Container(9001).ListItem.Art(clearlogo))" or hero_logo is None or (hero_logo.findtext("left"), hero_logo.findtext("top"), hero_logo.findtext("width"), hero_logo.findtext("height"), hero_logo.findtext("texture"), hero_logo.findtext("visible")) != ("0", "36", "900", "70", "$INFO[Container(9001).ListItem.Art(clearlogo)]", "!String.IsEmpty(Container(9001).ListItem.Art(clearlogo))") or hero_logo.find("aspectratio") is None or hero_logo.find("aspectratio").attrib != {"align": "left", "aligny": "center"} or hero_logo.findtext("aspectratio") != "keep":
             raise SystemExit("Home hero must prefer provider clearlogo artwork and retain a text-title fallback")
@@ -111,10 +111,16 @@ jobs:
             source_label = group.findtext("control/label", "")
             container_id = int(source_label.split("Container(", 1)[1].split(")", 1)[0])
             metadata = next((c for c in group.findall("control") if c.get("type") == "label" and ".ListItem.Year]" in c.findtext("label", "")), None)
+            row_index = container_id - 9000
+            episode_context = (
+                f"$INFO[Container({container_id}).ListItem.Season,  •  S]"
+                f"$INFO[Container({container_id}).ListItem.Episode,  ·  E]"
+                if row_index == 2 else ""
+            )
             expected = (f"$INFO[Container({container_id}).ListItem.Year]"
+                        f"{episode_context}"
                         f"$INFO[Container({container_id}).ListItem.Duration,  •  ]"
                         f"$INFO[Container({container_id}).ListItem.Genre,  •  ]")
-            row_index = container_id - 9000
             clearlogo_info = f"Container({container_id}).ListItem.Art(clearlogo)"
             title_label = next((node for node in group.findall("control")
                                 if node.get("type") == "label"
@@ -487,8 +493,8 @@ jobs:
           if any(button.findtext("texturefocus") != "focus-bar.png" for button in search.findall(".//control[@type='button']")):
             raise SystemExit("Search hub buttons are missing the unified focus treatment")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.30":
-            raise SystemExit("Skin archive version must be 0.5.30")
+          if skin.attrib.get("version") != "0.5.31":
+            raise SystemExit("Skin archive version must be 0.5.31")
           widget = ET.parse("tools/script.cineva.widgets/addon.xml").getroot()
           if widget.attrib.get("version") != "0.1.8":
             raise SystemExit("Widget manager version must be 0.1.8")
@@ -1564,6 +1570,14 @@ jobs:
               if row_number == 2:
                 time.sleep(0.8)
                 subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row2-focus.png"],check=True)
+                episode_labels = rpc("XBMC.GetInfoLabels", {"labels":[
+                  "Container(9002).ListItem.Season",
+                  "Container(9002).ListItem.Episode"
+                ]})
+                if (episode_labels.get("Container(9002).ListItem.Season") != "2"
+                    or episode_labels.get("Container(9002).ListItem.Episode") != "5"):
+                  raise SystemExit(f"In Progress Shows fixture did not expose season/episode metadata: {episode_labels}")
+                print("Verified row-2 In Progress Shows exposes season 2, episode 5 to the live Home hero.")
                 verify_lower_row_bottom_clear("artifacts/cineva-home-row2-focus.png", "row 2")
                 verify_missing_fanart_poster_hero("artifacts/cineva-home-row2-focus.png", "row 2")
                 verify_hero_clearlogo("artifacts/cineva-home-row2-focus.png", "row 2")

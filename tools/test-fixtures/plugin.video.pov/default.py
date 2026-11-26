@@ -54,7 +54,7 @@ def main():
             raise RuntimeError("Missing downloaded poster artwork: {}".format(poster))
         play_url = "plugin://plugin.video.pov/?action=play&id={}".format(index)
         item = xbmcgui.ListItem(label=title, path=play_url)
-        item.setInfo("video", {
+        video_info = {
             "title": title,
             "year": year,
             "genre": genre,
@@ -71,7 +71,11 @@ def main():
                 "A skilled thief enters dreams to steal secrets, then takes on an impossible job: plant an idea."
                 if title == "Inception" else ""
             ),
-        })
+        }
+        if is_tv and "in_progress" in action:
+            video_info["season"] = 2
+            video_info["episode"] = 5
+        item.setInfo("video", video_info)
         # Keep poster art portrait and thumb/fanart landscape, matching common
         # provider metadata. This catches skins that accidentally use thumb as a poster.
         backdrop_name = "tv-backdrop-{}.jpg".format(index) if is_tv else "backdrop-{}.jpg".format(index)

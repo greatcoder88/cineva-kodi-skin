@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.30.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.29.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.31.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.30.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -544,7 +544,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.30")
+        root.set("version", "0.5.31")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -778,8 +778,14 @@ def update_xml(data, path):
                     # This prevents empty duration metadata from leaving doubled bullets
                     # (and keeps the same compact format for all four dynamic hero rows).
                     container_id = int(source_label.split("Container(", 1)[1].split(")", 1)[0])
+                    episode_context = (
+                        f"$INFO[Container({container_id}).ListItem.Season,  •  S]"
+                        f"$INFO[Container({container_id}).ListItem.Episode,  ·  E]"
+                        if row_index == 2 else ""
+                    )
                     metadata = (
                         f"$INFO[Container({container_id}).ListItem.Year]"
+                        f"{episode_context}"
                         f"$INFO[Container({container_id}).ListItem.Duration,  •  ]"
                         f"$INFO[Container({container_id}).ListItem.Genre,  •  ]"
                     )
@@ -788,7 +794,7 @@ def update_xml(data, path):
                     set_child_text(labels[1], "height", 28)
                     set_child_text(labels[1], "font", "font10")
                     set_child_text(labels[1], "textcolor", "silver")
-                    set_child_text(labels[1], "width", 340)
+                    set_child_text(labels[1], "width", 400)
                     row_index = int(source_label.split("Container(", 1)[1].split(")", 1)[0]) - 9000
                     rating_id = 9340 + (row_index - 1) * 3
                     for old_rating in list(group.findall("control")):
@@ -798,18 +804,18 @@ def update_xml(data, path):
                     rating_bg = ET.SubElement(group, "control", {"type": "image", "id": str(rating_id)})
                     # Keep the IMDb score on the metadata baseline instead of
                     # spending a separate vertical row beneath year/duration/genre.
-                    for tag, value in (("left", 360), ("top", 126), ("width", 148), ("height", 32),
+                    for tag, value in (("left", 420), ("top", 126), ("width", 148), ("height", 32),
                                        ("texture", "rating-badge.png")):
                         set_child_text(rating_bg, tag, value)
                     set_child_text(rating_bg, "visible",
                                    f"!String.IsEmpty(Container({9000 + row_index}).ListItem.Rating)")
                     rating_logo = ET.SubElement(group, "control", {"type": "image", "id": str(rating_id + 1)})
-                    for tag, value in (("left", 368), ("top", 130), ("width", 48), ("height", 24),
+                    for tag, value in (("left", 428), ("top", 130), ("width", 48), ("height", 24),
                                        ("texture", "imdb-logo.png"),
                                        ("visible", f"!String.IsEmpty(Container({9000 + row_index}).ListItem.Rating)")):
                         set_child_text(rating_logo, tag, value)
                     rating_text = ET.SubElement(group, "control", {"type": "label", "id": str(rating_id + 2)})
-                    for tag, value in (("left", 422), ("top", 126), ("width", 84), ("height", 32),
+                    for tag, value in (("left", 482), ("top", 126), ("width", 84), ("height", 32),
                                        ("font", "font10"), ("textcolor", "FFFFD36A"),
                                        ("label", f"$INFO[Container({9000 + row_index}).ListItem.Rating]"),
                                        ("align", "left"), ("aligny", "center"),
@@ -2010,11 +2016,11 @@ def update_xml(data, path):
 
 def main():
     # Start the new distributable version from the last published package once.
-    # Subsequent builds always transform 0.5.29 in place and remain byte-stable.
+    # Subsequent builds always transform 0.5.30 in place and remain byte-stable.
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.30.zip and migration source skin.cineva-0.5.29.zip")
+        raise SystemExit("Missing skin.cineva-0.5.31.zip and migration source skin.cineva-0.5.30.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -2098,9 +2104,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.30":
-                        addon_root.set("version", "0.5.30")
-                        changed.append(info.filename + " (bump skin version to 0.5.30)")
+                    if addon_root.get("version") != "0.5.31":
+                        addon_root.set("version", "0.5.31")
+                        changed.append(info.filename + " (bump skin version to 0.5.31)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2108,18 +2114,18 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.30 - Prefer concise Home plot outlines with full-plot fallback",
-                        "- Show provider PlotOutline first in each Home hero, with Plot as the fallback when no outline is available.",
-                        "- Keep synopsis text bound to the currently selected widget item across all four shelves.",
-                        "- Preserve existing hero geometry, metadata, actions and D-pad navigation.",
+                        "0.5.31 - Add episode context to the In Progress Shows hero",
+                        "- Show season and episode beside year and genre when the selected TV item provides those fields.",
+                        "- Keep episode metadata scoped to the second Home hero; movie and trending rows retain their existing metadata.",
+                        "- Widen the metadata lane and realign the IMDb chip to prevent overlap.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.30 - Prefer concise Home plot outlines with full-plot fallback"):
+                    if changelog.startswith("0.5.31 - Add episode context to the In Progress Shows hero"):
                         pass
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.30 Home hero synopsis fallback changelog)")
+                        changed.append(info.filename + " (prepend 0.5.31 Home episode-context changelog)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:

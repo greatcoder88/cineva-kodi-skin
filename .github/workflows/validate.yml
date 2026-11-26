@@ -23,9 +23,9 @@ jobs:
       - name: Build release ZIP and verify true idempotence
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.30.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.31.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.30.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.31.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
@@ -33,8 +33,8 @@ jobs:
           echo "Archive SHA-256 is stable across consecutive builds: $after"
       - name: Expand uploaded CINÉVA archive
         run: |
-          test -s skin.cineva-0.5.30.zip
-          unzip -q skin.cineva-0.5.30.zip -d .
+          test -s skin.cineva-0.5.31.zip
+          unzip -q skin.cineva-0.5.31.zip -d .
       - name: Validate Settings-only widget configuration navigation
         run: |
           python - <<'PY'
@@ -229,16 +229,22 @@ jobs:
           hero_meta = next((c for c in hero_group.findall("control") if c.get("type") == "label" and "$INFO[Container(9001).ListItem.Year]" in c.findtext("label", "")), None) if hero_group is not None else None
           hero_eyebrow = hero_group.find("./control[@id='9300']") if hero_group is not None else None
           hero_logo = hero_group.find("./control[@id='9190']") if hero_group is not None else None
-          if hero_group is None or hero_group.findtext("top") != "118" or hero_group.findtext("height") != "318" or hero_title is None or (hero_title.findtext("top"), hero_title.findtext("height"), hero_title.findtext("font"), hero_title.findtext("width"), hero_title.findtext("wrapmultiline"), hero_title.findtext("aligny")) != ("36", "82", "font22", "1200", "true", "center") or hero_meta is None or (hero_meta.findtext("top"), hero_meta.findtext("height"), hero_meta.findtext("font"), hero_meta.findtext("textcolor"), hero_meta.findtext("width")) != ("128", "28", "font10", "silver", "340") or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("172", "56", "font13") or hero_eyebrow is None or (hero_eyebrow.findtext("top"), hero_eyebrow.findtext("height"), hero_eyebrow.findtext("label"), hero_eyebrow.findtext("visible"), hero_eyebrow.findtext("font"), hero_eyebrow.findtext("textcolor")) != ("0", "24", "CONTINUE WATCHING", "String.Contains(Skin.String(Cineva.Widget1.Path),in_progress)", "font9", "FFE50914") or hero_logo is None or (hero_logo.findtext("top"), hero_logo.findtext("height"), hero_logo.findtext("width")) != ("36", "70", "900"):
+          if hero_group is None or hero_group.findtext("top") != "118" or hero_group.findtext("height") != "318" or hero_title is None or (hero_title.findtext("top"), hero_title.findtext("height"), hero_title.findtext("font"), hero_title.findtext("width"), hero_title.findtext("wrapmultiline"), hero_title.findtext("aligny")) != ("36", "82", "font22", "1200", "true", "center") or hero_meta is None or (hero_meta.findtext("top"), hero_meta.findtext("height"), hero_meta.findtext("font"), hero_meta.findtext("textcolor"), hero_meta.findtext("width")) != ("128", "28", "font10", "silver", "400") or hero_plot is None or (hero_plot.findtext("top"), hero_plot.findtext("height"), hero_plot.findtext("font")) != ("172", "56", "font13") or hero_eyebrow is None or (hero_eyebrow.findtext("top"), hero_eyebrow.findtext("height"), hero_eyebrow.findtext("label"), hero_eyebrow.findtext("visible"), hero_eyebrow.findtext("font"), hero_eyebrow.findtext("textcolor")) != ("0", "24", "CONTINUE WATCHING", "String.Contains(Skin.String(Cineva.Widget1.Path),in_progress)", "font9", "FFE50914") or hero_logo is None or (hero_logo.findtext("top"), hero_logo.findtext("height"), hero_logo.findtext("width")) != ("36", "70", "900"):
               errors.append("Home hero eyebrow, title/clearlogo, metadata and synopsis must occupy separate, title-safe vertical bands")
           for group in (g for g in controls.findall("control") if g.get("type") == "group" and g.findtext("control/label", "").startswith("$INFO[Container(")):
               source_label = group.findtext("control/label", "")
               container_id = int(source_label.split("Container(", 1)[1].split(")", 1)[0])
               metadata = next((c for c in group.findall("control") if c.get("type") == "label" and ".ListItem.Year]" in c.findtext("label", "")), None)
+              row_index = container_id - 9000
+              episode_context = (
+                  f"$INFO[Container({container_id}).ListItem.Season,  •  S]"
+                  f"$INFO[Container({container_id}).ListItem.Episode,  ·  E]"
+                  if row_index == 2 else ""
+              )
               expected = (f"$INFO[Container({container_id}).ListItem.Year]"
+                          f"{episode_context}"
                           f"$INFO[Container({container_id}).ListItem.Duration,  •  ]"
                           f"$INFO[Container({container_id}).ListItem.Genre,  •  ]")
-              row_index = container_id - 9000
               eyebrow_base_id = 9300 + (row_index - 1) * 3
               source_path = f"Skin.String(Cineva.Widget{row_index}.Path)"
               eyebrow_specs = (
@@ -729,8 +735,8 @@ jobs:
           if any(button.findtext("texturefocus") != "focus-bar.png" for button in search.findall(".//control[@type='button']")):
               errors.append("Search hub buttons are missing the unified focus treatment")
           skin = ET.parse(root / "addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.30":
-              errors.append("Skin ZIP version is not 0.5.30")
+          if skin.attrib.get("version") != "0.5.31":
+              errors.append("Skin ZIP version is not 0.5.31")
           settings = ET.parse("tools/script.cineva.widgets/resources/settings.xml").getroot()
           registry = settings.find(".//setting[@id='widget_registry']")
           if registry is None or registry.attrib.get("type") != "string":

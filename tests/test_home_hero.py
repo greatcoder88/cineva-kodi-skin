@@ -7,17 +7,18 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.30.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.31.zip"
 
 
 class HomeHeroActionTests(unittest.TestCase):
     def test_release_changelog_uses_real_line_breaks(self):
         with ZipFile(ARCHIVE) as archive:
             lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
-        self.assertEqual(lines[0], "0.5.30 - Prefer concise Home plot outlines with full-plot fallback")
-        self.assertEqual(lines[1], "- Show provider PlotOutline first in each Home hero, with Plot as the fallback when no outline is available.")
-        self.assertEqual(lines[2], "- Keep synopsis text bound to the currently selected widget item across all four shelves.")
-        self.assertEqual(lines[3], "- Preserve existing hero geometry, metadata, actions and D-pad navigation.")
+        self.assertEqual(lines[0], "0.5.31 - Add episode context to the In Progress Shows hero")
+        self.assertEqual(lines[1], "- Show season and episode beside year and genre when the selected TV item provides those fields.")
+        self.assertEqual(lines[2], "- Keep episode metadata scoped to the second Home hero; movie and trending rows retain their existing metadata.")
+        self.assertEqual(lines[3], "- Widen the metadata lane and realign the IMDb chip to prevent overlap.")
+        self.assertIn("0.5.30 - Prefer concise Home plot outlines with full-plot fallback", lines)
         self.assertIn("0.5.29 - Fix three-line Home poster caption clipping", lines)
         self.assertIn("0.5.28 - Give Home poster titles room for three complete lines", lines)
         self.assertIn("0.5.26 - Clean up Home hero progress rendering", lines)
@@ -177,23 +178,46 @@ class HomeHeroActionTests(unittest.TestCase):
                 badge = hero.find(f"./control[@id='{rating_id}']")
                 logo = hero.find(f"./control[@id='{rating_id + 1}']")
                 score = hero.find(f"./control[@id='{rating_id + 2}']")
-                self.assertEqual(metadata.findtext("width"), "340")
+                self.assertEqual(metadata.findtext("width"), "400")
                 self.assertEqual(metadata.findtext("top"), "128")
                 self.assertEqual(int(badge.findtext("left")) - int(metadata.findtext("width")), 20)
                 plot = hero.find("./control[@type='textbox']")
                 self.assertEqual((plot.findtext("top"), plot.findtext("height")), ("172", "56"))
                 self.assertEqual(
                     (badge.findtext("left"), badge.findtext("top"), badge.findtext("width"), badge.findtext("height")),
-                    ("360", "126", "148", "32"),
+                    ("420", "126", "148", "32"),
                 )
                 self.assertEqual(
                     (logo.findtext("left"), logo.findtext("top"), logo.findtext("width"), logo.findtext("height")),
-                    ("368", "130", "48", "24"),
+                    ("428", "130", "48", "24"),
                 )
                 self.assertEqual(
                     (score.findtext("left"), score.findtext("top"), score.findtext("width"), score.findtext("height")),
-                    ("422", "126", "84", "32"),
+                    ("482", "126", "84", "32"),
                 )
+
+    def test_in_progress_tv_hero_surfaces_optional_season_and_episode(self):
+        with ZipFile(ARCHIVE) as archive:
+            home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
+            controls = home.find("controls")
+            for container_id, play_id in ((9001, 9111), (9002, 9113), (9003, 9115), (9004, 9117)):
+                hero = next(
+                    group for group in controls.findall("control")
+                    if group.get("type") == "group"
+                    and group.find(f"./control[@id='{play_id}']") is not None
+                )
+                metadata = next(
+                    node for node in hero.findall("control")
+                    if node.get("type") == "label"
+                    and f"$INFO[Container({container_id}).ListItem.Year]" in node.findtext("label", "")
+                )
+                label = metadata.findtext("label", "")
+                if container_id == 9002:
+                    self.assertIn("$INFO[Container(9002).ListItem.Season,  •  S]", label)
+                    self.assertIn("$INFO[Container(9002).ListItem.Episode,  ·  E]", label)
+                else:
+                    self.assertNotIn(".ListItem.Season", label)
+                    self.assertNotIn(".ListItem.Episode", label)
 
     def test_continue_watching_hero_exposes_item_progress_and_watched_percentage(self):
         with ZipFile(ARCHIVE) as archive:

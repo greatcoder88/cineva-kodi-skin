@@ -17,6 +17,7 @@ CINÉVA is an independent, remote-first cinematic Kodi skin. Kodi video add-ons 
 - First-install Home defaults: Continue Watching Movies, In Progress Shows, Trending Movies and Trending TV Shows (POV paths).
 - Per-screen widget selection from enabled Kodi video add-ons using the widget manager's folder picker.
 - Compact native 2:3 Home poster shelves with three-line captions, resume progress and a restrained 108% crimson D-pad selection state.
+- In-progress TV heroes show season and episode alongside year and genre when the provider supplies those fields.
 - Standard Kodi dialogs and player surfaces remain Kodi-owned.
 
 
@@ -53,7 +54,7 @@ A Linux GUI pass is useful evidence, not a substitute for these checks. Do not p
 
 ## Repository layout
 
-- `skin.cineva-0.5.30.zip` — distributable skin package.
+- `skin.cineva-0.5.31.zip` — distributable skin package.
 - `tools/build_skin_archive.py` — deterministic package builder and source patcher.
 - `tools/script.cineva.widgets/` — per-screen widget source picker.
 - `tests/` and `.github/workflows/` — automated validation.
