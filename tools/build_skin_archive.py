@@ -13,9 +13,9 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.58.zip"
-PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.57.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.56.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.59.zip"
+PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.58.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.57.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -690,7 +690,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.58")
+        root.set("version", "0.5.59")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -1765,7 +1765,7 @@ def update_xml(data, path):
         if normal_texture is None:
             raise SystemExit("Includes.xml normal poster image has no texture")
         normal_texture.set("fallback", "poster-placeholder.png")
-        for tag, value in (("left", 0), ("top", 302), ("width", 248), ("height", 108), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
+        for tag, value in (("left", 0), ("top", 302), ("width", 248), ("height", 108), ("align", "center"), ("aligny", "top"), ("font", "font10"), ("textcolor", "lightgrey")):
             set_child_text(normal_label, tag, value)
         stale_visibility = normal_label.find("visible")
         if stale_visibility is not None:
@@ -1859,7 +1859,7 @@ def update_xml(data, path):
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
             set_child_text(fallback_progress, "visible", f"!Control.HasFocus({container_id}) + ListItem.IsResumable")
             # Reserve an 108px focused caption area for three full lines at TV distance, ending above the row underline.
-            for tag, value in (("left", 0), ("top", 316), ("width", 248), ("height", 108), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "white")):
+            for tag, value in (("left", 0), ("top", 316), ("width", 248), ("height", 108), ("align", "center"), ("aligny", "top"), ("font", "font10"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
             stale_wrap = active_label.find("wrap")
             if stale_wrap is not None:
@@ -2670,15 +2670,15 @@ def update_xml(data, path):
 def main():
     # Start the new distributable version from the immediately previous package.
     # Keep the older archive as a recovery fallback for shallow checkouts.
-    # Subsequent builds transform 0.5.58 in place and remain byte-stable.
+    # Subsequent builds transform 0.5.59 in place and remain byte-stable.
     if not ARCHIVE.exists():
         source_archive = PREVIOUS_ARCHIVE if PREVIOUS_ARCHIVE.is_file() else LEGACY_ARCHIVE
         if source_archive.is_file():
             ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
         raise SystemExit(
-            "Missing skin.cineva-0.5.58.zip and migration sources skin.cineva-0.5.57.zip / "
-            "skin.cineva-0.5.56.zip"
+            "Missing skin.cineva-0.5.59.zip and migration sources skin.cineva-0.5.58.zip / "
+            "skin.cineva-0.5.57.zip"
         )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
@@ -2774,9 +2774,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.58":
-                        addon_root.set("version", "0.5.58")
-                        changed.append(info.filename + " (bump skin version to 0.5.58)")
+                    if addon_root.get("version") != "0.5.59":
+                        addon_root.set("version", "0.5.59")
+                        changed.append(info.filename + " (bump skin version to 0.5.59)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2790,6 +2790,7 @@ def main():
                         data = changelog.encode("utf-8")
                         changed.append(info.filename + " (refresh 0.5.58 release notes)")
                     release_entries = [
+                        ("0.5.59", "0.5.59 - Align Home poster captions consistently\n- Anchor one-, two- and three-line titles to the same top baseline beneath every poster.\n- Keep focused and inactive caption placement consistent across all four Home rails."),
                         ("0.5.58", "0.5.58 - Restore previous Home poster focus\n- Route D-pad Up directly to the previous poster shelf so Kodi restores its remembered selection.\n- Keep each Home row on an explicit default poster target for predictable remote navigation.\n- Preserve earlier shelf focusability while hiding only off-screen artwork behind the pinned hero."),
                         ("0.5.57", "0.5.57 - Restore D-pad Up between scrolled Home shelves\n- Keep earlier poster rails focusable when navigating Up from any later row.\n- Preserve the pinned-hero layout; off-screen rails remain clipped by the Home viewport."),
                         ("0.5.55", "0.5.55 - Restore native System Information and Profiles windows\n- Package Kodi Piers native settings pages for System Information and Profiles.\n- Restore the provider button path from the last Home widget slot.\n- Clarify the search action as SEARCH MOVIES & TV."),

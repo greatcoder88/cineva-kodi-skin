@@ -5,7 +5,7 @@ from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.58.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.59.zip"
 HUB_WINDOW = "skin.cineva/xml/CinevaWidgetHub.xml"
 
 
@@ -41,6 +41,30 @@ class HomeNavigationTests(unittest.TestCase):
                 for button in buttons.values())
         )
         self.assertNotIn("ActivateWindow(11119)", ET.tostring(home, encoding="unicode"))
+
+    def test_home_poster_captions_share_a_top_aligned_baseline(self):
+        with ZipFile(ARCHIVE) as archive:
+            includes = ET.fromstring(archive.read("skin.cineva/xml/Includes.xml"))
+
+        for index in range(1, 5):
+            row = 9000 + index
+            normal = includes.find(f"./include[@name='CinevaPosterItem{row}']")
+            focused = includes.find(f"./include[@name='CinevaFocusedPosterItem{row}']")
+            self.assertIsNotNone(normal, f"Home row {index} needs its normal poster layout")
+            self.assertIsNotNone(focused, f"Home row {index} needs its focused poster layout")
+
+            normal_caption = normal.find("./control[@type='textbox']")
+            self.assertIsNotNone(normal_caption)
+            self.assertEqual(normal_caption.findtext("top"), "302")
+            self.assertEqual(normal_caption.findtext("aligny"), "top")
+
+            focused_captions = focused.findall("./control[@type='textbox']")
+            self.assertEqual(
+                [(caption.findtext("top"), caption.findtext("aligny"))
+                 for caption in focused_captions],
+                [("302", "top"), ("316", "top")],
+                f"Home row {index} must keep inactive and focused titles anchored to their poster edges",
+            )
 
     def test_each_configured_home_row_has_a_focusable_view_all_action(self):
         with ZipFile(ARCHIVE) as archive:
