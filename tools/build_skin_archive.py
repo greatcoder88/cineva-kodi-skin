@@ -1570,6 +1570,31 @@ def update_xml(data, path):
         for control in list(controls):
             if control.get("id") == "9010" or control.findtext("label") == "MORE WIDGETS  ›":
                 controls.remove(control)
+
+        # First-run initialization happens asynchronously after Home is shown.
+        # Keep the cinematic backdrop and navigation visible, but never present
+        # an unexplained empty canvas while the widget registry is prepared.
+        startup_state = ET.Element("control", {"type": "group", "id": "9480"})
+        for tag, value in (("left", 96), ("top", 520), ("width", 1100), ("height", 150),
+                           ("visible", "!Skin.HasSetting(Cineva.Initialized)")):
+            set_child_text(startup_state, tag, value)
+        startup_title = ET.SubElement(startup_state, "control", {"type": "label", "id": "9481"})
+        for tag, value in (("left", 0), ("top", 0), ("width", 1000), ("height", 54),
+                           ("font", "font22"), ("textcolor", "white"),
+                           ("label", "PREPARING YOUR CINÉVA HOME"),
+                           ("align", "left"), ("aligny", "center")):
+            set_child_text(startup_title, tag, value)
+        startup_hint = ET.SubElement(startup_state, "control", {"type": "label", "id": "9482"})
+        for tag, value in (("left", 2), ("top", 58), ("width", 1000), ("height", 36),
+                           ("font", "font12"), ("textcolor", "FFB8BBC4"),
+                           ("label", "CONNECTING YOUR WIDGETS AND VIDEO ADD-ONS"),
+                           ("align", "left"), ("aligny", "center")):
+            set_child_text(startup_hint, tag, value)
+        startup_accent = ET.SubElement(startup_state, "control", {"type": "image", "id": "9483"})
+        for tag, value in (("left", 0), ("top", 112), ("width", 86), ("height", 4),
+                           ("texture", "focus-bar.png")):
+            set_child_text(startup_accent, tag, value)
+        controls.append(startup_state)
     elif path == "skin.cineva/xml/Includes.xml":
         # Use RESUME for continue-watching sources and PLAY for other shelves.
         # Keep the label in a skin variable so each row's action remains one
