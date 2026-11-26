@@ -1965,6 +1965,7 @@ jobs:
           # Open a real POV plugin directory, not just the Add-on Browser root.
           # This exercises MyVideoNav.xml, which previously had panel 50 but no
           # <views> registration and therefore could not receive focus.
+          log_before_pov = log_text()
           pov_directory = (
             "plugin://plugin.video.pov/?mode=build_movie_list"
             "&action=tmdb_movies_trending&name=Trending%20Movies"
@@ -2011,7 +2012,8 @@ jobs:
                 f"before={pov_items}; after={gui()}"
               )
             press("Up")
-          if "Control 50 in window 10025 has been asked to focus" in log_text():
+          pov_log_delta = log_text()[len(log_before_pov):]
+          if "Control 50 in window 10025 has been asked to focus" in pov_log_delta:
             raise SystemExit("Kodi still reports that MyVideoNav cannot focus panel 50")
           print(f"Verified real POV directory rendering and D-pad navigation: {pov_count} items.")
           press("Escape")
