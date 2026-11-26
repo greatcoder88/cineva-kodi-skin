@@ -401,7 +401,14 @@ jobs:
               raise SystemExit(f"Home widget {index} is missing its configured VIEW ALL action")
             if row_accent is None or row_accent.get("type") != "image" or (row_accent.findtext("left"), row_accent.findtext("top"), row_accent.findtext("width"), row_accent.findtext("height")) != ("0", "42", "58", "3") or row_accent.findtext("texture") != "focus-bar.png" or row_accent.findtext("visible") != f"Control.HasFocus({9000 + index})":
               raise SystemExit(f"Home widget {index} is missing its active-rail accent")
-            expected_up = ([(None, f"SetFocus({9159 + index})")] if index == 1 else [(f"!String.IsEmpty(Container({9000 + previous}).ListItem.Label)", f"SetFocus({9000 + previous})") for previous in range(index - 1, 0, -1)] + [(None, f"SetFocus({9159 + index})")])
+            expected_up = ([(None, f"SetFocus({9159 + index})")] if index == 1 else [
+              action
+              for previous in range(index - 1, 0, -1)
+              for action in (
+                (f"Integer.IsGreater(Container({9000 + previous}).NumItems,0)", f"SetFocus({9000 + previous})"),
+                (f"!String.IsEmpty(Skin.String(Cineva.Widget{previous}.Path))", f"SetFocus({9159 + previous})"),
+              )
+            ] + [(None, f"SetFocus({9159 + index})")])
             actual_up = [(node.get("condition"), node.text) for node in shelf.findall("onup")] if shelf is not None else []
             if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("55", "440") or actual_up != expected_up:
               raise SystemExit(f"Home widget {index} shelf geometry or previous-row Up route is incorrect")
