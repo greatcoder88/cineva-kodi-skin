@@ -967,7 +967,7 @@ jobs:
             # Exercise the exact Kodi Interface destination from CINÉVA Settings.
             # The window must populate both Kodi's category navigation (id 3)
             # and its dynamic setting controls (id 5), not merely open a blank shell.
-            rpc("Input.ExecuteAction", {"action":"settings"})
+            rpc("Input.ExecuteAction", {"action":"activatewindow(settings)"})
             deadline = time.time() + 8
             while time.time() < deadline:
               state = gui()
