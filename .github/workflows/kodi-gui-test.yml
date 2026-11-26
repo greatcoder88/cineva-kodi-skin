@@ -1135,13 +1135,13 @@ jobs:
               "Container(9001).ListItem.PlotOutline",
               "Container(9001).ListItem.Plot"
             ]})
-            expected_tagline = "An idea can change everything, even inside a dream."
+            expected_tagline = ""
             expected_plot_outline = "A skilled thief enters dreams to steal secrets, then takes on an impossible job: plant an idea."
             if (hero_labels.get("Container(9001).ListItem.Label") != "Inception"
                 or hero_labels.get("Container(9001).ListItem.Tagline") != expected_tagline
                 or hero_labels.get("Container(9001).ListItem.PlotOutline") != expected_plot_outline):
-              raise SystemExit(f"Home GUI fixture did not expose selected Inception tagline and synopsis metadata: {hero_labels}")
-            print("Verified the selected Home hero exposes a provider tagline, PlotOutline and full-plot fallback.")
+              raise SystemExit(f"Home GUI fixture did not expose selected Inception PlotOutline fallback metadata: {hero_labels}")
+            print("Verified the selected Inception hero falls back to PlotOutline when its provider has no tagline.")
             def red_coverage(image_path, crop):
               signal = subprocess.run(
                 ["convert", image_path, "-crop", crop,
