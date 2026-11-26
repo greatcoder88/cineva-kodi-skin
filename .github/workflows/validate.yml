@@ -729,8 +729,13 @@ jobs:
           layout = panel.find("itemlayout") if panel is not None else None
           if panel is None or (panel.findtext("left"), panel.findtext("top"), panel.findtext("width"), panel.findtext("height")) != ("54", "252", "1812", "790"):
               errors.append("Catalogue panel is not using the full-width cinematic grid")
-          if panel is None or panel.findtext("focusposition") != "1":
-              errors.append("Add-on directory panel must skip Kodi's synthetic parent row and focus the first real item")
+          if panel is None or panel.findtext("focusposition") != "0":
+              errors.append("Add-on directory panel must place its first poster in the first visible grid slot")
+          panel_focus = panel.find("onfocus") if panel is not None else None
+          if (panel_focus is None
+              or panel_focus.get("condition") != "Container.HasParent(50)"
+              or panel_focus.text != "Control.SetFocus(50,1,absolute)"):
+              errors.append("Add-on directory panel must use absolute list focus to skip Kodi's synthetic parent item")
           if layout is None or (layout.get("width"), layout.get("height")) != ("330", "390"):
               errors.append("Catalogue poster cards are missing the redesigned grid geometry")
           details = ET.parse(root / "xml/DialogVideoInfo.xml").getroot()
