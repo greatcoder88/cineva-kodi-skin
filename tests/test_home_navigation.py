@@ -130,14 +130,10 @@ class HomeNavigationTests(unittest.TestCase):
                     for term in control.findtext("visible", "").split("+")
                     if term.strip()
                 }
-                for later_index in range(index + 1, 5):
-                    self.assertNotIn(
-                        f"!Control.HasFocus({9000 + later_index})", terms,
-                        f"Home row {index} must remain focusable when later row {later_index} is selected",
-                    )
-                    self.assertIn(f"!Control.HasFocus({9111 + (later_index - 1) * 2})", terms)
-                    self.assertIn(f"!Control.HasFocus({9112 + (later_index - 1) * 2})", terms)
-                    self.assertIn(f"!Control.HasFocus({9159 + later_index})", terms)
+                self.assertEqual(
+                    terms, {f"!String.IsEmpty(Skin.String(Cineva.Widget{index}.Path))"},
+                    "Earlier poster shelves must not be hidden by later-row focus conditions",
+                )
 
     def test_home_shows_first_run_initialization_state_without_stealing_focus(self):
         with ZipFile(ARCHIVE) as archive:
@@ -276,7 +272,7 @@ class HomeNavigationTests(unittest.TestCase):
         nav = next(node for node in home.findall("./controls/control")
                    if node.get("type") == "group" and node.find("./control[@id='1001']") is not None)
         buttons = {node.get("id"): node for node in nav.findall("./control[@type='button']")}
-        expected = {"1001": "9111", "1002": "9115", "1003": "9117"}
+        expected = {"1001": "9111", "1002": "9113", "1003": "9115", "1004": "9117", "1005": "9111"}
         for control_id, target in expected.items():
             self.assertEqual(buttons[control_id].findtext("ondown"), f"SetFocus({target})")
         self.assertEqual(home.findtext("menucontrol"), "9001")
@@ -291,12 +287,20 @@ class HomeNavigationTests(unittest.TestCase):
     def test_osd_has_a_connected_remote_focus_path_and_native_transport_actions(self):
         with ZipFile(ARCHIVE) as archive:
             osd = ET.fromstring(archive.read("skin.cineva/xml/VideoOSD.xml"))
-        self.assertEqual(osd.findtext("defaultcontrol"), "602")
-        left = osd.find(".//control[@type='grouplist'][@id='201']")
-        right = osd.find(".//control[@type='grouplist'][@id='202']")
-        self.assertEqual(left.findtext("onright"), "70043")
-        self.assertEqual(right.findtext("onleft"), "603")
-        self.assertEqual(osd.findtext("menucontrol"), "602")
+        self.assertEqual(osd.findtext("defaultcontrol"), "9001")
+        self.assertEqual(osd.get("menucontrol"), "9001")
+        group = osd.find("./controls/control[@type='group']")
+        self.assertIsNotNone(group)
+        buttons = {node.get("id"): node for node in group.findall("./control[@type='button']")}
+        self.assertEqual(set(buttons), {"9001", "9002", "9003", "9004"})
+        for button in buttons.values():
+            self.assertTrue(button.findtext("onleft", "").startswith("SetFocus("))
+            self.assertTrue(button.findtext("onright", "").startswith("SetFocus("))
+            self.assertEqual(button.findtext("onup"), "SetFocus(9000)")
+        seek = osd.find("./controls/control[@type='slider'][@id='9000']")
+        self.assertIsNotNone(seek)
+        self.assertEqual(seek.findtext("info"), "Player.Progress")
+        self.assertEqual(seek.findtext("action"), "seek")
 
     def test_home_header_focus_uses_transparent_tabs_and_tracking_underlines(self):
         with ZipFile(ARCHIVE) as archive:
