@@ -74,13 +74,20 @@ jobs:
               assert files, f"missing ZIP in {folder}"
               found=links(folder/"index.html")
               assert all((f.name,f.name) in found for f in files), (addon_id,found)
-          skin_zip=root/"zips"/"skin.cineva"/"skin.cineva-0.5.54.zip"
+          skin_zip=root/"zips"/"skin.cineva"/"skin.cineva-0.5.56.zip"
           with ZipFile(skin_zip) as z:
               skin=ET.fromstring(z.read("skin.cineva/addon.xml"))
+              file_manager=ET.fromstring(z.read("skin.cineva/xml/FileManager.xml"))
+          assert file_manager.findtext("defaultcontrol") == "20"
+          pane_ids = {
+              node.get("id")
+              for node in file_manager.findall("./controls/control[@type='fixedlist']")
+          }
+          assert pane_ids == {"20", "21"}, pane_ids
           dependency=skin.find("./requires/import[@addon='script.cineva.widgets']")
           helper=next(x for x in ET.fromstring(xml).findall("addon") if x.get("id") == "script.cineva.widgets")
           helper_version=helper.get("version")
-          assert skin.get("version") == "0.5.54"
+          assert skin.get("version") == "0.5.56"
           assert dependency is not None
           assert dependency.get("version") == helper_version
           helper_dir=Path("tools/script.cineva.widgets")

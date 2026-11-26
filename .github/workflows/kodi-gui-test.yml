@@ -26,29 +26,29 @@ jobs:
       - name: Build release ZIP, verify idempotence, and commit source fixes
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.55.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.56.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.55.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.56.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
           fi
           echo "Archive SHA-256 is stable across consecutive builds: $after"
           mkdir -p artifacts
-          cp skin.cineva-0.5.55.zip artifacts/
-          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.55.zip)" ]; then
+          cp skin.cineva-0.5.56.zip artifacts/
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.56.zip)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add skin.cineva-0.5.55.zip
-            git commit -m "Build updated CINÉVA 0.5.55 skin archive"
+            git add skin.cineva-0.5.56.zip
+            git commit -m "Build updated CINÉVA 0.5.56 skin archive"
             git push origin HEAD:main || echo "::warning::Could not push rebuilt skin ZIP; GUI test still uses the rebuilt local ZIP."
           fi
 
       - name: Expand uploaded skin archive and prepare add-ons
         run: |
           mkdir -p artifacts
-          test -s skin.cineva-0.5.55.zip
-          unzip -q skin.cineva-0.5.55.zip -d .
+          test -s skin.cineva-0.5.56.zip
+          unzip -q skin.cineva-0.5.56.zip -d .
           test -f skin.cineva/addon.xml
           test -d skin.cineva/xml
           test -f skin.cineva/xml/Home.xml
@@ -562,8 +562,8 @@ jobs:
                  for button in search.findall(".//control[@type='button']")):
             raise SystemExit("CINÉVA search actions are missing their branded focus surface")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.55":
-            raise SystemExit("Skin archive version must be 0.5.55")
+          if skin.attrib.get("version") != "0.5.56":
+            raise SystemExit("Skin archive version must be 0.5.56")
           widget = ET.parse("tools/script.cineva.widgets/addon.xml").getroot()
           if widget.attrib.get("version") != "0.1.8":
             raise SystemExit("Widget manager version must be 0.1.8")
@@ -2399,6 +2399,75 @@ jobs:
           print("Opened native Skin Settings and verified D-pad focus starts on widget slot 1.")
           press("Escape")
           wait_for_window(10004)
+
+          # The Settings hub must open Kodi's native two-pane File Manager.
+          # This directly guards the blank-screen regression reported on Fire TV.
+          wait_for_control("CINÉVA SKIN SETTINGS")
+          press("Left")
+          wait_for_control("SYSTEM INFORMATION")
+          press("Down")
+          wait_for_control("FILE MANAGER")
+          time.sleep(0.8)
+          subprocess.run(["import", "-display", ":99", "-window", "root",
+                          "artifacts/cineva-file-manager-entry.png"], check=True)
+          file_manager_log_before = log_text()
+          press("Return")
+          file_manager_state = wait_for_window(10003)
+          file_manager_info = rpc("XBMC.GetInfoLabels", {
+            "labels":[
+              "Container(20).NumItems", "Container(21).NumItems",
+              "Container(20).ListItem.Label", "Container(21).ListItem.Label"
+            ]
+          })
+          left_count = int(file_manager_info.get("Container(20).NumItems", "0"))
+          right_count = int(file_manager_info.get("Container(21).NumItems", "0"))
+          if left_count < 1 or right_count < 1:
+            subprocess.run(["import", "-display", ":99", "-window", "root",
+                            "artifacts/cineva-file-manager-blank.png"], check=True)
+            raise SystemExit(
+              f"File Manager opened but one or both native panes are blank: "
+              f"left={left_count}, right={right_count}; info={file_manager_info}; "
+              f"GUI={file_manager_state}"
+            )
+
+          def wait_for_file_pane_focus(control_id):
+            deadline = time.time() + 5
+            last_state = gui()
+            while time.time() < deadline:
+              last_state = gui()
+              current_id = str(last_state.get("currentcontrol", {}).get("id", ""))
+              if current_id == str(control_id):
+                return last_state
+              flags = rpc("XBMC.GetInfoBooleans", {
+                "booleans":[f"Control.HasFocus({control_id})"]
+              })
+              if info_true(flags.get(f"Control.HasFocus({control_id})")):
+                return last_state
+              time.sleep(0.2)
+            raise SystemExit(
+              f"File Manager D-pad focus did not reach pane {control_id}: {last_state}"
+            )
+
+          wait_for_file_pane_focus(20)
+          subprocess.run(["import", "-display", ":99", "-window", "root",
+                          "artifacts/cineva-file-manager-left-focused.png"], check=True)
+          press("Right")
+          wait_for_file_pane_focus(21)
+          subprocess.run(["import", "-display", ":99", "-window", "root",
+                          "artifacts/cineva-file-manager-right-focused.png"], check=True)
+          press("Left")
+          wait_for_file_pane_focus(20)
+          file_manager_log_delta = log_text()[len(file_manager_log_before):]
+          if ("Control 20 in window 10003 has been asked to focus" in file_manager_log_delta
+              or "Control 21 in window 10003 has been asked to focus" in file_manager_log_delta):
+            raise SystemExit("Kodi logged an invalid File Manager pane focus request")
+          print(
+            f"Verified native File Manager renders both panes and D-pad switches "
+            f"20 → 21 → 20 ({left_count} left items, {right_count} right items)."
+          )
+          press("Escape")
+          wait_for_window(10004)
+          wait_for_control("FILE MANAGER")
           press("Escape")
           wait_for_window(10000)
 

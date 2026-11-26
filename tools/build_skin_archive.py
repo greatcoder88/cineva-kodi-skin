@@ -13,9 +13,9 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.55.zip"
-PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.53.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.51.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.56.zip"
+PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.55.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.53.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -645,12 +645,52 @@ def file_manager_template():
   </controls>
 </window>""")
 
+
+
+def restore_previous_home_shelf_focus(root):
+    """Keep every earlier Home rail focusable from any later poster row.
+
+    The Home grouplist scrolls earlier rails above its viewport. Hiding those
+    controls with Control.HasFocus(later-row) prevents Kodi from focusing them
+    on D-pad Up, especially when Up must skip empty widget slots. The viewport
+    clips off-screen rails; keep hero-action and VIEW ALL guards intact.
+    """
+    rail = root.find("./controls/control[@type='grouplist'][@id='9050']")
+    if rail is None:
+        raise SystemExit("Home XML is missing the main widget rail grouplist")
+    for index in range(1, 4):
+        row = rail.find(f"./control[@type='group'][@id='{9060 + index}']")
+        if row is None:
+            raise SystemExit(f"Home XML is missing widget row {index}")
+        later_poster_guards = {
+            f"!Control.HasFocus({9000 + later_index})"
+            for later_index in range(index + 1, 5)
+        }
+        targets = (
+            row.find("./control[@type='label']"),
+            row.find(f"./control[@type='button'][@id='{9159 + index}']"),
+            row.find(f"./control[@type='fixedlist'][@id='{9000 + index}']"),
+        )
+        for target in targets:
+            visible = target.find("visible") if target is not None else None
+            if visible is None or not (visible.text or "").strip():
+                raise SystemExit(
+                    f"Home widget row {index} is missing a visibility condition "
+                    "for its heading, VIEW ALL button, or poster shelf"
+                )
+            terms = [term.strip() for term in visible.text.split("+") if term.strip()]
+            filtered = [term for term in terms if term not in later_poster_guards]
+            if filtered != terms:
+                visible.text = " + ".join(filtered)
+    return root
+
+
 def update_xml(data, path):
     root = ET.fromstring(data)
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.55")
+        root.set("version", "0.5.56")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -678,6 +718,8 @@ def update_xml(data, path):
         default.text = "50"
     elif path == "skin.cineva/xml/FileManager.xml":
         root = file_manager_template()
+    elif path == "skin.cineva/xml/Home.xml":
+        root = restore_previous_home_shelf_focus(root)
     elif path in {
         "skin.cineva/xml/FileBrowser.xml",
         "skin.cineva/xml/DialogAddonSettings.xml",
@@ -2567,15 +2609,15 @@ def update_xml(data, path):
 def main():
     # Start the new distributable version from the immediately previous package.
     # Keep the older archive as a recovery fallback for shallow checkouts.
-    # Subsequent builds transform 0.5.53 in place and remain byte-stable.
+    # Subsequent builds transform 0.5.56 in place and remain byte-stable.
     if not ARCHIVE.exists():
         source_archive = PREVIOUS_ARCHIVE if PREVIOUS_ARCHIVE.is_file() else LEGACY_ARCHIVE
         if source_archive.is_file():
             ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
         raise SystemExit(
-            "Missing skin.cineva-0.5.53.zip and migration sources "
-            "skin.cineva-0.5.46.zip / skin.cineva-0.5.45.zip"
+            "Missing skin.cineva-0.5.56.zip and migration sources skin.cineva-0.5.55.zip / "
+            "skin.cineva-0.5.53.zip"
         )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
@@ -2671,34 +2713,27 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.53":
-                        addon_root.set("version", "0.5.53")
-                        changed.append(info.filename + " (bump skin version to 0.5.53)")
+                    if addon_root.get("version") != "0.5.56":
+                        addon_root.set("version", "0.5.56")
+                        changed.append(info.filename + " (bump skin version to 0.5.56)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
                     data = ET.tostring(addon_root, encoding="UTF-8", xml_declaration=True)
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
-                    entry = chr(10).join((
-                        "0.5.55 - Restore native System Information and Profiles windows\n- Package Kodi Piers native settings pages for System Information and Profiles.\n- Restore the provider button path from the last Home widget slot.\n- Clarify the search action as SEARCH MOVIES & TV.\n\n0.5.54 - Restore File Manager dual-pane navigation",
-                        "- Add a provider setting in CINÉVA Skin Settings (POV in this release).",
-                        "- Search one title once and load separate movie and TV result shelves from POV.",
-                        "- Replace the generic add-on picker page with a poster-led CINÉVA search screen.",
-                        "",
-                        "0.5.52 - Fix vertical navigation between Home shelves",
-                        "- Move Up from each Home shelf to the nearest configured shelf above it.",
-                        "- Skip empty widget slots and retain VIEW ALL as the upper boundary action.",
-                        "- Keep D-pad navigation consistent across all four Home widget rows.",
-                        "- Show first-run Home initialization, per-widget loading skeletons and completed-empty states.",
-                        "",
-                        "",
-                    ))
-                    if changelog.startswith("0.5.53 - Add unified POV movie and TV search"):
-                        pass
-                    else:
-                        data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.53 Home focus restoration changelog)")
+                    release_entries = [
+                        ("0.5.56", "0.5.56 - Restore D-pad Up between scrolled Home shelves\n- Keep earlier poster rails focusable when navigating Up from any later row.\n- Preserve the pinned-hero layout; off-screen rails remain clipped by the Home viewport."),
+                        ("0.5.55", "0.5.55 - Restore native System Information and Profiles windows\n- Package Kodi Piers native settings pages for System Information and Profiles.\n- Restore the provider button path from the last Home widget slot.\n- Clarify the search action as SEARCH MOVIES & TV."),
+                        ("0.5.54", "0.5.54 - Restore File Manager dual-pane navigation\n- Restore Kodi's native left and right File Manager panes with explicit D-pad focus routing."),
+                    ]
+                    missing_entries = [
+                        entry for version, entry in release_entries
+                        if version + " -" not in changelog
+                    ]
+                    if missing_entries:
+                        data = ("\n\n".join(missing_entries) + "\n\n" + changelog).encode("utf-8")
+                        changed.append(info.filename + " (prepend missing CINÉVA release notes)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:

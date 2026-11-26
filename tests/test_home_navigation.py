@@ -5,7 +5,7 @@ from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.54.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.56.zip"
 HUB_WINDOW = "skin.cineva/xml/CinevaWidgetHub.xml"
 
 
@@ -109,6 +109,35 @@ class HomeNavigationTests(unittest.TestCase):
                 f"!Container({container_id}).IsUpdating + "
                 f"Integer.IsEqual(Container({container_id}).NumItems,0)",
             )
+
+    def test_previous_home_shelf_targets_remain_focusable_during_later_row_focus(self):
+        with ZipFile(ARCHIVE) as archive:
+            home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
+        rail = home.find("./controls/control[@type='grouplist'][@id='9050']")
+        self.assertIsNotNone(rail)
+        for index in range(1, 4):
+            row = rail.find(f"./control[@type='group'][@id='{9060 + index}']")
+            self.assertIsNotNone(row)
+            controls = (
+                row.find("./control[@type='label']"),
+                row.find(f"./control[@type='button'][@id='{9159 + index}']"),
+                row.find(f"./control[@type='fixedlist'][@id='{9000 + index}']"),
+            )
+            for control in controls:
+                self.assertIsNotNone(control)
+                terms = {
+                    term.strip()
+                    for term in control.findtext("visible", "").split("+")
+                    if term.strip()
+                }
+                for later_index in range(index + 1, 5):
+                    self.assertNotIn(
+                        f"!Control.HasFocus({9000 + later_index})", terms,
+                        f"Home row {index} must remain focusable when later row {later_index} is selected",
+                    )
+                    self.assertIn(f"!Control.HasFocus({9111 + (later_index - 1) * 2})", terms)
+                    self.assertIn(f"!Control.HasFocus({9112 + (later_index - 1) * 2})", terms)
+                    self.assertIn(f"!Control.HasFocus({9159 + later_index})", terms)
 
     def test_home_shows_first_run_initialization_state_without_stealing_focus(self):
         with ZipFile(ARCHIVE) as archive:
