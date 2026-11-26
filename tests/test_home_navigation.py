@@ -70,7 +70,18 @@ class HomeNavigationTests(unittest.TestCase):
             self.assertEqual(button.findtext("visible"), heading.findtext("visible"))
             shelf = row.find(f"./control[@type='fixedlist'][@id='{container_id}']")
             self.assertIsNotNone(shelf)
-            expected_up = (\n                [(None, f"SetFocus({view_all_id})")]\n                if index == 1 else\n                [(f"!String.IsEmpty(Skin.String(Cineva.Widget{previous}.Path))", f"SetFocus({9000 + previous})")\n                 for previous in range(index - 1, 0, -1)]\n                + [(None, f"SetFocus({view_all_id})")]\n            )\n            self.assertEqual(\n                [(node.get("condition"), node.text) for node in shelf.findall("onup")],\n                expected_up,\n                f"Home row {index} must move Up to the nearest configured shelf above it",\n            )
+            expected_up = (
+                [(None, f"SetFocus({view_all_id})")]
+                if index == 1 else
+                [(f"!String.IsEmpty(Skin.String(Cineva.Widget{previous}.Path))", f"SetFocus({9000 + previous})")
+                 for previous in range(index - 1, 0, -1)]
+                + [(None, f"SetFocus({view_all_id})")]
+            )
+            self.assertEqual(
+                [(node.get("condition"), node.text) for node in shelf.findall("onup")],
+                expected_up,
+                f"Home row {index} must move Up to the nearest configured shelf above it",
+            )
 
     def test_kodi_settings_exposes_addons_and_native_skin_settings(self):
         with ZipFile(ARCHIVE) as archive:
