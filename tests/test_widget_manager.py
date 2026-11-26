@@ -112,21 +112,29 @@ class KodiManagerTests(unittest.TestCase):
         rendered = ET.fromstring(builder.update_xml(source, "skin.cineva/xml/Settings.xml"))
         self.assertEqual(rendered.findtext("defaultcontrol"), "11405")
         buttons = {node.get("id"): node for node in rendered.findall("./controls/control[@type='button']")}
-        self.assertEqual(set(buttons), {str(control_id) for control_id in range(11401, 11409)})
+        self.assertEqual(set(buttons), {str(control_id) for control_id in range(11401, 11410)})
         self.assertEqual(buttons["11405"].findtext("onclick"), "ActivateWindow(AddonBrowser)")
         self.assertEqual(buttons["11408"].findtext("onclick"), "ActivateWindow(SkinSettings)")
         for control_id, button in buttons.items():
             self.assertEqual(button.findtext("texturefocus"), "hero-secondary-focus.png")
             self.assertEqual(button.findtext("texturenofocus"), "hero-secondary.png")
             numeric_id = int(control_id)
-            row, column = divmod(numeric_id - 11401, 2)
-            side_id = numeric_id + (1 if column == 0 else -1)
-            up_id = numeric_id - 2 if row > 0 else numeric_id + 6
-            down_id = numeric_id + 2 if row < 3 else numeric_id - 6
-            self.assertEqual(button.findtext("onleft"), f"SetFocus({side_id})")
-            self.assertEqual(button.findtext("onright"), f"SetFocus({side_id})")
-            self.assertEqual(button.findtext("onup"), f"SetFocus({up_id})")
-            self.assertEqual(button.findtext("ondown"), f"SetFocus({down_id})")
+            if numeric_id == 11409:
+                self.assertEqual(button.findtext("label"), "FILE MANAGER")
+                self.assertEqual(button.findtext("onclick"), "ActivateWindow(FileManager)")
+                self.assertEqual(button.findtext("onup"), "SetFocus(11407)")
+                self.assertEqual(button.findtext("ondown"), "SetFocus(11401)")
+                self.assertEqual(button.findtext("onleft"), "SetFocus(11408)")
+                self.assertEqual(button.findtext("onright"), "SetFocus(11401)")
+            else:
+                row, column = divmod(numeric_id - 11401, 2)
+                side_id = numeric_id + (1 if column == 0 else -1)
+                up_id = numeric_id - 2 if row > 0 else numeric_id + 6
+                down_id = 11409 if numeric_id == 11407 else (numeric_id - 6 if row == 3 else numeric_id + 2)
+                self.assertEqual(button.findtext("onleft"), f"SetFocus({side_id})")
+                self.assertEqual(button.findtext("onright"), f"SetFocus({side_id})")
+                self.assertEqual(button.findtext("onup"), f"SetFocus({up_id})")
+                self.assertEqual(button.findtext("ondown"), f"SetFocus({down_id})")
 
     def test_addon_browser_uses_kodis_native_container_id_50(self):
         builder_path = ROOT / "tools/build_skin_archive.py"
