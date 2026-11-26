@@ -2025,13 +2025,13 @@ jobs:
                 deadline = time.time() + 8
                 while time.time() < deadline:
                   state = gui()
-                  if state.get("currentcontrol",{}).get("label","").strip() == expected_row_labels[2]:
+                  if state.get("currentcontrol",{}).get("label","").strip() == expected_focus_label:
                     break
                   time.sleep(0.25)
                 else:
                   raise SystemExit(
-                    f"Row-2 More Info Down did not return to its selected poster "
-                    f"{expected_row_labels[2]!r}: {state}"
+                    f"Row-1 More Info Down did not return to its selected poster "
+                    f"{expected_focus_label!r}: {state}"
                   )
               if row_number == 4:
                 time.sleep(0.8)
