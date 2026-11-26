@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.42.zip"
-PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.41.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.43.zip"
+PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.42.zip"
 LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.35.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
@@ -586,7 +586,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.42")
+        root.set("version", "0.5.43")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -1910,10 +1910,17 @@ def update_xml(data, path):
         # restrained metadata and a full-width grid that uses the screen.
         panel = root.find("./controls/control[@type='panel']")
         if panel is not None:
-            # MyVideoNav exposes Kodi's synthetic ".." parent row at index 0.
-            # Start the panel on index 1 so Down from the explicit BACK button
-            # lands on the first real add-on item, not a redundant parent entry.
-            set_child_text(panel, "focusposition", 1)
+            # focusposition is the on-screen slot, not the selected item index.
+            # Kodi's parent folder is still a real list item, so explicitly select
+            # absolute item 1 when the panel receives focus. This skips ".." while
+            # preserving the safe BACK default during asynchronous plugin loading.
+            set_child_text(panel, "focusposition", 0)
+            panel_onfocus = panel.find("onfocus")
+            if panel_onfocus is None:
+                panel_onfocus = ET.SubElement(panel, "onfocus")
+            panel_onfocus.attrib.clear()
+            panel_onfocus.set("condition", "Container.HasParent(50)")
+            panel_onfocus.text = "Control.SetFocus(50,1,absolute)"
             set_child_text(panel, "left", 54)
             set_child_text(panel, "top", 252)
             set_child_text(panel, "width", 1812)
@@ -2249,15 +2256,15 @@ def update_xml(data, path):
 def main():
     # Start the new distributable version from the immediately previous package.
     # Keep the older archive as a recovery fallback for shallow checkouts.
-    # Subsequent builds transform 0.5.42 in place and remain byte-stable.
+    # Subsequent builds transform 0.5.43 in place and remain byte-stable.
     if not ARCHIVE.exists():
         source_archive = PREVIOUS_ARCHIVE if PREVIOUS_ARCHIVE.is_file() else LEGACY_ARCHIVE
         if source_archive.is_file():
             ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
         raise SystemExit(
-            "Missing skin.cineva-0.5.42.zip and migration sources "
-            "skin.cineva-0.5.41.zip / skin.cineva-0.5.35.zip"
+            "Missing skin.cineva-0.5.43.zip and migration sources "
+            "skin.cineva-0.5.42.zip / skin.cineva-0.5.35.zip"
         )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
@@ -2349,9 +2356,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.42":
-                        addon_root.set("version", "0.5.42")
-                        changed.append(info.filename + " (bump skin version to 0.5.42)")
+                    if addon_root.get("version") != "0.5.43":
+                        addon_root.set("version", "0.5.43")
+                        changed.append(info.filename + " (bump skin version to 0.5.43)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2359,18 +2366,18 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.42 - Focus the first playable item in add-on directories",
+                        "0.5.43 - Focus the first playable item in add-on directories",
                         "- Make the native add-on browser skip its synthetic parent entry when D-pad focus enters the poster grid.",
                         "- Keep the dedicated Back control as the safe default while selecting the first real directory item.",
                         "- Preserve the configured Home widget path and make the first poster immediately reachable.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.42 - Focus the first playable item in add-on directories"):
+                    if changelog.startswith("0.5.43 - Focus the first playable item in add-on directories"):
                         pass
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.42 add-on directory focus changelog)")
+                        changed.append(info.filename + " (prepend 0.5.43 add-on directory focus changelog)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:

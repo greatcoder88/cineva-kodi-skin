@@ -4,7 +4,7 @@ from zipfile import ZipFile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.42.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.43.zip"
 XML = "skin.cineva/xml/"
 
 
@@ -30,9 +30,13 @@ class KodiNavigationWindowTests(unittest.TestCase):
                     self.assertEqual(panel.findtext("onup"), "49")
                     self.assertEqual(
                         panel.findtext("focusposition"),
-                        "1",
-                        "D-pad Down from BACK must skip Kodi's synthetic parent row and focus the first real add-on item",
+                        "0",
+                        "The first real poster should occupy the first visible panel slot",
                     )
+                    panel_focus = panel.find("onfocus")
+                    self.assertIsNotNone(panel_focus, "MyVideoNav must explicitly move past Kodi's synthetic parent item")
+                    self.assertEqual(panel_focus.get("condition"), "Container.HasParent(50)")
+                    self.assertEqual(panel_focus.text, "Control.SetFocus(50,1,absolute)")
                 else:
                     self.assertEqual(root.findtext("defaultcontrol"), "50", filename)
                 self.assertIsNotNone(
