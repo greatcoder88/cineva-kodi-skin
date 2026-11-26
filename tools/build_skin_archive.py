@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.51.zip"
-PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.50.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.52.zip"
+PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.51.zip"
 LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.49.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
@@ -591,7 +591,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.51")
+        root.set("version", "0.5.52")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -2413,14 +2413,14 @@ def update_xml(data, path):
 def main():
     # Start the new distributable version from the immediately previous package.
     # Keep the older archive as a recovery fallback for shallow checkouts.
-    # Subsequent builds transform 0.5.51 in place and remain byte-stable.
+    # Subsequent builds transform 0.5.52 in place and remain byte-stable.
     if not ARCHIVE.exists():
         source_archive = PREVIOUS_ARCHIVE if PREVIOUS_ARCHIVE.is_file() else LEGACY_ARCHIVE
         if source_archive.is_file():
             ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
         raise SystemExit(
-            "Missing skin.cineva-0.5.51.zip and migration sources "
+            "Missing skin.cineva-0.5.52.zip and migration sources "
             "skin.cineva-0.5.46.zip / skin.cineva-0.5.45.zip"
         )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
@@ -2513,9 +2513,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.51":
-                        addon_root.set("version", "0.5.51")
-                        changed.append(info.filename + " (bump skin version to 0.5.51)")
+                    if addon_root.get("version") != "0.5.52":
+                        addon_root.set("version", "0.5.52")
+                        changed.append(info.filename + " (bump skin version to 0.5.52)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2523,18 +2523,18 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.51 - Fix vertical navigation between Home shelves",
+                        "0.5.52 - Fix vertical navigation between Home shelves",
                         "- Move Up from each Home shelf to the nearest configured shelf above it.",
                         "- Skip empty widget slots and retain VIEW ALL as the upper boundary action.",
                         "- Keep D-pad navigation consistent across all four Home widget rows.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.51 - Fix vertical navigation between Home shelves"):
+                    if changelog.startswith("0.5.52 - Fix vertical navigation between Home shelves"):
                         pass
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.51 Home focus restoration changelog)")
+                        changed.append(info.filename + " (prepend 0.5.52 Home focus restoration changelog)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:
