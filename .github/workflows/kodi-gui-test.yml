@@ -1555,6 +1555,16 @@ jobs:
               if preview_detail < 0.025:
                 raise SystemExit(f"Next Home poster is not visibly previewed at the right edge (detail={preview_detail:.4f})")
               print(f"Verified the seventh Home poster peeks into the 1800px shelf (visible width={preview_width}px, detail={preview_detail:.4f}).")
+            # Poster -> VIEW ALL -> hero RESUME is the intentional two-step vertical path.
+            subprocess.run(["xdotool","key","Up"],check=True)
+            deadline = time.time() + 8
+            while time.time() < deadline:
+              state = gui()
+              if state.get("currentcontrol",{}).get("label","").strip().upper() == "VIEW ALL":
+                break
+              time.sleep(0.25)
+            else:
+              raise SystemExit(f"Home shelf Up did not focus VIEW ALL: {state}")
             subprocess.run(["xdotool","key","Up"],check=True)
             deadline = time.time() + 8
             while time.time() < deadline:
@@ -1563,7 +1573,7 @@ jobs:
                 break
               time.sleep(0.25)
             else:
-              raise SystemExit(f"Home shelf Up did not focus the RESUME hero action: {state}")
+              raise SystemExit(f"VIEW ALL Up did not focus the RESUME hero action: {state}")
             subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-actions.png"],check=True)
             # Interstellar is intentionally missing ListItem.Art(poster) in the
             # fixture. Its visible third card must render the crimson placeholder.
