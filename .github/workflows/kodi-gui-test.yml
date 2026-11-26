@@ -1131,14 +1131,17 @@ jobs:
               raise SystemExit(f"Back from Kodi Settings did not return to Home: {state}")
             hero_labels = rpc("XBMC.GetInfoLabels", {"labels":[
               "Container(9001).ListItem.Label",
+              "Container(9001).ListItem.Tagline",
               "Container(9001).ListItem.PlotOutline",
               "Container(9001).ListItem.Plot"
             ]})
+            expected_tagline = "An idea can change everything, even inside a dream."
             expected_plot_outline = "A skilled thief enters dreams to steal secrets, then takes on an impossible job: plant an idea."
             if (hero_labels.get("Container(9001).ListItem.Label") != "Inception"
+                or hero_labels.get("Container(9001).ListItem.Tagline") != expected_tagline
                 or hero_labels.get("Container(9001).ListItem.PlotOutline") != expected_plot_outline):
-              raise SystemExit(f"Home GUI fixture did not expose the selected Inception PlotOutline: {hero_labels}")
-            print("Verified the selected Home hero has a provider PlotOutline and a full-plot fallback.")
+              raise SystemExit(f"Home GUI fixture did not expose selected Inception tagline and synopsis metadata: {hero_labels}")
+            print("Verified the selected Home hero exposes a provider tagline, PlotOutline and full-plot fallback.")
             def red_coverage(image_path, crop):
               signal = subprocess.run(
                 ["convert", image_path, "-crop", crop,
@@ -1411,6 +1414,17 @@ jobs:
               raise SystemExit(f"Home shelf 9001 did not expose its previous-page cue after scrolling: labels={scrolled_labels}; flags={scrolled_flags}")
             subprocess.run(["import","-display",":99","-window","root",
                             "artifacts/cineva-home-shelf-scrolled.png"],check=True)
+            if scrolled_position == total_items:
+              scrolled_hero = rpc("XBMC.GetInfoLabels", {"labels":[
+                "Container(9001).ListItem.Label",
+                "Container(9001).ListItem.Tagline",
+                "Container(9001).ListItem.Plot"
+              ]})
+              expected_barbie_tagline = "A perfect world changes when one question is asked."
+              if (scrolled_hero.get("Container(9001).ListItem.Label") != "Barbie"
+                  or scrolled_hero.get("Container(9001).ListItem.Tagline") != expected_barbie_tagline):
+                raise SystemExit(f"Home hero metadata did not update with the scrolled Barbie poster: {scrolled_hero}")
+              print("Verified the Home hero synopsis updates to Barbie's own provider tagline at the final shelf item.")
             # The selected poster should stay in the middle of the visible rail
             # after scrolling, rather than snapping to the far-left edge and
             # leaving the remaining viewport empty.
