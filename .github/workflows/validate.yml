@@ -750,12 +750,14 @@ jobs:
               focus_progresses = focus_include.findall("./control[@type='progress']") if focus_include is not None else []
               if row_focus is None or row_focus.text != f"CinevaFocusedPosterItem{container_id}":
                   errors.append(f"Home row {container_id} does not use its own focus layout")
-              if len(focus_images) != 3 or focus_images[0].findtext("visible") != row_visibility(f"!Control.HasFocus({container_id})") or focus_images[1].findtext("visible") != row_visibility(f"Control.HasFocus({container_id})"):
-                  errors.append(f"Home row {container_id} must show a normal poster when inactive and focus artwork only when active")
-              elif any(image.findtext("texture") != "$INFO[ListItem.Art(poster)]" for image in focus_images[:2]):
+              if (len(focus_images) != 2
+                  or focus_images[0].findtext("visible") != row_visibility(f"!Control.HasFocus({container_id})")
+                  or focus_images[1].findtext("visible") != row_visibility(f"Control.HasFocus({container_id})")):
+                  errors.append(f"Home row {container_id} must keep only its inactive and focused poster artwork, without a detached underline")
+              elif any(image.findtext("texture") != "$INFO[ListItem.Art(poster)]" for image in focus_images):
                   errors.append(f"Home row {container_id} must use semantic portrait poster art in both focus states")
-              elif (focus_images[2].findtext("texture"), focus_images[2].findtext("visible"), focus_images[2].findtext("left"), focus_images[2].findtext("top"), focus_images[2].findtext("width"), focus_images[2].findtext("height")) != ("focus-bar.png", row_visibility(f"Control.HasFocus({container_id})"), "84", "430", "80", "4"):
-                  errors.append(f"Home row {container_id} focused poster is missing its red selection accent")
+              elif focus_images[1].findtext("bordertexture") != "poster-focus.png":
+                  errors.append(f"Home row {container_id} focused poster is missing its crimson artwork border")
               if len(focus_labels) != 2 or focus_labels[0].findtext("visible") != row_visibility(f"!Control.HasFocus({container_id})") or focus_labels[1].findtext("visible") != row_visibility(f"Control.HasFocus({container_id})"):
                   errors.append(f"Home row {container_id} must keep exactly one correctly styled title visible")
               elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width"), focus_labels[1].findtext("aligny")) != ("font10", "316", "108", "248", "top") or focus_labels[1].find("wrap") is not None:
