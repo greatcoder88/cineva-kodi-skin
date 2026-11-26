@@ -717,6 +717,14 @@ jobs:
           if focused_title is not None:
               errors.append("Base focused poster template must not retain an unused title layer")
           for container_id in (9001, 9002, 9003, 9004):
+              later_focus_ids = []
+              for later_index in range(container_id - 8999, 5):
+                  later_container = 9000 + later_index
+                  later_play = 9111 + (later_index - 1) * 2
+                  later_focus_ids.extend((later_container, later_play, later_play + 1, 9159 + later_index))
+              visibility_suffix = "".join(f" + !Control.HasFocus({focus_id})" for focus_id in later_focus_ids)
+              def row_visibility(base):
+                  return base + visibility_suffix
               row_group = rail_list.find(f"./control[@type='group'][@id='{9060 + container_id - 9000}']") if rail_list is not None else None
               row = row_group.find(f"./control[@type='fixedlist'][@id='{container_id}']") if row_group is not None else None
               row_focus = row.find("./focusedlayout/include") if row is not None else None
@@ -726,13 +734,13 @@ jobs:
               focus_progresses = focus_include.findall("./control[@type='progress']") if focus_include is not None else []
               if row_focus is None or row_focus.text != f"CinevaFocusedPosterItem{container_id}":
                   errors.append(f"Home row {container_id} does not use its own focus layout")
-              if len(focus_images) != 3 or focus_images[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_images[1].findtext("visible") != f"Control.HasFocus({container_id})":
+              if len(focus_images) != 3 or focus_images[0].findtext("visible") != row_visibility(f"!Control.HasFocus({container_id})") or focus_images[1].findtext("visible") != row_visibility(f"Control.HasFocus({container_id})"):
                   errors.append(f"Home row {container_id} must show a normal poster when inactive and focus artwork only when active")
               elif any(image.findtext("texture") != "$INFO[ListItem.Art(poster)]" for image in focus_images[:2]):
                   errors.append(f"Home row {container_id} must use semantic portrait poster art in both focus states")
-              elif (focus_images[2].findtext("texture"), focus_images[2].findtext("visible"), focus_images[2].findtext("left"), focus_images[2].findtext("top"), focus_images[2].findtext("width"), focus_images[2].findtext("height")) != ("focus-bar.png", f"Control.HasFocus({container_id})", "84", "430", "80", "4"):
+              elif (focus_images[2].findtext("texture"), focus_images[2].findtext("visible"), focus_images[2].findtext("left"), focus_images[2].findtext("top"), focus_images[2].findtext("width"), focus_images[2].findtext("height")) != ("focus-bar.png", row_visibility(f"Control.HasFocus({container_id})"), "84", "430", "80", "4"):
                   errors.append(f"Home row {container_id} focused poster is missing its red selection accent")
-              if len(focus_labels) != 2 or focus_labels[0].findtext("visible") != f"!Control.HasFocus({container_id})" or focus_labels[1].findtext("visible") != f"Control.HasFocus({container_id})":
+              if len(focus_labels) != 2 or focus_labels[0].findtext("visible") != row_visibility(f"!Control.HasFocus({container_id})") or focus_labels[1].findtext("visible") != row_visibility(f"Control.HasFocus({container_id})"):
                   errors.append(f"Home row {container_id} must keep exactly one correctly styled title visible")
               elif (focus_labels[1].findtext("font"), focus_labels[1].findtext("top"), focus_labels[1].findtext("height"), focus_labels[1].findtext("width"), focus_labels[1].findtext("aligny")) != ("font10", "316", "108", "248", "center") or focus_labels[1].find("wrap") is not None:
                   errors.append(f"Home row {container_id} focused title must use the compact, multiline card-title treatment")
@@ -742,8 +750,8 @@ jobs:
               if zoom is None or (zoom.get("start"), zoom.get("end"), zoom.get("time"), zoom.get("tween"), zoom.get("easing")) != ("100", "104", "160", "sine", "out") or zoom.text != "Focus":
                   errors.append(f"Home row {container_id} focused poster is missing its short, event-driven D-pad zoom")
               expected_progress_visibility = {
-                  f"!Control.HasFocus({container_id}) + ListItem.IsResumable",
-                  f"Control.HasFocus({container_id}) + ListItem.IsResumable",
+                  row_visibility(f"!Control.HasFocus({container_id}) + ListItem.IsResumable"),
+                  row_visibility(f"Control.HasFocus({container_id}) + ListItem.IsResumable"),
               }
               if len(focus_progresses) != 2 or {p.findtext("visible") for p in focus_progresses} != expected_progress_visibility:
                   errors.append(f"Home row {container_id} must show one resumable progress strip in both inactive and active card states")
