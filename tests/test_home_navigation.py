@@ -161,6 +161,31 @@ class HomeNavigationTests(unittest.TestCase):
         self.assertEqual(addon_browser.findtext("views"), "50")
         self.assertIsNone(addon_browser.find("./controls/control[@type='panel'][@id='3']"))
 
+    def test_search_is_provider_driven_with_separate_movie_and_tv_results(self):
+        with ZipFile(ARCHIVE) as archive:
+            search = ET.fromstring(archive.read("skin.cineva/xml/custom11112.xml"))
+            settings = ET.fromstring(archive.read("skin.cineva/xml/SkinSettings.xml"))
+        controls = search.find("controls")
+        self.assertEqual(search.findtext("defaultcontrol"), "9703")
+        self.assertEqual(controls.findtext("./control[@id='9703']/label"), "SEARCH")
+        self.assertEqual(controls.findtext("./control[@id='9705']/onclick"),
+                         "RunScript(script.cineva.widgets,action=search)")
+        movie = controls.find("./control[@type='panel'][@id='9701']")
+        tv = controls.find("./control[@type='panel'][@id='9702']")
+        self.assertIsNotNone(movie)
+        self.assertIsNotNone(tv)
+        self.assertEqual(movie.findtext("content"), "$INFO[Skin.String(Cineva.Search.MoviePath)]")
+        self.assertEqual(tv.findtext("content"), "$INFO[Skin.String(Cineva.Search.ShowPath)]")
+        self.assertEqual(movie.findtext("onright"), "SetFocus(9702)")
+        self.assertEqual(tv.findtext("onleft"), "SetFocus(9701)")
+        self.assertEqual(len(movie.findall("itemlayout/control[@type='image']")), 1)
+        self.assertEqual(len(tv.findall("itemlayout/control[@type='image']")), 1)
+        provider = settings.find("./controls/control[@id='45']")
+        self.assertIsNotNone(provider)
+        self.assertEqual(provider.findtext("onclick"),
+                         "RunScript(script.cineva.widgets,action=searchprovider)")
+        self.assertIn("SEARCH PROVIDER", ET.tostring(settings, encoding="unicode"))
+
     def test_native_skin_settings_starts_on_the_first_widget_slot(self):
         with ZipFile(ARCHIVE) as archive:
             settings = ET.fromstring(archive.read("skin.cineva/xml/SkinSettings.xml"))
