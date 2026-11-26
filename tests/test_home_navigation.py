@@ -151,6 +151,18 @@ class HomeNavigationTests(unittest.TestCase):
                 self.assertEqual(button.findtext("onup"), f"SetFocus({up_id})")
                 self.assertEqual(button.findtext("ondown"), f"SetFocus({down_id})")
 
+    def test_system_info_and_profiles_native_windows_are_packaged(self):
+        with ZipFile(ARCHIVE) as archive:
+            names = set(archive.namelist())
+            system_info = ET.fromstring(archive.read("skin.cineva/xml/SettingsSystemInfo.xml"))
+            profiles = ET.fromstring(archive.read("skin.cineva/xml/SettingsProfile.xml"))
+        self.assertIn("skin.cineva/xml/SettingsSystemInfo.xml", names)
+        self.assertIn("skin.cineva/xml/SettingsProfile.xml", names)
+        self.assertEqual(system_info.findtext("defaultcontrol"), "95")
+        self.assertIsNotNone(system_info.find(".//control[@id='30']"))
+        self.assertEqual(profiles.findtext("defaultcontrol"), "9000")
+        self.assertIsNotNone(profiles.find(".//control[@id='9000']"))
+
     def test_file_manager_keeps_kodis_native_dual_pane_focus(self):
         with ZipFile(ARCHIVE) as archive:
             file_manager = ET.fromstring(archive.read("skin.cineva/xml/FileManager.xml"))
