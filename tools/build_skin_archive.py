@@ -1957,7 +1957,7 @@ def update_xml(data, path):
                 left_id = button_id - 4 if column > 0 else button_id + 8
                 right_id = button_id + 4 if column < 2 else button_id - 8
                 button = ET.Element("control", {"type": "button", "id": str(button_id)})
-                for tag, value in (("left", left), ("top", 300 + (slot - 1) * 82), ("width", 520), ("height", 64), ("font", "font14"), ("label", f"WIDGET {slot}  ·  $INFO[Skin.String({string_prefix}{slot}.Name)]"), ("texturefocus", "focus-bar.png"), ("texturenofocus", "black.png"), ("textcolor", "white"), ("focusedcolor", "white"), ("onclick", f"RunScript(script.cineva.widgets,action=configure&screen={screen}&slot={slot})"), ("onup", f"SetFocus({up_id})"), ("ondown", f"SetFocus({down_id})"), ("onleft", f"SetFocus({left_id})"), ("onright", f"SetFocus({right_id})")):
+                for tag, value in (("left", left), ("top", 300 + (slot - 1) * 82), ("width", 520), ("height", 64), ("font", "font14"), ("label", f"WIDGET {slot}  ·  $INFO[Skin.String({string_prefix}{slot}.Name)]"), ("texturefocus", "focus-bar.png"), ("texturenofocus", "black.png"), ("textcolor", "white"), ("focusedcolor", "white"), ("onclick", f"RunScript(script.cineva.widgets,action=configure&screen={screen}&slot={slot})"), ("onup", f"SetFocus({up_id})"), ("ondown", f"SetFocus({45 if screen == 'home' and slot == 4 else down_id})"), ("onleft", f"SetFocus({left_id})"), ("onright", f"SetFocus({right_id})")):
                     set_child_text(button, tag, value)
                 controls.append(button)
         # A concise hint explains that each action opens the add-on/folder picker.
@@ -1976,7 +1976,7 @@ def update_xml(data, path):
         provider_button = ET.Element("control", {"type": "button", "id": "45"})
         for tag, value in (("left", 520), ("top", 758), ("width", 480), ("height", 64),
                            ("font", "font14"),
-                           ("label", " $INFO[Skin.String(Cineva.Search.Provider)] "),
+                           ("label", "SEARCH PROVIDER  ·  $INFO[Skin.String(Cineva.Search.Provider)]"),
                            ("texturefocus", "hero-secondary-focus.png"),
                            ("texturenofocus", "hero-secondary.png"),
                            ("textcolor", "white"), ("focusedcolor", "white"),
@@ -2503,7 +2503,7 @@ def update_xml(data, path):
                     ("height", 34), ("font", "font12"), ("textcolor", "silver"),
                     ("label", "$INFO[Skin.String(Cineva.Search.Query)]")))
         add_control("button", 9705, (("left", 1450), ("top", 86), ("width", 360),
-                    ("height", 64), ("font", "font14"), ("label", "NEW SEARCH"),
+                    ("height", 64), ("font", "font14"), ("label", "SEARCH MOVIES & TV"),
                     ("texturefocus", "hero-secondary-focus.png"),
                     ("texturenofocus", "hero-secondary.png"),
                     ("onclick", "RunScript(script.cineva.widgets,action=search)"),
