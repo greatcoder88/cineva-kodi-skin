@@ -1224,7 +1224,7 @@ jobs:
             deadline = time.time() + 15
             while time.time() < deadline:
               view_all_items = rpc("XBMC.GetInfoLabels", {"labels":["Container(50).NumItems"]})
-              view_all_count = int(view_all_items.get("Container(50).NumItems", "0"))
+              view_all_count = int((view_all_items.get("Container(50).NumItems") or "0").strip() or "0")
               if view_all_count > 0:
                 break
               time.sleep(0.25)
