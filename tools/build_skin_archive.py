@@ -14,7 +14,7 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 ARCHIVE = ROOT / "skin.cineva-0.5.57.zip"
-PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.55.zip"
+PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.56.zip"
 LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.53.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
@@ -2674,7 +2674,7 @@ def main():
             ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
         raise SystemExit(
-            "Missing skin.cineva-0.5.57.zip and migration sources skin.cineva-0.5.55.zip / "
+            "Missing skin.cineva-0.5.57.zip and migration sources skin.cineva-0.5.56.zip / "
             "skin.cineva-0.5.53.zip"
         )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
