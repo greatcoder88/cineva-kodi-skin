@@ -159,9 +159,9 @@ class HomeNavigationTests(unittest.TestCase):
                           "File Manager is a native dual-pane window, not a media view")
         controls = file_manager.find("controls")
         self.assertIsNotNone(controls)
-        self.assertIsNotNone(controls.find(".//*[@id='20']"),
+        self.assertIsNotNone(controls.find("./control[@type='fixedlist'][@id='20']"),
                              "Left file pane must remain present")
-        self.assertIsNotNone(controls.find(".//*[@id='21']"),
+        self.assertIsNotNone(controls.find("./control[@type='fixedlist'][@id='21']"),
                              "Right file pane must remain present")
 
     def test_addon_browser_uses_kodis_native_media_window_view(self):
