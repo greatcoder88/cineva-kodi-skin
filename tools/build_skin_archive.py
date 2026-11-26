@@ -13,7 +13,7 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.54.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.55.zip"
 PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.53.zip"
 LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.51.zip"
 
@@ -650,7 +650,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.54")
+        root.set("version", "0.5.55")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -2591,6 +2591,8 @@ def main():
                 "skin.cineva/xml/Includes.xml",
                 "skin.cineva/xml/SkinSettings.xml",
                 "skin.cineva/xml/Settings.xml",
+                "skin.cineva/xml/SettingsSystemInfo.xml",
+                "skin.cineva/xml/SettingsProfile.xml",
                 "skin.cineva/xml/SettingsCategory.xml",
                 "skin.cineva/xml/AddonBrowser.xml",
                 "skin.cineva/xml/DialogAddonInfo.xml",
@@ -2630,6 +2632,8 @@ def main():
                 "skin.cineva/fonts/Poppins-OFL.txt": "OFL.txt",
             }
             generated_assets = {
+                "skin.cineva/xml/SettingsSystemInfo.xml": update_xml(fetch_asset("https://raw.githubusercontent.com/xbmc/xbmc/Piers/addons/skin.estuary/xml/SettingsSystemInfo.xml"), "skin.cineva/xml/SettingsSystemInfo.xml"),
+                "skin.cineva/xml/SettingsProfile.xml": update_xml(fetch_asset("https://raw.githubusercontent.com/xbmc/xbmc/Piers/addons/skin.estuary/xml/SettingsProfile.xml"), "skin.cineva/xml/SettingsProfile.xml"),
                 **{path: fetch_asset(font_base + filename)
                    for path, filename in font_assets.items()},
                 **{path: fetch_asset(poppins_base + filename)
@@ -2677,7 +2681,7 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.53 - Add unified POV movie and TV search",
+                        "0.5.55 - Restore native System Information and Profiles windows\n- Package Kodi Piers native settings pages for System Information and Profiles.\n- Restore the provider button path from the last Home widget slot.\n- Clarify the search action as SEARCH MOVIES & TV.\n\n0.5.54 - Restore File Manager dual-pane navigation",
                         "- Add a provider setting in CINÉVA Skin Settings (POV in this release).",
                         "- Search one title once and load separate movie and TV result shelves from POV.",
                         "- Replace the generic add-on picker page with a poster-led CINÉVA search screen.",
