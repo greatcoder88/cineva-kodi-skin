@@ -326,8 +326,8 @@ class HomeHeroActionTests(unittest.TestCase):
                 1080 - int(rail.findtext("top")) - first_row_height - int(rail.findtext("itemgap"))
             )
             self.assertEqual(visible_next_shelf_preview, 124)
-            visible_next_poster_peek = int(rail.findtext("width")) - 7 * 248 - 7 * 8 - 24
-            self.assertEqual(visible_next_poster_peek, 44)
+            visible_next_poster_peek = int(rail.findtext("width")) - 7 * 248 - 24
+            self.assertEqual(visible_next_poster_peek, 100)
             for row in range(1, 5):
                 group = rail.find(f"./control[@type='group'][@id='{9060 + row}']")
                 shelf = group.find(f"./control[@type='fixedlist'][@id='{9000 + row}']")

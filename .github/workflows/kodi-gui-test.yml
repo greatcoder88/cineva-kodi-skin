@@ -1141,9 +1141,14 @@ jobs:
             # The selected poster should stay in the middle of the visible rail
             # after scrolling, rather than snapping to the far-left edge and
             # leaving the remaining viewport empty.
+            # The rail now renders seven complete 248px cards. Sample just
+            # inside each poster's left focus border (18px inset).
+            visible_slots = 7
+            card_pitch = 248
+            sample_offset = 12
             focus_lane = []
-            for slot in range(6):
-              x = 60 + slot * 299 + 20
+            for slot in range(visible_slots):
+              x = 60 + slot * card_pitch + sample_offset
               signal = subprocess.run(
                 ["convert","artifacts/cineva-home-shelf-scrolled.png",
                  "-crop",f"40x300+{x}+433",
@@ -1152,7 +1157,7 @@ jobs:
                 text=True,capture_output=True,check=True
               )
               focus_lane.append(float(signal.stdout.strip()))
-            focused_slot = max(range(6), key=lambda slot: focus_lane[slot])
+            focused_slot = max(range(visible_slots), key=lambda slot: focus_lane[slot])
             # The far-right focus border only partially intersects the narrow sample crop.
             # Keep a 1% signal floor so a visibly rendered 3px frame is not rejected.
             if focus_lane[focused_slot] < 0.010 or focused_slot < 2:
@@ -1160,19 +1165,19 @@ jobs:
                 f"Scrolled Home focus is not in the visible browsing lane: "
                 f"slot={focused_slot}, signals={focus_lane}"
               )
-            if scrolled_position == total_items and focused_slot != 5:
+            if scrolled_position == total_items and focused_slot != visible_slots - 1:
               raise SystemExit(
                 f"Last Home item should settle at the right rail edge: "
-                f"position={scrolled_position}/{total_items}, slot={focused_slot + 1}/6"
+                f"position={scrolled_position}/{total_items}, slot={focused_slot + 1}/{visible_slots}"
               )
-            if scrolled_position < total_items and focused_slot > 4:
+            if scrolled_position < total_items and focused_slot > visible_slots - 2:
               raise SystemExit(
                 f"Home focus left its central lane before reaching the final item: "
-                f"position={scrolled_position}/{total_items}, slot={focused_slot + 1}/6"
+                f"position={scrolled_position}/{total_items}, slot={focused_slot + 1}/{visible_slots}"
               )
             print(
               f"Verified selected poster in Home browsing lane slot "
-              f"{focused_slot + 1}/6 at position {scrolled_position}/{total_items}."
+              f"{focused_slot + 1}/{visible_slots} at position {scrolled_position}/{total_items}."
             )
             # The rightward probe may clamp at the final item before all six
             # key presses are consumed. Return only the distance Kodi actually moved.
