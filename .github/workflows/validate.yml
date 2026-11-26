@@ -471,6 +471,11 @@ jobs:
                   alpha_at = lambda row: decoded[row * stride + 1 + 3]
                   if len(decoded) != stride * 430 or alpha_at(0) != 0 or not (50 <= alpha_at(214) <= 78) or alpha_at(429) < 120:
                       errors.append("Lower-row scroll mask must use a gradual 0-to-128 alpha fade aligned with the hero bottom fade")
+          startup_state = controls.find("./control[@type='group'][@id='9480']")
+          if startup_state is None or startup_state.findtext("visible") != "!Skin.HasSetting(Cineva.Initialized)":
+              errors.append("Home must show a first-run initialization state until widgets are prepared")
+          if startup_state is not None and startup_state.find("./control[@type='button']") is not None:
+              errors.append("Home initialization artwork must not steal D-pad focus")
           rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
           if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("60", "444", "1860", "670") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "180"):
               errors.append("Home rails must use the pinned-hero vertical scrolling viewport")
@@ -532,7 +537,15 @@ jobs:
                       errors.append("Home row 1 must use one consolidated hero group that stays visible for its poster/actions and yields to rows 2–4")
               row_group = rail_list.find(f"./control[@type='group'][@id='{9060 + container_id - 9000}']") if rail_list is not None else None
               shelf = row_group.find(f"./control[@type='fixedlist'][@id='{container_id}']") if row_group is not None else None
-              expected_up = ([(None, f"SetFocus({9159 + (container_id - 9000)})")] if container_id == 9001 else [(f"!String.IsEmpty(Container({9000 + previous}).ListItem.Label)", f"SetFocus({9000 + previous})") for previous in range(container_id - 9000 - 1, 0, -1)] + [(None, f"SetFocus({9159 + (container_id - 9000)})")])
+              row_index = container_id - 9000
+            expected_up = ([(None, f"SetFocus({9159 + row_index})")] if row_index == 1 else [
+                action
+                for previous in range(row_index - 1, 0, -1)
+                for action in (
+                    (f"Integer.IsGreater(Container({9000 + previous}).NumItems,0)", f"SetFocus({9000 + previous})"),
+                    (f"!String.IsEmpty(Skin.String(Cineva.Widget{previous}.Path))", f"SetFocus({9159 + previous})"),
+                )
+            ] + [(None, f"SetFocus({9159 + row_index})")])
               actual_up = [(node.get("condition"), node.text) for node in shelf.findall("onup")] if shelf is not None else []
               if shelf is None or actual_up != expected_up or row_group.findtext("onup") != f"SetFocus({play_id})":
                   errors.append(f"Home row {container_id} cannot navigate up to its hero actions")
@@ -566,10 +579,31 @@ jobs:
                   errors.append(f"Home widget {index} VIEW ALL action is missing its branded focus textures")
               if row_accent is None or row_accent.get("type") != "image" or (row_accent.findtext("left"), row_accent.findtext("top"), row_accent.findtext("width"), row_accent.findtext("height")) != ("0", "42", "58", "3") or row_accent.findtext("texture") != "focus-bar.png" or row_accent.findtext("visible") != f"Control.HasFocus({9000 + index})":
                   errors.append(f"Home widget {index} is missing its active-rail accent")
-              expected_up = ([(None, f"SetFocus({9159 + index})")] if index == 1 else [(f"!String.IsEmpty(Container({9000 + previous}).ListItem.Label)", f"SetFocus({9000 + previous})") for previous in range(index - 1, 0, -1)] + [(None, f"SetFocus({9159 + index})")])
+              expected_up = ([(None, f"SetFocus({9159 + index})")] if index == 1 else [
+                  action
+                  for previous in range(index - 1, 0, -1)
+                  for action in (
+                      (f"Integer.IsGreater(Container({9000 + previous}).NumItems,0)", f"SetFocus({9000 + previous})"),
+                      (f"!String.IsEmpty(Skin.String(Cineva.Widget{previous}.Path))", f"SetFocus({9159 + previous})"),
+                  )
+              ] + [(None, f"SetFocus({9159 + index})")])
               actual_up = [(node.get("condition"), node.text) for node in shelf.findall("onup")] if shelf is not None else []
               if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("55", "440") or actual_up != expected_up:
                   errors.append(f"Home widget {index} shelf geometry or upward focus route is incorrect")
+              loading = row_group.find(f"./control[@type='group'][@id='{9400 + index}']")
+              empty_state = row_group.find(f"./control[@type='group'][@id='{9520 + index}']")
+              if loading is None or len(loading.findall("./control[@type='image']")) != 5:
+                  errors.append(f"Home widget {index} is missing its five-poster loading skeleton")
+              if loading is not None and loading.findtext("visible") != (
+                  f"!String.IsEmpty(Skin.String(Cineva.Widget{index}.Path)) + "
+                  f"Container({9000 + index}).IsUpdating + Integer.IsEqual(Container({9000 + index}).NumItems,0)"
+              ):
+                  errors.append(f"Home widget {index} loading state is not tied to Kodi container updates")
+              if empty_state is None or empty_state.findtext("visible") != (
+                  f"!String.IsEmpty(Skin.String(Cineva.Widget{index}.Path)) + "
+                  f"!Container({9000 + index}).IsUpdating + Integer.IsEqual(Container({9000 + index}).NumItems,0)"
+              ):
+                  errors.append(f"Home widget {index} is missing its completed-empty state")
               cue_id = 9360 + (index - 1) * 3
               position = row_group.find(f"./control[@id='{cue_id}']") if row_group is not None else None
               previous = row_group.find(f"./control[@id='{cue_id + 1}']") if row_group is not None else None
