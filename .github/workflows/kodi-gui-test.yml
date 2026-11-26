@@ -551,7 +551,8 @@ jobs:
           osd = ET.parse("skin.cineva/xml/VideoOSD.xml").getroot()
           osd_seek = osd.find("./controls/control[@type='slider'][@id='9000']")
           osd_buttons = {node.get("id"): node for node in osd.findall("./controls/control[@type='group']/control[@type='button']")}
-          if (osd.findtext("defaultcontrol") != "9001" or osd_seek is None
+          if (osd.findtext("defaultcontrol") != "9001" or osd.get("menucontrol") != "9001"
+              or osd.findtext("menucontrol") != "9001" or osd_seek is None
               or osd_seek.findtext("info") != "Player.Progress"
               or set(osd_buttons) != {"9001", "9002", "9003", "9004"}
               or any(not button.findtext("onright", "").startswith("SetFocus(") for button in osd_buttons.values())):
@@ -584,6 +585,15 @@ jobs:
             for button in nav.findall("./control[@type='button']")
           ):
             raise SystemExit("Home navigation tabs must remain transparent in both focus states")
+          expected_home_nav = {"1001": "9111", "1002": "9115", "1003": "9117"}
+          for button_id, target_id in expected_home_nav.items():
+            button = nav.find(f"./control[@id='{button_id}']") if nav is not None else None
+            if button is None or button.findtext("ondown") != f"SetFocus({target_id})":
+              raise SystemExit(f"Home navigation button {button_id} does not enter its matching content row")
+          for button_id in ("1004", "1005"):
+            button = nav.find(f"./control[@id='{button_id}']") if nav is not None else None
+            if button is None or button.find("ondown") is not None:
+              raise SystemExit(f"Home navigation button {button_id} must not enter an unrelated widget row")
           expected_home_marker_visible = "Window.IsActive(home) + " + " + ".join(
             f"!Control.HasFocus({control_id})" for control_id in (1002, 1003, 1004, 1005)
           )

@@ -1624,7 +1624,7 @@ def update_xml(data, path):
                 set_child_text(nav_group, tag, value)
             for button in nav_group.findall("./control[@type='button']"):
                 # Text-first navigation: remove the heavy black button slabs.
-                action_targets = {"1001": "9111", "1002": "9113", "1003": "9115", "1004": "9117", "1005": "9111"}
+                action_targets = {"1001": "9111", "1002": "9115", "1003": "9117"}
                 nav_ids = ("1001", "1002", "1003", "1004", "1005")
                 if button.get("id") in nav_ids:
                     position = nav_ids.index(button.get("id"))
@@ -1632,6 +1632,12 @@ def update_xml(data, path):
                     set_child_text(button, "onright", f"SetFocus({nav_ids[min(len(nav_ids) - 1, position + 1)]})")
                 if button.get("id") in action_targets:
                     set_child_text(button, "ondown", f"SetFocus({action_targets[button.get('id')]})")
+                else:
+                    # Search and Settings leave Home for their own windows;
+                    # they must not drop into an unrelated Home widget shelf.
+                    stale_down = button.find("ondown")
+                    if stale_down is not None:
+                        button.remove(stale_down)
                 # Leave both button textures absent: a stretched focus texture
                 # paints a solid crimson rectangle across the whole tab.
                 for texture_tag in ("texturefocus", "texturenofocus"):
@@ -2267,6 +2273,10 @@ def update_xml(data, path):
         default.set("always", "true")
         default.text = "9001"
         root.set("menucontrol", "9001")
+        menucontrol = root.find("menucontrol")
+        if menucontrol is None:
+            menucontrol = ET.SubElement(root, "menucontrol")
+        menucontrol.text = "9001"
         controls = root.find("controls")
         if controls is None:
             raise SystemExit("VideoOSD.xml is missing its controls container")

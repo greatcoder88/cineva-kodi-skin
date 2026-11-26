@@ -272,9 +272,13 @@ class HomeNavigationTests(unittest.TestCase):
         nav = next(node for node in home.findall("./controls/control")
                    if node.get("type") == "group" and node.find("./control[@id='1001']") is not None)
         buttons = {node.get("id"): node for node in nav.findall("./control[@type='button']")}
-        expected = {"1001": "9111", "1002": "9113", "1003": "9115", "1004": "9117", "1005": "9111"}
+        expected = {"1001": "9111", "1002": "9115", "1003": "9117"}
         for control_id, target in expected.items():
             self.assertEqual(buttons[control_id].findtext("ondown"), f"SetFocus({target})")
+        self.assertIsNone(buttons["1004"].find("ondown"),
+                          "Search must not focus an unrelated Home widget")
+        self.assertIsNone(buttons["1005"].find("ondown"),
+                          "Settings must not focus an unrelated Home widget")
         self.assertEqual(home.findtext("menucontrol"), "9001")
 
     def test_continue_watching_poster_selection_invokes_kodi_playback(self):
@@ -289,6 +293,7 @@ class HomeNavigationTests(unittest.TestCase):
             osd = ET.fromstring(archive.read("skin.cineva/xml/VideoOSD.xml"))
         self.assertEqual(osd.findtext("defaultcontrol"), "9001")
         self.assertEqual(osd.get("menucontrol"), "9001")
+        self.assertEqual(osd.findtext("menucontrol"), "9001")
         group = osd.find("./controls/control[@type='group']")
         self.assertIsNotNone(group)
         buttons = {node.get("id"): node for node in group.findall("./control[@type='button']")}
