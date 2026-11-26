@@ -15,7 +15,7 @@ import urllib.request
 ROOT = Path(__file__).resolve().parents[1]
 ARCHIVE = ROOT / "skin.cineva-0.5.51.zip"
 PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.50.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.48.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.49.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
