@@ -1377,6 +1377,10 @@ def update_xml(data, path):
                 layout.set("width", "248")
                 layout.set("height", "440")
             focused_layout = shelf.find("./focusedlayout")
+            item_layout = shelf.find("./itemlayout")
+            item_include = item_layout.find("include") if item_layout is not None else None
+            if item_include is not None:
+                item_include.text = f"CinevaPosterItem{9000 + index}"
             focused_include = focused_layout.find("include") if focused_layout is not None else None
             if focused_include is not None:
                 focused_include.text = f"CinevaFocusedPosterItem{9000 + index}"
@@ -1866,6 +1870,33 @@ def update_xml(data, path):
                 clone.remove(child)
             for child in (fallback_image, active_image, fallback_label, active_label, fallback_progress, clone_progress, focus_accent):
                 clone.append(child)
+            root.append(clone)
+
+            # Each Home rail gets its own item include. When a lower rail is
+            # focused, the earlier rail must remain a valid D-pad target, but
+            # its off-screen poster art, captions and resume bars must not bleed
+            # through the pinned hero. Hide only the item visuals, never the
+            # parent fixedlist control, so Up can still return to that shelf.
+            normal_clone = ET.fromstring(ET.tostring(normal, encoding="unicode"))
+            normal_clone.set("name", f"CinevaPosterItem{container_id}")
+            later_focus_ids = []
+            for later_index in range(container_id - 8999, 5):
+                later_container = 9000 + later_index
+                later_play = 9111 + (later_index - 1) * 2
+                later_focus_ids.extend((later_container, later_play, later_play + 1, 9159 + later_index))
+            visibility_guard = [f"!Control.HasFocus({control_id})" for control_id in later_focus_ids]
+            for layout_control in list(normal_clone.findall("control")) + list(clone.findall("control")):
+                visible = layout_control.find("visible")
+                current = (visible.text or "").strip() if visible is not None else ""
+                terms = [term.strip() for term in current.split("+") if term.strip()]
+                for guard in visibility_guard:
+                    if guard not in terms:
+                        terms.append(guard)
+                set_child_text(layout_control, "visible", " + ".join(terms))
+            previous_normal = root.find(f"./include[@name='CinevaPosterItem{container_id}']")
+            if previous_normal is not None:
+                root.remove(previous_normal)
+            root.append(normal_clone)
             root.append(clone)
     elif path == "skin.cineva/xml/AddonBrowser.xml":
         menucontrol = root.find("menucontrol")
