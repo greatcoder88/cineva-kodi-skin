@@ -2258,81 +2258,51 @@ def update_xml(data, path):
                 set_child_text(node, "texturenofocus", "black.png")
                 set_child_text(node, "textcolor", "white")
     elif path == "skin.cineva/xml/VideoOSD.xml":
-        # Preserve Kodi transport actions and fix the focus graph. Estuary's
-        # stock right target (804) is hidden for normal files, stranding Right.
+        # This is CINÉVA's compact native player overlay, not Estuary's OSD.
+        # Wire its real controls into one D-pad loop and expose a seek slider.
         default = root.find("defaultcontrol")
         if default is None:
             default = ET.Element("defaultcontrol")
             root.insert(0, default)
         default.set("always", "true")
-        default.text = "602"
-        menucontrol = root.find("menucontrol")
-        if menucontrol is None:
-            menucontrol = ET.SubElement(root, "menucontrol")
-        menucontrol.text = "602"
+        default.text = "9001"
+        root.set("menucontrol", "9001")
         controls = root.find("controls")
-        overlay = next((node for node in controls.findall("control")
-                        if node.get("type") == "group" and node.find("./control[@id='200']") is not None), None)
-        if overlay is not None:
-            set_child_text(overlay, "left", 0)
-            set_child_text(overlay, "top", 720)
-            set_child_text(overlay, "width", 1920)
-            set_child_text(overlay, "height", 360)
-            for tag in ("right", "bottom"):
-                stale = overlay.find(tag)
-                if stale is not None:
-                    overlay.remove(stale)
-            transport = overlay.find("./control[@id='200']")
-            set_child_text(transport, "left", 80)
-            set_child_text(transport, "top", 0)
-            set_child_text(transport, "width", 1760)
-            set_child_text(transport, "height", 220)
-            left_rail = transport.find("./control[@type='grouplist'][@id='201']")
-            right_rail = transport.find("./control[@type='grouplist'][@id='202']")
-            if left_rail is not None:
-                set_child_text(left_rail, "left", 0)
-                set_child_text(left_rail, "top", 110)
-                set_child_text(left_rail, "width", 1050)
-                set_child_text(left_rail, "height", 92)
-                set_child_text(left_rail, "onleft", "601")
-                set_child_text(left_rail, "onright", "70043")
-                for button in left_rail.findall(".//control[@type='button']") + left_rail.findall(".//control[@type='radiobutton']"):
-                    set_child_text(button, "height", 76)
-                    set_child_text(button, "onup", "87")
-                    set_child_text(button, "ondown", "87")
-            if right_rail is not None:
-                set_child_text(right_rail, "right", 0)
-                set_child_text(right_rail, "top", 110)
-                set_child_text(right_rail, "width", 700)
-                set_child_text(right_rail, "height", 92)
-                set_child_text(right_rail, "onleft", "603")
-                set_child_text(right_rail, "onright", "70048")
-                for button in right_rail.findall(".//control[@type='button']") + right_rail.findall(".//control[@type='radiobutton']"):
-                    set_child_text(button, "height", 76)
-                    set_child_text(button, "onup", "87")
-                    set_child_text(button, "ondown", "87")
-        seek_group = controls.find("./control[@type='group'][@id='6000']")
-        if seek_group is not None:
-            set_child_text(seek_group, "left", 80)
-            set_child_text(seek_group, "top", 36)
-            set_child_text(seek_group, "width", 1760)
-            set_child_text(seek_group, "height", 36)
-            for tag in ("right", "bottom"):
-                stale = seek_group.find(tag)
-                if stale is not None:
-                    seek_group.remove(stale)
-            for slider in seek_group.findall("./control[@type='slider']"):
-                set_child_text(slider, "left", 0)
-                set_child_text(slider, "top", 0)
-                set_child_text(slider, "width", 1760)
-                set_child_text(slider, "height", 24)
-                set_child_text(slider, "onup", "200")
-                set_child_text(slider, "ondown", "200")
-        for button in controls.findall(".//control[@type='button']") + controls.findall(".//control[@type='radiobutton']"):
-            if button.get("id") in {"602", "603", "70043", "70048"}:
-                set_child_text(button, "texturefocus", "hero-secondary-focus.png")
-                set_child_text(button, "texturenofocus", "hero-secondary.png")
-                set_child_text(button, "textcolor", "white")
+        if controls is None:
+            raise SystemExit("VideoOSD.xml is missing its controls container")
+        button_group = next((node for node in controls.findall("control")
+                             if node.get("type") == "group"
+                             and node.find("./control[@id='9001']") is not None), None)
+        if button_group is None:
+            raise SystemExit("VideoOSD.xml is missing its native transport buttons")
+        for control_id, left_id, right_id in (
+            ("9001", "9004", "9002"),
+            ("9002", "9001", "9003"),
+            ("9003", "9002", "9004"),
+            ("9004", "9003", "9001"),
+        ):
+            button = button_group.find(f"./control[@id='{control_id}']")
+            if button is None:
+                raise SystemExit(f"VideoOSD.xml is missing transport control {control_id}")
+            set_child_text(button, "onleft", f"SetFocus({left_id})")
+            set_child_text(button, "onright", f"SetFocus({right_id})")
+            set_child_text(button, "onup", "SetFocus(9000)")
+            set_child_text(button, "ondown", f"SetFocus({right_id})")
+            set_child_text(button, "height", 64)
+            set_child_text(button, "texturefocus", "hero-secondary-focus.png")
+            set_child_text(button, "texturenofocus", "hero-secondary.png")
+        seek = controls.find("./control[@type='slider'][@id='9000']")
+        if seek is None:
+            seek = ET.Element("control", {"type": "slider", "id": "9000"})
+            controls.append(seek)
+        for tag, value in (("left", 80), ("top", 880), ("width", 1760), ("height", 24),
+                           ("info", "Player.Progress"), ("action", "seek"),
+                           ("onup", "SetFocus(9001)"), ("ondown", "SetFocus(9001)")):
+            set_child_text(seek, tag, value)
+        for tag, value in (("texturesliderbar", "white.png"),
+                           ("textureslidernib", "hero-secondary.png"),
+                           ("textureslidernibfocus", "hero-secondary-focus.png")):
+            set_child_text(seek, tag, value)
     elif path in {"skin.cineva/xml/custom11117.xml", "skin.cineva/xml/custom11118.xml"}:
         # Catalogue widget slots are optional. Always land on the top navigation
         # so an empty screen still has a valid D-pad focus target and can reach
