@@ -1230,22 +1230,43 @@ jobs:
               time.sleep(0.25)
             if view_all_count < 1:
               raise SystemExit(f"Home VIEW ALL did not open the configured widget directory: {view_all_items}; GUI={gui()}")
-            first_view_all_item = rpc("XBMC.GetInfoLabels", {"labels":["Container(50).ListItem.Label"]}).get("Container(50).ListItem.Label", "").strip()
             expected_first_item = str(first_row_items[0].get("label", "")).strip()
-            if view_all_count != len(first_row_items) or first_view_all_item != expected_first_item:
-              raise SystemExit(f"Home VIEW ALL opened the wrong configured widget path: count={view_all_count}, first={first_view_all_item!r}, expected={expected_first_item!r}")
+            if view_all_count != len(first_row_items):
+              raise SystemExit(
+                f"Home VIEW ALL opened a directory with the wrong item count: "
+                f"count={view_all_count}, expected={len(first_row_items)}"
+              )
+            # Before the panel receives focus Kodi may report its synthetic
+            # parent entry ("..") as Container(50).ListItem.Label. That value
+            # is not evidence that VIEW ALL opened the wrong plugin path.
+            # Validate the actual focused list item only after the remote Down
+            # action moves focus from BACK (49) into the native panel (50).
             press("Down")
             deadline = time.time() + 5
             view_all_focus = gui()
             while time.time() < deadline:
               current = view_all_focus.get("currentcontrol", {})
-              if view_all_focus.get("currentwindow", {}).get("id") == 10025 and current.get("label", "").strip() == expected_first_item:
+              if (
+                view_all_focus.get("currentwindow", {}).get("id") == 10025
+                and current.get("id") == 50
+                and current.get("label", "").strip() == expected_first_item
+              ):
                 break
               time.sleep(0.2)
               view_all_focus = gui()
             else:
-              raise SystemExit(f"Home VIEW ALL opened its directory but D-pad Down did not focus the first poster: {view_all_focus}")
-            print(f"Verified Home VIEW ALL opens the configured plugin directory and enters its native poster panel: {view_all_count} items.")
+              raise SystemExit(
+                f"Home VIEW ALL opened its directory but D-pad Down did not "
+                f"focus the first real poster in panel 50: {view_all_focus}; "
+                f"expected={expected_first_item!r}"
+              )
+            subprocess.run(["import", "-display", ":99", "-window", "root",
+                            "artifacts/cineva-view-all-directory-focused.png"], check=True)
+            print(
+              f"Verified Home VIEW ALL opens the configured plugin directory and "
+              f"D-pad Down focuses its first real poster in native panel 50: "
+              f"{view_all_count} items, {expected_first_item}."
+            )
             press("Escape")
             wait_for_window(10000)
             returned_home = gui()
