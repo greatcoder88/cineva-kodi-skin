@@ -5,7 +5,7 @@ from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.49.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.51.zip"
 HUB_WINDOW = "skin.cineva/xml/CinevaWidgetHub.xml"
 
 
@@ -70,7 +70,7 @@ class HomeNavigationTests(unittest.TestCase):
             self.assertEqual(button.findtext("visible"), heading.findtext("visible"))
             shelf = row.find(f"./control[@type='fixedlist'][@id='{container_id}']")
             self.assertIsNotNone(shelf)
-            self.assertEqual(shelf.findtext("onup"), f"SetFocus({view_all_id})")
+            expected_up = (\n                [(None, f"SetFocus({view_all_id})")]\n                if index == 1 else\n                [(f"!String.IsEmpty(Skin.String(Cineva.Widget{previous}.Path))", f"SetFocus({9000 + previous})")\n                 for previous in range(index - 1, 0, -1)]\n                + [(None, f"SetFocus({view_all_id})")]\n            )\n            self.assertEqual(\n                [(node.get("condition"), node.text) for node in shelf.findall("onup")],\n                expected_up,\n                f"Home row {index} must move Up to the nearest configured shelf above it",\n            )
 
     def test_kodi_settings_exposes_addons_and_native_skin_settings(self):
         with ZipFile(ARCHIVE) as archive:
@@ -78,7 +78,7 @@ class HomeNavigationTests(unittest.TestCase):
         self.assertEqual(settings.get("id"), "10004")
         self.assertEqual(settings.findtext("defaultcontrol"), "11405")
         buttons = {node.get("id"): node for node in settings.findall("./controls/control[@type='button']")}
-        self.assertEqual(set(buttons), {str(control_id) for control_id in range(11401, 11409)})
+        self.assertEqual(set(buttons), {str(control_id) for control_id in range(11401, 11410)})
         self.assertEqual(buttons["11405"].findtext("label"), "ADD-ONS")
         self.assertEqual(buttons["11405"].findtext("onclick"), "ActivateWindow(AddonBrowser)")
         self.assertEqual(buttons["11408"].findtext("label"), "CINÉVA SKIN SETTINGS")
@@ -87,14 +87,21 @@ class HomeNavigationTests(unittest.TestCase):
             self.assertEqual(button.findtext("texturefocus"), "hero-secondary-focus.png")
             self.assertEqual(button.findtext("texturenofocus"), "hero-secondary.png")
             numeric_id = int(control_id)
-            row, column = divmod(numeric_id - 11401, 2)
-            side_id = numeric_id + (1 if column == 0 else -1)
-            up_id = numeric_id - 2 if row > 0 else numeric_id + 6
-            down_id = numeric_id + 2 if row < 3 else numeric_id - 6
-            self.assertEqual(button.findtext("onleft"), f"SetFocus({side_id})")
-            self.assertEqual(button.findtext("onright"), f"SetFocus({side_id})")
-            self.assertEqual(button.findtext("onup"), f"SetFocus({up_id})")
-            self.assertEqual(button.findtext("ondown"), f"SetFocus({down_id})")
+            if numeric_id == 11409:
+                self.assertEqual(button.findtext("onup"), "SetFocus(11407)")
+                self.assertEqual(button.findtext("ondown"), "SetFocus(11401)")
+                self.assertEqual(button.findtext("onleft"), "SetFocus(11408)")
+                self.assertEqual(button.findtext("onright"), "SetFocus(11401)")
+                self.assertEqual(button.findtext("onclick"), "ActivateWindow(FileManager)")
+            else:
+                row, column = divmod(numeric_id - 11401, 2)
+                side_id = numeric_id + (1 if column == 0 else -1)
+                up_id = numeric_id - 2 if row > 0 else numeric_id + 6
+                down_id = 11409 if numeric_id == 11407 else (numeric_id - 6 if row == 3 else numeric_id + 2)
+                self.assertEqual(button.findtext("onleft"), f"SetFocus({side_id})")
+                self.assertEqual(button.findtext("onright"), f"SetFocus({side_id})")
+                self.assertEqual(button.findtext("onup"), f"SetFocus({up_id})")
+                self.assertEqual(button.findtext("ondown"), f"SetFocus({down_id})")
 
     def test_addon_browser_uses_kodis_native_media_window_view(self):
         with ZipFile(ARCHIVE) as archive:
