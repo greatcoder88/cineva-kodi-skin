@@ -1818,6 +1818,29 @@ jobs:
               else:
                 raise SystemExit(f"D-pad Down did not reach Home row {row_number} ({expected_label}): {state}")
               print(f"Scrolled Home to row {row_number}; focused item:", state.get("currentcontrol"))
+              if row_number == 3:
+                # Trending Movies regression: repeated Up must traverse row 2 then row 1.
+                for expected_previous in (expected_row_labels[2], expected_focus_label):
+                  subprocess.run(["xdotool", "key", "Up"], check=True)
+                  deadline = time.time() + 8
+                  while time.time() < deadline:
+                    state = gui()
+                    if state.get("currentcontrol", {}).get("label", "").strip() == expected_previous:
+                      break
+                    time.sleep(0.2)
+                  else:
+                    raise SystemExit(f"Repeated Up from row 3 did not reach previous shelf {expected_previous!r}: {state}")
+                for expected_return in (expected_row_labels[2], expected_row_labels[3]):
+                  subprocess.run(["xdotool", "key", "Down"], check=True)
+                  deadline = time.time() + 8
+                  while time.time() < deadline:
+                    state = gui()
+                    if state.get("currentcontrol", {}).get("label", "").strip() == expected_return:
+                      break
+                    time.sleep(0.2)
+                  else:
+                    raise SystemExit(f"Down did not restore row 3 navigation at {expected_return!r}: {state}")
+                print("Verified repeated Up from row 3 traverses row 2 and row 1; Down restores both rows.")
               if row_number == 2:
                 time.sleep(0.8)
                 subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row2-focus.png"],check=True)
