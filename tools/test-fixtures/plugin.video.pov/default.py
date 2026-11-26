@@ -67,6 +67,10 @@ def main():
                 if title == "Breaking Bad" else
                 "A richly detailed story of impossible choices, loyalty, and the consequences that follow."
             ),
+            "plotoutline": (
+                "A skilled thief enters dreams to steal secrets, then takes on an impossible job: plant an idea."
+                if title == "Inception" else ""
+            ),
         })
         # Keep poster art portrait and thumb/fanart landscape, matching common
         # provider metadata. This catches skins that accidentally use thumb as a poster.

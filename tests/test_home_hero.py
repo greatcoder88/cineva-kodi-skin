@@ -7,17 +7,18 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.29.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.30.zip"
 
 
 class HomeHeroActionTests(unittest.TestCase):
     def test_release_changelog_uses_real_line_breaks(self):
         with ZipFile(ARCHIVE) as archive:
             lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
-        self.assertEqual(lines[0], "0.5.29 - Fix three-line Home poster caption clipping")
-        self.assertEqual(lines[1], "- Give normal and focused poster titles 108px of vertical space for three full lines.")
-        self.assertEqual(lines[2], "- Extend each Home row and move the focus accent below the expanded caption.")
-        self.assertEqual(lines[3], "- Preserve poster artwork, resume progress, next-shelf previews and D-pad navigation.")
+        self.assertEqual(lines[0], "0.5.30 - Prefer concise Home plot outlines with full-plot fallback")
+        self.assertEqual(lines[1], "- Show provider PlotOutline first in each Home hero, with Plot as the fallback when no outline is available.")
+        self.assertEqual(lines[2], "- Keep synopsis text bound to the currently selected widget item across all four shelves.")
+        self.assertEqual(lines[3], "- Preserve existing hero geometry, metadata, actions and D-pad navigation.")
+        self.assertIn("0.5.29 - Fix three-line Home poster caption clipping", lines)
         self.assertIn("0.5.28 - Give Home poster titles room for three complete lines", lines)
         self.assertIn("0.5.26 - Clean up Home hero progress rendering", lines)
         self.assertIn("0.5.25 - Surface continue-watching progress in the Home hero", lines)
@@ -448,6 +449,42 @@ class HomeHeroActionTests(unittest.TestCase):
                 (212, 40),
             )
 
+
+    def test_home_hero_prefers_plot_outline_and_falls_back_to_plot(self):
+        with ZipFile(ARCHIVE) as archive:
+            home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
+            controls = home.find("controls")
+            for row_index, container_id in enumerate((9001, 9002, 9003, 9004), start=1):
+                play_id = 9111 + (row_index - 1) * 2
+                hero = next(
+                    group for group in controls.findall("control")
+                    if group.get("type") == "group"
+                    and group.find(f"./control[@id='{play_id}']") is not None
+                )
+                outline_id = 9400 + (row_index - 1) * 2
+                outline = hero.find(f"./control[@id='{outline_id}']")
+                plot = hero.find(f"./control[@id='{outline_id + 1}']")
+                self.assertIsNotNone(outline, f"Home hero {container_id} is missing PlotOutline")
+                self.assertIsNotNone(plot, f"Home hero {container_id} is missing Plot fallback")
+                self.assertEqual(outline.get("type"), "textbox")
+                self.assertEqual(plot.get("type"), "textbox")
+                self.assertEqual(
+                    (outline.findtext("left"), outline.findtext("top"), outline.findtext("width"),
+                     outline.findtext("height"), outline.findtext("font"), outline.findtext("textcolor"),
+                     outline.findtext("label"), outline.findtext("visible")),
+                    ("0", "172", "900", "56", "font13", "white",
+                     f"$INFO[Container({container_id}).ListItem.PlotOutline]",
+                     f"!String.IsEmpty(Container({container_id}).ListItem.PlotOutline)"),
+                )
+                self.assertEqual(
+                    (plot.findtext("left"), plot.findtext("top"), plot.findtext("width"),
+                     plot.findtext("height"), plot.findtext("font"), plot.findtext("textcolor"),
+                     plot.findtext("label"), plot.findtext("visible")),
+                    ("0", "172", "900", "56", "font13", "white",
+                     f"$INFO[Container({container_id}).ListItem.Plot]",
+                     f"String.IsEmpty(Container({container_id}).ListItem.PlotOutline) + "
+                     f"!String.IsEmpty(Container({container_id}).ListItem.Plot)"),
+                )
 
 if __name__ == "__main__":
     unittest.main()

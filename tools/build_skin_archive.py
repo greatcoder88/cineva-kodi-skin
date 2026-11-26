@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.29.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.28.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.30.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.29.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -544,7 +544,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.29")
+        root.set("version", "0.5.30")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -873,7 +873,7 @@ def update_xml(data, path):
             # or TRENDING NOW; user-added/replaced paths receive a neutral label.
             eyebrow_base_id = 9300 + (row_index - 1) * 3
             for old_control in list(hero_group.findall("control")):
-                if old_control.get("id") in {
+                if old_control.get("type") == "textbox" or old_control.get("id") in {
                     *(str(eyebrow_base_id + offset) for offset in range(3)),
                     str(9190 + (container_id - 9001)), str(play_id), str(info_id),
                     str(9380 + row_index - 1), str(9384 + row_index - 1)
@@ -922,6 +922,28 @@ def update_xml(data, path):
             ET.SubElement(
                 clearlogo, "aspectratio", {"align": "left", "aligny": "center"}
             ).text = "keep"
+            # Prefer the provider's concise PlotOutline in the cinematic hero.
+            # Fall back to Plot only when no outline exists; both remain bound to
+            # the selected item in the active Home shelf.
+            synopsis_base_id = 9400 + (row_index - 1) * 2
+            synopsis_specs = (
+                (synopsis_base_id, "PlotOutline",
+                 f"!String.IsEmpty(Container({container_id}).ListItem.PlotOutline)"),
+                (synopsis_base_id + 1, "Plot",
+                 f"String.IsEmpty(Container({container_id}).ListItem.PlotOutline) + "
+                 f"!String.IsEmpty(Container({container_id}).ListItem.Plot)"),
+            )
+            for synopsis_id, info_label, visible in synopsis_specs:
+                synopsis = ET.SubElement(
+                    hero_group, "control", {"type": "textbox", "id": str(synopsis_id)}
+                )
+                for tag, value in (
+                    ("left", 0), ("top", 172), ("width", 900), ("height", 56),
+                    ("font", "font13"), ("textcolor", "white"),
+                    ("label", f"$INFO[Container({container_id}).ListItem.{info_label}]"),
+                    ("visible", visible),
+                ):
+                    set_child_text(synopsis, tag, value)
             # Continue-watching widgets get a second, larger progress cue in the
             # hero itself. Keep it tied to the selected item and hide it for
             # trending/collection sources or non-resumable entries.
@@ -1988,11 +2010,11 @@ def update_xml(data, path):
 
 def main():
     # Start the new distributable version from the last published package once.
-    # Subsequent builds always transform 0.5.28 in place and remain byte-stable.
+    # Subsequent builds always transform 0.5.29 in place and remain byte-stable.
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.29.zip and migration source skin.cineva-0.5.28.zip")
+        raise SystemExit("Missing skin.cineva-0.5.30.zip and migration source skin.cineva-0.5.29.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -2076,9 +2098,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.29":
-                        addon_root.set("version", "0.5.29")
-                        changed.append(info.filename + " (bump skin version to 0.5.29)")
+                    if addon_root.get("version") != "0.5.30":
+                        addon_root.set("version", "0.5.30")
+                        changed.append(info.filename + " (bump skin version to 0.5.30)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2086,21 +2108,18 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.29 - Fix three-line Home poster caption clipping",
-                        "- Give normal and focused poster titles 108px of vertical space for three full lines.",
-                        "- Extend each Home row and move the focus accent below the expanded caption.",
-                        "- Preserve poster artwork, resume progress, next-shelf previews and D-pad navigation.",
+                        "0.5.30 - Prefer concise Home plot outlines with full-plot fallback",
+                        "- Show provider PlotOutline first in each Home hero, with Plot as the fallback when no outline is available.",
+                        "- Keep synopsis text bound to the currently selected widget item across all four shelves.",
+                        "- Preserve existing hero geometry, metadata, actions and D-pad navigation.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.29 - Fix three-line Home poster caption clipping"):
+                    if changelog.startswith("0.5.30 - Prefer concise Home plot outlines with full-plot fallback"):
                         pass
-                    elif changelog.startswith("0.5.28 - Give Home poster titles room for three complete lines"):
-                        data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.29 three-line Home poster caption fix changelog)")
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (0.5.29 three-line Home poster caption fix release)")
+                        changed.append(info.filename + " (prepend 0.5.30 Home hero synopsis fallback changelog)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:

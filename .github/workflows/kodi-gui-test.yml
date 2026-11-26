@@ -26,29 +26,29 @@ jobs:
       - name: Build release ZIP, verify idempotence, and commit source fixes
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.29.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.30.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.29.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.30.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
           fi
           echo "Archive SHA-256 is stable across consecutive builds: $after"
           mkdir -p artifacts
-          cp skin.cineva-0.5.29.zip artifacts/
-          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.29.zip)" ]; then
+          cp skin.cineva-0.5.30.zip artifacts/
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.30.zip)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add skin.cineva-0.5.29.zip
-            git commit -m "Build updated CINÉVA 0.5.29 skin archive"
+            git add skin.cineva-0.5.30.zip
+            git commit -m "Build updated CINÉVA 0.5.30 skin archive"
             git push origin HEAD:main || echo "::warning::Could not push rebuilt skin ZIP; GUI test still uses the rebuilt local ZIP."
           fi
 
       - name: Expand uploaded skin archive and prepare add-ons
         run: |
           mkdir -p artifacts
-          test -s skin.cineva-0.5.29.zip
-          unzip -q skin.cineva-0.5.29.zip -d .
+          test -s skin.cineva-0.5.30.zip
+          unzip -q skin.cineva-0.5.30.zip -d .
           test -f skin.cineva/addon.xml
           test -d skin.cineva/xml
           test -f skin.cineva/xml/Home.xml
@@ -487,8 +487,8 @@ jobs:
           if any(button.findtext("texturefocus") != "focus-bar.png" for button in search.findall(".//control[@type='button']")):
             raise SystemExit("Search hub buttons are missing the unified focus treatment")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.29":
-            raise SystemExit("Skin archive version must be 0.5.29")
+          if skin.attrib.get("version") != "0.5.30":
+            raise SystemExit("Skin archive version must be 0.5.30")
           widget = ET.parse("tools/script.cineva.widgets/addon.xml").getroot()
           if widget.attrib.get("version") != "0.1.8":
             raise SystemExit("Widget manager version must be 0.1.8")
@@ -958,6 +958,16 @@ jobs:
             # before any navigation changes the selected poster or active control.
             subprocess.run(["import","-display",":99","-window","root",
                             "artifacts/cineva-home-initial.png"],check=True)
+            hero_labels = rpc("XBMC.GetInfoLabels", {"labels":[
+              "Container(9001).ListItem.Label",
+              "Container(9001).ListItem.PlotOutline",
+              "Container(9001).ListItem.Plot"
+            ]})
+            expected_plot_outline = "A skilled thief enters dreams to steal secrets, then takes on an impossible job: plant an idea."
+            if (hero_labels.get("Container(9001).ListItem.Label") != "Inception"
+                or hero_labels.get("Container(9001).ListItem.PlotOutline") != expected_plot_outline):
+              raise SystemExit(f"Home GUI fixture did not expose the selected Inception PlotOutline: {hero_labels}")
+            print("Verified the selected Home hero has a provider PlotOutline and a full-plot fallback.")
             def red_coverage(image_path, crop):
               signal = subprocess.run(
                 ["convert", image_path, "-crop", crop,
