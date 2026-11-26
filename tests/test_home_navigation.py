@@ -73,7 +73,7 @@ class HomeNavigationTests(unittest.TestCase):
             expected_up = (
                 [(None, f"SetFocus({view_all_id})")]
                 if index == 1 else
-                [(f"!String.IsEmpty(Skin.String(Cineva.Widget{previous}.Path))", f"SetFocus({9000 + previous})")
+                [(f"!String.IsEmpty(Container({9000 + previous}).ListItem.Label)", f"SetFocus({9000 + previous})")
                  for previous in range(index - 1, 0, -1)]
                 + [(None, f"SetFocus({view_all_id})")]
             )
