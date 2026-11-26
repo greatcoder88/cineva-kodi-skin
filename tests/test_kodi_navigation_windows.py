@@ -33,6 +33,14 @@ class KodiNavigationWindowTests(unittest.TestCase):
 
             addon_info = ET.fromstring(archive.read(XML + "DialogAddonInfo.xml"))
             self.assertEqual(addon_info.findtext("defaultcontrol"), "9000")
+            self.assertIn(
+                "ListItem.AddonName",
+                addon_info.findtext("./controls/control[@type='label']/label", ""),
+            )
+            self.assertIn(
+                "ListItem.AddonDescription",
+                addon_info.findtext("./controls/control[@type='textbox']/label", ""),
+            )
             action_group = addon_info.find(".//control[@type='grouplist'][@id='9000']")
             self.assertIsNotNone(action_group, "Add-on information needs a focusable action group")
             for control_id in ("12", "9", "10", "7", "8", "14", "6"):
