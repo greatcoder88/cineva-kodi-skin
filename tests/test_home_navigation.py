@@ -53,7 +53,7 @@ class HomeNavigationTests(unittest.TestCase):
             self.assertEqual(button.findtext("label"), "VIEW ALL")
             self.assertEqual(
                 button.findtext("onclick"),
-                f"ActivateWindow(10025,$INFO[Skin.String(Cineva.Widget{index}.Path)])",
+                f"ActivateWindow(Videos,$INFO[Skin.String(Cineva.Widget{index}.Path)],return)",
             )
             self.assertEqual(button.findtext("onup"), f"SetFocus({play_id})")
             self.assertEqual(button.findtext("ondown"), f"SetFocus({container_id})")

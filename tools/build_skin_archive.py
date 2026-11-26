@@ -707,9 +707,12 @@ def update_xml(data, path):
                 if child.get("type") == "group" and child.get("id", "").startswith("906"):
                     for row_child in list(child.findall("control")):
                         child.remove(row_child)
-                        # Generated shelf counters/arrows are rebuilt below; do not
-                        # promote them to screen-level controls during an archive rebuild.
-                        if row_child.get("id") in {str(control_id) for control_id in range(9360, 9376)}:
+                        # Generated VIEW ALL buttons, shelf counters and arrows are
+                        # rebuilt below; do not promote them to screen-level controls.
+                        if row_child.get("id") in (
+                            {str(control_id) for control_id in range(9160, 9164)}
+                            | {str(control_id) for control_id in range(9360, 9376)}
+                        ):
                             continue
                         # Row accents belong inside their shelf group. Older
                         # builds accidentally promoted them to screen-level
@@ -764,9 +767,10 @@ def update_xml(data, path):
                         control.remove(visible)
                 else:
                     play_id = 9111 + (container_id - 9001) * 2
+                    view_all_id = 9159 + (container_id - 9000)
                     action_focus = " | ".join(
                         f"Control.HasFocus({focus_id})"
-                        for focus_id in (container_id, play_id, play_id + 1)
+                        for focus_id in (container_id, play_id, play_id + 1, view_all_id)
                     )
                     set_child_text(control, "visible", action_focus)
             if control.get("type") == "image" and texture == "hero-shade.png":
@@ -781,7 +785,7 @@ def update_xml(data, path):
         if len(hero_artwork) != 4:
             raise SystemExit(f"Home.xml must have four dynamic fanart layers, found {len(hero_artwork)}")
         poster_layers = []
-        row1_exclusions = (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118)
+        row1_exclusions = (9002, 9113, 9114, 9161, 9003, 9115, 9116, 9162, 9004, 9117, 9118, 9163)
         for row_index, container_id in enumerate((9001, 9002, 9003, 9004), start=1):
             art_conditions = (
                 f"String.IsEmpty(Container({container_id}).ListItem.Art(fanart))",
@@ -794,9 +798,10 @@ def update_xml(data, path):
                 )
             else:
                 play_id = 9111 + (row_index - 1) * 2
+                view_all_id = 9159 + row_index
                 visible = " | ".join(
                     " + ".join((f"Control.HasFocus({focus_id})",) + art_conditions)
-                    for focus_id in (container_id, play_id, play_id + 1)
+                    for focus_id in (container_id, play_id, play_id + 1, view_all_id)
                 )
             poster = ET.Element("control", {"type": "image", "id": str(9139 + row_index)})
             for tag, value in (
@@ -1151,14 +1156,15 @@ def update_xml(data, path):
                 continue
             container_id = int(source_label.split("Container(", 1)[1].split(")", 1)[0])
             play_id = 9111 + (container_id - 9001) * 2
+            view_all_id = 9159 + (container_id - 9000)
             set_child_text(hero_group, "visible",
-                           f"Control.HasFocus({container_id}) | Control.HasFocus({play_id}) | Control.HasFocus({play_id + 1})")
+                           f"Control.HasFocus({container_id}) | Control.HasFocus({play_id}) | Control.HasFocus({play_id + 1}) | Control.HasFocus({view_all_id})")
         if home_default_hero_group is None:
             raise SystemExit("Home row 1 lost its consolidated hero/action group")
         # Keep the first hero active on initial Home/navigation focus and while
         # row 1 or its two actions are focused. Switch cleanly to rows 2–4 without
         # leaving two hero groups visible or hiding row 1's PLAY/MORE INFO controls.
-        row1_exclusions = (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118)
+        row1_exclusions = (9002, 9113, 9114, 9161, 9003, 9115, 9116, 9162, 9004, 9117, 9118, 9163)
         set_child_text(home_default_hero_group, "visible",
                        " + ".join(f"!Control.HasFocus({control_id})" for control_id in row1_exclusions))
         # Keep the cinematic hero pinned while the four Home rails scroll as one catalogue.
@@ -1176,7 +1182,7 @@ def update_xml(data, path):
         set_child_text(rail_list, "usecontrolcoords", "false")
         lower_row_focus = " | ".join(
             f"Control.HasFocus({control_id})"
-            for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118)
+            for control_id in (9002, 9113, 9114, 9161, 9003, 9115, 9116, 9162, 9004, 9117, 9118, 9163)
         )
         ET.SubElement(
             rail_list,
@@ -1237,7 +1243,8 @@ def update_xml(data, path):
             for later_index in range(index + 1, 5):
                 later_container = 9000 + later_index
                 later_play = 9111 + (later_index - 1) * 2
-                later_focus_ids.extend((later_container, later_play, later_play + 1))
+                later_view_all = 9159 + later_index
+                later_focus_ids.extend((later_container, later_play, later_play + 1, later_view_all))
             base_row_visibility = f"!String.IsEmpty(Skin.String(Cineva.Widget{index}.Path))"
             # Reset source visibility first so repeated archive builds do not
             # append duplicate Kodi boolean conditions to the same control.
@@ -1258,7 +1265,7 @@ def update_xml(data, path):
                 ("font", "font9"), ("label", "VIEW ALL"),
                 ("textcolor", "silver"), ("focusedcolor", "white"),
                 ("align", "center"), ("aligny", "center"),
-                ("onclick", f"ActivateWindow(10025,$INFO[Skin.String(Cineva.Widget{index}.Path)])"),
+                ("onclick", f"ActivateWindow(Videos,$INFO[Skin.String(Cineva.Widget{index}.Path)],return)"),
                 ("onup", f"SetFocus({play_id})"),
                 ("ondown", f"SetFocus({container_id})"),
                 ("onleft", f"SetFocus({view_all_id})"),
@@ -1335,7 +1342,7 @@ def update_xml(data, path):
             set_child_text(scroll_mask, tag, value)
         ET.SubElement(scroll_mask, "texture").text = "rail-scroll-mask.png"
         set_child_text(scroll_mask, "aspectratio", "scale")
-        lower_focus_ids = (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118)
+        lower_focus_ids = (9002, 9113, 9114, 9161, 9003, 9115, 9116, 9162, 9004, 9117, 9118, 9163)
         set_child_text(scroll_mask, "visible", " | ".join(
             f"Control.HasFocus({control_id})" for control_id in lower_focus_ids
         ))
