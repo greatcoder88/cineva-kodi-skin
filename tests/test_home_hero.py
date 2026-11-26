@@ -7,16 +7,17 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.33.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.34.zip"
 
 
 class HomeHeroActionTests(unittest.TestCase):
     def test_release_changelog_uses_real_line_breaks(self):
         with ZipFile(ARCHIVE) as archive:
             lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
-        self.assertEqual(lines[0], "0.5.33 - Keep the final Home poster and caption inside the viewport")
+        self.assertEqual(lines[0], "0.5.34 - Restore the native Kodi Interface settings screen")
         self.assertEqual(lines[1], "- Rebalance all four Home rails to show seven complete poster cards plus a small eighth-card preview.")
         self.assertEqual(lines[2], "- Keep the rightmost fully visible poster title, focus frame and progress strip inside the 1920px screen while preserving D-pad browsing.")
+        self.assertIn("0.5.33 - Keep the final Home poster and caption inside the viewport", lines)
         self.assertIn("0.5.32 - Smooth the Home hero top fade", lines)
         self.assertIn("0.5.31 - Add episode context to the In Progress Shows hero", lines)
         self.assertIn("0.5.30 - Prefer concise Home plot outlines with full-plot fallback", lines)
