@@ -13,7 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.36.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.37.zip"
+PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.36.zip"
 LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.35.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
@@ -585,7 +586,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.36")
+        root.set("version", "0.5.37")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -1804,6 +1805,15 @@ def update_xml(data, path):
         ET.SubElement(controls, "include").text = "CinevaBackground"
         ET.SubElement(controls, "include").text = "CinevaTopBar"
     elif path == "skin.cineva/xml/MyVideoNav.xml":
+        # Do not force focus onto the native directory panel while Kodi is still
+        # resolving a plugin URL. Some add-ons populate Container(50) only after
+        # MyVideoNav has initialized; always=true makes Kodi log a failed focus
+        # request during that empty loading interval. Keep panel 50 registered as
+        # the real view/default target, but let Kodi retain valid focus until the
+        # directory has items and the panel can accept D-pad navigation.
+        default_control = root.find("defaultcontrol")
+        if default_control is not None:
+            default_control.attrib.pop("always", None)
         # Unified cinematic catalogue: larger portrait cards, generous gutters,
         # restrained metadata and a full-width grid that uses the screen.
         panel = root.find("./controls/control[@type='panel']")
@@ -2141,12 +2151,18 @@ def update_xml(data, path):
 
 
 def main():
-    # Start the new distributable version from the last published package once.
-    # Subsequent builds transform 0.5.36 in place and remain byte-stable.
-    if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
-        ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
+    # Start the new distributable version from the immediately previous package.
+    # Keep the older archive as a recovery fallback for shallow checkouts.
+    # Subsequent builds transform 0.5.37 in place and remain byte-stable.
+    if not ARCHIVE.exists():
+        source_archive = PREVIOUS_ARCHIVE if PREVIOUS_ARCHIVE.is_file() else LEGACY_ARCHIVE
+        if source_archive.is_file():
+            ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.36.zip and migration source skin.cineva-0.5.35.zip")
+        raise SystemExit(
+            "Missing skin.cineva-0.5.37.zip and migration sources "
+            "skin.cineva-0.5.36.zip / skin.cineva-0.5.35.zip"
+        )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -2237,9 +2253,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.36":
-                        addon_root.set("version", "0.5.36")
-                        changed.append(info.filename + " (bump skin version to 0.5.36)")
+                    if addon_root.get("version") != "0.5.37":
+                        addon_root.set("version", "0.5.37")
+                        changed.append(info.filename + " (bump skin version to 0.5.37)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2247,18 +2263,18 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.36 - Balance Home hero synopsis line wrapping",
-                        "- Widen the Home hero synopsis to use the available title column and prevent a short orphaned final line.",
-                        "- Preserve the dynamic PlotOutline-to-Plot fallback and all Home shelf navigation.",
-                        "- Keep the hero metadata, progress cue, and actions in their current readable bands.",
+                        "0.5.37 - Prevent premature Kodi video-panel focus",
+                        "- Keep MyVideoNav's native panel 50 registered while removing forced focus during asynchronous plugin-directory loading.",
+                        "- Preserve populated POV directory posters, labels, and D-pad navigation once Kodi has resolved the listing.",
+                        "- Retain the full-width catalogue layout and all existing Home, playback, and settings behavior.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.36 - Balance Home hero synopsis line wrapping"):
+                    if changelog.startswith("0.5.37 - Prevent premature Kodi video-panel focus"):
                         pass
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.36 Home hero composition changelog)")
+                        changed.append(info.filename + " (prepend 0.5.37 MyVideoNav focus changelog)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:

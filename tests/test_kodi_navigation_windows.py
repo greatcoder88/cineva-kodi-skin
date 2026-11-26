@@ -4,7 +4,7 @@ from zipfile import ZipFile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.35.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.37.zip"
 XML = "skin.cineva/xml/"
 
 
@@ -15,6 +15,12 @@ class KodiNavigationWindowTests(unittest.TestCase):
                 root = ET.fromstring(archive.read(XML + filename))
                 self.assertEqual(root.findtext("views"), "50", filename)
                 self.assertEqual(root.findtext("defaultcontrol"), "50", filename)
+                if filename == "MyVideoNav.xml":
+                    self.assertNotIn(
+                        "always",
+                        root.find("defaultcontrol").attrib,
+                        "MyVideoNav must not force focus before an asynchronous plugin listing is ready",
+                    )
                 self.assertIsNotNone(
                     root.find(".//control[@type='panel'][@id='50']"),
                     f"{filename} must contain the registered native panel",
