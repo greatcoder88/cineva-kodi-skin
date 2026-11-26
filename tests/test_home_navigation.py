@@ -213,6 +213,7 @@ class HomeNavigationTests(unittest.TestCase):
         self.assertEqual(panel.get("id"), "50")
         self.assertEqual(addon_browser.findtext("defaultcontrol"), "50")
         self.assertEqual(addon_browser.findtext("views"), "50")
+        self.assertEqual(addon_browser.get("menucontrol"), "50")
         self.assertIsNone(addon_browser.find("./controls/control[@type='panel'][@id='3']"))
 
     def test_search_is_provider_driven_with_separate_movie_and_tv_results(self):
@@ -275,7 +276,7 @@ class HomeNavigationTests(unittest.TestCase):
         nav = next(node for node in home.findall("./controls/control")
                    if node.get("type") == "group" and node.find("./control[@id='1001']") is not None)
         buttons = {node.get("id"): node for node in nav.findall("./control[@type='button']")}
-        expected = {"1001": "9111", "1002": "9113", "1003": "9115", "1004": "9117", "1005": "9111"}
+        expected = {"1001": "9111", "1002": "9115", "1003": "9117"}
         for control_id, target in expected.items():
             self.assertEqual(buttons[control_id].findtext("ondown"), f"SetFocus({target})")
         self.assertEqual(home.get("menucontrol"), "9001")
