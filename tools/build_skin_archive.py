@@ -13,9 +13,9 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.57.zip"
-PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.56.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.53.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.58.zip"
+PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.57.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.56.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -690,7 +690,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.57")
+        root.set("version", "0.5.58")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -1336,6 +1336,7 @@ def update_xml(data, path):
             for tag, value in (("left", 0), ("top", 0), ("width", 1860), ("height", 500)):
                 set_child_text(row_group, tag, value)
             container_id = 9000 + index
+            set_child_text(row_group, "defaultcontrol", container_id)
             play_id = 9111 + (index - 1) * 2
             view_all_id = 9159 + index
             next_target = 9000 + index + 1 if index < 4 else 1001
@@ -1361,29 +1362,16 @@ def update_xml(data, path):
             if index == 1:
                 set_child_text(shelf, "onclick", "PlayMedia($INFO[ListItem.FileNameAndPath])")
             set_child_text(shelf, "itemgap", 8)
-            # Rebuild routes from scratch so repeated packaging does not accumulate duplicate onup actions.
+            # Kodi's navigation tags accept one target. Point to the previous
+            # row GROUP, which remembers its last focused child (normally the
+            # selected poster). Multiple conditional <onup> nodes are ambiguous
+            # to Kodi and were falling through to this row's VIEW ALL button.
             for stale_up in shelf.findall("onup"):
                 shelf.remove(stale_up)
             if index == 1:
                 set_child_text(shelf, "onup", f"SetFocus({view_all_id})")
             else:
-                # Prefer the nearest populated shelf. If a configured shelf above
-                # is still empty (or its add-on returned no items), route to that
-                # shelf's visible VIEW ALL action rather than focusing an empty list.
-                for previous_index in range(index - 1, 0, -1):
-                    previous_container = 9000 + previous_index
-                    previous_view_all = 9159 + previous_index
-                    populated = ET.SubElement(
-                        shelf, "onup",
-                        {"condition": f"Integer.IsGreater(Container({previous_container}).NumItems,0)"}
-                    )
-                    populated.text = f"SetFocus({previous_container})"
-                    configured = ET.SubElement(
-                        shelf, "onup",
-                        {"condition": f"!String.IsEmpty(Skin.String(Cineva.Widget{previous_index}.Path))"}
-                    )
-                    configured.text = f"SetFocus({previous_view_all})"
-                ET.SubElement(shelf, "onup").text = f"SetFocus({view_all_id})"
+                set_child_text(shelf, "onup", str(9060 + index - 1))
             set_child_text(shelf, "ondown", f"SetFocus({next_target})")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
                 layout.set("width", "248")
@@ -2648,15 +2636,15 @@ def update_xml(data, path):
 def main():
     # Start the new distributable version from the immediately previous package.
     # Keep the older archive as a recovery fallback for shallow checkouts.
-    # Subsequent builds transform 0.5.57 in place and remain byte-stable.
+    # Subsequent builds transform 0.5.58 in place and remain byte-stable.
     if not ARCHIVE.exists():
         source_archive = PREVIOUS_ARCHIVE if PREVIOUS_ARCHIVE.is_file() else LEGACY_ARCHIVE
         if source_archive.is_file():
             ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
         raise SystemExit(
-            "Missing skin.cineva-0.5.57.zip and migration sources skin.cineva-0.5.56.zip / "
-            "skin.cineva-0.5.53.zip"
+            "Missing skin.cineva-0.5.58.zip and migration sources skin.cineva-0.5.57.zip / "
+            "skin.cineva-0.5.56.zip"
         )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
@@ -2752,9 +2740,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.57":
-                        addon_root.set("version", "0.5.57")
-                        changed.append(info.filename + " (bump skin version to 0.5.57)")
+                    if addon_root.get("version") != "0.5.58":
+                        addon_root.set("version", "0.5.58")
+                        changed.append(info.filename + " (bump skin version to 0.5.58)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2762,6 +2750,7 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     release_entries = [
+                        ("0.5.58", "0.5.58 - Restore previous Home poster focus\n- Route D-pad Up to the previous row group so Kodi restores its last focused poster.\n- Give each Home row an explicit default poster target.\n- Replace ambiguous conditional navigation tags with Kodi's native group focus memory."),
                         ("0.5.57", "0.5.57 - Restore D-pad Up between scrolled Home shelves\n- Keep earlier poster rails focusable when navigating Up from any later row.\n- Preserve the pinned-hero layout; off-screen rails remain clipped by the Home viewport."),
                         ("0.5.55", "0.5.55 - Restore native System Information and Profiles windows\n- Package Kodi Piers native settings pages for System Information and Profiles.\n- Restore the provider button path from the last Home widget slot.\n- Clarify the search action as SEARCH MOVIES & TV."),
                         ("0.5.54", "0.5.54 - Restore File Manager dual-pane navigation\n- Restore Kodi's native left and right File Manager panes with explicit D-pad focus routing."),

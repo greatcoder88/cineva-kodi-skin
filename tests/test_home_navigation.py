@@ -5,7 +5,7 @@ from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.57.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.58.zip"
 HUB_WINDOW = "skin.cineva/xml/CinevaWidgetHub.xml"
 
 
@@ -70,24 +70,13 @@ class HomeNavigationTests(unittest.TestCase):
             self.assertEqual(button.findtext("visible"), heading.findtext("visible"))
             shelf = row.find(f"./control[@type='fixedlist'][@id='{container_id}']")
             self.assertIsNotNone(shelf)
-            expected_up = (
-                [(None, f"SetFocus({view_all_id})")]
-                if index == 1 else
-                [
-                    action
-                    for previous in range(index - 1, 0, -1)
-                    for action in (
-                        (f"Integer.IsGreater(Container({9000 + previous}).NumItems,0)",
-                         f"SetFocus({9000 + previous})"),
-                        (f"!String.IsEmpty(Skin.String(Cineva.Widget{previous}.Path))",
-                         f"SetFocus({9159 + previous})"),
-                    )
-                ] + [(None, f"SetFocus({view_all_id})")]
-            )
+            self.assertEqual(row.findtext("defaultcontrol"), str(container_id),
+                             "each Home row must restore its last focused poster, or default to its shelf")
+            expected_up = f"SetFocus({view_all_id})" if index == 1 else str(9060 + index - 1)
             self.assertEqual(
                 [(node.get("condition"), node.text) for node in shelf.findall("onup")],
-                expected_up,
-                f"Home row {index} must move Up to the nearest populated/configured shelf above it",
+                [(None, expected_up)],
+                f"Home row {index} must use one native focus target; later rows target the previous row group",
             )
             loading = row.find(f"./control[@type='group'][@id='{9400 + index}']")
             self.assertIsNotNone(loading, f"Home row {index} needs a non-focusable loading state")

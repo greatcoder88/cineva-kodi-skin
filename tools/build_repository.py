@@ -50,7 +50,7 @@ def write_http_directory_index(directory: Path, title: str, entries: list[tuple[
 
 
 def main() -> None:
-    skin_zip = ROOT / "skin.cineva-0.5.57.zip"
+    skin_zip = ROOT / "skin.cineva-0.5.58.zip"
     helper_dir = ROOT / "tools/script.cineva.widgets"
     if not skin_zip.is_file():
         raise SystemExit("Build the skin ZIP before assembling the repository.")
@@ -69,7 +69,7 @@ def main() -> None:
     helper_version = helper_root.attrib["version"]
     skin_root = ET.fromstring(skin_xml)
     skin_version = skin_root.attrib["version"]
-    expected_skin_version = "0.5.57"  # Home previous-row D-pad focus recovery release
+    expected_skin_version = "0.5.58"  # Native previous-row group focus recovery
     if skin_version != expected_skin_version:
         raise SystemExit(
             f"Skin archive manifest version is {skin_version!r}; "

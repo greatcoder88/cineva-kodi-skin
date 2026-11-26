@@ -4,7 +4,7 @@ on:
     branches: [main]
     paths-ignore:
       - "repository-site/**"
-      - "skin.cineva-0.5.57.zip"
+      - "skin.cineva-0.5.58.zip"
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -24,9 +24,9 @@ jobs:
       - name: Build release ZIP and verify true idempotence
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.57.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.58.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.57.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.58.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
@@ -34,8 +34,8 @@ jobs:
           echo "Archive SHA-256 is stable across consecutive builds: $after"
       - name: Expand uploaded CINÉVA archive
         run: |
-          test -s skin.cineva-0.5.57.zip
-          unzip -q skin.cineva-0.5.57.zip -d .
+          test -s skin.cineva-0.5.58.zip
+          unzip -q skin.cineva-0.5.58.zip -d .
       - name: Validate Settings-only widget configuration navigation
         run: |
           python - <<'PY'
@@ -819,8 +819,8 @@ jobs:
                  for button in search.findall(".//control[@type='button']")):
               errors.append("CINÉVA search actions are missing their branded focus surface")
           skin = ET.parse(root / "addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.57":
-              errors.append("Skin ZIP version is not 0.5.57")
+          if skin.attrib.get("version") != "0.5.58":
+              errors.append("Skin ZIP version is not 0.5.58")
           settings = ET.parse("tools/script.cineva.widgets/resources/settings.xml").getroot()
           registry = settings.find(".//setting[@id='widget_registry']")
           if registry is None or registry.attrib.get("type") != "string":
