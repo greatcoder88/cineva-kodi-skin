@@ -207,7 +207,7 @@ jobs:
             raise SystemExit("CINÉVA top navigation is layered underneath the hero artwork")
           top_shade = controls.find("./control[@id='9100']")
           top_texture = top_shade.find("texture") if top_shade is not None else None
-          if top_shade is None or top_shade.findtext("height") != "320" or top_shade.findtext("aspectratio") != "stretch" or top_texture is None or top_texture.attrib.get("flipy") != "true:
+          if top_shade is None or top_shade.findtext("height") != "320" or top_shade.findtext("aspectratio") != "stretch" or top_texture is None or top_texture.attrib.get("flipy") != "true":
             raise SystemExit("Home hero is missing the mirrored top fade for readable navigation")
           left_shade = controls.find("./control[@id='9105']")
           if left_shade is None or (left_shade.findtext("left"), left_shade.findtext("top"), left_shade.findtext("width"), left_shade.findtext("height")) != ("0", "0", "1920", "440") or left_shade.findtext("texture") != "hero-left-shade.png":
