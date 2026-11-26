@@ -500,3 +500,40 @@ class HomeNavigationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_previous_home_rows_hide_offscreen_item_art_without_disabling_focus(self):
+        with ZipFile(ARCHIVE) as archive:
+            home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
+            includes = ET.fromstring(archive.read("skin.cineva/xml/Includes.xml"))
+        rail = home.find("./controls/control[@type='grouplist'][@id='9050']")
+        self.assertIsNotNone(rail)
+        for row_index in range(1, 5):
+            container_id = 9000 + row_index
+            row = rail.find(f"./control[@id='{9060 + row_index}']")
+            self.assertIsNotNone(row)
+            shelf = row.find(f"./control[@type='fixedlist'][@id='{container_id}']")
+            self.assertIsNotNone(shelf)
+            self.assertTrue(
+                (shelf.findtext("visible") or "").startswith("!String.IsEmpty"),
+                "the parent shelf must remain visible and focusable for D-pad return",
+            )
+            item_include = shelf.findtext("./itemlayout/include")
+            focused_include = shelf.findtext("./focusedlayout/include")
+            self.assertEqual(item_include, f"CinevaPosterItem{container_id}")
+            self.assertEqual(focused_include, f"CinevaFocusedPosterItem{container_id}")
+            later_focus_ids = []
+            for later_index in range(row_index + 1, 5):
+                later_container = 9000 + later_index
+                later_play = 9111 + (later_index - 1) * 2
+                later_focus_ids.extend((later_container, later_play, later_play + 1, 9159 + later_index))
+            for include_name in (item_include, focused_include):
+                layout = includes.find(f"./include[@name='{include_name}']")
+                self.assertIsNotNone(layout, f"missing row-specific include {include_name}")
+                for control in layout.findall("control"):
+                    visible = control.findtext("visible", "")
+                    for focus_id in later_focus_ids:
+                        self.assertIn(
+                            f"!Control.HasFocus({focus_id})", visible,
+                            f"{include_name} must hide off-screen artwork while a later row is active",
+                        )
+
