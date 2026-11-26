@@ -232,7 +232,53 @@ class WidgetManager:
                 return
             self.configure_slot(registry, screen, picked + 1)
 
+    @staticmethod
+    def search_provider():
+        provider = xbmc.getInfoLabel('Skin.String(Cineva.Search.Provider)').strip().lower()
+        return provider if provider in ('pov', 'umbrella') else 'pov'
+
+    def configure_search_provider(self):
+        current = self.search_provider()
+        choices = ['POV' + ('  ✓' if current == 'pov' else ''),
+                   'Umbrella' + ('  ✓' if current == 'umbrella' else '')]
+        selected = self.dialog.select('CINÉVA · Search provider', choices)
+        if selected < 0:
+            return
+        provider = ('pov', 'umbrella')[selected]
+        xbmc.executebuiltin('Skin.SetString(Cineva.Search.Provider,{})'.format(provider))
+        xbmc.executebuiltin('Notification(CINÉVA,Search provider: {},3000)'.format(
+            'POV' if provider == 'pov' else 'Umbrella'))
+
+    def search(self):
+        provider = self.search_provider()
+        query = self.dialog.input('Search movies and TV shows', type=xbmcgui.INPUT_ALPHANUM)
+        if not query or not query.strip():
+            return
+        from urllib.parse import quote_plus
+        term = quote_plus(query.strip().encode('utf-8'))
+        if provider == 'umbrella':
+            movie = 'plugin://plugin.video.umbrella/?action=movieSearchterm&name=' + term
+            tv = 'plugin://plugin.video.umbrella/?action=tvSearchterm&name=' + term
+        else:
+            movie = 'plugin://plugin.video.pov/?mode=build_movie_list&action=tmdb_movies_search&query=' + term
+            tv = 'plugin://plugin.video.pov/?mode=build_tvshow_list&action=tmdb_tv_search&query=' + term
+        xbmc.executebuiltin('Skin.SetString(Cineva.Search.Query,{})'.format(
+            json.dumps(query.strip(), ensure_ascii=False)))
+        xbmc.executebuiltin('Skin.SetString(Cineva.Search.MoviePath,{})'.format(
+            json.dumps(movie, ensure_ascii=False)))
+        xbmc.executebuiltin('Skin.SetString(Cineva.Search.ShowPath,{})'.format(
+            json.dumps(tv, ensure_ascii=False)))
+        xbmc.executebuiltin('ActivateWindow(11112)')
+        xbmc.executebuiltin('Container.Refresh(9701)')
+        xbmc.executebuiltin('Container.Refresh(9702)')
+
     def run(self, action='manage', screen='home', slot=1, container='9001', path=''):
+        if action == 'searchprovider':
+            self.configure_search_provider()
+            return
+        if action == 'search':
+            self.search()
+            return
         if action == 'play':
             try:
                 container_id = int(container)
