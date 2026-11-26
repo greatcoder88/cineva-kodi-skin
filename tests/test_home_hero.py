@@ -15,8 +15,8 @@ class HomeHeroActionTests(unittest.TestCase):
         with ZipFile(ARCHIVE) as archive:
             lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
         self.assertEqual(lines[0], "0.5.34 - Restore the native Kodi Interface settings screen")
-        self.assertEqual(lines[1], "- Rebalance all four Home rails to show seven complete poster cards plus a small eighth-card preview.")
-        self.assertEqual(lines[2], "- Keep the rightmost fully visible poster title, focus frame and progress strip inside the 1920px screen while preserving D-pad browsing.")
+        self.assertEqual(lines[1], "- Rebuild SettingsCategory.xml with Kodi’s dynamic category and setting-control prototypes.")
+        self.assertEqual(lines[2], "- Restore category navigation, option controls, settings-level selector, description panel and scrollbar in CINÉVA styling.")
         self.assertIn("0.5.33 - Keep the final Home poster and caption inside the viewport", lines)
         self.assertIn("0.5.32 - Smooth the Home hero top fade", lines)
         self.assertIn("0.5.31 - Add episode context to the In Progress Shows hero", lines)
