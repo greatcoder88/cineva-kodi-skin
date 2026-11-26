@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.60.zip"
-PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.59.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.61.zip"
+PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.60.zip"
 LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.58.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
@@ -690,7 +690,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.60")
+        root.set("version", "0.5.61")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -1126,8 +1126,9 @@ def update_xml(data, path):
                 }:
                     hero_group.remove(old_control)
             source_path = f"Skin.String(Cineva.Widget{row_index}.Path)"
+            in_progress_label = "CONTINUE WATCHING" if row_index == 1 else "IN PROGRESS"
             eyebrow_specs = (
-                ("CONTINUE WATCHING", f"String.Contains({source_path},in_progress)"),
+                (in_progress_label, f"String.Contains({source_path},in_progress)"),
                 ("TRENDING NOW", f"String.Contains({source_path},trending)"),
                 ("YOUR COLLECTION",
                  f"!String.Contains({source_path},in_progress) + !String.Contains({source_path},trending)")
@@ -2682,14 +2683,14 @@ def update_xml(data, path):
 def main():
     # Start the new distributable version from the immediately previous package.
     # Keep the older archive as a recovery fallback for shallow checkouts.
-    # Subsequent builds transform 0.5.60 in place and remain byte-stable.
+    # Subsequent builds transform 0.5.61 in place and remain byte-stable.
     if not ARCHIVE.exists():
         source_archive = PREVIOUS_ARCHIVE if PREVIOUS_ARCHIVE.is_file() else LEGACY_ARCHIVE
         if source_archive.is_file():
             ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
         raise SystemExit(
-            "Missing skin.cineva-0.5.60.zip and migration sources skin.cineva-0.5.59.zip / "
+            "Missing skin.cineva-0.5.61.zip and migration sources skin.cineva-0.5.60.zip / "
             "skin.cineva-0.5.58.zip"
         )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
@@ -2786,9 +2787,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.60":
-                        addon_root.set("version", "0.5.60")
-                        changed.append(info.filename + " (bump skin version to 0.5.60)")
+                    if addon_root.get("version") != "0.5.61":
+                        addon_root.set("version", "0.5.61")
+                        changed.append(info.filename + " (bump skin version to 0.5.61)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2802,6 +2803,7 @@ def main():
                         data = changelog.encode("utf-8")
                         changed.append(info.filename + " (refresh 0.5.58 release notes)")
                     release_entries = [
+                        ("0.5.61", "0.5.61 - Match Home hero context to the selected shelf\n- Label the first in-progress movie rail CONTINUE WATCHING and the second in-progress TV rail IN PROGRESS.\n- Keep trending and custom collection labels source-aware across all four Home rows."),
                         ("0.5.60", "0.5.60 - Give Home heroes concise provider taglines\n- Prefer a supplied ListItem.Tagline for the selected poster before PlotOutline and full Plot fallbacks.\n- Keep all three synopsis sources in the same title-safe hero band so the copy updates with each focused item."),
                         ("0.5.59", "0.5.59 - Align Home poster captions consistently\n- Anchor one-, two- and three-line titles to the same top baseline beneath every poster.\n- Keep focused and inactive caption placement consistent across all four Home rails."),
                         ("0.5.58", "0.5.58 - Restore previous Home poster focus\n- Route D-pad Up directly to the previous poster shelf so Kodi restores its remembered selection.\n- Keep each Home row on an explicit default poster target for predictable remote navigation.\n- Preserve earlier shelf focusability while hiding only off-screen artwork behind the pinned hero."),

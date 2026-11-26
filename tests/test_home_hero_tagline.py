@@ -6,7 +6,7 @@ from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.60.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.61.zip"
 FIXTURE = ROOT / "tools/test-fixtures/plugin.video.pov/default.py"
 
 
@@ -51,6 +51,25 @@ class HomeHeroTaglineTests(unittest.TestCase):
             self.assertEqual(
                 plot.findtext("visible"),
                 f"String.IsEmpty({tagline_info}) + String.IsEmpty({outline_info}) + !String.IsEmpty({plot_info})",
+            )
+
+    def test_progress_eyebrows_distinguish_continue_watching_from_in_progress(self):
+        with ZipFile(ARCHIVE) as archive:
+            home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
+        controls = home.find("controls")
+        for row, expected_label in ((1, "CONTINUE WATCHING"), (2, "IN PROGRESS")):
+            play_id = 9111 + (row - 1) * 2
+            hero = next(
+                group for group in controls.findall("control")
+                if group.get("type") == "group"
+                and group.find(f"./control[@id='{play_id}']") is not None
+            )
+            eyebrow = hero.find(f"./control[@id='{9300 + (row - 1) * 3}']")
+            self.assertIsNotNone(eyebrow, f"Home hero row {row} is missing its in-progress eyebrow")
+            self.assertEqual(eyebrow.findtext("label"), expected_label)
+            self.assertEqual(
+                eyebrow.findtext("visible"),
+                f"String.Contains(Skin.String(Cineva.Widget{row}.Path),in_progress)",
             )
 
     def test_gui_fixture_has_distinct_provider_copy_for_every_movie_and_show(self):
