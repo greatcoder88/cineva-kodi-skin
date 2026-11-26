@@ -250,8 +250,9 @@ jobs:
                           f"$INFO[Container({container_id}).ListItem.Genre,  •  ]")
               eyebrow_base_id = 9300 + (row_index - 1) * 3
               source_path = f"Skin.String(Cineva.Widget{row_index}.Path)"
+              in_progress_label = "CONTINUE WATCHING" if row_index == 1 else "IN PROGRESS"
               eyebrow_specs = (
-                  ("CONTINUE WATCHING", f"String.Contains({source_path},in_progress)"),
+                  (in_progress_label, f"String.Contains({source_path},in_progress)"),
                   ("TRENDING NOW", f"String.Contains({source_path},trending)"),
                   ("YOUR COLLECTION", f"!String.Contains({source_path},in_progress) + !String.Contains({source_path},trending)")
               )
