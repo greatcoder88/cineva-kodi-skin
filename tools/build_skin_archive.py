@@ -1870,8 +1870,6 @@ def update_xml(data, path):
                 clone.remove(child)
             for child in (fallback_image, active_image, fallback_label, active_label, fallback_progress, clone_progress, focus_accent):
                 clone.append(child)
-            root.append(clone)
-
             # Each Home rail gets its own item include. When a lower rail is
             # focused, the earlier rail must remain a valid D-pad target, but
             # its off-screen poster art, captions and resume bars must not bleed
