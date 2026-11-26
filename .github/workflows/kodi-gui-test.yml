@@ -352,8 +352,10 @@ jobs:
               raise SystemExit(f"Home row {container_id} hero actions are missing their branded nine-slice focus surfaces")
             row_group = rail_list.find(f"./control[@type='group'][@id='{9060 + container_id - 9000}']") if rail_list is not None else None
             shelf = row_group.find(f"./control[@type='fixedlist'][@id='{container_id}']") if row_group is not None else None
-            if shelf is None or shelf.findtext("onup") != f"SetFocus({9159 + (container_id - 9000)})" or row_group.findtext("onup") != f"SetFocus({play_id})":
-              raise SystemExit(f"Home row {container_id} cannot navigate up to VIEW ALL and its hero actions")
+            expected_up = ([(None, f"SetFocus({9159 + (container_id - 9000)})")] if container_id == 9001 else [(f"!String.IsEmpty(Skin.String(Cineva.Widget{previous}.Path))", f"SetFocus({9000 + previous})") for previous in range(container_id - 9000 - 1, 0, -1)] + [(None, f"SetFocus({9159 + (container_id - 9000)})")])
+              actual_up = [(node.get("condition"), node.text) for node in shelf.findall("onup")] if shelf is not None else []
+              if shelf is None or actual_up != expected_up or row_group.findtext("onup") != f"SetFocus({play_id})":
+              raise SystemExit(f"Home row {container_id} does not navigate Up to the nearest configured shelf above it")
           for index in range(1, 5):
             row_group = rail_children[index - 1] if len(rail_children) == 4 else None
             row_controls = [child for child in row_group if child.tag == "control"] if row_group is not None else []
@@ -377,8 +379,10 @@ jobs:
               raise SystemExit(f"Home widget {index} is missing its configured VIEW ALL action")
             if row_accent is None or row_accent.get("type") != "image" or (row_accent.findtext("left"), row_accent.findtext("top"), row_accent.findtext("width"), row_accent.findtext("height")) != ("0", "42", "58", "3") or row_accent.findtext("texture") != "focus-bar.png" or row_accent.findtext("visible") != f"Control.HasFocus({9000 + index})":
               raise SystemExit(f"Home widget {index} is missing its active-rail accent")
-            if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("55", "440") or shelf.findtext("onup") != f"SetFocus({9159 + index})":
-              raise SystemExit(f"Home widget {index} shelf geometry or VIEW ALL focus route is incorrect")
+            expected_up = ([(None, f"SetFocus({9159 + index})")] if index == 1 else [(f"!String.IsEmpty(Skin.String(Cineva.Widget{previous}.Path))", f"SetFocus({9000 + previous})") for previous in range(index - 1, 0, -1)] + [(None, f"SetFocus({9159 + index})")])
+              actual_up = [(node.get("condition"), node.text) for node in shelf.findall("onup")] if shelf is not None else []
+              if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("55", "440") or actual_up != expected_up:
+              raise SystemExit(f"Home widget {index} shelf geometry or previous-row Up route is incorrect")
             later_focus_ids = [control_id for later_index in range(index + 1, 5)
                                for control_id in (9000 + later_index, 9111 + (later_index - 1) * 2, 9112 + (later_index - 1) * 2, 9159 + later_index)]
             if later_focus_ids:
