@@ -2617,19 +2617,20 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.53 - Add unified POV movie and TV search
-- Add a provider setting in CINÉVA Skin Settings (POV in this release).
-- Search one title once and load separate movie and TV result shelves from POV.
-- Replace the generic add-on picker page with a poster-led CINÉVA search screen.
-
-0.5.52 - Fix vertical navigation between Home shelves",
+                        "0.5.53 - Add unified POV movie and TV search",
+                        "- Add a provider setting in CINÉVA Skin Settings (POV in this release).",
+                        "- Search one title once and load separate movie and TV result shelves from POV.",
+                        "- Replace the generic add-on picker page with a poster-led CINÉVA search screen.",
+                        "",
+                        "0.5.52 - Fix vertical navigation between Home shelves",
                         "- Move Up from each Home shelf to the nearest configured shelf above it.",
                         "- Skip empty widget slots and retain VIEW ALL as the upper boundary action.",
                         "- Keep D-pad navigation consistent across all four Home widget rows.",
+                        "- Show first-run Home initialization, per-widget loading skeletons and completed-empty states.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.53 - Fix vertical navigation between Home shelves"):
+                    if changelog.startswith("0.5.53 - Add unified POV movie and TV search"):
                         pass
                     else:
                         data = (entry + changelog).encode("utf-8")
