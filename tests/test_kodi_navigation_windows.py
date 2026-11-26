@@ -4,7 +4,7 @@ from zipfile import ZipFile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.37.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.38.zip"
 XML = "skin.cineva/xml/"
 
 
@@ -14,13 +14,23 @@ class KodiNavigationWindowTests(unittest.TestCase):
             for filename in ("MyVideoNav.xml", "MyMusicNav.xml", "MyPrograms.xml", "FileManager.xml"):
                 root = ET.fromstring(archive.read(XML + filename))
                 self.assertEqual(root.findtext("views"), "50", filename)
-                self.assertEqual(root.findtext("defaultcontrol"), "50", filename)
                 if filename == "MyVideoNav.xml":
-                    self.assertNotIn(
-                        "always",
-                        root.find("defaultcontrol").attrib,
-                        "MyVideoNav must not force focus before an asynchronous plugin listing is ready",
+                    self.assertEqual(root.findtext("defaultcontrol"), "49", filename)
+                    default_control = root.find("defaultcontrol")
+                    self.assertNotIn("always", default_control.attrib)
+                    back_control = root.find("./controls/control[@type='button'][@id='49']")
+                    self.assertIsNotNone(back_control, "MyVideoNav needs a safe focus target while plugins load")
+                    self.assertEqual(back_control.findtext("label"), "BACK TO ADD-ONS")
+                    self.assertEqual(back_control.findtext("onclick"), "PreviousMenu")
+                    self.assertEqual(
+                        [(node.get("condition"), node.text) for node in back_control.findall("ondown")],
+                        [
+                            ("!String.IsEmpty(Container(50).ListItem.Label)", "SetFocus(50)"),
+                            (None, "SetFocus(49)"),
+                        ],
                     )
+                else:
+                    self.assertEqual(root.findtext("defaultcontrol"), "50", filename)
                 self.assertIsNotNone(
                     root.find(".//control[@type='panel'][@id='50']"),
                     f"{filename} must contain the registered native panel",

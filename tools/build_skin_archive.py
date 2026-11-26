@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.37.zip"
-PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.36.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.38.zip"
+PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.37.zip"
 LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.35.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
@@ -586,7 +586,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.37")
+        root.set("version", "0.5.38")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -1804,12 +1804,10 @@ def update_xml(data, path):
         ET.SubElement(controls, "include").text = "CinevaBackground"
         ET.SubElement(controls, "include").text = "CinevaTopBar"
     elif path == "skin.cineva/xml/MyVideoNav.xml":
-        # Keep the native directory panel registered, but do not force focus
-        # while Kodi is still resolving an asynchronous plugin URL. Add-ons may
-        # populate Container(50) only after MyVideoNav initializes; forcing the
-        # empty panel at that moment logs a failed focus request and can leave
-        # remote navigation in a dead state. Once items arrive, Kodi can focus
-        # the same registered panel 50 normally.
+        # Kodi initializes MyVideoNav before an asynchronous plugin URL has
+        # populated Container(50). A panel cannot receive initial focus while
+        # empty, so use a real, visible parent-navigation button as the safe
+        # default and move into panel 50 only after its first item is available.
         views = root.find("views")
         if views is None:
             views = ET.Element("views")
@@ -1822,7 +1820,55 @@ def update_xml(data, path):
             default_control = ET.Element("defaultcontrol")
             root.insert(0, default_control)
         default_control.attrib.pop("always", None)
-        default_control.text = "50"
+        default_control.text = "49"
+        controls = root.find("controls")
+        if controls is not None:
+            count_label = next((
+                node for node in controls.findall("control")
+                if node.get("type") == "label"
+                and "$INFO[Container.NumItems]" in node.findtext("label", "")
+            ), None)
+            if count_label is not None:
+                set_child_text(count_label, "left", 290)
+                set_child_text(count_label, "top", 202)
+                set_child_text(count_label, "width", 1400)
+                set_child_text(count_label, "height", 36)
+            back_button = controls.find("./control[@id='49']")
+            if back_button is None:
+                back_button = ET.Element("control", {"type": "button", "id": "49"})
+                insert_at = list(controls).index(count_label) + 1 if count_label is not None else 2
+                controls.insert(insert_at, back_button)
+            else:
+                back_button.clear()
+                back_button.set("type", "button")
+                back_button.set("id", "49")
+            for tag, value in {
+                "left": "72",
+                "top": "194",
+                "width": "190",
+                "height": "48",
+                "font": "font12",
+                "label": "BACK TO ADD-ONS",
+                "textcolor": "silver",
+                "focusedcolor": "white",
+                "align": "center",
+                "aligny": "center",
+                "onclick": "PreviousMenu",
+                "onleft": "SetFocus(49)",
+                "onright": "SetFocus(49)",
+                "onup": "SetFocus(49)",
+            }.items():
+                set_child_text(back_button, tag, value)
+            focus_texture = ET.SubElement(back_button, "texturefocus", {"border": "8"})
+            focus_texture.text = "hero-secondary-focus.png"
+            normal_texture = ET.SubElement(back_button, "texturenofocus", {"border": "8"})
+            normal_texture.text = "hero-secondary.png"
+            enter_list = ET.SubElement(
+                back_button, "ondown",
+                {"condition": "!String.IsEmpty(Container(50).ListItem.Label)"}
+            )
+            enter_list.text = "SetFocus(50)"
+            ET.SubElement(back_button, "ondown").text = "SetFocus(49)"
         # Unified cinematic catalogue: larger portrait cards, generous gutters,
         # restrained metadata and a full-width grid that uses the screen.
         panel = root.find("./controls/control[@type='panel']")
@@ -2162,15 +2208,15 @@ def update_xml(data, path):
 def main():
     # Start the new distributable version from the immediately previous package.
     # Keep the older archive as a recovery fallback for shallow checkouts.
-    # Subsequent builds transform 0.5.37 in place and remain byte-stable.
+    # Subsequent builds transform 0.5.38 in place and remain byte-stable.
     if not ARCHIVE.exists():
         source_archive = PREVIOUS_ARCHIVE if PREVIOUS_ARCHIVE.is_file() else LEGACY_ARCHIVE
         if source_archive.is_file():
             ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
         raise SystemExit(
-            "Missing skin.cineva-0.5.37.zip and migration sources "
-            "skin.cineva-0.5.36.zip / skin.cineva-0.5.35.zip"
+            "Missing skin.cineva-0.5.38.zip and migration sources "
+            "skin.cineva-0.5.37.zip / skin.cineva-0.5.35.zip"
         )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
@@ -2262,9 +2308,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.37":
-                        addon_root.set("version", "0.5.37")
-                        changed.append(info.filename + " (bump skin version to 0.5.37)")
+                    if addon_root.get("version") != "0.5.38":
+                        addon_root.set("version", "0.5.38")
+                        changed.append(info.filename + " (bump skin version to 0.5.38)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2272,18 +2318,18 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.37 - Prevent premature Kodi video-panel focus",
-                        "- Keep MyVideoNav's native panel 50 registered while removing forced focus during asynchronous plugin-directory loading.",
-                        "- Preserve populated POV directory posters, labels, and D-pad navigation once Kodi has resolved the listing.",
-                        "- Retain the full-width catalogue layout and all existing Home, playback, and settings behavior.",
+                        "0.5.38 - Give asynchronous video directories a safe focus entry",
+                        "- Default MyVideoNav to a visible Back to Add-ons action while Kodi resolves plugin directory contents.",
+                        "- Move D-pad focus into native panel 50 only when its first item is available.",
+                        "- Preserve the full-width poster grid, directory count, and return-to-parent behavior.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.37 - Prevent premature Kodi video-panel focus"):
+                    if changelog.startswith("0.5.38 - Give asynchronous video directories a safe focus entry"):
                         pass
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.37 MyVideoNav focus changelog)")
+                        changed.append(info.filename + " (prepend 0.5.38 safe video-directory focus changelog)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:
