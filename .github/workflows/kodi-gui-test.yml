@@ -978,6 +978,7 @@ jobs:
               raise SystemExit(f"Settings landing window did not open from the GUI action: {state}")
             rpc("Input.Up")  # Add-ons -> Player
             rpc("Input.Right")  # Player -> Interface
+            rpc("Input.Select")  # Open the focused Interface category
             deadline = time.time() + 10
             while time.time() < deadline:
               state = gui()
