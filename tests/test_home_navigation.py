@@ -498,9 +498,6 @@ class HomeNavigationTests(unittest.TestCase):
                 )
 
 
-if __name__ == "__main__":
-    unittest.main()
-
     def test_previous_home_rows_hide_offscreen_item_art_without_disabling_focus(self):
         with ZipFile(ARCHIVE) as archive:
             home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
@@ -537,3 +534,8 @@ if __name__ == "__main__":
                             f"{include_name} must hide off-screen artwork while a later row is active (row {row_index})",
                         )
 
+
+
+
+if __name__ == "__main__":
+    unittest.main()
