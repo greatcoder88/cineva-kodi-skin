@@ -1005,7 +1005,16 @@ jobs:
               f"Verified populated Kodi Interface settings in the real GUI: "
               f"{category_count} categories and {option_count} setting controls."
             )
-            rpc("Input.Back")
+            rpc("Input.Back")  # Interface settings -> Kodi Settings landing window
+            deadline = time.time() + 8
+            while time.time() < deadline:
+              state = gui()
+              if state.get("currentwindow",{}).get("id") == 10004:
+                break
+              time.sleep(0.2)
+            else:
+              raise SystemExit(f"Back from Interface settings did not return to Kodi Settings: {state}")
+            rpc("Input.Back")  # Kodi Settings landing window -> Home
             deadline = time.time() + 8
             while time.time() < deadline:
               state = gui()
@@ -1013,7 +1022,7 @@ jobs:
                 break
               time.sleep(0.2)
             else:
-              raise SystemExit(f"Back from Interface settings did not return to Home: {state}")
+              raise SystemExit(f"Back from Kodi Settings did not return to Home: {state}")
             hero_labels = rpc("XBMC.GetInfoLabels", {"labels":[
               "Container(9001).ListItem.Label",
               "Container(9001).ListItem.PlotOutline",
