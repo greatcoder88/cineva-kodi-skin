@@ -718,9 +718,6 @@ def update_xml(data, path):
         default.text = "50"
     elif path == "skin.cineva/xml/FileManager.xml":
         root = file_manager_template()
-    elif path == "skin.cineva/xml/Home.xml":
-        root = restore_previous_home_shelf_focus(root)
-        root.set("menucontrol", "9001")
     elif path in {
         "skin.cineva/xml/FileBrowser.xml",
         "skin.cineva/xml/DialogAddonSettings.xml",
@@ -732,11 +729,6 @@ def update_xml(data, path):
             root.insert(0, default)
         default.set("always", "true")
         default.text = "3"
-    elif path == "skin.cineva/xml/AddonBrowser.xml":
-        root.set("menucontrol", "50")
-        default = root.find("defaultcontrol")
-        if default is not None:
-            default.text = "50"
     elif path == "skin.cineva/xml/DialogAddonInfo.xml":
         # Kodi opens this dialog when the user selects a particular add-on.
         # Its original default control 50 did not exist, so the info screen
@@ -788,6 +780,8 @@ def update_xml(data, path):
             normal.text = "hero-secondary.png"
         controls.append(group)
     elif path == "skin.cineva/xml/Home.xml":
+        root = restore_previous_home_shelf_focus(root)
+        root.set("menucontrol", "9001")
         default = root.find("defaultcontrol")
         if default is None:
             default = ET.Element("defaultcontrol")
@@ -1636,7 +1630,7 @@ def update_xml(data, path):
                 set_child_text(nav_group, tag, value)
             for button in nav_group.findall("./control[@type='button']"):
                 # Text-first navigation: remove the heavy black button slabs.
-                action_targets = {"1001": "9111", "1002": "9113", "1003": "9115", "1004": "9117", "1005": "9111"}
+                action_targets = {"1001": "9111", "1002": "9115", "1003": "9117"}
                 nav_ids = ("1001", "1002", "1003", "1004", "1005")
                 if button.get("id") in nav_ids:
                     position = nav_ids.index(button.get("id"))
@@ -1880,6 +1874,7 @@ def update_xml(data, path):
                 clone.append(child)
             root.append(clone)
     elif path == "skin.cineva/xml/AddonBrowser.xml":
+        root.set("menucontrol", "50")
         # Kodi's native Add-on Browser is a media window. Its directory items
         # are delivered to the view container with id 50; an arbitrary id=3
         # panel cannot receive the browser list and leaves remote focus nowhere.
