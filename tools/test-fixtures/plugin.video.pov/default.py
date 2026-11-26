@@ -34,6 +34,7 @@ def main():
     handle = int(sys.argv[1])
     query = parse_qs(sys.argv[2].lstrip("?")) if len(sys.argv) > 2 else {}
     action = query.get("action", [""])[-1]
+    search_term = query.get("query", [""])[-1].strip().casefold()
     # Kodi invokes default.py with the add-on root in sys.argv[0]; nested
     # plugin:// paths are not preserved there. Route playback explicitly via
     # the query string so a real poster SELECT reaches this resolver.
@@ -44,6 +45,8 @@ def main():
         return
     is_tv = "tv" in action or "tvshow" in action
     records = SHOWS if is_tv else MOVIES
+    if action in ("tmdb_movies_search", "tmdb_tv_search"):
+        records = [record for record in records if search_term in record[0].casefold()]
     addon_path = xbmcaddon.Addon().getAddonInfo("path")
     poster_dir = os.path.join(addon_path, "resources", "posters")
     poster_kind = "tv" if is_tv else "movie"
