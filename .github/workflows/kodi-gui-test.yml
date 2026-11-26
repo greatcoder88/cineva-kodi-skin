@@ -1271,12 +1271,23 @@ jobs:
               f"D-pad Down focuses its first real poster in native panel 50: "
               f"{view_all_count} items, {expected_first_item}."
             )
-            # Use Kodi's own Back action for the plugin directory. Sending an
-            # X11 Escape key leaves MyVideoNav active on Kodi Piers in this
-            # fixture, even though the selected item is correct.
-            rpc("Input.Back")
-            wait_for_window(10000)
+            # Kodi may keep the Videos window active for one Back press while
+            # unwinding the plugin directory. Follow the native Back action
+            # until the originating Home window is restored; never assume a
+            # single Back closes both the plugin path and its window.
             returned_home = gui()
+            for back_attempt in range(3):
+              if returned_home.get("currentwindow", {}).get("id") == 10000:
+                break
+              rpc("Input.Back")
+              deadline = time.time() + 5
+              while time.time() < deadline:
+                returned_home = gui()
+                if returned_home.get("currentwindow", {}).get("id") == 10000:
+                  break
+                time.sleep(0.2)
+            if returned_home.get("currentwindow", {}).get("id") != 10000:
+              raise SystemExit(f"Back from Home VIEW ALL did not restore Home after three native Back actions: {returned_home}")
             if returned_home.get("currentcontrol", {}).get("label", "").strip().upper() == "VIEW ALL":
               press("Down")
             deadline = time.time() + 5
@@ -1285,7 +1296,7 @@ jobs:
               if returned_home.get("currentwindow", {}).get("id") == 10000 and returned_home.get("currentcontrol", {}).get("label", "").strip() == expected_focus_label:
                 break
               time.sleep(0.2)
-            if returned_home.get("currentcontrol", {}).get("label", "").strip() != expected_focus_label:
+            if returned_home.get("currentwindow", {}).get("id") != 10000 or returned_home.get("currentcontrol", {}).get("label", "").strip() != expected_focus_label:
               raise SystemExit(f"Returning from Home VIEW ALL did not restore the selected poster rail: {returned_home}")
             # Save the exact focused poster state, then follow the visible
             # hero actions with real D-pad keys. Poster focus selects the title;
