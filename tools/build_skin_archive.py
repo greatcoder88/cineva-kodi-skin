@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.38.zip"
-PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.37.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.39.zip"
+PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.38.zip"
 LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.35.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
@@ -586,7 +586,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.38")
+        root.set("version", "0.5.39")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -1829,10 +1829,18 @@ def update_xml(data, path):
                 and "$INFO[Container.NumItems]" in node.findtext("label", "")
             ), None)
             if count_label is not None:
-                set_child_text(count_label, "left", 290)
+                set_child_text(count_label, "left", 220)
                 set_child_text(count_label, "top", 202)
-                set_child_text(count_label, "width", 1400)
+                set_child_text(count_label, "width", 1470)
                 set_child_text(count_label, "height", 36)
+            title_label = next((
+                node for node in controls.findall("control")
+                if node.get("type") == "label"
+                and "Container.FolderName" in node.findtext("label", "")
+            ), None)
+            if title_label is not None:
+                set_child_text(title_label, "top", 118)
+                set_child_text(title_label, "height", 68)
             back_button = controls.find("./control[@id='49']")
             if back_button is None:
                 back_button = ET.Element("control", {"type": "button", "id": "49"})
@@ -1845,10 +1853,10 @@ def update_xml(data, path):
             for tag, value in {
                 "left": "72",
                 "top": "194",
-                "width": "190",
+                "width": "132",
                 "height": "48",
                 "font": "font12",
-                "label": "BACK TO ADD-ONS",
+                "label": "BACK",
                 "textcolor": "silver",
                 "focusedcolor": "white",
                 "align": "center",
@@ -1865,7 +1873,7 @@ def update_xml(data, path):
             normal_texture.text = "hero-secondary.png"
             enter_list = ET.SubElement(
                 back_button, "ondown",
-                {"condition": "!String.IsEmpty(Container(50).ListItem.Label)"}
+                {"condition": "Integer.IsGreater(Container(50).NumItems,0)"}
             )
             enter_list.text = "SetFocus(50)"
             ET.SubElement(back_button, "ondown").text = "SetFocus(49)"
@@ -2208,15 +2216,15 @@ def update_xml(data, path):
 def main():
     # Start the new distributable version from the immediately previous package.
     # Keep the older archive as a recovery fallback for shallow checkouts.
-    # Subsequent builds transform 0.5.38 in place and remain byte-stable.
+    # Subsequent builds transform 0.5.39 in place and remain byte-stable.
     if not ARCHIVE.exists():
         source_archive = PREVIOUS_ARCHIVE if PREVIOUS_ARCHIVE.is_file() else LEGACY_ARCHIVE
         if source_archive.is_file():
             ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
         raise SystemExit(
-            "Missing skin.cineva-0.5.38.zip and migration sources "
-            "skin.cineva-0.5.37.zip / skin.cineva-0.5.35.zip"
+            "Missing skin.cineva-0.5.39.zip and migration sources "
+            "skin.cineva-0.5.38.zip / skin.cineva-0.5.35.zip"
         )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
@@ -2308,9 +2316,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.38":
-                        addon_root.set("version", "0.5.38")
-                        changed.append(info.filename + " (bump skin version to 0.5.38)")
+                    if addon_root.get("version") != "0.5.39":
+                        addon_root.set("version", "0.5.39")
+                        changed.append(info.filename + " (bump skin version to 0.5.39)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2318,18 +2326,18 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.38 - Give asynchronous video directories a safe focus entry",
-                        "- Default MyVideoNav to a visible Back to Add-ons action while Kodi resolves plugin directory contents.",
-                        "- Move D-pad focus into native panel 50 only when its first item is available.",
-                        "- Preserve the full-width poster grid, directory count, and return-to-parent behavior.",
+                        "0.5.39 - Make MyVideoNav enter populated directories reliably",
+                        "- Use a visible, context-neutral Back action as the initial focus target while Kodi resolves video directories.",
+                        "- Transfer D-pad focus into native panel 50 when Container(50).NumItems is greater than zero.",
+                        "- Keep empty plugin folders safely on Back and preserve the full-width poster grid.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.38 - Give asynchronous video directories a safe focus entry"):
+                    if changelog.startswith("0.5.39 - Make MyVideoNav enter populated directories reliably"):
                         pass
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.38 safe video-directory focus changelog)")
+                        changed.append(info.filename + " (prepend 0.5.39 populated-directory focus changelog)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:

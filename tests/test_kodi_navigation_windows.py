@@ -4,7 +4,7 @@ from zipfile import ZipFile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.38.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.39.zip"
 XML = "skin.cineva/xml/"
 
 
@@ -20,12 +20,12 @@ class KodiNavigationWindowTests(unittest.TestCase):
                     self.assertNotIn("always", default_control.attrib)
                     back_control = root.find("./controls/control[@type='button'][@id='49']")
                     self.assertIsNotNone(back_control, "MyVideoNav needs a safe focus target while plugins load")
-                    self.assertEqual(back_control.findtext("label"), "BACK TO ADD-ONS")
+                    self.assertEqual(back_control.findtext("label"), "BACK")
                     self.assertEqual(back_control.findtext("onclick"), "PreviousMenu")
                     self.assertEqual(
                         [(node.get("condition"), node.text) for node in back_control.findall("ondown")],
                         [
-                            ("!String.IsEmpty(Container(50).ListItem.Label)", "SetFocus(50)"),
+                            ("Integer.IsGreater(Container(50).NumItems,0)", "SetFocus(50)"),
                             (None, "SetFocus(49)"),
                         ],
                     )
