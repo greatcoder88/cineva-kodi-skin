@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.31.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.30.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.32.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.31.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -544,7 +544,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.31")
+        root.set("version", "0.5.32")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -707,7 +707,7 @@ def update_xml(data, path):
             set_child_text(top_shade, tag, value)
         top_texture = ET.SubElement(top_shade, "texture", {"flipy": "true"})
         top_texture.text = "hero-shade.png"
-        set_child_text(top_shade, "aspectratio", "scale")
+        set_child_text(top_shade, "aspectratio", "stretch")
         controls.insert(list(controls).index(hero_shade) + 1, top_shade)
         previous_left_shade = controls.find("./control[@id='9105']")
         if previous_left_shade is not None:
@@ -2016,11 +2016,11 @@ def update_xml(data, path):
 
 def main():
     # Start the new distributable version from the last published package once.
-    # Subsequent builds always transform 0.5.30 in place and remain byte-stable.
+    # Subsequent builds always transform 0.5.31 in place and remain byte-stable.
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.31.zip and migration source skin.cineva-0.5.30.zip")
+        raise SystemExit("Missing skin.cineva-0.5.32.zip and migration source skin.cineva-0.5.31.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -2104,9 +2104,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.31":
-                        addon_root.set("version", "0.5.31")
-                        changed.append(info.filename + " (bump skin version to 0.5.31)")
+                    if addon_root.get("version") != "0.5.32":
+                        addon_root.set("version", "0.5.32")
+                        changed.append(info.filename + " (bump skin version to 0.5.32)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2114,18 +2114,17 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.31 - Add episode context to the In Progress Shows hero",
-                        "- Show season and episode beside year and genre when the selected TV item provides those fields.",
-                        "- Keep episode metadata scoped to the second Home hero; movie and trending rows retain their existing metadata.",
-                        "- Widen the metadata lane and realign the IMDb chip to prevent overlap.",
+                        "0.5.32 - Smooth the Home hero top fade",
+                        "- Stretch the mirrored top veil to its full texture height so it reaches transparency at the bottom edge.",
+                        "- Remove the horizontal shade seam across bright and dark fanart without changing the hero title-safe contrast.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.31 - Add episode context to the In Progress Shows hero"):
+                    if changelog.startswith("0.5.32 - Smooth the Home hero top fade"):
                         pass
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.31 Home episode-context changelog)")
+                        changed.append(info.filename + " (prepend 0.5.32 Home hero fade changelog)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:

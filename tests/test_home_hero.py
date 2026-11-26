@@ -7,17 +7,17 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.31.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.32.zip"
 
 
 class HomeHeroActionTests(unittest.TestCase):
     def test_release_changelog_uses_real_line_breaks(self):
         with ZipFile(ARCHIVE) as archive:
             lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
-        self.assertEqual(lines[0], "0.5.31 - Add episode context to the In Progress Shows hero")
-        self.assertEqual(lines[1], "- Show season and episode beside year and genre when the selected TV item provides those fields.")
-        self.assertEqual(lines[2], "- Keep episode metadata scoped to the second Home hero; movie and trending rows retain their existing metadata.")
-        self.assertEqual(lines[3], "- Widen the metadata lane and realign the IMDb chip to prevent overlap.")
+        self.assertEqual(lines[0], "0.5.32 - Smooth the Home hero top fade")
+        self.assertEqual(lines[1], "- Stretch the mirrored top veil to its full texture height so it reaches transparency at the bottom edge.")
+        self.assertEqual(lines[2], "- Remove the horizontal shade seam across bright and dark fanart without changing the hero title-safe contrast.")
+        self.assertIn("0.5.31 - Add episode context to the In Progress Shows hero", lines)
         self.assertIn("0.5.30 - Prefer concise Home plot outlines with full-plot fallback", lines)
         self.assertIn("0.5.29 - Fix three-line Home poster caption clipping", lines)
         self.assertIn("0.5.28 - Give Home poster titles room for three complete lines", lines)
@@ -43,6 +43,18 @@ class HomeHeroActionTests(unittest.TestCase):
         index_11 = lines.index("0.5.11 - Restore Home shelf focus after playback")
         self.assertTrue(lines[index_11 + 1].startswith("- Return remote focus to the originating Home shelf"))
         self.assertTrue(lines[index_11 + 2].startswith("- Preserve the selected title context when a resolver returns"))
+
+    def test_home_top_veil_stretches_the_full_gradient_without_a_horizontal_seam(self):
+        with ZipFile(ARCHIVE) as archive:
+            home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
+        top_shade = home.find(".//control[@id='9100']")
+        self.assertIsNotNone(top_shade)
+        self.assertEqual(top_shade.findtext("height"), "320")
+        self.assertEqual(top_shade.findtext("aspectratio"), "stretch")
+        texture = top_shade.find("texture")
+        self.assertIsNotNone(texture)
+        self.assertEqual(texture.text, "hero-shade.png")
+        self.assertEqual(texture.attrib.get("flipy"), "true")
 
     def test_all_home_heroes_use_branded_nine_slice_action_surfaces(self):
         with ZipFile(ARCHIVE) as archive:
