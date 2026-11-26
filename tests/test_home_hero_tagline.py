@@ -64,7 +64,9 @@ class HomeHeroTaglineTests(unittest.TestCase):
         self.assertEqual(len(values["TAGLINES"]), 16)
         self.assertEqual(len(values["PLOTS"]), 16)
         self.assertEqual(set(values["TAGLINES"]), set(values["PLOTS"]))
-        self.assertEqual(len(set(values["TAGLINES"].values())), 16)
+        self.assertEqual(sum(bool(value) for value in values["TAGLINES"].values()), 15)
+        self.assertEqual(len({value for value in values["TAGLINES"].values() if value}), 15)
+        self.assertEqual(values["TAGLINES"]["Inception"], "")
         self.assertEqual(len(set(values["PLOTS"].values())), 16)
         self.assertEqual(values["PLOT_OUTLINES"]["Inception"],
                          "A skilled thief enters dreams to steal secrets, then takes on an impossible job: plant an idea.")
