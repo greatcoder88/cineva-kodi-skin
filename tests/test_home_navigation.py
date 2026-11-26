@@ -224,7 +224,7 @@ class HomeNavigationTests(unittest.TestCase):
         self.assertEqual(controls.findtext("./control[@id='9703']/label"), "SEARCH")
         self.assertIsNotNone(controls.find("./control[@type='button'][@id='9705']"),
                              "Search must default to a focusable control, not the title label")
-        self.assertEqual(controls.findtext("./control[@id='9705']/label"), "NEW SEARCH")
+        self.assertEqual(controls.findtext("./control[@id='9705']/label"), "SEARCH MOVIES & TV")
         self.assertEqual(controls.findtext("./control[@id='9705']/onclick"),
                          "RunScript(script.cineva.widgets,action=search)")
         movie = controls.find("./control[@type='panel'][@id='9701']")
@@ -251,12 +251,16 @@ class HomeNavigationTests(unittest.TestCase):
                    if node.get("id") in {str(control_id) for control_id in range(21, 33)}}
         self.assertEqual(set(buttons), {str(control_id) for control_id in range(21, 33)})
         self.assertNotIn("5", buttons, "overlapping legacy OPEN CINÉVA SETTINGS button must be removed")
+        provider = settings.find("./controls/control[@type='button'][@id='45']")
+        self.assertIsNotNone(provider, "the provider selector must follow the final slot in its column")
+        self.assertEqual(provider.findtext("onup"), "SetFocus(24)")
+        self.assertEqual(provider.findtext("ondown"), "SetFocus(21)")
         for button_id, button in buttons.items():
             numeric_id = int(button_id)
             column = (numeric_id - 21) // 4
             row = (numeric_id - 21) % 4
             up_id = numeric_id - 1 if row > 0 else numeric_id + 3
-            down_id = numeric_id + 1 if row < 3 else numeric_id - 3
+            down_id = 45 if numeric_id == 24 else (numeric_id + 1 if row < 3 else numeric_id - 3)
             left_id = numeric_id - 4 if column > 0 else numeric_id + 8
             right_id = numeric_id + 4 if column < 2 else numeric_id - 8
             self.assertEqual(button.findtext("onup"), f"SetFocus({up_id})")
