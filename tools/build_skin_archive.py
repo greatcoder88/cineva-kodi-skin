@@ -1870,12 +1870,12 @@ def update_xml(data, path):
             "movies": ("MOVIES WIDGETS", 704, "Cineva.MovieWidget"),
             "tvshows": ("TV SHOWS WIDGETS", 1312, "Cineva.ShowWidget"),
         }
-        generated_ids = {"5", "6", "7", "8", "9", "10", "40", "41", "42", "43"}
+        generated_ids = {"5", "6", "7", "8", "9", "10", "40", "41", "42", "43", "44", "45"}
         generated_ids.update(str(control_id) for control_id in range(21, 33))
         generated_labels = {
             "HOME WIDGETS", "MOVIES WIDGETS", "TV SHOWS WIDGETS",
             "Choose a slot to select, change or clear its video add-on source.",
-            "OPEN CINÉVA SETTINGS",
+            "OPEN CINÉVA SETTINGS", "SEARCH PROVIDER",
         }
         for stale in list(controls.findall("control")):
             if (stale.get("id") in generated_ids
