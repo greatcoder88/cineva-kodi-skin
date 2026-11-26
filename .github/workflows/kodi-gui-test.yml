@@ -1982,25 +1982,25 @@ jobs:
                   row1_rail_coverage = float(rail_signal.stdout.strip())
                 except ValueError:
                   raise SystemExit(f"Could not measure the row-1 shelf during hero-action focus: {rail_signal.stdout!r}")
-                if row2_rail_coverage < 0.18:
+                if row1_rail_coverage < 0.18:
                   raise SystemExit(
                     "Row-1 hero action focus leaves its matching poster shelf off-screen "
-                    f"(visible-art coverage={row2_rail_coverage:.3f})"
+                    f"(visible-art coverage={row1_rail_coverage:.3f})"
                   )
                 print(
                   "Verified row-1 poster shelf remains visible while its hero PLAY action is focused "
-                  f"(visible-art coverage={row2_rail_coverage:.3f})."
+                  f"(visible-art coverage={row1_rail_coverage:.3f})."
                 )
                 # Row 1 is the active row after the documented Up navigation chain. Compare
                 # its focused-poster hero with the same row's PLAY-focused hero.
                 subprocess.run(["convert","artifacts/cineva-home-poster-focused.png","-crop","760x230+1100+110","+repage","/tmp/hero-row1-focused.png"],check=True)
-                subprocess.run(["convert","artifacts/cineva-home-row2-actions.png","-crop","760x230+1100+110","+repage","/tmp/hero-row1-action.png"],check=True)
-                hero_action_diff = subprocess.run(["compare","-metric","AE","/tmp/hero-row2-focused.png","/tmp/hero-row2-action.png","null:"],text=True,capture_output=True,check=False)
+                subprocess.run(["convert","artifacts/cineva-home-row1-actions.png","-crop","760x230+1100+110","+repage","/tmp/hero-row1-action.png"],check=True)
+                hero_action_diff = subprocess.run(["compare","-metric","AE","/tmp/hero-row1-focused.png","/tmp/hero-row1-action.png","null:"],text=True,capture_output=True,check=False)
                 hero_action_metric = (hero_action_diff.stderr or hero_action_diff.stdout).strip().split()
                 try:
                   hero_action_changed = int(hero_action_metric[0])
                 except (IndexError, ValueError):
-                  raise SystemExit(f"Could not compare hero art across row-2 action focus: {hero_action_diff.stderr} {hero_action_diff.stdout}")
+                  raise SystemExit(f"Could not compare hero art across row-1 action focus: {hero_action_diff.stderr} {hero_action_diff.stdout}")
                 if hero_action_changed > 5000:
                   raise SystemExit(f"Row-1 hero fanart changed when PLAY received focus ({hero_action_changed} pixels differ)")
                 print(f"Verified row-1 hero fanart remains pinned through PLAY focus ({hero_action_changed} pixels differ).")
