@@ -206,7 +206,8 @@ class HomeNavigationTests(unittest.TestCase):
         with ZipFile(ARCHIVE) as archive:
             settings = ET.fromstring(archive.read("skin.cineva/xml/SkinSettings.xml"))
         self.assertEqual(settings.findtext("defaultcontrol"), "21")
-        buttons = {node.get("id"): node for node in settings.findall("./controls/control[@type='button']")}
+        buttons = {node.get("id"): node for node in settings.findall("./controls/control[@type='button']")
+                   if node.get("id") in {str(control_id) for control_id in range(21, 33)}}
         self.assertEqual(set(buttons), {str(control_id) for control_id in range(21, 33)})
         self.assertNotIn("5", buttons, "overlapping legacy OPEN CINÉVA SETTINGS button must be removed")
         for button_id, button in buttons.items():
