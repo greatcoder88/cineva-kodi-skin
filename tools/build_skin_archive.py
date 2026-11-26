@@ -13,9 +13,9 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.48.zip"
-PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.47.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.46.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.49.zip"
+PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.48.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.47.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -586,7 +586,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.48")
+        root.set("version", "0.5.49")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -2266,14 +2266,14 @@ def update_xml(data, path):
 def main():
     # Start the new distributable version from the immediately previous package.
     # Keep the older archive as a recovery fallback for shallow checkouts.
-    # Subsequent builds transform 0.5.48 in place and remain byte-stable.
+    # Subsequent builds transform 0.5.49 in place and remain byte-stable.
     if not ARCHIVE.exists():
         source_archive = PREVIOUS_ARCHIVE if PREVIOUS_ARCHIVE.is_file() else LEGACY_ARCHIVE
         if source_archive.is_file():
             ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
         raise SystemExit(
-            "Missing skin.cineva-0.5.48.zip and migration sources "
+            "Missing skin.cineva-0.5.49.zip and migration sources "
             "skin.cineva-0.5.46.zip / skin.cineva-0.5.45.zip"
         )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
@@ -2366,9 +2366,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.48":
-                        addon_root.set("version", "0.5.48")
-                        changed.append(info.filename + " (bump skin version to 0.5.48)")
+                    if addon_root.get("version") != "0.5.49":
+                        addon_root.set("version", "0.5.49")
+                        changed.append(info.filename + " (bump skin version to 0.5.49)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2376,18 +2376,18 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.48 - Restore Home poster focus after VIEW ALL",
-                        "- Restore the last focused Home poster when returning from a plugin directory.",
-                        "- Keep Home navigation as the first-open default without forcing it on every window re-entry.",
-                        "- Preserve the originating window and selected shelf item across VIEW ALL navigation.",
+                        "0.5.49 - Enforce Home focus restoration after VIEW ALL",
+                        "- Remove the forced Home default focus after building the XML archive.",
+                        "- Preserve the last focused poster when returning from VIEW ALL or another window.",
+                        "- Keep the Home tab as the initial focus on a fresh launch.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.48 - Restore Home poster focus after VIEW ALL"):
+                    if changelog.startswith("0.5.49 - Enforce Home focus restoration after VIEW ALL"):
                         pass
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.48 Home focus restoration changelog)")
+                        changed.append(info.filename + " (prepend 0.5.49 Home focus restoration changelog)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:
@@ -2399,6 +2399,22 @@ def main():
                     if updated != data:
                         changed.append(info.filename)
                     data = updated
+                if info.filename == "skin.cineva/xml/Home.xml":
+                    # Final archive-level guard: Home must use 1001 only on
+                    # first launch, never force it over a restored shelf focus.
+                    home_root = ET.fromstring(data)
+                    home_default = home_root.find("defaultcontrol")
+                    if home_default is None:
+                        home_default = ET.Element("defaultcontrol")
+                        home_root.insert(0, home_default)
+                    had_forced_focus = "always" in home_default.attrib
+                    home_default.attrib.pop("always", None)
+                    home_default.text = "1001"
+                    if "always" in home_default.attrib:
+                        raise SystemExit("Home defaultcontrol still forces focus on every re-entry")
+                    if had_forced_focus and info.filename not in changed:
+                        changed.append(info.filename + " (remove forced Home default focus)")
+                    data = ET.tostring(home_root, encoding="UTF-8", xml_declaration=True)
                 target.writestr(info, data)
             for asset_name, asset_data in generated_assets.items():
                 if asset_name not in written_assets:
