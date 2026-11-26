@@ -13,9 +13,9 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.49.zip"
-PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.48.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.47.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.50.zip"
+PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.50.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.48.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -591,7 +591,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.49")
+        root.set("version", "0.5.50")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -1707,6 +1707,7 @@ def update_xml(data, path):
             ("PROFILES", "ActivateWindow(Profiles)"),
             ("SYSTEM INFORMATION", "ActivateWindow(SystemInfo)"),
             ("CINÉVA SKIN SETTINGS", "ActivateWindow(SkinSettings)"),
+            ("FILE MANAGER", "ActivateWindow(FileManager)"),
         )
         for index, (label, action) in enumerate(options):
             row, column = divmod(index, 2)
@@ -1718,17 +1719,22 @@ def update_xml(data, path):
             focused.text = "hero-secondary-focus.png"
             normal = ET.SubElement(button, "texturenofocus", {"border": "8"})
             normal.text = "hero-secondary.png"
-            left_id = control_id + (1 if column == 0 else -1)
-            right_id = control_id + (1 if column == 0 else -1)
-            up_id = control_id - 2 if row > 0 else control_id + 6
-            down_id = control_id + 2 if row < 3 else control_id - 6
+            if index == 8:
+                left_id, right_id, up_id, down_id = 11408, 11401, 11407, 11401
+            else:
+                left_id = right_id = control_id + (1 if column == 0 else -1)
+                up_id = control_id - 2 if row > 0 else (11407 if column == 0 else 11408)
+                if row == 3:
+                    down_id = 11409 if column == 0 else 11402
+                else:
+                    down_id = control_id + 2
             set_child_text(button, "onleft", f"SetFocus({left_id})")
             set_child_text(button, "onright", f"SetFocus({right_id})")
             set_child_text(button, "onup", f"SetFocus({up_id})")
             set_child_text(button, "ondown", f"SetFocus({down_id})")
             controls.append(button)
         hint = ET.Element("control", {"type": "label"})
-        for tag, value in (("left", 98), ("top", 724), ("width", 1700), ("height", 42), ("font", "font12"), ("textcolor", "grey"), ("label", "ADD-ONS opens Kodi's browser for installed add-ons, repositories and updates.")):
+        for tag, value in (("left", 98), ("top", 820), ("width", 1700), ("height", 42), ("font", "font12"), ("textcolor", "grey"), ("label", "FILE MANAGER opens Kodi's native file source and storage browser. ADD-ONS opens the add-on browser.")):
             set_child_text(hint, tag, value)
         controls.append(hint)
     elif path == "skin.cineva/xml/SkinSettings.xml":
@@ -2292,14 +2298,14 @@ def update_xml(data, path):
 def main():
     # Start the new distributable version from the immediately previous package.
     # Keep the older archive as a recovery fallback for shallow checkouts.
-    # Subsequent builds transform 0.5.49 in place and remain byte-stable.
+    # Subsequent builds transform 0.5.50 in place and remain byte-stable.
     if not ARCHIVE.exists():
         source_archive = PREVIOUS_ARCHIVE if PREVIOUS_ARCHIVE.is_file() else LEGACY_ARCHIVE
         if source_archive.is_file():
             ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
         raise SystemExit(
-            "Missing skin.cineva-0.5.49.zip and migration sources "
+            "Missing skin.cineva-0.5.50.zip and migration sources "
             "skin.cineva-0.5.46.zip / skin.cineva-0.5.45.zip"
         )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
@@ -2392,9 +2398,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.49":
-                        addon_root.set("version", "0.5.49")
-                        changed.append(info.filename + " (bump skin version to 0.5.49)")
+                    if addon_root.get("version") != "0.5.50":
+                        addon_root.set("version", "0.5.50")
+                        changed.append(info.filename + " (bump skin version to 0.5.50)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2402,18 +2408,18 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.49 - Enforce Home focus restoration after VIEW ALL",
-                        "- Remove the forced Home default focus after building the XML archive.",
-                        "- Preserve the last focused poster when returning from VIEW ALL or another window.",
-                        "- Keep the Home tab as the initial focus on a fresh launch.",
+                        "0.5.50 - Add File Manager to the Settings hub",
+                        "- Add a direct Kodi File Manager shortcut to the Settings landing page.",
+                        "- Keep all nine Settings destinations reachable with predictable D-pad navigation.",
+                        "- Preserve Kodi's native File Manager window and behavior.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.49 - Enforce Home focus restoration after VIEW ALL"):
+                    if changelog.startswith("0.5.50 - Enforce Home focus restoration after VIEW ALL"):
                         pass
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.49 Home focus restoration changelog)")
+                        changed.append(info.filename + " (prepend 0.5.50 Home focus restoration changelog)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:
