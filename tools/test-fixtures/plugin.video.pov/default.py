@@ -33,7 +33,7 @@ TAGLINES = {
     "The Shawshank Redemption: Special Collector's Edition": "Hope can survive even behind the thickest walls.",
     "The Dark Knight": "When the city needs a hero, chaos answers first.",
     "Interstellar": "The farthest journey begins with a promise to come home.",
-    "Inception": "An idea can change everything, even inside a dream.",
+    "Inception": "",
     "The Matrix": "The world you know is only a carefully built illusion.",
     "Dune: Part Two": "A desert destiny rises with the power of a legend.",
     "Oppenheimer": "One discovery changes the world, then changes its maker.",
