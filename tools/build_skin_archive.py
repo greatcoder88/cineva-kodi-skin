@@ -1903,7 +1903,7 @@ def update_xml(data, path):
             set_child_text(active_image, "visible", f"Control.HasFocus({container_id})")
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
             set_child_text(fallback_progress, "visible", f"!Control.HasFocus({container_id}) + ListItem.IsResumable")
-            # Reserve an 108px focused caption area for three full lines at TV distance, ending above the row underline.
+            # Reserve an 108px focused caption area for three full lines at TV distance.
             for tag, value in (("left", 0), ("top", 316), ("width", 248), ("height", 108), ("align", "center"), ("aligny", "top"), ("font", "font10"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
             stale_wrap = active_label.find("wrap")
