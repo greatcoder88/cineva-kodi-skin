@@ -13,7 +13,7 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.56.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.57.zip"
 PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.55.zip"
 LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.53.zip"
 
@@ -690,7 +690,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.56")
+        root.set("version", "0.5.57")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -720,6 +720,7 @@ def update_xml(data, path):
         root = file_manager_template()
     elif path == "skin.cineva/xml/Home.xml":
         root = restore_previous_home_shelf_focus(root)
+        root.set("menucontrol", "9001")
     elif path in {
         "skin.cineva/xml/FileBrowser.xml",
         "skin.cineva/xml/DialogAddonSettings.xml",
@@ -731,6 +732,11 @@ def update_xml(data, path):
             root.insert(0, default)
         default.set("always", "true")
         default.text = "3"
+    elif path == "skin.cineva/xml/AddonBrowser.xml":
+        root.set("menucontrol", "50")
+        default = root.find("defaultcontrol")
+        if default is not None:
+            default.text = "50"
     elif path == "skin.cineva/xml/DialogAddonInfo.xml":
         # Kodi opens this dialog when the user selects a particular add-on.
         # Its original default control 50 did not exist, so the info screen
@@ -1358,6 +1364,10 @@ def update_xml(data, path):
             # pinning every later selection to the far-left slot.
             set_child_text(shelf, "focusposition", 3)
             set_child_text(shelf, "movement", 3)
+            # The default first rail is POV's in-progress list: poster selection
+            # must resolve media for playback, not enter a plugin directory.
+            if index == 1:
+                set_child_text(shelf, "onclick", "PlayMedia($INFO[ListItem.FileNameAndPath])")
             set_child_text(shelf, "itemgap", 8)
             # Rebuild routes from scratch so repeated packaging does not accumulate duplicate onup actions.
             for stale_up in shelf.findall("onup"):
@@ -1626,7 +1636,7 @@ def update_xml(data, path):
                 set_child_text(nav_group, tag, value)
             for button in nav_group.findall("./control[@type='button']"):
                 # Text-first navigation: remove the heavy black button slabs.
-                action_targets = {"1001": "9111", "1002": "9115", "1003": "9117"}
+                action_targets = {"1001": "9111", "1002": "9113", "1003": "9115", "1004": "9117", "1005": "9111"}
                 nav_ids = ("1001", "1002", "1003", "1004", "1005")
                 if button.get("id") in nav_ids:
                     position = nav_ids.index(button.get("id"))
@@ -2250,30 +2260,78 @@ def update_xml(data, path):
                 set_child_text(node, "texturenofocus", "black.png")
                 set_child_text(node, "textcolor", "white")
     elif path == "skin.cineva/xml/VideoOSD.xml":
-        # Premium, low-profile playback overlay with a long seek bar and legible controls.
-        for node in root.findall("./controls/control"):
-            if node.get("type") == "image":
-                set_child_text(node, "top", 720)
-                set_child_text(node, "height", 360)
-            elif node.get("type") == "label":
-                set_child_text(node, "left", 80)
-                if "$INFO[VideoPlayer.Title]" in node.findtext("label", ""):
-                    set_child_text(node, "top", 770)
-                    set_child_text(node, "font", "font20")
-                else:
-                    set_child_text(node, "top", 826)
-            elif node.get("type") == "progress":
-                set_child_text(node, "left", 80)
-                set_child_text(node, "top", 880)
-                set_child_text(node, "width", 1760)
-            elif node.get("type") == "group":
-                set_child_text(node, "left", 80)
-                set_child_text(node, "top", 920)
-                for button in node.findall("./control[@type='button']"):
-                    set_child_text(button, "height", 64)
-                    set_child_text(button, "texturefocus", "focus-bar.png")
-                    set_child_text(button, "texturenofocus", "black.png")
-                    set_child_text(button, "textcolor", "white")
+        # Preserve Kodi transport actions and fix the focus graph. Estuary's
+        # stock right target (804) is hidden for normal files, stranding Right.
+        default = root.find("defaultcontrol")
+        if default is None:
+            default = ET.Element("defaultcontrol")
+            root.insert(0, default)
+        default.set("always", "true")
+        default.text = "602"
+        root.set("menucontrol", "602")
+        controls = root.find("controls")
+        overlay = next((node for node in controls.findall("control")
+                        if node.get("type") == "group" and node.find("./control[@id='200']") is not None), None)
+        if overlay is not None:
+            set_child_text(overlay, "left", 0)
+            set_child_text(overlay, "top", 720)
+            set_child_text(overlay, "width", 1920)
+            set_child_text(overlay, "height", 360)
+            for tag in ("right", "bottom"):
+                stale = overlay.find(tag)
+                if stale is not None:
+                    overlay.remove(stale)
+            transport = overlay.find("./control[@id='200']")
+            set_child_text(transport, "left", 80)
+            set_child_text(transport, "top", 0)
+            set_child_text(transport, "width", 1760)
+            set_child_text(transport, "height", 220)
+            left_rail = transport.find("./control[@type='grouplist'][@id='201']")
+            right_rail = transport.find("./control[@type='grouplist'][@id='202']")
+            if left_rail is not None:
+                set_child_text(left_rail, "left", 0)
+                set_child_text(left_rail, "top", 110)
+                set_child_text(left_rail, "width", 1050)
+                set_child_text(left_rail, "height", 92)
+                set_child_text(left_rail, "onleft", "601")
+                set_child_text(left_rail, "onright", "70043")
+                for button in left_rail.findall(".//control[@type='button']") + left_rail.findall(".//control[@type='radiobutton']"):
+                    set_child_text(button, "height", 76)
+                    set_child_text(button, "onup", "87")
+                    set_child_text(button, "ondown", "87")
+            if right_rail is not None:
+                set_child_text(right_rail, "right", 0)
+                set_child_text(right_rail, "top", 110)
+                set_child_text(right_rail, "width", 700)
+                set_child_text(right_rail, "height", 92)
+                set_child_text(right_rail, "onleft", "603")
+                set_child_text(right_rail, "onright", "70048")
+                for button in right_rail.findall(".//control[@type='button']") + right_rail.findall(".//control[@type='radiobutton']"):
+                    set_child_text(button, "height", 76)
+                    set_child_text(button, "onup", "87")
+                    set_child_text(button, "ondown", "87")
+        seek_group = controls.find("./control[@type='group'][@id='6000']")
+        if seek_group is not None:
+            set_child_text(seek_group, "left", 80)
+            set_child_text(seek_group, "top", 36)
+            set_child_text(seek_group, "width", 1760)
+            set_child_text(seek_group, "height", 36)
+            for tag in ("right", "bottom"):
+                stale = seek_group.find(tag)
+                if stale is not None:
+                    seek_group.remove(stale)
+            for slider in seek_group.findall("./control[@type='slider']"):
+                set_child_text(slider, "left", 0)
+                set_child_text(slider, "top", 0)
+                set_child_text(slider, "width", 1760)
+                set_child_text(slider, "height", 24)
+                set_child_text(slider, "onup", "200")
+                set_child_text(slider, "ondown", "200")
+        for button in controls.findall(".//control[@type='button']") + controls.findall(".//control[@type='radiobutton']"):
+            if button.get("id") in {"602", "603", "70043", "70048"}:
+                set_child_text(button, "texturefocus", "hero-secondary-focus.png")
+                set_child_text(button, "texturenofocus", "hero-secondary.png")
+                set_child_text(button, "textcolor", "white")
     elif path in {"skin.cineva/xml/custom11117.xml", "skin.cineva/xml/custom11118.xml"}:
         # Catalogue widget slots are optional. Always land on the top navigation
         # so an empty screen still has a valid D-pad focus target and can reach
@@ -2609,14 +2667,14 @@ def update_xml(data, path):
 def main():
     # Start the new distributable version from the immediately previous package.
     # Keep the older archive as a recovery fallback for shallow checkouts.
-    # Subsequent builds transform 0.5.56 in place and remain byte-stable.
+    # Subsequent builds transform 0.5.57 in place and remain byte-stable.
     if not ARCHIVE.exists():
         source_archive = PREVIOUS_ARCHIVE if PREVIOUS_ARCHIVE.is_file() else LEGACY_ARCHIVE
         if source_archive.is_file():
             ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
         raise SystemExit(
-            "Missing skin.cineva-0.5.56.zip and migration sources skin.cineva-0.5.55.zip / "
+            "Missing skin.cineva-0.5.57.zip and migration sources skin.cineva-0.5.55.zip / "
             "skin.cineva-0.5.53.zip"
         )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
@@ -2713,9 +2771,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.56":
-                        addon_root.set("version", "0.5.56")
-                        changed.append(info.filename + " (bump skin version to 0.5.56)")
+                    if addon_root.get("version") != "0.5.57":
+                        addon_root.set("version", "0.5.57")
+                        changed.append(info.filename + " (bump skin version to 0.5.57)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2723,7 +2781,7 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     release_entries = [
-                        ("0.5.56", "0.5.56 - Restore D-pad Up between scrolled Home shelves\n- Keep earlier poster rails focusable when navigating Up from any later row.\n- Preserve the pinned-hero layout; off-screen rails remain clipped by the Home viewport."),
+                        ("0.5.57", "0.5.57 - Restore D-pad Up between scrolled Home shelves\n- Keep earlier poster rails focusable when navigating Up from any later row.\n- Preserve the pinned-hero layout; off-screen rails remain clipped by the Home viewport."),
                         ("0.5.55", "0.5.55 - Restore native System Information and Profiles windows\n- Package Kodi Piers native settings pages for System Information and Profiles.\n- Restore the provider button path from the last Home widget slot.\n- Clarify the search action as SEARCH MOVIES & TV."),
                         ("0.5.54", "0.5.54 - Restore File Manager dual-pane navigation\n- Restore Kodi's native left and right File Manager panes with explicit D-pad focus routing."),
                     ]
