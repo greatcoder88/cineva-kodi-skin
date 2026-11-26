@@ -7,16 +7,16 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.34.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.35.zip"
 
 
 class HomeHeroActionTests(unittest.TestCase):
     def test_release_changelog_uses_real_line_breaks(self):
         with ZipFile(ARCHIVE) as archive:
             lines = archive.read("skin.cineva/changelog.txt").decode("utf-8").splitlines()
-        self.assertEqual(lines[0], "0.5.34 - Restore the native Kodi Interface settings screen")
-        self.assertEqual(lines[1], "- Rebuild SettingsCategory.xml with Kodi’s dynamic category and setting-control prototypes.")
-        self.assertEqual(lines[2], "- Restore category navigation, option controls, settings-level selector, description panel and scrollbar in CINÉVA styling.")
+        self.assertEqual(lines[0], "0.5.35 - Restore working navigation inside Kodi add-ons and media windows")
+        self.assertEqual(lines[1], "- Register the native view containers so video add-on directories can receive D-pad focus and render their items.")
+        self.assertEqual(lines[2], "- Repair missing default-focus targets in add-on information/settings and file-browser dialogs.")
         self.assertIn("0.5.33 - Keep the final Home poster and caption inside the viewport", lines)
         self.assertIn("0.5.32 - Smooth the Home hero top fade", lines)
         self.assertIn("0.5.31 - Add episode context to the In Progress Shows hero", lines)
