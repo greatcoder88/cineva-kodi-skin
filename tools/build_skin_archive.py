@@ -637,6 +637,15 @@ def update_xml(data, path):
         controls = root.find("controls")
         if controls is None:
             controls = ET.SubElement(root, "controls")
+        title = controls.find("./control[@type='label']")
+        if title is not None:
+            set_child_text(title, "label", "$INFO[ListItem.AddonName]")
+        description = controls.find("./control[@type='textbox']")
+        if description is not None:
+            set_child_text(
+                description, "label",
+                "$INFO[ListItem.AddonSummary,[B],[/B][CR]]$INFO[ListItem.AddonDescription]"
+            )
         for stale in list(controls.findall("control")):
             if stale.get("id") == "9000":
                 controls.remove(stale)
