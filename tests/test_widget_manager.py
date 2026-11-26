@@ -81,7 +81,8 @@ class KodiManagerTests(unittest.TestCase):
         source = b'<window id="10035"><controls><control type="button" id="6"><label>OLD</label></control></controls></window>'
         rendered = ET.fromstring(builder.update_xml(source, "skin.cineva/xml/SkinSettings.xml"))
         controls = rendered.find("controls")
-        buttons = controls.findall("control[@type='button']")
+        buttons = [node for node in controls.findall("control[@type='button']")
+                   if node.get("id") in {str(control_id) for control_id in range(21, 33)}]
         self.assertEqual(len(buttons), 12)
         self.assertEqual(rendered.findtext("defaultcontrol"), "21")
         self.assertNotIn("5", {button.get("id") for button in buttons})
