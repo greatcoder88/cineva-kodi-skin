@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths-ignore:
       - "repository-site/**"
-      - "skin.cineva-0.5.62.zip"
+      - "skin.cineva-0.5.63.zip"
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -27,29 +27,29 @@ jobs:
       - name: Build release ZIP, verify idempotence, and commit source fixes
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.62.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.63.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.62.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.63.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
           fi
           echo "Archive SHA-256 is stable across consecutive builds: $after"
           mkdir -p artifacts
-          cp skin.cineva-0.5.62.zip artifacts/
-          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.62.zip)" ]; then
+          cp skin.cineva-0.5.63.zip artifacts/
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.63.zip)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add skin.cineva-0.5.62.zip
-            git commit -m "Build updated CINÉVA 0.5.62 skin archive"
+            git add skin.cineva-0.5.63.zip
+            git commit -m "Build updated CINÉVA 0.5.63 skin archive"
             git push origin HEAD:main || echo "::warning::Could not push rebuilt skin ZIP; GUI test still uses the rebuilt local ZIP."
           fi
 
       - name: Expand uploaded skin archive and prepare add-ons
         run: |
           mkdir -p artifacts
-          test -s skin.cineva-0.5.62.zip
-          unzip -q skin.cineva-0.5.62.zip -d .
+          test -s skin.cineva-0.5.63.zip
+          unzip -q skin.cineva-0.5.63.zip -d .
           test -f skin.cineva/addon.xml
           test -d skin.cineva/xml
           test -f skin.cineva/xml/Home.xml
@@ -513,9 +513,13 @@ jobs:
           if any((node.findtext("left"), node.findtext("top"), node.findtext("width"), node.findtext("height")) != (("29", "289", "190", "5") if node.findtext("visible").startswith("!") else ("23", "302", "202", "5")) for node in focus_progresses):
             raise SystemExit("Normal and focused poster progress strips must align to their respective artwork baselines")
           row_focus = ET.parse("skin.cineva/xml/Includes.xml").getroot().find("./include[@name='CinevaFocusedPosterItem9001']")
-          focus_accent = next((node for node in row_focus.findall("./control[@type='image']") if node.findtext("texture") == "focus-bar.png"), None) if row_focus is not None else None
-          if focus_accent is None or (focus_accent.findtext("left"), focus_accent.findtext("top"), focus_accent.findtext("width"), focus_accent.findtext("height")) != ("84", "430", "80", "4"):
-            raise SystemExit("Focused poster selection accent must be a short centered underline")
+          focus_accents = [node for node in row_focus.findall("./control[@type='image']") if node.findtext("texture") == "focus-bar.png"] if row_focus is not None else []
+          if focus_accents:
+            raise SystemExit("Focused poster must not render a detached underline below its caption")
+          focus_art = next((node for node in row_focus.findall("./control[@type='image']") if node.find("bordertexture") is not None), None) if row_focus is not None else None
+          focus_zoom = focus_art.find("./animation[@effect='zoom']") if focus_art is not None else None
+          if focus_art is None or focus_art.findtext("bordertexture") != "poster-focus.png" or focus_zoom is None or (focus_zoom.get("start"), focus_zoom.get("end"), focus_zoom.get("time")) != ("100", "104", "160"):
+            raise SystemExit("Focused poster must retain its crimson artwork border and restrained selection zoom")
           focus_border = Path("skin.cineva/media/poster-focus.png").read_bytes()
           if focus_border[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(focus_border[16:20], "big"), int.from_bytes(focus_border[20:24], "big")) != (8, 8):
             raise SystemExit("Packaged crimson poster-focus texture is missing or has the wrong dimensions")
@@ -576,8 +580,8 @@ jobs:
                  for button in search.findall(".//control[@type='button']")):
             raise SystemExit("CINÉVA search actions are missing their branded focus surface")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.62":
-            raise SystemExit("Skin archive version must be 0.5.62")
+          if skin.attrib.get("version") != "0.5.63":
+            raise SystemExit("Skin archive version must be 0.5.63")
           widget = ET.parse("tools/script.cineva.widgets/addon.xml").getroot()
           if widget.attrib.get("version") != "0.1.8":
             raise SystemExit("Widget manager version must be 0.1.8")
@@ -1780,6 +1784,20 @@ jobs:
               if bright_coverage > 0.001:
                 raise SystemExit(f"{row_name} shelf captions still touch or clip at the 1080p bottom edge (bright coverage={bright_coverage:.4f})")
               print(f"Verified {row_name} leaves a clean 16px bottom safe area (bright coverage={bright_coverage:.4f}).")
+            def verify_no_detached_focus_underline(screenshot, row_name):
+              signal = subprocess.run(
+                ["convert", screenshot, "-crop", "1920x24+0+1048",
+                 "-fx", "((r>0.6)&&(g<0.25)&&(b<0.25))?1:0",
+                 "-format", "%[fx:mean]", "info:"],
+                text=True, capture_output=True, check=True
+              )
+              try:
+                red_coverage = float(signal.stdout.strip())
+              except ValueError:
+                raise SystemExit(f"Could not measure the lower focus edge for {row_name}: {signal.stdout!r}")
+              if red_coverage > 0.0005:
+                raise SystemExit(f"{row_name} still shows a detached red focus underline at the bottom edge (coverage={red_coverage:.4f})")
+              print(f"Verified {row_name} has no detached bottom focus underline (red coverage={red_coverage:.4f}).")
             def verify_missing_fanart_poster_hero(screenshot, row_name):
               signal = subprocess.run(
                 ["convert", screenshot, "-crop", "500x300+1350+180",
@@ -1930,6 +1948,7 @@ jobs:
                   raise SystemExit(f"In Progress Shows fixture did not expose season/episode metadata: {episode_labels}")
                 print("Verified row-2 In Progress Shows exposes season 2, episode 5 to the live Home hero.")
                 verify_lower_row_bottom_clear("artifacts/cineva-home-row2-focus.png", "row 2")
+                verify_no_detached_focus_underline("artifacts/cineva-home-row2-focus.png", "row 2")
                 verify_missing_fanart_poster_hero("artifacts/cineva-home-row2-focus.png", "row 2")
                 verify_hero_clearlogo("artifacts/cineva-home-row2-focus.png", "row 2")
                 # The previous rail should fade away beneath the pinned hero without
@@ -2082,10 +2101,12 @@ jobs:
               if row_number == 3:
                 time.sleep(0.8)
                 subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row3-focus.png"],check=True)
+                verify_no_detached_focus_underline("artifacts/cineva-home-row3-focus.png", "row 3")
               if row_number == 4:
                 time.sleep(0.8)
                 subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row4-scroll.png"],check=True)
                 verify_lower_row_bottom_clear("artifacts/cineva-home-row4-scroll.png", "row 4")
+                verify_no_detached_focus_underline("artifacts/cineva-home-row4-scroll.png", "row 4")
                 verify_missing_fanart_poster_hero("artifacts/cineva-home-row4-scroll.png", "row 4")
                 row4_mask_signal = subprocess.run(
                   ["convert","artifacts/cineva-home-row4-scroll.png","-crop","1920x36+0+394","-colorspace","gray","-format","%[fx:mean]","info:"],
