@@ -279,7 +279,7 @@ class HomeNavigationTests(unittest.TestCase):
         expected = {"1001": "9111", "1002": "9115", "1003": "9117"}
         for control_id, target in expected.items():
             self.assertEqual(buttons[control_id].findtext("ondown"), f"SetFocus({target})")
-        self.assertEqual(home.get("menucontrol"), "9001")
+        self.assertEqual(home.findtext("menucontrol"), "9001")
 
     def test_continue_watching_poster_selection_invokes_kodi_playback(self):
         with ZipFile(ARCHIVE) as archive:
@@ -296,7 +296,7 @@ class HomeNavigationTests(unittest.TestCase):
         right = osd.find(".//control[@type='grouplist'][@id='202']")
         self.assertEqual(left.findtext("onright"), "70043")
         self.assertEqual(right.findtext("onleft"), "603")
-        self.assertEqual(osd.get("menucontrol"), "602")
+        self.assertEqual(osd.findtext("menucontrol"), "602")
 
     def test_home_header_focus_uses_transparent_tabs_and_tracking_underlines(self):
         with ZipFile(ARCHIVE) as archive:
