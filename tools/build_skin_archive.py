@@ -593,7 +593,6 @@ def update_xml(data, path):
     elif path == "skin.cineva/xml/SettingsCategory.xml":
         root = settings_category_template()
     elif path in {
-        "skin.cineva/xml/MyVideoNav.xml",
         "skin.cineva/xml/MyMusicNav.xml",
         "skin.cineva/xml/MyPrograms.xml",
         "skin.cineva/xml/FileManager.xml",
@@ -1805,15 +1804,25 @@ def update_xml(data, path):
         ET.SubElement(controls, "include").text = "CinevaBackground"
         ET.SubElement(controls, "include").text = "CinevaTopBar"
     elif path == "skin.cineva/xml/MyVideoNav.xml":
-        # Do not force focus onto the native directory panel while Kodi is still
-        # resolving a plugin URL. Some add-ons populate Container(50) only after
-        # MyVideoNav has initialized; always=true makes Kodi log a failed focus
-        # request during that empty loading interval. Keep panel 50 registered as
-        # the real view/default target, but let Kodi retain valid focus until the
-        # directory has items and the panel can accept D-pad navigation.
+        # Keep the native directory panel registered, but do not force focus
+        # while Kodi is still resolving an asynchronous plugin URL. Add-ons may
+        # populate Container(50) only after MyVideoNav initializes; forcing the
+        # empty panel at that moment logs a failed focus request and can leave
+        # remote navigation in a dead state. Once items arrive, Kodi can focus
+        # the same registered panel 50 normally.
+        views = root.find("views")
+        if views is None:
+            views = ET.Element("views")
+            default = root.find("defaultcontrol")
+            insert_at = list(root).index(default) + 1 if default is not None else 0
+            root.insert(insert_at, views)
+        views.text = "50"
         default_control = root.find("defaultcontrol")
-        if default_control is not None:
-            default_control.attrib.pop("always", None)
+        if default_control is None:
+            default_control = ET.Element("defaultcontrol")
+            root.insert(0, default_control)
+        default_control.attrib.pop("always", None)
+        default_control.text = "50"
         # Unified cinematic catalogue: larger portrait cards, generous gutters,
         # restrained metadata and a full-width grid that uses the screen.
         panel = root.find("./controls/control[@type='panel']")
