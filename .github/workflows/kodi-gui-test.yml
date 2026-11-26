@@ -1281,15 +1281,16 @@ jobs:
             # unwinding the plugin directory. Follow the native Back action
             # until the originating Home window is restored; never assume a
             # single Back closes both the plugin path and its window.
-            # Exercise the same physical Back key used by a TV remote. Kodi's
-            # JSON-RPC Input.Back method does not reproduce the X11 key path,
-            # so send Escape through the GUI and allow the plugin parent stack
+            # Kodi Piers maps the TV-remote Back key to the Back action
+            # (keyboard Backspace/browser_back). Escape maps to PreviousMenu,
+            # which is a different action and does not reproduce the Android
+            # remote path. Exercise Backspace and allow the plugin parent stack
             # to unwind before asserting that the calling Home window returns.
             returned_home = gui()
             for back_attempt in range(3):
               if returned_home.get("currentwindow", {}).get("id") == 10000:
                 break
-              press("Escape")
+              press("BackSpace")
               deadline = time.time() + 5
               while time.time() < deadline:
                 returned_home = gui()
