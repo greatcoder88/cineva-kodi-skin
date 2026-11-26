@@ -26,29 +26,29 @@ jobs:
       - name: Build release ZIP, verify idempotence, and commit source fixes
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.45.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.46.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.45.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.46.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
           fi
           echo "Archive SHA-256 is stable across consecutive builds: $after"
           mkdir -p artifacts
-          cp skin.cineva-0.5.45.zip artifacts/
-          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.45.zip)" ]; then
+          cp skin.cineva-0.5.46.zip artifacts/
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.46.zip)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add skin.cineva-0.5.45.zip
-            git commit -m "Build updated CINÉVA 0.5.45 skin archive"
+            git add skin.cineva-0.5.46.zip
+            git commit -m "Build updated CINÉVA 0.5.46 skin archive"
             git push origin HEAD:main || echo "::warning::Could not push rebuilt skin ZIP; GUI test still uses the rebuilt local ZIP."
           fi
 
       - name: Expand uploaded skin archive and prepare add-ons
         run: |
           mkdir -p artifacts
-          test -s skin.cineva-0.5.45.zip
-          unzip -q skin.cineva-0.5.45.zip -d .
+          test -s skin.cineva-0.5.46.zip
+          unzip -q skin.cineva-0.5.46.zip -d .
           test -f skin.cineva/addon.xml
           test -d skin.cineva/xml
           test -f skin.cineva/xml/Home.xml
@@ -486,12 +486,18 @@ jobs:
             raise SystemExit("MyVideoNav Down navigation must use Kodi's native panel control ID 50")
           panel = catalogue.find("./controls/control[@type='panel'][@id='50']")
           layout = panel.find("itemlayout") if panel is not None else None
-          if panel is None or panel.findtext("onup") != "SetFocus(49)":
+          if panel is None or panel.findtext("onup") != "49":
             raise SystemExit("Catalogue panel must return to the Back control when moving Up off its first row")
           if panel is None or (panel.findtext("left"), panel.findtext("top"), panel.findtext("width"), panel.findtext("height")) != ("54", "252", "1812", "790"):
             raise SystemExit("Catalogue panel is not using the full-width cinematic grid")
           if layout is None or (layout.get("width"), layout.get("height")) != ("330", "390"):
             raise SystemExit("Catalogue poster cards are missing the redesigned grid geometry")
+          for layout_name in ("itemlayout", "focusedlayout"):
+            poster_layout = panel.find(layout_name) if panel is not None else None
+            poster_image = poster_layout.find("./control[@type='image']") if poster_layout is not None else None
+            poster_texture = poster_image.find("texture") if poster_image is not None else None
+            if poster_texture is None or poster_texture.get("fallback") != "poster-placeholder.png":
+              raise SystemExit(f"MyVideoNav {layout_name} must use the branded missing-poster fallback")
           details = ET.parse("skin.cineva/xml/DialogVideoInfo.xml").getroot()
           detail_poster = next((c for c in details.findall("./controls/control") if c.get("type") == "image" and c.findtext("texture") == "$INFO[ListItem.Art(poster)]"), None)
           detail_plot = details.find("./controls/control[@type='textbox']")
@@ -507,8 +513,8 @@ jobs:
           if any(button.findtext("texturefocus") != "focus-bar.png" for button in search.findall(".//control[@type='button']")):
             raise SystemExit("Search hub buttons are missing the unified focus treatment")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.45":
-            raise SystemExit("Skin archive version must be 0.5.45")
+          if skin.attrib.get("version") != "0.5.46":
+            raise SystemExit("Skin archive version must be 0.5.46")
           widget = ET.parse("tools/script.cineva.widgets/addon.xml").getroot()
           if widget.attrib.get("version") != "0.1.8":
             raise SystemExit("Widget manager version must be 0.1.8")

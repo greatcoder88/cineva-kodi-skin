@@ -23,9 +23,9 @@ jobs:
       - name: Build release ZIP and verify true idempotence
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.45.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.46.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.45.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.46.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
@@ -33,8 +33,8 @@ jobs:
           echo "Archive SHA-256 is stable across consecutive builds: $after"
       - name: Expand uploaded CINÉVA archive
         run: |
-          test -s skin.cineva-0.5.45.zip
-          unzip -q skin.cineva-0.5.45.zip -d .
+          test -s skin.cineva-0.5.46.zip
+          unzip -q skin.cineva-0.5.46.zip -d .
       - name: Validate Settings-only widget configuration navigation
         run: |
           python - <<'PY'
@@ -736,10 +736,16 @@ jobs:
               or panel_focus.get("condition") != "Container.HasParent(50)"
               or panel_focus.text != "Control.SetFocus(50,1,absolute)"):
               errors.append("Add-on directory panel must use absolute list focus to skip Kodi's synthetic parent item")
-          if panel is None or panel.findtext("onup") != "SetFocus(49)":
+          if panel is None or panel.findtext("onup") != "49":
               errors.append("Add-on directory panel must route D-pad Up to the visible Back control")
           if layout is None or (layout.get("width"), layout.get("height")) != ("330", "390"):
               errors.append("Catalogue poster cards are missing the redesigned grid geometry")
+          for layout_name in ("itemlayout", "focusedlayout"):
+              poster_layout = panel.find(layout_name) if panel is not None else None
+              poster_image = poster_layout.find("./control[@type='image']") if poster_layout is not None else None
+              poster_texture = poster_image.find("texture") if poster_image is not None else None
+              if poster_texture is None or poster_texture.get("fallback") != "poster-placeholder.png":
+                  errors.append(f"MyVideoNav {layout_name} must use the branded missing-poster fallback")
           details = ET.parse(root / "xml/DialogVideoInfo.xml").getroot()
           detail_poster = next((c for c in details.findall("./controls/control") if c.get("type") == "image" and c.findtext("texture") == "$INFO[ListItem.Art(poster)]"), None)
           detail_plot = details.find("./controls/control[@type='textbox']")
@@ -755,8 +761,8 @@ jobs:
           if any(button.findtext("texturefocus") != "focus-bar.png" for button in search.findall(".//control[@type='button']")):
               errors.append("Search hub buttons are missing the unified focus treatment")
           skin = ET.parse(root / "addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.45":
-              errors.append("Skin ZIP version is not 0.5.45")
+          if skin.attrib.get("version") != "0.5.46":
+              errors.append("Skin ZIP version is not 0.5.46")
           settings = ET.parse("tools/script.cineva.widgets/resources/settings.xml").getroot()
           registry = settings.find(".//setting[@id='widget_registry']")
           if registry is None or registry.attrib.get("type") != "string":
