@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.32.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.31.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.33.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.32.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -544,7 +544,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.32")
+        root.set("version", "0.5.33")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -1039,7 +1039,7 @@ def update_xml(data, path):
         # Each row is a single grouplist child so its non-focusable heading cannot
         # intercept Up from the nested fixedlist before the shelf's explicit route.
         rail_list = ET.Element("control", {"type": "grouplist", "id": "9050"})
-        for tag, value in (("left", 60), ("top", 444), ("width", 1800), ("height", 670)):
+        for tag, value in (("left", 60), ("top", 444), ("width", 1860), ("height", 670)):
             set_child_text(rail_list, tag, value)
         set_child_text(rail_list, "orientation", "vertical")
         set_child_text(rail_list, "itemgap", 12)
@@ -1071,7 +1071,7 @@ def update_xml(data, path):
             controls.remove(heading)
             controls.remove(shelf)
             row_group = ET.Element("control", {"type": "group", "id": str(9060 + index)})
-            for tag, value in (("left", 0), ("top", 0), ("width", 1800), ("height", 500)):
+            for tag, value in (("left", 0), ("top", 0), ("width", 1860), ("height", 500)):
                 set_child_text(row_group, tag, value)
             play_id = 9111 + (index - 1) * 2
             next_target = 9000 + index + 1 if index < 4 else 1001
@@ -1085,18 +1085,18 @@ def update_xml(data, path):
             set_child_text(heading, "font", "font18")
             set_child_text(shelf, "left", 0)
             set_child_text(shelf, "top", 55)
-            set_child_text(shelf, "width", 1800)
+            set_child_text(shelf, "width", 1860)
             set_child_text(shelf, "height", 440)
             # Keep the selected poster in a stable central lane while browsing.
             # Movement 3 lets the first/last items use the rail edges without
             # pinning every later selection to the far-left slot.
             set_child_text(shelf, "focusposition", 3)
             set_child_text(shelf, "movement", 3)
-            set_child_text(shelf, "itemgap", 14)
+            set_child_text(shelf, "itemgap", 8)
             set_child_text(shelf, "onup", f"SetFocus({play_id})")
             set_child_text(shelf, "ondown", f"SetFocus({next_target})")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
-                layout.set("width", "270")
+                layout.set("width", "248")
                 layout.set("height", "440")
             focused_layout = shelf.find("./focusedlayout")
             focused_include = focused_layout.find("include") if focused_layout is not None else None
@@ -1140,14 +1140,14 @@ def update_xml(data, path):
             # stable contrast surface over both dark and bright hero artwork.
             pill = ET.Element("control", {"type": "image", "id": str(9372 + index - 1)})
             for tag, value in (
-                ("left", 1578), ("top", -1), ("width", 212), ("height", 40),
+                ("left", 1638), ("top", -1), ("width", 212), ("height", 40),
                 ("texture", "shelf-navigation-pill.png"), ("aspectratio", "scale"),
                 ("visible", cue_visible),
             ):
                 set_child_text(pill, tag, value)
             position = ET.Element("control", {"type": "label", "id": str(counter_id)})
             for tag, value in (
-                ("left", 1590), ("top", 0), ("width", 104), ("height", 38),
+                ("left", 1650), ("top", 0), ("width", 104), ("height", 38),
                 ("font", "font10"), ("textcolor", "white"),
                 ("label", f"$INFO[Container({9000 + index}).CurrentItem] / $INFO[Container({9000 + index}).NumItems]"),
                 ("align", "center"), ("aligny", "center"),
@@ -1156,7 +1156,7 @@ def update_xml(data, path):
                 set_child_text(position, tag, value)
             previous = ET.Element("control", {"type": "label", "id": str(counter_id + 1)})
             for tag, value in (
-                ("left", 1698), ("top", 0), ("width", 30), ("height", 38),
+                ("left", 1758), ("top", 0), ("width", 30), ("height", 38),
                 ("font", "font18"), ("textcolor", "silver"),
                 ("label", "‹"), ("align", "center"), ("aligny", "center"),
                 ("visible", f"Control.HasFocus({9000 + index}) + Container({9000 + index}).HasPrevious"),
@@ -1164,7 +1164,7 @@ def update_xml(data, path):
                 set_child_text(previous, tag, value)
             following = ET.Element("control", {"type": "label", "id": str(counter_id + 2)})
             for tag, value in (
-                ("left", 1738), ("top", 0), ("width", 30), ("height", 38),
+                ("left", 1798), ("top", 0), ("width", 30), ("height", 38),
                 ("font", "font18"), ("textcolor", "FFE50914"),
                 ("label", "›"), ("align", "center"), ("aligny", "center"),
                 ("visible", f"Control.HasFocus({9000 + index}) + Container({9000 + index}).HasNext"),
@@ -1350,7 +1350,7 @@ def update_xml(data, path):
         # Textboxes wrap naturally inside an 84px caption area with room for three complete title lines.
         normal_label.set("type", "textbox")
         focused_label.set("type", "textbox")
-        for tag, value in (("left", 35), ("top", 0), ("width", 200), ("height", 300)):
+        for tag, value in (("left", 24), ("top", 0), ("width", 200), ("height", 300)):
             set_child_text(normal_image, tag, value)
         # Use the semantic poster key for every shelf state. Providers often map
         # thumb to landscape fanart, which makes inactive cards turn into short,
@@ -1360,7 +1360,7 @@ def update_xml(data, path):
         if normal_texture is None:
             raise SystemExit("Includes.xml normal poster image has no texture")
         normal_texture.set("fallback", "poster-placeholder.png")
-        for tag, value in (("left", 0), ("top", 302), ("width", 270), ("height", 108), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
+        for tag, value in (("left", 0), ("top", 302), ("width", 248), ("height", 108), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "lightgrey")):
             set_child_text(normal_label, tag, value)
         stale_visibility = normal_label.find("visible")
         if stale_visibility is not None:
@@ -1382,7 +1382,7 @@ def update_xml(data, path):
         if normal_progress is None:
             normal_progress = ET.fromstring(ET.tostring(progress, encoding="unicode"))
             normal.append(normal_progress)
-        for tag, value in (("left", 40), ("top", 289), ("width", 190), ("height", 5)):
+        for tag, value in (("left", 29), ("top", 289), ("width", 190), ("height", 5)):
             set_child_text(normal_progress, tag, value)
         set_child_text(normal_progress, "info", "ListItem.PercentPlayed")
         set_child_text(normal_progress, "visible", "ListItem.IsResumable")
@@ -1393,7 +1393,7 @@ def update_xml(data, path):
         # the title below it. The 104% control geometry plus a 104% focus
         # animation gives a balanced ~108% total scale instead of double-enlarging
         # an already oversized 108% control.
-        for tag, value in (("left", 29), ("top", -4), ("width", 212), ("height", 318)):
+        for tag, value in (("left", 18), ("top", -4), ("width", 212), ("height", 318)):
             set_child_text(focused_image, tag, value)
         set_child_text(focused_image, "texture", "$INFO[ListItem.Art(poster)]")
         focused_texture = focused_image.find("texture")
@@ -1422,7 +1422,7 @@ def update_xml(data, path):
             focus_animation.set("tween", "sine")
             focus_animation.set("easing", "out")
         focus_animation.text = "Focus"
-        for tag, value in (("left", 34), ("width", 202), ("top", 302), ("height", 5)):
+        for tag, value in (("left", 23), ("width", 202), ("top", 302), ("height", 5)):
             set_child_text(progress, tag, value)
         if focused_label is not None and focused_label in list(focused):
             focused.remove(focused_label)
@@ -1447,7 +1447,7 @@ def update_xml(data, path):
             set_child_text(fallback_label, "visible", f"!Control.HasFocus({container_id})")
             set_child_text(fallback_progress, "visible", f"!Control.HasFocus({container_id}) + ListItem.IsResumable")
             # Reserve an 108px focused caption area for three full lines at TV distance, ending above the row underline.
-            for tag, value in (("left", 0), ("top", 316), ("width", 270), ("height", 108), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "white")):
+            for tag, value in (("left", 0), ("top", 316), ("width", 248), ("height", 108), ("align", "center"), ("aligny", "center"), ("font", "font10"), ("textcolor", "white")):
                 set_child_text(active_label, tag, value)
             stale_wrap = active_label.find("wrap")
             if stale_wrap is not None:
@@ -1458,7 +1458,7 @@ def update_xml(data, path):
             set_child_text(active_label, "visible", f"Control.HasFocus({container_id})")
             set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
             focus_accent = ET.Element("control", {"type": "image"})
-            for tag, value in (("left", 95), ("top", 430), ("width", 80), ("height", 4)):
+            for tag, value in (("left", 84), ("top", 430), ("width", 80), ("height", 4)):
                 set_child_text(focus_accent, tag, value)
             set_child_text(focus_accent, "texture", "focus-bar.png")
             set_child_text(focus_accent, "visible", f"Control.HasFocus({container_id})")
@@ -2016,11 +2016,11 @@ def update_xml(data, path):
 
 def main():
     # Start the new distributable version from the last published package once.
-    # Subsequent builds always transform 0.5.31 in place and remain byte-stable.
+    # Subsequent builds always transform 0.5.32 in place and remain byte-stable.
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.32.zip and migration source skin.cineva-0.5.31.zip")
+        raise SystemExit("Missing skin.cineva-0.5.33.zip and migration source skin.cineva-0.5.32.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -2104,9 +2104,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.32":
-                        addon_root.set("version", "0.5.32")
-                        changed.append(info.filename + " (bump skin version to 0.5.32)")
+                    if addon_root.get("version") != "0.5.33":
+                        addon_root.set("version", "0.5.33")
+                        changed.append(info.filename + " (bump skin version to 0.5.33)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2114,17 +2114,17 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.32 - Smooth the Home hero top fade",
-                        "- Stretch the mirrored top veil to its full texture height so it reaches transparency at the bottom edge.",
-                        "- Remove the horizontal shade seam across bright and dark fanart without changing the hero title-safe contrast.",
+                        "0.5.33 - Keep the final Home poster and caption inside the viewport",
+                        "- Rebalance all four Home rails to show seven complete poster cards plus a small eighth-card preview.",
+                        "- Keep the rightmost fully visible poster title, focus frame and progress strip inside the 1920px screen while preserving D-pad browsing.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.32 - Smooth the Home hero top fade"):
+                    if changelog.startswith("0.5.33 - Keep the final Home poster and caption inside the viewport"):
                         pass
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.32 Home hero fade changelog)")
+                        changed.append(info.filename + " (prepend 0.5.33 Home poster rail changelog)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:

@@ -26,29 +26,29 @@ jobs:
       - name: Build release ZIP, verify idempotence, and commit source fixes
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.32.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.33.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.32.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.33.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
           fi
           echo "Archive SHA-256 is stable across consecutive builds: $after"
           mkdir -p artifacts
-          cp skin.cineva-0.5.32.zip artifacts/
-          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.32.zip)" ]; then
+          cp skin.cineva-0.5.33.zip artifacts/
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.33.zip)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add skin.cineva-0.5.32.zip
-            git commit -m "Build updated CINÉVA 0.5.32 skin archive"
+            git add skin.cineva-0.5.33.zip
+            git commit -m "Build updated CINÉVA 0.5.33 skin archive"
             git push origin HEAD:main || echo "::warning::Could not push rebuilt skin ZIP; GUI test still uses the rebuilt local ZIP."
           fi
 
       - name: Expand uploaded skin archive and prepare add-ons
         run: |
           mkdir -p artifacts
-          test -s skin.cineva-0.5.32.zip
-          unzip -q skin.cineva-0.5.32.zip -d .
+          test -s skin.cineva-0.5.33.zip
+          unzip -q skin.cineva-0.5.33.zip -d .
           test -f skin.cineva/addon.xml
           test -d skin.cineva/xml
           test -f skin.cineva/xml/Home.xml
@@ -307,7 +307,7 @@ jobs:
           if overlay_data[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(overlay_data[16:20], "big"), int.from_bytes(overlay_data[20:24], "big")) != (1920, 440):
             raise SystemExit("Packaged hero contrast texture is missing or has the wrong dimensions")
           rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
-          if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("60", "444", "1800", "670") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "180"):
+          if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("60", "444", "1860", "670") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "180"):
             raise SystemExit("Home rails are missing their vertical scrolling viewport")
           lower_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118))
           lower_slide = rail_list.find("./animation[@effect='slide']") if rail_list is not None else None
@@ -383,8 +383,8 @@ jobs:
             if shelf.findtext("ondown") != expected_down or row_group.findtext("ondown") != expected_down:
               raise SystemExit(f"Home widget {index} cannot navigate down to the next rail")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
-              if (layout.get("width"), layout.get("height")) != ("270", "440"):
-                raise SystemExit(f"Home widget {index} poster card geometry is not the 6-up layout")
+              if (layout.get("width"), layout.get("height")) != ("248", "440"):
+                raise SystemExit(f"Home widget {index} poster card geometry is not the seven-full-card layout")
           shelf_cue_ids = []
           for row in range(1, 5):
             container_id = 9000 + row
@@ -397,12 +397,12 @@ jobs:
             expected_cue_visible = f"Control.HasFocus({container_id}) + !String.IsEmpty(Container({container_id}).ListItem.Label)"
             if pill is None or (pill.get("type"), pill.findtext("texture"), pill.findtext("visible"),
                                 pill.findtext("left"), pill.findtext("top"), pill.findtext("width"), pill.findtext("height")) != (
-                "image", "shelf-navigation-pill.png", expected_cue_visible, "1578", "-1", "212", "40"
+                "image", "shelf-navigation-pill.png", expected_cue_visible, "1638", "-1", "212", "40"
             ):
               raise SystemExit(f"Home shelf {container_id} is missing its focused glass navigation capsule")
             if position is None or (position.findtext("label"), position.findtext("visible"), position.findtext("left"), position.findtext("width")) != (
                 f"$INFO[Container({container_id}).CurrentItem] / $INFO[Container({container_id}).NumItems]",
-                expected_cue_visible, "1590", "104"
+                expected_cue_visible, "1650", "104"
             ):
               raise SystemExit(f"Home shelf {container_id} is missing its live position counter")
             if previous is None or (previous.findtext("label"), previous.findtext("visible")) != (
@@ -443,7 +443,7 @@ jobs:
               raise SystemExit(f"Home row {row_index} must resolve RESUME for in-progress sources and PLAY otherwise")
           poster = includes.find("./include[@name='CinevaPosterItem']")
           normal_image = poster.find("./control[@type='image']") if poster is not None else None
-          if poster is None or normal_image is None or (normal_image.findtext("left"), normal_image.findtext("top"), normal_image.findtext("width"), normal_image.findtext("height")) != ("35", "0", "200", "300") or poster.findtext("./control[@type='textbox']/width") != "270" or poster.findtext("./control[@type='textbox']/top") != "302" or poster.findtext("./control[@type='textbox']/height") != "108" or poster.find("./control[@type='textbox']/wrap") is not None or poster.findtext("./control[@type='textbox']/font") != "font10" or poster.findtext("./control[@type='textbox']/aligny") != "center":
+          if poster is None or normal_image is None or (normal_image.findtext("left"), normal_image.findtext("top"), normal_image.findtext("width"), normal_image.findtext("height")) != ("24", "0", "200", "300") or poster.findtext("./control[@type='textbox']/width") != "248" or poster.findtext("./control[@type='textbox']/top") != "302" or poster.findtext("./control[@type='textbox']/height") != "108" or poster.find("./control[@type='textbox']/wrap") is not None or poster.findtext("./control[@type='textbox']/font") != "font10" or poster.findtext("./control[@type='textbox']/aligny") != "center":
             raise SystemExit("Home poster and title layout is missing its larger native 2:3 poster artwork or readable title baseline")
           focused_poster = includes.find("./include[@name='CinevaFocusedPosterItem9001']")
           focused_title = next((label for label in focused_poster.findall("./control[@type='textbox']") if label.findtext("textcolor") == "white"), None) if focused_poster is not None else None
@@ -451,19 +451,19 @@ jobs:
             raise SystemExit("Focused poster titles must sit below the focused artwork without overlap")
           focused_image = next((node for node in focused_poster.findall("./control[@type='image']") if node.findtext("visible") == "Control.HasFocus(9001)"), None) if focused_poster is not None else None
           focused_zoom = focused_image.find("./animation[@effect='zoom']") if focused_image is not None else None
-          if focused_image is None or (focused_image.findtext("left"), focused_image.findtext("top"), focused_image.findtext("width"), focused_image.findtext("height")) != ("29", "-4", "212", "318") or focused_zoom is None or (focused_zoom.get("start"), focused_zoom.get("end"), focused_zoom.get("time"), focused_zoom.get("tween"), focused_zoom.get("easing")) != ("100", "104", "160", "sine", "out"):
+          if focused_image is None or (focused_image.findtext("left"), focused_image.findtext("top"), focused_image.findtext("width"), focused_image.findtext("height")) != ("18", "-4", "212", "318") or focused_zoom is None or (focused_zoom.get("start"), focused_zoom.get("end"), focused_zoom.get("time"), focused_zoom.get("tween"), focused_zoom.get("easing")) != ("100", "104", "160", "sine", "out"):
             raise SystemExit("Focused poster artwork must use the title-safe 110% selection zoom")
           normal_progress = poster.find("./control[@type='progress']") if poster is not None else None
-          if normal_progress is None or (normal_progress.findtext("left"), normal_progress.findtext("top"), normal_progress.findtext("width"), normal_progress.findtext("height"), normal_progress.findtext("visible"), normal_progress.findtext("info"), normal_progress.findtext("texturebg")) != ("40", "289", "190", "5", "ListItem.IsResumable", "ListItem.PercentPlayed", "resume-track.png"):
+          if normal_progress is None or (normal_progress.findtext("left"), normal_progress.findtext("top"), normal_progress.findtext("width"), normal_progress.findtext("height"), normal_progress.findtext("visible"), normal_progress.findtext("info"), normal_progress.findtext("texturebg")) != ("29", "289", "190", "5", "ListItem.IsResumable", "ListItem.PercentPlayed", "resume-track.png"):
             raise SystemExit("Normal poster cards must show a correctly aligned resumable progress strip on a charcoal track")
           focus_progresses = focused_poster.findall("./control[@type='progress']") if focused_poster is not None else []
           if len(focus_progresses) != 2 or {node.findtext("visible") for node in focus_progresses} != {"!Control.HasFocus(9001) + ListItem.IsResumable", "Control.HasFocus(9001) + ListItem.IsResumable"} or any(node.findtext("texturebg") != "resume-track.png" for node in focus_progresses):
             raise SystemExit("Focused poster template must retain one charcoal-track progress strip in both focus states")
-          if any((node.findtext("left"), node.findtext("top"), node.findtext("width"), node.findtext("height")) != (("40", "289", "190", "5") if node.findtext("visible").startswith("!") else ("34", "302", "202", "5")) for node in focus_progresses):
+          if any((node.findtext("left"), node.findtext("top"), node.findtext("width"), node.findtext("height")) != (("29", "289", "190", "5") if node.findtext("visible").startswith("!") else ("23", "302", "202", "5")) for node in focus_progresses):
             raise SystemExit("Normal and focused poster progress strips must align to their respective artwork baselines")
           row_focus = ET.parse("skin.cineva/xml/Includes.xml").getroot().find("./include[@name='CinevaFocusedPosterItem9001']")
           focus_accent = next((node for node in row_focus.findall("./control[@type='image']") if node.findtext("texture") == "focus-bar.png"), None) if row_focus is not None else None
-          if focus_accent is None or (focus_accent.findtext("left"), focus_accent.findtext("top"), focus_accent.findtext("width"), focus_accent.findtext("height")) != ("95", "430", "80", "4"):
+          if focus_accent is None or (focus_accent.findtext("left"), focus_accent.findtext("top"), focus_accent.findtext("width"), focus_accent.findtext("height")) != ("84", "430", "80", "4"):
             raise SystemExit("Focused poster selection accent must be a short centered underline")
           focus_border = Path("skin.cineva/media/poster-focus.png").read_bytes()
           if focus_border[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(focus_border[16:20], "big"), int.from_bytes(focus_border[20:24], "big")) != (8, 8):
@@ -493,8 +493,8 @@ jobs:
           if any(button.findtext("texturefocus") != "focus-bar.png" for button in search.findall(".//control[@type='button']")):
             raise SystemExit("Search hub buttons are missing the unified focus treatment")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.32":
-            raise SystemExit("Skin archive version must be 0.5.32")
+          if skin.attrib.get("version") != "0.5.33":
+            raise SystemExit("Skin archive version must be 0.5.33")
           widget = ET.parse("tools/script.cineva.widgets/addon.xml").getroot()
           if widget.attrib.get("version") != "0.1.8":
             raise SystemExit("Widget manager version must be 0.1.8")
