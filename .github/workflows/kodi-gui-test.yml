@@ -41,7 +41,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add skin.cineva-0.5.59.zip
-            git commit -m "Build updated CINÉVA 0.5.58 skin archive"
+            git commit -m "Build updated CINÉVA 0.5.59 skin archive"
             git push origin HEAD:main || echo "::warning::Could not push rebuilt skin ZIP; GUI test still uses the rebuilt local ZIP."
           fi
 
@@ -472,11 +472,11 @@ jobs:
               raise SystemExit(f"Home row {row_index} must resolve RESUME for in-progress sources and PLAY otherwise")
           poster = includes.find("./include[@name='CinevaPosterItem']")
           normal_image = poster.find("./control[@type='image']") if poster is not None else None
-          if poster is None or normal_image is None or (normal_image.findtext("left"), normal_image.findtext("top"), normal_image.findtext("width"), normal_image.findtext("height")) != ("24", "0", "200", "300") or poster.findtext("./control[@type='textbox']/width") != "248" or poster.findtext("./control[@type='textbox']/top") != "302" or poster.findtext("./control[@type='textbox']/height") != "108" or poster.find("./control[@type='textbox']/wrap") is not None or poster.findtext("./control[@type='textbox']/font") != "font10" or poster.findtext("./control[@type='textbox']/aligny") != "center":
+          if poster is None or normal_image is None or (normal_image.findtext("left"), normal_image.findtext("top"), normal_image.findtext("width"), normal_image.findtext("height")) != ("24", "0", "200", "300") or poster.findtext("./control[@type='textbox']/width") != "248" or poster.findtext("./control[@type='textbox']/top") != "302" or poster.findtext("./control[@type='textbox']/height") != "108" or poster.find("./control[@type='textbox']/wrap") is not None or poster.findtext("./control[@type='textbox']/font") != "font10" or poster.findtext("./control[@type='textbox']/aligny") != "top":
             raise SystemExit("Home poster and title layout is missing its larger native 2:3 poster artwork or readable title baseline")
           focused_poster = includes.find("./include[@name='CinevaFocusedPosterItem9001']")
           focused_title = next((label for label in focused_poster.findall("./control[@type='textbox']") if label.findtext("textcolor") == "white"), None) if focused_poster is not None else None
-          if focused_title is None or focused_title.findtext("font") != "font10" or focused_title.findtext("top") != "316" or focused_title.findtext("height") != "108" or focused_title.findtext("aligny") != "center" or focused_title.find("wrap") is not None :
+          if focused_title is None or focused_title.findtext("font") != "font10" or focused_title.findtext("top") != "316" or focused_title.findtext("height") != "108" or focused_title.findtext("aligny") != "top" or focused_title.find("wrap") is not None :
             raise SystemExit("Focused poster titles must sit below the focused artwork without overlap")
           row1_visibility_suffix = "".join(
             f" + !Control.HasFocus({focus_id})"
@@ -560,8 +560,8 @@ jobs:
                  for button in search.findall(".//control[@type='button']")):
             raise SystemExit("CINÉVA search actions are missing their branded focus surface")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.58":
-            raise SystemExit("Skin archive version must be 0.5.58")
+          if skin.attrib.get("version") != "0.5.59":
+            raise SystemExit("Skin archive version must be 0.5.59")
           widget = ET.parse("tools/script.cineva.widgets/addon.xml").getroot()
           if widget.attrib.get("version") != "0.1.8":
             raise SystemExit("Widget manager version must be 0.1.8")
