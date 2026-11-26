@@ -1411,6 +1411,16 @@ jobs:
             if int(restored_labels.get("Container(9001).CurrentItem", "0")) != initial_position:
               raise SystemExit(f"Home shelf did not return to its original item after scroll-cue verification: {restored_labels}")
             print(f"Verified Home shelf position counter {initial_position}/{total_items}, next cue, and previous cue after moving to {scrolled_position}.")
+            # The poster row is directly below VIEW ALL; the next Up reaches the pinned hero action.
+            subprocess.run(["xdotool","key","Up"],check=True)
+            deadline = time.time() + 8
+            while time.time() < deadline:
+              state = gui()
+              if state.get("currentcontrol",{}).get("label","").strip().upper() == "VIEW ALL":
+                break
+              time.sleep(0.25)
+            else:
+              raise SystemExit(f"Poster Up did not focus VIEW ALL: {state}")
             subprocess.run(["xdotool","key","Up"],check=True)
             deadline = time.time() + 8
             while time.time() < deadline:
@@ -1419,7 +1429,7 @@ jobs:
                 break
               time.sleep(0.25)
             else:
-              raise SystemExit(f"Poster Up did not focus the RESUME hero action: {state}")
+              raise SystemExit(f"VIEW ALL Up did not focus the RESUME hero action: {state}")
             subprocess.run(["xdotool","key","Right"],check=True)
             deadline = time.time() + 8
             while time.time() < deadline:
@@ -1846,6 +1856,16 @@ jobs:
                 if crimson_coverage < 0.35:
                   raise SystemExit(f"Row-2 hero PLAY surface is not visibly rendered (crimson coverage={crimson_coverage:.3f})")
                 print(f"Verified row-2 hero PLAY surface in rendered screenshot (crimson coverage={crimson_coverage:.3f}).")
+                # Row 2 follows the same spatial path: poster -> VIEW ALL -> hero PLAY.
+                subprocess.run(["xdotool","key","Up"],check=True)
+                deadline = time.time() + 8
+                while time.time() < deadline:
+                  state = gui()
+                  if state.get("currentcontrol",{}).get("label","").strip().upper() == "VIEW ALL":
+                    break
+                  time.sleep(0.25)
+                else:
+                  raise SystemExit(f"Row-2 poster Up did not focus VIEW ALL: {state}")
                 subprocess.run(["xdotool","key","Up"],check=True)
                 deadline = time.time() + 8
                 while time.time() < deadline:
@@ -1854,7 +1874,7 @@ jobs:
                     break
                   time.sleep(0.25)
                 else:
-                  raise SystemExit(f"Row-2 Up did not focus its RESUME action: {state}")
+                  raise SystemExit(f"Row-2 VIEW ALL Up did not focus its RESUME action: {state}")
                 subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row2-actions.png"],check=True)
                 # The selected row's fanart must remain pinned while focus moves
                 # from the poster to PLAY; compare only the unobstructed right hero.
