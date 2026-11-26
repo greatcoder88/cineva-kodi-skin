@@ -2510,8 +2510,19 @@ jobs:
             f"20 → 21 → 20 ({left_count} left items, {right_count} right items)."
           )
           press("Escape")
-          wait_for_window(10004)
-          wait_for_control("FILE MANAGER")
+          settings_after_file_manager = wait_for_window(10004)
+          settings_after_file_manager_label = settings_after_file_manager.get("currentcontrol", {}).get("label", "").strip().upper()
+          # Kodi's Settings hub resets to its default ADD-ONS item after
+          # returning from native windows. Validate that a real focus target
+          # is restored, but do not assume the previous FILE MANAGER item
+          # remains selected.
+          if settings_after_file_manager_label not in {
+              "ADD-ONS", "SYSTEM INFORMATION", "FILE MANAGER", "CINÉVA SKIN SETTINGS"
+          }:
+            raise SystemExit(
+              f"Settings hub returned from File Manager without a usable D-pad focus: {settings_after_file_manager}"
+            )
+          print("Settings hub focus after returning from File Manager:", settings_after_file_manager)
           press("Escape")
           wait_for_window(10000)
 
