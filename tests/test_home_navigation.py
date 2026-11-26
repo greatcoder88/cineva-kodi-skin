@@ -73,15 +73,52 @@ class HomeNavigationTests(unittest.TestCase):
             expected_up = (
                 [(None, f"SetFocus({view_all_id})")]
                 if index == 1 else
-                [(f"!String.IsEmpty(Container({9000 + previous}).ListItem.Label)", f"SetFocus({9000 + previous})")
-                 for previous in range(index - 1, 0, -1)]
-                + [(None, f"SetFocus({view_all_id})")]
+                [
+                    action
+                    for previous in range(index - 1, 0, -1)
+                    for action in (
+                        (f"Integer.IsGreater(Container({9000 + previous}).NumItems,0)",
+                         f"SetFocus({9000 + previous})"),
+                        (f"!String.IsEmpty(Skin.String(Cineva.Widget{previous}.Path))",
+                         f"SetFocus({9159 + previous})"),
+                    )
+                ] + [(None, f"SetFocus({view_all_id})")]
             )
             self.assertEqual(
                 [(node.get("condition"), node.text) for node in shelf.findall("onup")],
                 expected_up,
-                f"Home row {index} must move Up to the nearest configured shelf above it",
+                f"Home row {index} must move Up to the nearest populated/configured shelf above it",
             )
+            loading = row.find(f"./control[@type='group'][@id='{9400 + index}']")
+            self.assertIsNotNone(loading, f"Home row {index} needs a non-focusable loading state")
+            self.assertEqual(
+                loading.findtext("visible"),
+                f"!String.IsEmpty(Skin.String(Cineva.Widget{index}.Path)) + "
+                f"Container({container_id}).IsUpdating + "
+                f"Integer.IsEqual(Container({container_id}).NumItems,0)",
+            )
+            self.assertEqual(
+                len(loading.findall("./control[@type='image']")), 5,
+                "Loading state must preserve the poster-shelf geometry",
+            )
+            empty_state = row.find(f"./control[@type='group'][@id='{9520 + index}']")
+            self.assertIsNotNone(empty_state, f"Home row {index} needs a completed-empty state")
+            self.assertEqual(
+                empty_state.findtext("visible"),
+                f"!String.IsEmpty(Skin.String(Cineva.Widget{index}.Path)) + "
+                f"!Container({container_id}).IsUpdating + "
+                f"Integer.IsEqual(Container({container_id}).NumItems,0)",
+            )
+
+    def test_home_shows_first_run_initialization_state_without_stealing_focus(self):
+        with ZipFile(ARCHIVE) as archive:
+            home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
+        state = home.find("./controls/control[@type='group'][@id='9480']")
+        self.assertIsNotNone(state)
+        self.assertEqual(state.findtext("visible"), "!Skin.HasSetting(Cineva.Initialized)")
+        self.assertEqual(state.findtext("./control[@id='9481']/label"), "PREPARING YOUR CINÉVA HOME")
+        self.assertIsNone(state.find("./control[@type='button']"),
+                          "Loading artwork must never steal D-pad focus")
 
     def test_kodi_settings_exposes_addons_and_native_skin_settings(self):
         with ZipFile(ARCHIVE) as archive:
