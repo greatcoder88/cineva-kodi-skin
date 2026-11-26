@@ -650,7 +650,7 @@ jobs:
           ):
               errors.append("Home navigation tabs must remain transparent in both focus states")
           if nav is not None:
-              expected_down = {"1001": "9111", "1002": "9115", "1003": "9117"}
+              expected_down = {"1001": "9111", "1002": "9113", "1003": "9115", "1004": "9117", "1005": "9111"}
               for button_id, target_id in expected_down.items():
                   button = nav.find(f"./control[@id='{button_id}']")
                   if button is None or button.findtext("ondown") != f"SetFocus({target_id})":
