@@ -1907,6 +1907,24 @@ def update_xml(data, path):
                            ("textcolor", "grey"), ("label", "Choose a slot to select, change or clear its video add-on source.")):
             set_child_text(hint, tag, value)
         controls.append(hint)
+        provider_title = ET.Element("control", {"type": "label", "id": "44"})
+        for tag, value in (("left", 96), ("top", 770), ("width", 430), ("height", 42),
+                           ("font", "font16"), ("textcolor", "white"),
+                           ("label", "SEARCH PROVIDER")):
+            set_child_text(provider_title, tag, value)
+        controls.append(provider_title)
+        provider_button = ET.Element("control", {"type": "button", "id": "45"})
+        for tag, value in (("left", 520), ("top", 758), ("width", 480), ("height", 64),
+                           ("font", "font14"),
+                           ("label", " $INFO[Skin.String(Cineva.Search.Provider)] "),
+                           ("texturefocus", "hero-secondary-focus.png"),
+                           ("texturenofocus", "hero-secondary.png"),
+                           ("textcolor", "white"), ("focusedcolor", "white"),
+                           ("onclick", "RunScript(script.cineva.widgets,action=searchprovider)"),
+                           ("onup", "SetFocus(24)"), ("ondown", "SetFocus(21)"),
+                           ("onleft", "SetFocus(45)"), ("onright", "SetFocus(45)")):
+            set_child_text(provider_button, tag, value)
+        controls.append(provider_button)
     elif path == "skin.cineva/xml/Font.xml":
         fontset = root.find("./fontset[@id='Default']")
         if fontset is None:
@@ -2398,15 +2416,91 @@ def update_xml(data, path):
                     "Choose a widget from an installed video add-on, library node, or playlist. Select None to clear the slot."
                 )
     elif path == "skin.cineva/xml/custom11112.xml":
-        # Search hub: keep the search action prominent and align results to the catalogue grid.
-        for node in root.findall(".//control[@type='label']"):
-            if node.findtext("label", "").strip() == "अपना वीडियो ऐड-ऑन चुनें और उसका सर्च इंटरफ़ेस खोलें।":
-                set_child_text(node, "label", "Choose a video add-on to open its search interface.")
-        for node in root.findall(".//control[@type='button']"):
-            set_child_text(node, "texturefocus", "focus-bar.png")
-            set_child_text(node, "texturenofocus", "black.png")
-            set_child_text(node, "textcolor", "white")
-            set_child_text(node, "focusedcolor", "white")
+        # CINÉVA owns the search experience; POV/Umbrella only provide the
+        # movie and TV result directories. Keep both result rails independent.
+        controls = root.find("controls")
+        if controls is None:
+            raise SystemExit("Search window is missing its controls container")
+        for stale in list(controls):
+            controls.remove(stale)
+        default = root.find("defaultcontrol")
+        if default is None:
+            default = ET.Element("defaultcontrol")
+            root.insert(0, default)
+        default.set("always", "true")
+        default.text = "9703"
+        def add_control(kind, control_id, specs, parent=controls):
+            node = ET.SubElement(parent, "control", {"type": kind, "id": str(control_id)})
+            for tag, value in specs:
+                set_child_text(node, tag, value)
+            return node
+        add_control("image", 9700, (("left", 0), ("top", 0), ("width", 1920),
+                    ("height", 1080), ("texture", "hero-left-shade.png")))
+        add_control("label", 9703, (("left", 96), ("top", 76), ("width", 1000),
+                    ("height", 72), ("font", "font30"), ("textcolor", "white"),
+                    ("label", "SEARCH")))
+        add_control("label", 9704, (("left", 98), ("top", 154), ("width", 1200),
+                    ("height", 34), ("font", "font12"), ("textcolor", "silver"),
+                    ("label", "$INFO[Skin.String(Cineva.Search.Query)]")))
+        add_control("button", 9705, (("left", 1450), ("top", 86), ("width", 360),
+                    ("height", 64), ("font", "font14"), ("label", "NEW SEARCH"),
+                    ("texturefocus", "hero-secondary-focus.png"),
+                    ("texturenofocus", "hero-secondary.png"),
+                    ("onclick", "RunScript(script.cineva.widgets,action=search)"),
+                    ("onleft", "SetFocus(9705)"), ("onright", "SetFocus(9705)"),
+                    ("ondown", "SetFocus(9701)"), ("onup", "SetFocus(9705)")))
+        add_control("label", 9706, (("left", 96), ("top", 222), ("width", 800),
+                    ("height", 42), ("font", "font18"), ("textcolor", "white"),
+                    ("label", "MOVIES")))
+        add_control("label", 9707, (("left", 990), ("top", 222), ("width", 800),
+                    ("height", 42), ("font", "font18"), ("textcolor", "white"),
+                    ("label", "TV SHOWS")))
+        for control_id, left, path_info, up_id, right_id in (
+            (9701, 96, "Cineva.Search.MoviePath", 9705, 9702),
+            (9702, 990, "Cineva.Search.ShowPath", 9705, 9701),
+        ):
+            panel = ET.SubElement(controls, "control", {
+                "type": "panel", "id": str(control_id)
+            })
+            for tag, value in (("left", left), ("top", 278), ("width", 820),
+                               ("height", 650), ("orientation", "vertical"),
+                               ("scrolltime", 260), ("focusposition", 0),
+                               ("onup", f"SetFocus({up_id})"),
+                               ("ondown", f"SetFocus({control_id})"),
+                               ("onleft", f"SetFocus({right_id})"),
+                               ("onright", f"SetFocus({right_id})")):
+                set_child_text(panel, tag, value)
+            item_layout = ET.SubElement(panel, "itemlayout", {
+                "width": "190", "height": "300"
+            })
+            focused_layout = ET.SubElement(panel, "focusedlayout", {
+                "width": "190", "height": "300"
+            })
+            for layout, focused in ((item_layout, False), (focused_layout, True)):
+                poster = ET.SubElement(layout, "control", {"type": "image"})
+                for tag, value in (("left", 8), ("top", 4), ("width", 174),
+                                   ("height", 250), ("texture", "$INFO[ListItem.Art(poster)]"),
+                                   ("fallback", "poster-placeholder.png"),
+                                   ("aspectratio", "keep")):
+                    set_child_text(poster, tag, value)
+                if focused:
+                    overlay = ET.SubElement(layout, "control", {"type": "image"})
+                    for tag, value in (("left", 0), ("top", 0), ("width", 190),
+                                       ("height", 258), ("texture", "poster-focus.png")):
+                        set_child_text(overlay, tag, value)
+                title = ET.SubElement(layout, "control", {"type": "label"})
+                for tag, value in (("left", 8), ("top", 258), ("width", 174),
+                                   ("height", 38), ("font", "font10"),
+                                   ("textcolor", "white" if focused else "silver"),
+                                   ("label", "$INFO[ListItem.Label]"),
+                                   ("align", "left"), ("aligny", "center"),
+                                   ("wrapmultiline", "true")):
+                    set_child_text(title, tag, value)
+            content = ET.SubElement(panel, "content")
+            content.text = "$INFO[Skin.String({})]".format(path_info)
+        add_control("label", 9708, (("left", 96), ("top", 950), ("width", 1700),
+                    ("height", 34), ("font", "font11"), ("textcolor", "silver"),
+                    ("label", "Select a poster to open it in your selected video add-on. BACK returns to the previous screen.")))
     return ET.tostring(root, encoding="UTF-8", xml_declaration=True)
 
 
