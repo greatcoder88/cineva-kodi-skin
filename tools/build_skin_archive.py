@@ -13,9 +13,9 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.47.zip"
-PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.46.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.45.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.48.zip"
+PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.47.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.46.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -586,7 +586,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.47")
+        root.set("version", "0.5.48")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -677,9 +677,11 @@ def update_xml(data, path):
     elif path == "skin.cineva/xml/Home.xml":
         default = root.find("defaultcontrol")
         if default is None:
-            default = ET.Element("defaultcontrol", {"always": "true"})
+            default = ET.Element("defaultcontrol")
             root.insert(0, default)
-        default.set("always", "true")
+        # Use the Home tab on first launch, but let Kodi restore the last
+        # focused poster/rail when returning from VIEW ALL or another window.
+        default.attrib.pop("always", None)
         default.text = "1001"
         onload = root.find("onload")
         if onload is None:
@@ -2264,14 +2266,14 @@ def update_xml(data, path):
 def main():
     # Start the new distributable version from the immediately previous package.
     # Keep the older archive as a recovery fallback for shallow checkouts.
-    # Subsequent builds transform 0.5.47 in place and remain byte-stable.
+    # Subsequent builds transform 0.5.48 in place and remain byte-stable.
     if not ARCHIVE.exists():
         source_archive = PREVIOUS_ARCHIVE if PREVIOUS_ARCHIVE.is_file() else LEGACY_ARCHIVE
         if source_archive.is_file():
             ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
         raise SystemExit(
-            "Missing skin.cineva-0.5.47.zip and migration sources "
+            "Missing skin.cineva-0.5.48.zip and migration sources "
             "skin.cineva-0.5.46.zip / skin.cineva-0.5.45.zip"
         )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
@@ -2364,9 +2366,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.47":
-                        addon_root.set("version", "0.5.47")
-                        changed.append(info.filename + " (bump skin version to 0.5.47)")
+                    if addon_root.get("version") != "0.5.48":
+                        addon_root.set("version", "0.5.48")
+                        changed.append(info.filename + " (bump skin version to 0.5.48)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2374,18 +2376,18 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.47 - Fix remote Back and parent-item focus in add-on directories",
-                        "- Route Back from the native poster panel to the visible BACK control.",
-                        "- Detect Kodi's synthetic parent tile from the focused ListItem instead of a path-level flag.",
-                        "- Keep the originating window reachable after leaving a plugin directory.",
+                        "0.5.48 - Restore Home poster focus after VIEW ALL",
+                        "- Restore the last focused Home poster when returning from a plugin directory.",
+                        "- Keep Home navigation as the first-open default without forcing it on every window re-entry.",
+                        "- Preserve the originating window and selected shelf item across VIEW ALL navigation.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.47 - Fix remote Back and parent-item focus in add-on directories"):
+                    if changelog.startswith("0.5.48 - Restore Home poster focus after VIEW ALL"):
                         pass
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.47 add-on navigation changelog)")
+                        changed.append(info.filename + " (prepend 0.5.48 Home focus restoration changelog)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:
