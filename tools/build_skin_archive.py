@@ -780,8 +780,6 @@ def update_xml(data, path):
             normal.text = "hero-secondary.png"
         controls.append(group)
     elif path == "skin.cineva/xml/Home.xml":
-        root = restore_previous_home_shelf_focus(root)
-        root.set("menucontrol", "9001")
         default = root.find("defaultcontrol")
         if default is None:
             default = ET.Element("defaultcontrol")
@@ -1706,6 +1704,9 @@ def update_xml(data, path):
                            ("texture", "focus-bar.png")):
             set_child_text(startup_accent, tag, value)
         controls.append(startup_state)
+        # Apply the Up-navigation repair after all four rails have been rebuilt.
+        root = restore_previous_home_shelf_focus(root)
+        root.set("menucontrol", "9001")
     elif path == "skin.cineva/xml/Includes.xml":
         # Use RESUME for continue-watching sources and PLAY for other shelves.
         # Keep the label in a skin variable so each row's action remains one
