@@ -57,12 +57,17 @@ def png_chunk(kind, payload):
 
 
 def hero_left_shade_png():
-    """Create a deterministic left-to-right hero overlay with a soft bottom fade."""
+    """Keep a strong title-safe veil under hero copy, then fade smoothly into the artwork."""
     width, height = 1920, 440
-    horizontal_alpha = [
-        int(224 * max(0.0, 1.0 - x / (width * 0.82)) ** 1.55)
-        for x in range(width)
-    ]
+    text_safe_edge = 760
+    horizontal_alpha = []
+    for x in range(width):
+        if x <= text_safe_edge:
+            alpha = 216
+        else:
+            fade_position = (x - text_safe_edge) / (width - text_safe_edge)
+            alpha = int(216 * max(0.0, 1.0 - fade_position) ** 1.55)
+        horizontal_alpha.append(alpha)
     pixels = bytearray()
     for y in range(height):
         vertical = max(0.0, 1.0 - y / (height - 1)) ** 0.8
@@ -960,7 +965,7 @@ def update_xml(data, path):
                         # bring the synopsis up to restore a tighter editorial rhythm.
                         set_child_text(child, "top", 172)
                         set_child_text(child, "height", 56)
-                        set_child_text(child, "width", 1200)
+                        set_child_text(child, "width", 760)
                         set_child_text(child, "font", "font13")
                         set_child_text(child, "textcolor", "white")
             if group.get("type") == "group" and group.findtext("control/label", "").startswith("$INFO[Container("):
@@ -1061,9 +1066,9 @@ def update_xml(data, path):
             ET.SubElement(
                 clearlogo, "aspectratio", {"align": "left", "aligny": "center"}
             ).text = "keep"
-            # Prefer the provider's concise PlotOutline in the cinematic hero.
-            # Fall back to Plot only when no outline exists; both remain bound to
-            # the selected item in the active Home shelf.
+            # Keep plot copy inside the 760px title-safe column so it wraps
+            # before running across the focal artwork; prefer PlotOutline and fall
+            # back to Plot only when no outline exists.
             synopsis_base_id = 9400 + (row_index - 1) * 2
             synopsis_specs = (
                 (synopsis_base_id, "PlotOutline",
@@ -1077,7 +1082,7 @@ def update_xml(data, path):
                     hero_group, "control", {"type": "textbox", "id": str(synopsis_id)}
                 )
                 for tag, value in (
-                    ("left", 0), ("top", 172), ("width", 1200), ("height", 56),
+                    ("left", 0), ("top", 172), ("width", 760), ("height", 56),
                     ("font", "font13"), ("textcolor", "white"),
                     ("label", f"$INFO[Container({container_id}).ListItem.{info_label}]"),
                     ("visible", visible),
