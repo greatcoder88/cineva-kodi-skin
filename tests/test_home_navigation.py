@@ -269,6 +269,34 @@ class HomeNavigationTests(unittest.TestCase):
             self.assertEqual(button.findtext("onright"), f"SetFocus({right_id})")
 
 
+    def test_home_header_routes_into_the_matching_widget_row(self):
+        with ZipFile(ARCHIVE) as archive:
+            home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
+        nav = next(node for node in home.findall("./controls/control")
+                   if node.get("type") == "group" and node.find("./control[@id='1001']") is not None)
+        buttons = {node.get("id"): node for node in nav.findall("./control[@type='button']")}
+        expected = {"1001": "9111", "1002": "9113", "1003": "9115", "1004": "9117", "1005": "9111"}
+        for control_id, target in expected.items():
+            self.assertEqual(buttons[control_id].findtext("ondown"), f"SetFocus({target})")
+        self.assertEqual(home.get("menucontrol"), "9001")
+
+    def test_continue_watching_poster_selection_invokes_kodi_playback(self):
+        with ZipFile(ARCHIVE) as archive:
+            home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
+        row = home.find("./controls/control[@type='grouplist'][@id='9050']/control[@id='9061']")
+        shelf = row.find("./control[@type='fixedlist'][@id='9001']")
+        self.assertEqual(shelf.findtext("onclick"), "PlayMedia($INFO[ListItem.FileNameAndPath])")
+
+    def test_osd_has_a_connected_remote_focus_path_and_native_transport_actions(self):
+        with ZipFile(ARCHIVE) as archive:
+            osd = ET.fromstring(archive.read("skin.cineva/xml/VideoOSD.xml"))
+        self.assertEqual(osd.findtext("defaultcontrol"), "602")
+        left = osd.find(".//control[@type='grouplist'][@id='201']")
+        right = osd.find(".//control[@type='grouplist'][@id='202']")
+        self.assertEqual(left.findtext("onright"), "70043")
+        self.assertEqual(right.findtext("onleft"), "603")
+        self.assertEqual(osd.get("menucontrol"), "602")
+
     def test_home_header_focus_uses_transparent_tabs_and_tracking_underlines(self):
         with ZipFile(ARCHIVE) as archive:
             home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
