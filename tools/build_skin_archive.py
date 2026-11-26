@@ -13,9 +13,9 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.53.zip"
-PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.51.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.49.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.54.zip"
+PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.53.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.51.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -591,7 +591,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.53")
+        root.set("version", "0.5.54")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -600,11 +600,10 @@ def update_xml(data, path):
     elif path in {
         "skin.cineva/xml/MyMusicNav.xml",
         "skin.cineva/xml/MyPrograms.xml",
-        "skin.cineva/xml/FileManager.xml",
     }:
-        # Media windows need an explicit registered view. A panel with id=50
-        # alone is not enough: Kodi otherwise opens the window but cannot focus
-        # the directory container (the blank add-on-content screen).
+        # These media windows use the native directory container 50.
+        # FileManager is deliberately excluded: Kodi's native File Manager is
+        # a dual-pane window (controls 20 and 21), not a media-view window.
         views = root.find("views")
         if views is None:
             views = ET.Element("views")
@@ -618,6 +617,18 @@ def update_xml(data, path):
             root.insert(0, default)
         default.set("always", "true")
         default.text = "50"
+    elif path == "skin.cineva/xml/FileManager.xml":
+        # Restore Kodi's native dual-pane focus model; a forced container 50
+        # has no corresponding control and produces a completely blank screen.
+        views = root.find("views")
+        if views is not None:
+            root.remove(views)
+        default = root.find("defaultcontrol")
+        if default is None:
+            default = ET.Element("defaultcontrol", {"always": "true"})
+            root.insert(0, default)
+        default.set("always", "true")
+        default.text = "20"
     elif path in {
         "skin.cineva/xml/FileBrowser.xml",
         "skin.cineva/xml/DialogAddonSettings.xml",
