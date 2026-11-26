@@ -2147,7 +2147,7 @@ jobs:
             state = gui()
             item_label = info.get("Container(50).ListItem.Label", "").strip()
             control_label = state.get("currentcontrol", {}).get("label", "").strip()
-            return item_label or control_label, state, info
+            return (control_label if control_label and control_label.upper() != "BACK" else item_label), state, info
           initial_pov_label, initial_pov_state, initial_pov_labels = pov_selection_state()
           if not initial_pov_label or initial_pov_label.upper() == "BACK" or initial_pov_label == "..":
             raise SystemExit(
