@@ -5,7 +5,7 @@ from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.62.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.63.zip"
 HUB_WINDOW = "skin.cineva/xml/CinevaWidgetHub.xml"
 
 
@@ -108,6 +108,23 @@ class HomeNavigationTests(unittest.TestCase):
                 [("302", "top"), ("316", "top")],
                 f"Home row {index} must keep inactive and focused titles anchored to their poster edges",
             )
+            detached_accents = [
+                node for node in focused.findall("./control[@type='image']")
+                if node.findtext("texture") == "focus-bar.png"
+            ]
+            self.assertEqual(
+                detached_accents, [],
+                f"Home row {index} must not add a detached underline below its focused poster",
+            )
+            focused_art = next(
+                (node for node in focused.findall("./control[@type='image']")
+                 if node.find("bordertexture") is not None),
+                None,
+            )
+            self.assertIsNotNone(focused_art, f"Home row {index} must retain its visible poster focus border")
+            self.assertEqual(focused_art.findtext("bordertexture"), "poster-focus.png")
+            zoom = focused_art.find("./animation[@effect='zoom']")
+            self.assertIsNotNone(zoom, f"Home row {index} must retain its restrained focused-poster zoom")
 
     def test_each_configured_home_row_has_a_focusable_view_all_action(self):
         with ZipFile(ARCHIVE) as archive:

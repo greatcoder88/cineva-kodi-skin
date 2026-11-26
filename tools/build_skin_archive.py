@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.62.zip"
-PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.61.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.63.zip"
+PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.62.zip"
 LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.58.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
@@ -690,7 +690,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.62")
+        root.set("version", "0.5.63")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -1914,14 +1914,12 @@ def update_xml(data, path):
                 active_label.remove(stale_multiline)
             set_child_text(active_label, "visible", f"Control.HasFocus({container_id})")
             set_child_text(clone_progress, "visible", f"Control.HasFocus({container_id}) + ListItem.IsResumable")
-            focus_accent = ET.Element("control", {"type": "image"})
-            for tag, value in (("left", 84), ("top", 430), ("width", 80), ("height", 4)):
-                set_child_text(focus_accent, tag, value)
-            set_child_text(focus_accent, "texture", "focus-bar.png")
-            set_child_text(focus_accent, "visible", f"Control.HasFocus({container_id})")
+            # The crimson poster border and short focus zoom already identify
+            # the selected card. Do not add a second underline at the bottom of
+            # the 440px item: on lower rails it reads as a detached screen-edge bar.
             for child in list(clone.findall("control")):
                 clone.remove(child)
-            for child in (fallback_image, active_image, fallback_label, active_label, fallback_progress, clone_progress, focus_accent):
+            for child in (fallback_image, active_image, fallback_label, active_label, fallback_progress, clone_progress):
                 clone.append(child)
             # Each Home rail gets its own item include. When a lower rail is
             # focused, the earlier rail must remain a valid D-pad target, but
@@ -2715,14 +2713,14 @@ def update_xml(data, path):
 def main():
     # Start the new distributable version from the immediately previous package.
     # Keep the older archive as a recovery fallback for shallow checkouts.
-    # Subsequent builds transform 0.5.62 in place and remain byte-stable.
+    # Subsequent builds transform 0.5.63 in place and remain byte-stable.
     if not ARCHIVE.exists():
         source_archive = PREVIOUS_ARCHIVE if PREVIOUS_ARCHIVE.is_file() else LEGACY_ARCHIVE
         if source_archive.is_file():
             ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
         raise SystemExit(
-            "Missing skin.cineva-0.5.62.zip and migration sources skin.cineva-0.5.61.zip / "
+            "Missing skin.cineva-0.5.63.zip and migration sources skin.cineva-0.5.62.zip / "
             "skin.cineva-0.5.58.zip"
         )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
@@ -2819,9 +2817,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.62":
-                        addon_root.set("version", "0.5.62")
-                        changed.append(info.filename + " (bump skin version to 0.5.62)")
+                    if addon_root.get("version") != "0.5.63":
+                        addon_root.set("version", "0.5.63")
+                        changed.append(info.filename + " (bump skin version to 0.5.63)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2835,6 +2833,9 @@ def main():
                         data = changelog.encode("utf-8")
                         changed.append(info.filename + " (refresh 0.5.58 release notes)")
                     release_entries = [
+                        ("0.5.63", "0.5.63 - Simplify the focused Home poster state
+- Remove the detached red underline below selected posters; the crimson artwork border and restrained zoom remain the focus cue.
+- Keep the multi-line caption and resume progress layout clean across all four Home rails."),
                         ("0.5.62", "0.5.62 - Restore the Home shelf viewport after top-level navigation\n- Bring the first configured Home shelf back into view before opening Movies, TV Shows, Search or Settings.\n- Restore the activated navigation tab before leaving so returning to Home keeps the hero and poster rail aligned."),
                         ("0.5.61", "0.5.61 - Match Home hero context to the selected shelf\n- Label the first in-progress movie rail CONTINUE WATCHING and the second in-progress TV rail IN PROGRESS.\n- Keep trending and custom collection labels source-aware across all four Home rows."),
                         ("0.5.60", "0.5.60 - Give Home heroes concise provider taglines\n- Prefer a supplied ListItem.Tagline for the selected poster before PlotOutline and full Plot fallbacks.\n- Keep all three synopsis sources in the same title-safe hero band so the copy updates with each focused item."),
