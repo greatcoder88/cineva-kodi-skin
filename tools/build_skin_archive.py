@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.34.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.33.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.35.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.34.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -585,12 +585,86 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.34")
+        root.set("version", "0.5.35")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
     elif path == "skin.cineva/xml/SettingsCategory.xml":
         root = settings_category_template()
+    elif path in {
+        "skin.cineva/xml/MyVideoNav.xml",
+        "skin.cineva/xml/MyMusicNav.xml",
+        "skin.cineva/xml/MyPrograms.xml",
+        "skin.cineva/xml/FileManager.xml",
+    }:
+        # Media windows need an explicit registered view. A panel with id=50
+        # alone is not enough: Kodi otherwise opens the window but cannot focus
+        # the directory container (the blank add-on-content screen).
+        views = root.find("views")
+        if views is None:
+            views = ET.Element("views")
+            default = root.find("defaultcontrol")
+            insert_at = list(root).index(default) + 1 if default is not None else 0
+            root.insert(insert_at, views)
+        views.text = "50"
+        default = root.find("defaultcontrol")
+        if default is None:
+            default = ET.Element("defaultcontrol", {"always": "true"})
+            root.insert(0, default)
+        default.set("always", "true")
+        default.text = "50"
+    elif path in {
+        "skin.cineva/xml/FileBrowser.xml",
+        "skin.cineva/xml/DialogAddonSettings.xml",
+    }:
+        # These dialogs render their selectable list in panel 3, not panel 50.
+        default = root.find("defaultcontrol")
+        if default is None:
+            default = ET.Element("defaultcontrol", {"always": "true"})
+            root.insert(0, default)
+        default.set("always", "true")
+        default.text = "3"
+    elif path == "skin.cineva/xml/DialogAddonInfo.xml":
+        # Kodi opens this dialog when the user selects a particular add-on.
+        # Its original default control 50 did not exist, so the info screen
+        # opened without focus and presented as a blank dead end.
+        default = root.find("defaultcontrol")
+        if default is None:
+            default = ET.Element("defaultcontrol", {"always": "true"})
+            root.insert(0, default)
+        default.set("always", "true")
+        default.text = "9000"
+        controls = root.find("controls")
+        if controls is None:
+            controls = ET.SubElement(root, "controls")
+        for stale in list(controls.findall("control")):
+            if stale.get("id") == "9000":
+                controls.remove(stale)
+        group = ET.Element("control", {"type": "grouplist", "id": "9000"})
+        for tag, value in (("left", 96), ("top", 820), ("width", 1728), ("height", 150),
+                           ("orientation", "horizontal"), ("itemgap", 18),
+                           ("onleft", "9000"), ("onright", "9000"),
+                           ("onup", "9000"), ("ondown", "9000")):
+            set_child_text(group, tag, value)
+        for control_id, label, control_type in (
+            ("12", "OPEN ADD-ON", "button"),
+            ("9", "CONFIGURE", "button"),
+            ("10", "MORE INFO", "button"),
+            ("7", "ENABLE / DISABLE", "radiobutton"),
+            ("8", "INSTALL", "button"),
+            ("14", "UPDATE", "button"),
+            ("6", "UNINSTALL", "radiobutton"),
+        ):
+            button = ET.SubElement(group, "control", {"type": control_type, "id": control_id})
+            for tag, value in (("width", 220), ("height", 120), ("font", "font12"),
+                               ("label", label), ("align", "center"), ("aligny", "center"),
+                               ("textcolor", "silver"), ("focusedcolor", "white")):
+                set_child_text(button, tag, value)
+            focus = ET.SubElement(button, "texturefocus", {"border": "8"})
+            focus.text = "hero-secondary-focus.png"
+            normal = ET.SubElement(button, "texturenofocus", {"border": "8"})
+            normal.text = "hero-secondary.png"
+        controls.append(group)
     elif path == "skin.cineva/xml/Home.xml":
         default = root.find("defaultcontrol")
         if default is None:
@@ -2063,7 +2137,7 @@ def main():
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.34.zip and migration source skin.cineva-0.5.33.zip")
+        raise SystemExit("Missing skin.cineva-0.5.35.zip and migration source skin.cineva-0.5.34.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -2080,6 +2154,12 @@ def main():
                 "skin.cineva/xml/Settings.xml",
                 "skin.cineva/xml/SettingsCategory.xml",
                 "skin.cineva/xml/AddonBrowser.xml",
+                "skin.cineva/xml/DialogAddonInfo.xml",
+                "skin.cineva/xml/DialogAddonSettings.xml",
+                "skin.cineva/xml/FileBrowser.xml",
+                "skin.cineva/xml/FileManager.xml",
+                "skin.cineva/xml/MyMusicNav.xml",
+                "skin.cineva/xml/MyPrograms.xml",
                 "skin.cineva/xml/Font.xml",
                 "skin.cineva/xml/MyVideoNav.xml",
                 "skin.cineva/xml/DialogVideoInfo.xml",
@@ -2148,8 +2228,8 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.34":
-                        addon_root.set("version", "0.5.34")
+                    if addon_root.get("version") != "0.5.35":
+                        addon_root.set("version", "0.5.35")
                         changed.append(info.filename + " (bump skin version to 0.5.34)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
