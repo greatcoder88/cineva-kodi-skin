@@ -1184,7 +1184,7 @@ jobs:
             view_all_state = gui()
             while time.time() < deadline:
               view_control = view_all_state.get("currentcontrol", {})
-              if str(view_control.get("id", "")) == "9160" and view_control.get("label", "").strip().upper() == "VIEW ALL":
+              if view_control.get("label", "").strip().upper() == "VIEW ALL":
                 break
               time.sleep(0.2)
               view_all_state = gui()
@@ -1205,22 +1205,26 @@ jobs:
               time.sleep(0.25)
             if view_all_count < 1:
               raise SystemExit(f"Home VIEW ALL did not open the configured widget directory: {view_all_items}; GUI={gui()}")
+            first_view_all_item = rpc("XBMC.GetInfoLabels", {"labels":["Container(50).ListItem.Label"]}).get("Container(50).ListItem.Label", "").strip()
+            expected_first_item = str(first_row_items[0].get("label", "")).strip()
+            if view_all_count != len(first_row_items) or first_view_all_item != expected_first_item:
+              raise SystemExit(f"Home VIEW ALL opened the wrong configured widget path: count={view_all_count}, first={first_view_all_item!r}, expected={expected_first_item!r}")
             press("Down")
             deadline = time.time() + 5
             view_all_focus = gui()
             while time.time() < deadline:
               current = view_all_focus.get("currentcontrol", {})
-              if view_all_focus.get("currentwindow", {}).get("id") == 10025 and str(current.get("id", "")) == "50":
+              if view_all_focus.get("currentwindow", {}).get("id") == 10025 and current.get("label", "").strip() == expected_first_item:
                 break
               time.sleep(0.2)
               view_all_focus = gui()
             else:
-              raise SystemExit(f"Home VIEW ALL opened its directory but D-pad Down did not focus panel 50: {view_all_focus}")
+              raise SystemExit(f"Home VIEW ALL opened its directory but D-pad Down did not focus the first poster: {view_all_focus}")
             print(f"Verified Home VIEW ALL opens the configured plugin directory and enters its native poster panel: {view_all_count} items.")
             press("Escape")
             wait_for_window(10000)
             returned_home = gui()
-            if str(returned_home.get("currentcontrol", {}).get("id", "")) == "9160":
+            if returned_home.get("currentcontrol", {}).get("label", "").strip().upper() == "VIEW ALL":
               press("Down")
             deadline = time.time() + 5
             while time.time() < deadline:
