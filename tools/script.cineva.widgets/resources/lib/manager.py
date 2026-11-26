@@ -239,15 +239,15 @@ class WidgetManager:
 
     def configure_search_provider(self):
         current = self.search_provider()
-        choices = ['POV' + ('  ✓' if current == 'pov' else ''),
-                   'Umbrella' + ('  ✓' if current == 'umbrella' else '')]
-        selected = self.dialog.select('CINÉVA · Search provider', choices)
+        # POV is the only exposed provider in this release. Keep provider
+        # routing centralized so Umbrella can be added later without changing
+        # the search screen or its result containers.
+        selected = self.dialog.select('CINÉVA · Search provider', ['POV  ✓'])
         if selected < 0:
             return
-        provider = ('pov', 'umbrella')[selected]
+        provider = 'pov'
         xbmc.executebuiltin('Skin.SetString(Cineva.Search.Provider,{})'.format(provider))
-        xbmc.executebuiltin('Notification(CINÉVA,Search provider: {},3000)'.format(
-            'POV' if provider == 'pov' else 'Umbrella'))
+        xbmc.executebuiltin('Notification(CINÉVA,Search provider: POV,3000)')
 
     def search(self):
         provider = self.search_provider()
@@ -256,12 +256,8 @@ class WidgetManager:
             return
         from urllib.parse import quote_plus
         term = quote_plus(query.strip().encode('utf-8'))
-        if provider == 'umbrella':
-            movie = 'plugin://plugin.video.umbrella/?action=movieSearchterm&name=' + term
-            tv = 'plugin://plugin.video.umbrella/?action=tvSearchterm&name=' + term
-        else:
-            movie = 'plugin://plugin.video.pov/?mode=build_movie_list&action=tmdb_movies_search&query=' + term
-            tv = 'plugin://plugin.video.pov/?mode=build_tvshow_list&action=tmdb_tv_search&query=' + term
+        movie = 'plugin://plugin.video.pov/?mode=build_movie_list&action=tmdb_movies_search&query=' + term
+        tv = 'plugin://plugin.video.pov/?mode=build_tvshow_list&action=tmdb_tv_search&query=' + term
         xbmc.executebuiltin('Skin.SetString(Cineva.Search.Query,{})'.format(
             json.dumps(query.strip(), ensure_ascii=False)))
         xbmc.executebuiltin('Skin.SetString(Cineva.Search.MoviePath,{})'.format(
