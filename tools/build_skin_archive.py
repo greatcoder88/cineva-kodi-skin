@@ -14,7 +14,7 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 ARCHIVE = ROOT / "skin.cineva-0.5.34.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.34.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.33.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -560,18 +560,18 @@ def settings_category_template():
       <control type="image"><left>0</left><top>188</top><right>96</right><height>2</height><texture colordiffuse="button_focus" border="2">dialogs/separator-grey.png</texture></control>
       <control type="image"><left>0</left><bottom>116</bottom><right>96</right><height>2</height><texture colordiffuse="button_focus" border="2">dialogs/separator-grey.png</texture></control>
     </control>
-    <control type="button" id="7"><description>Default setting button</description><include>DefaultSettingButton</include></control>
-    <control type="radiobutton" id="8"><description>Default setting toggle</description><include>DefaultSettingButton</include></control>
-    <control type="spincontrolex" id="9"><description>Default setting spinner</description><include>DefaultSettingButton</include><aligny>center</aligny></control>
-    <control type="sliderex" id="13"><description>Default setting slider</description><include>DefaultSettingButton</include><aligny>center</aligny></control>
+    <control type="button" id="7"><description>Default setting button</description><left>0</left><width>1180</width><height>64</height><font>font14</font><aligny>center</aligny><textoffsetx>24</textoffsetx><texturefocus border="8">hero-secondary-focus.png</texturefocus><texturenofocus border="8">hero-secondary.png</texturenofocus><textcolor>silver</textcolor><focusedcolor>white</focusedcolor></control>
+    <control type="radiobutton" id="8"><description>Default setting toggle</description><left>0</left><width>1180</width><height>64</height><font>font14</font><aligny>center</aligny><textoffsetx>24</textoffsetx><texturefocus border="8">hero-secondary-focus.png</texturefocus><texturenofocus border="8">hero-secondary.png</texturenofocus><textcolor>silver</textcolor><focusedcolor>white</focusedcolor></control>
+    <control type="spincontrolex" id="9"><description>Default setting spinner</description><left>0</left><width>1180</width><height>64</height><font>font14</font><aligny>center</aligny><textoffsetx>24</textoffsetx><texturefocus border="8">hero-secondary-focus.png</texturefocus><texturenofocus border="8">hero-secondary.png</texturenofocus><textcolor>silver</textcolor><focusedcolor>white</focusedcolor></control>
+    <control type="sliderex" id="13"><description>Default setting slider</description><left>0</left><width>1180</width><height>64</height><font>font14</font><aligny>center</aligny><texturefocus border="8">hero-secondary-focus.png</texturefocus><texturenofocus border="8">hero-secondary.png</texturenofocus><textcolor>silver</textcolor><focusedcolor>white</focusedcolor></control>
     <control type="image" id="11"><description>Setting separator</description><height>3</height><texture colordiffuse="AAAAAAAA" border="3">dialogs/separator-grey.png</texture></control>
     <control type="label" id="14"><description>Setting section label</description><width>1180</width><textoffsetx>28</textoffsetx><top>0</top><height>50</height><label></label><align>left</align><aligny>center</aligny><font>font18</font><textcolor>silver</textcolor><shadowcolor>black</shadowcolor></control>
-    <control type="colorbutton" id="15"><description>Default setting color button</description><include>DefaultSettingButton</include></control>
+    <control type="colorbutton" id="15"><description>Default setting color button</description><left>0</left><width>1180</width><height>64</height><font>font14</font><aligny>center</aligny><textoffsetx>24</textoffsetx><texturefocus border="8">hero-secondary-focus.png</texturefocus><texturenofocus border="8">hero-secondary.png</texturenofocus><textcolor>silver</textcolor><focusedcolor>white</focusedcolor></control>
     <control type="group">
       <left>96</left><top>210</top><width>420</width><height>760</height>
       <control type="grouplist" id="3"><description>Settings category navigation</description><left>0</left><top>0</top><width>420</width><height>650</height><onleft>5</onleft><onright>5</onright><onup>3</onup><ondown>3</ondown></control>
       <control type="button" id="10"><description>Default category button</description><left>0</left><width>420</width><height>72</height><textoffsetx>28</textoffsetx><aligny>center</aligny><font>font16</font><texturefocus colordiffuse="button_focus" border="8">hero-secondary-focus.png</texturefocus><texturenofocus border="8">hero-secondary.png</texturenofocus><textcolor>silver</textcolor><focusedcolor>white</focusedcolor></control>
-      <control type="radiobutton" id="20"><description>Settings level selector</description><left>0</left><top>680</top><width>420</width><height>64</height><label>SETTINGS LEVEL</label><include>DefaultSettingButton</include><onclick>SettingsLevelChange</onclick><onleft>5</onleft><onright>5</onright><onup>3</onup><ondown>3</ondown></control>
+      <control type="radiobutton" id="20"><description>Settings level selector</description><left>0</left><top>680</top><width>420</width><height>64</height><label>SETTINGS LEVEL</label><font>font14</font><textcolor>silver</textcolor><focusedcolor>white</focusedcolor><aligny>center</aligny><textoffsetx>24</textoffsetx><texturefocus border="8">hero-secondary-focus.png</texturefocus><texturenofocus border="8">hero-secondary.png</texturenofocus><onclick>SettingsLevelChange</onclick><onleft>5</onleft><onright>5</onright><onup>3</onup><ondown>3</ondown></control>
     </control>
     <control type="group"><right>0</right><top>210</top><bottom>120</bottom><width>60</width>
       <control type="scrollbar" id="60"><right>18</right><top>0</top><bottom>0</bottom><width>12</width><orientation>vertical</orientation><texturesliderbackground /><onleft>5</onleft><onright>5</onright></control>
@@ -2063,7 +2063,7 @@ def main():
     if not ARCHIVE.exists() and LEGACY_ARCHIVE.is_file():
         ARCHIVE.write_bytes(LEGACY_ARCHIVE.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
-        raise SystemExit("Missing skin.cineva-0.5.34.zip and migration source skin.cineva-0.5.34.zip")
+        raise SystemExit("Missing skin.cineva-0.5.34.zip and migration source skin.cineva-0.5.33.zip")
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
     tmp = Path(tmp_name)
@@ -2168,7 +2168,7 @@ def main():
                         pass
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.34 Home poster rail changelog)")
+                        changed.append(info.filename + " (prepend 0.5.34 Interface settings changelog)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:
