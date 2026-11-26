@@ -29,6 +29,46 @@ SHOWS = [
     ("Succession", 2018, "Drama"),
 ]
 
+TAGLINES = {
+    "The Shawshank Redemption: Special Collector's Edition": "Hope can survive even behind the thickest walls.",
+    "The Dark Knight": "When the city needs a hero, chaos answers first.",
+    "Interstellar": "The farthest journey begins with a promise to come home.",
+    "Inception": "An idea can change everything, even inside a dream.",
+    "The Matrix": "The world you know is only a carefully built illusion.",
+    "Dune: Part Two": "A desert destiny rises with the power of a legend.",
+    "Oppenheimer": "One discovery changes the world, then changes its maker.",
+    "Barbie": "A perfect world changes when one question is asked.",
+    "Breaking Bad": "A second life takes a chemistry teacher beyond control.",
+    "Dark": "Four families uncover a mystery that spans generations.",
+    "Severance": "Two separate lives share one unsettling secret.",
+    "The Last of Us": "A fragile bond becomes humanity's last hope.",
+    "The Bear": "A young chef returns home to rebuild a restaurant and himself.",
+    "Sherlock": "A brilliant detective sees what everyone else misses.",
+    "Game of Thrones": "Great houses battle for power in a world of dragons.",
+    "Succession": "A media empire becomes a battlefield for its heirs.",
+}
+PLOTS = {
+    "The Shawshank Redemption: Special Collector's Edition": "A banker sentenced for a crime he did not commit builds an unlikely friendship and a quiet plan for freedom.",
+    "The Dark Knight": "Batman faces a criminal mastermind whose escalating attacks push Gotham and its heroes to their limits.",
+    "Interstellar": "A team of explorers travels beyond this galaxy to discover whether mankind has a future among the stars.",
+    "Inception": "A skilled thief enters dreams to steal secrets, then takes on an impossible job: plant an idea.",
+    "The Matrix": "A computer hacker discovers that reality is a simulation and joins a rebellion against the machines controlling it.",
+    "Dune: Part Two": "Paul Atreides unites with Chani and the Fremen while seeking revenge and confronting a destiny that could reshape the universe.",
+    "Oppenheimer": "Theoretical physicist J. Robert Oppenheimer leads the Manhattan Project and wrestles with the consequences of creating the atomic bomb.",
+    "Barbie": "After leaving Barbieland, Barbie and Ken discover the joys and complications of life in the real world.",
+    "Breaking Bad": "A high-school chemistry teacher enters the criminal underworld, changing his family and himself forever.",
+    "Dark": "A missing child exposes secrets connecting four families across several generations in a small German town.",
+    "Severance": "Employees at Lumon undergo a procedure that separates their work memories from their personal lives.",
+    "The Last of Us": "A hardened survivor escorts a teenage girl across a dangerous post-pandemic America.",
+    "The Bear": "A fine-dining chef returns to Chicago to run his family's sandwich shop while navigating grief and a demanding kitchen.",
+    "Sherlock": "A consulting detective and his flatmate solve unusual crimes across modern-day London.",
+    "Game of Thrones": "Noble families struggle for the Iron Throne as an ancient threat gathers beyond the northern border.",
+    "Succession": "The children of a powerful media owner compete for control as their family's empire faces an uncertain future.",
+}
+PLOT_OUTLINES = {
+    "Inception": "A skilled thief enters dreams to steal secrets, then takes on an impossible job: plant an idea."
+}
+
 
 def main():
     handle = int(sys.argv[1])
@@ -63,17 +103,9 @@ def main():
             "genre": genre,
             "mediatype": "tvshow" if is_tv else "movie",
             "rating": 8.4,
-            "plot": (
-                "Framed for a murder he did not commit, a banker finds hope and friendship while enduring a brutal prison sentence."
-                if title == "The Shawshank Redemption: Special Collector's Edition" else
-                "A high-school chemistry teacher enters the criminal underworld, changing his family and himself forever."
-                if title == "Breaking Bad" else
-                "A richly detailed story of impossible choices, loyalty, and the consequences that follow."
-            ),
-            "plotoutline": (
-                "A skilled thief enters dreams to steal secrets, then takes on an impossible job: plant an idea."
-                if title == "Inception" else ""
-            ),
+            "tagline": TAGLINES[title],
+            "plot": PLOTS[title],
+            "plotoutline": PLOT_OUTLINES.get(title, ""),
         }
         if is_tv and "in_progress" in action:
             video_info["season"] = 2
