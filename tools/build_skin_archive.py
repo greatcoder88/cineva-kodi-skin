@@ -1261,9 +1261,22 @@ def update_xml(data, path):
             if index == 1:
                 set_child_text(shelf, "onup", f"SetFocus({view_all_id})")
             else:
+                # Prefer the nearest populated shelf. If a configured shelf above
+                # is still empty (or its add-on returned no items), route to that
+                # shelf's visible VIEW ALL action rather than focusing an empty list.
                 for previous_index in range(index - 1, 0, -1):
-                    previous_up = ET.SubElement(shelf, "onup", {"condition": f"!String.IsEmpty(Container({9000 + previous_index}).ListItem.Label)"})
-                    previous_up.text = f"SetFocus({9000 + previous_index})"
+                    previous_container = 9000 + previous_index
+                    previous_view_all = 9159 + previous_index
+                    populated = ET.SubElement(
+                        shelf, "onup",
+                        {"condition": f"Integer.IsGreater(Container({previous_container}).NumItems,0)"}
+                    )
+                    populated.text = f"SetFocus({previous_container})"
+                    configured = ET.SubElement(
+                        shelf, "onup",
+                        {"condition": f"!String.IsEmpty(Skin.String(Cineva.Widget{previous_index}.Path))"}
+                    )
+                    configured.text = f"SetFocus({previous_view_all})"
                 ET.SubElement(shelf, "onup").text = f"SetFocus({view_all_id})"
             set_child_text(shelf, "ondown", f"SetFocus({next_target})")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
@@ -1325,6 +1338,69 @@ def update_xml(data, path):
             row_group.append(view_all)
             row_group.append(row_accent)
             row_group.append(shelf)
+
+            # Non-focusable loading artwork occupies the exact poster-rail area.
+            # It is shown only for a configured widget while Kodi is updating an
+            # empty container, so intentional blank slots remain genuinely blank.
+            loading = ET.Element("control", {"type": "group", "id": str(9400 + index)})
+            loading_visible = (
+                f"{base_row_visibility} + Container({container_id}).IsUpdating"
+                f" + Integer.IsEqual(Container({container_id}).NumItems,0)"
+            )
+            for tag, value in (("left", 0), ("top", 55), ("width", 1860), ("height", 440),
+                               ("visible", loading_visible)):
+                set_child_text(loading, tag, value)
+            loading_title = ET.SubElement(loading, "control", {"type": "label", "id": str(9410 + index)})
+            for tag, value in (("left", 0), ("top", 0), ("width", 620), ("height", 34),
+                               ("font", "font12"), ("textcolor", "FFE50914"),
+                               ("label", "LOADING YOUR TITLES"), ("align", "left"),
+                               ("aligny", "center")):
+                set_child_text(loading_title, tag, value)
+            loading_hint = ET.SubElement(loading, "control", {"type": "label", "id": str(9420 + index)})
+            for tag, value in (("left", 0), ("top", 34), ("width", 900), ("height", 30),
+                               ("font", "font10"), ("textcolor", "FFB8BBC4"),
+                               ("label", "CONNECTING TO YOUR VIDEO ADD-ON"),
+                               ("align", "left"), ("aligny", "center")):
+                set_child_text(loading_hint, tag, value)
+            for placeholder_index in range(5):
+                placeholder = ET.SubElement(
+                    loading, "control",
+                    {"type": "image", "id": str(9430 + index * 5 + placeholder_index)}
+                )
+                for tag, value in (
+                    ("left", placeholder_index * 256), ("top", 76),
+                    ("width", 232), ("height", 348),
+                    ("texture", "poster-placeholder.png"),
+                ):
+                    set_child_text(placeholder, tag, value)
+                ET.SubElement(
+                    placeholder, "aspectratio", {"align": "center", "aligny": "center"}
+                ).text = "keep"
+            row_group.append(loading)
+
+            # A completed empty response is not a loading screen. Explain why
+            # the shelf is empty without inventing an add-on-specific error.
+            empty_state = ET.Element("control", {"type": "group", "id": str(9450 + index)})
+            empty_visible = (
+                f"{base_row_visibility} + !Container({container_id}).IsUpdating"
+                f" + Integer.IsEqual(Container({container_id}).NumItems,0)"
+            )
+            for tag, value in (("left", 0), ("top", 112), ("width", 1100), ("height", 110),
+                               ("visible", empty_visible)):
+                set_child_text(empty_state, tag, value)
+            empty_label = ET.SubElement(empty_state, "control", {"type": "label", "id": str(9460 + index)})
+            for tag, value in (("left", 0), ("top", 0), ("width", 1000), ("height", 42),
+                               ("font", "font16"), ("textcolor", "white"),
+                               ("label", "NO TITLES AVAILABLE"), ("align", "left"),
+                               ("aligny", "center")):
+                set_child_text(empty_label, tag, value)
+            empty_hint = ET.SubElement(empty_state, "control", {"type": "label", "id": str(9470 + index)})
+            for tag, value in (("left", 0), ("top", 42), ("width", 1100), ("height", 38),
+                               ("font", "font11"), ("textcolor", "FFB8BBC4"),
+                               ("label", "Check this add-on or choose a different widget in CINÉVA Skin Settings."),
+                               ("align", "left"), ("aligny", "center")):
+                set_child_text(empty_hint, tag, value)
+            row_group.append(empty_state)
             # Show live horizontal position only while this shelf owns focus.
             # Directional chevrons appear only when Kodi reports another page,
             # so the cue never suggests scrolling past the end of a short list.
