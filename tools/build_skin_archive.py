@@ -2238,17 +2238,18 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.34 - Restore the native Kodi Interface settings screen",
-                        "- Rebuild SettingsCategory.xml with Kodi’s dynamic category and setting-control prototypes.",
-                        "- Restore category navigation, option controls, settings-level selector, description panel and scrollbar in CINÉVA styling.",
+                        "0.5.35 - Restore working navigation inside Kodi add-ons and media windows",
+                        "- Register the native view containers so video add-on directories can receive D-pad focus and render their items.",
+                        "- Repair missing default-focus targets in add-on information/settings and file-browser dialogs.",
+                        "- Give the add-on information dialog real focusable Kodi action controls instead of an empty dead end.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.34 - Restore the native Kodi Interface settings screen"):
+                    if changelog.startswith("0.5.35 - Restore working navigation inside Kodi add-ons and media windows"):
                         pass
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.34 Interface settings changelog)")
+                        changed.append(info.filename + " (prepend 0.5.35 add-on navigation changelog)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:
