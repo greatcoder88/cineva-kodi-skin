@@ -4,7 +4,7 @@ from zipfile import ZipFile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.39.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.40.zip"
 XML = "skin.cineva/xml/"
 
 
@@ -23,12 +23,11 @@ class KodiNavigationWindowTests(unittest.TestCase):
                     self.assertEqual(back_control.findtext("label"), "BACK")
                     self.assertEqual(back_control.findtext("onclick"), "PreviousMenu")
                     self.assertEqual(
-                        [(node.get("condition"), node.text) for node in back_control.findall("ondown")],
-                        [
-                            ("Integer.IsGreater(Container(50).NumItems,0)", "SetFocus(50)"),
-                            (None, "SetFocus(49)"),
-                        ],
+                        [node.text for node in back_control.findall("ondown")],
+                        ["50"],
                     )
+                    panel = root.find(".//control[@type='panel'][@id='50']")
+                    self.assertEqual(panel.findtext("onup"), "49")
                 else:
                     self.assertEqual(root.findtext("defaultcontrol"), "50", filename)
                 self.assertIsNotNone(

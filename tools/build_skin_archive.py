@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.39.zip"
-PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.38.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.40.zip"
+PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.39.zip"
 LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.35.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
@@ -586,7 +586,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.39")
+        root.set("version", "0.5.40")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -1805,9 +1805,9 @@ def update_xml(data, path):
         ET.SubElement(controls, "include").text = "CinevaTopBar"
     elif path == "skin.cineva/xml/MyVideoNav.xml":
         # Kodi initializes MyVideoNav before an asynchronous plugin URL has
-        # populated Container(50). A panel cannot receive initial focus while
-        # empty, so use a real, visible parent-navigation button as the safe
-        # default and move into panel 50 only after its first item is available.
+        # populated Container(50). Keep the visible Back button as the safe
+        # default, then use Kodi's native control-ID navigation once the user
+        # presses Down. The panel returns to Back when moving Up off its first row.
         views = root.find("views")
         if views is None:
             views = ET.Element("views")
@@ -1871,12 +1871,10 @@ def update_xml(data, path):
             focus_texture.text = "hero-secondary-focus.png"
             normal_texture = ET.SubElement(back_button, "texturenofocus", {"border": "8"})
             normal_texture.text = "hero-secondary.png"
-            enter_list = ET.SubElement(
-                back_button, "ondown",
-                {"condition": "Integer.IsGreater(Container(50).NumItems,0)"}
-            )
-            enter_list.text = "SetFocus(50)"
-            ET.SubElement(back_button, "ondown").text = "SetFocus(49)"
+            ET.SubElement(back_button, "ondown").text = "50"
+            panel = controls.find("./control[@type='panel'][@id='50']")
+            if panel is not None:
+                set_child_text(panel, "onup", "49")
         # Unified cinematic catalogue: larger portrait cards, generous gutters,
         # restrained metadata and a full-width grid that uses the screen.
         panel = root.find("./controls/control[@type='panel']")
@@ -2216,14 +2214,14 @@ def update_xml(data, path):
 def main():
     # Start the new distributable version from the immediately previous package.
     # Keep the older archive as a recovery fallback for shallow checkouts.
-    # Subsequent builds transform 0.5.39 in place and remain byte-stable.
+    # Subsequent builds transform 0.5.40 in place and remain byte-stable.
     if not ARCHIVE.exists():
         source_archive = PREVIOUS_ARCHIVE if PREVIOUS_ARCHIVE.is_file() else LEGACY_ARCHIVE
         if source_archive.is_file():
             ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
         raise SystemExit(
-            "Missing skin.cineva-0.5.39.zip and migration sources "
+            "Missing skin.cineva-0.5.40.zip and migration sources "
             "skin.cineva-0.5.38.zip / skin.cineva-0.5.35.zip"
         )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
@@ -2316,9 +2314,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.39":
-                        addon_root.set("version", "0.5.39")
-                        changed.append(info.filename + " (bump skin version to 0.5.39)")
+                    if addon_root.get("version") != "0.5.40":
+                        addon_root.set("version", "0.5.40")
+                        changed.append(info.filename + " (bump skin version to 0.5.40)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2326,18 +2324,18 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.39 - Make MyVideoNav enter populated directories reliably",
-                        "- Use a visible, context-neutral Back action as the initial focus target while Kodi resolves video directories.",
-                        "- Transfer D-pad focus into native panel 50 when Container(50).NumItems is greater than zero.",
-                        "- Keep empty plugin folders safely on Back and preserve the full-width poster grid.",
+                        "0.5.40 - Fix native D-pad entry into video directories",
+                        "- Keep the visible Back action as the safe initial focus target while Kodi resolves plugin directories.",
+                        "- Use Kodi's native panel control ID for Down navigation instead of a conditional built-in action.",
+                        "- Return Up from the first panel row to Back while preserving the full-width poster grid.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.39 - Make MyVideoNav enter populated directories reliably"):
+                    if changelog.startswith("0.5.40 - Fix native D-pad entry into video directories"):
                         pass
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.39 populated-directory focus changelog)")
+                        changed.append(info.filename + " (prepend 0.5.40 native D-pad focus changelog)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:
