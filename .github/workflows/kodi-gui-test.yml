@@ -1875,7 +1875,16 @@ jobs:
                 if crimson_coverage < 0.35:
                   raise SystemExit(f"Row-2 hero PLAY surface is not visibly rendered (crimson coverage={crimson_coverage:.3f})")
                 print(f"Verified row-2 hero PLAY surface in rendered screenshot (crimson coverage={crimson_coverage:.3f}).")
-                # Row 2 follows the same spatial path: poster -> VIEW ALL -> hero PLAY.
+                # Row 2 Up must first return to the selected poster in row 1.
+                subprocess.run(["xdotool","key","Up"],check=True)
+                deadline = time.time() + 8
+                while time.time() < deadline:
+                  state = gui()
+                  if state.get("currentcontrol",{}).get("label","").strip() == expected_focus_label:
+                    break
+                  time.sleep(0.25)
+                else:
+                  raise SystemExit(f"Row-2 Up did not return to previous shelf {expected_focus_label!r}: {state}")
                 subprocess.run(["xdotool","key","Up"],check=True)
                 deadline = time.time() + 8
                 while time.time() < deadline:
@@ -1884,7 +1893,7 @@ jobs:
                     break
                   time.sleep(0.25)
                 else:
-                  raise SystemExit(f"Row-2 poster Up did not focus VIEW ALL: {state}")
+                  raise SystemExit(f"Row-1 Up did not focus VIEW ALL: {state}")
                 subprocess.run(["xdotool","key","Up"],check=True)
                 deadline = time.time() + 8
                 while time.time() < deadline:
