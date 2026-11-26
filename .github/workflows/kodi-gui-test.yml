@@ -1271,7 +1271,10 @@ jobs:
               f"D-pad Down focuses its first real poster in native panel 50: "
               f"{view_all_count} items, {expected_first_item}."
             )
-            press("Escape")
+            # Use Kodi's own Back action for the plugin directory. Sending an
+            # X11 Escape key leaves MyVideoNav active on Kodi Piers in this
+            # fixture, even though the selected item is correct.
+            rpc("Input.Back")
             wait_for_window(10000)
             returned_home = gui()
             if returned_home.get("currentcontrol", {}).get("label", "").strip().upper() == "VIEW ALL":
