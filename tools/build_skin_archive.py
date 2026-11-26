@@ -1255,6 +1255,9 @@ def update_xml(data, path):
             set_child_text(shelf, "focusposition", 3)
             set_child_text(shelf, "movement", 3)
             set_child_text(shelf, "itemgap", 8)
+            # Rebuild routes from scratch so repeated packaging does not accumulate duplicate onup actions.
+            for stale_up in shelf.findall("onup"):
+                shelf.remove(stale_up)
             if index == 1:
                 set_child_text(shelf, "onup", f"SetFocus({view_all_id})")
             else:
