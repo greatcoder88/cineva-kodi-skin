@@ -549,13 +549,13 @@ jobs:
           if detail_plot is None or (detail_plot.findtext("left"), detail_plot.findtext("top"), detail_plot.findtext("width"), detail_plot.findtext("height")) != ("104", "350", "1000", "300"):
             raise SystemExit("Video details synopsis is not using the redesigned text column")
           osd = ET.parse("skin.cineva/xml/VideoOSD.xml").getroot()
-          osd_seek = osd.find("./controls/control[@type='group'][@id='6000']/control[@type='slider']")
-          osd_left = osd.find(".//control[@type='grouplist'][@id='201']")
-          osd_right = osd.find(".//control[@type='grouplist'][@id='202']")
-          if osd_seek is None or (osd_seek.findtext("left"), osd_seek.findtext("width")) != ("0", "1760"):
-            raise SystemExit("Player OSD seek slider is not using the full-width layout")
-          if osd.findtext("defaultcontrol") != "602" or osd_left is None or osd_left.findtext("onright") != "70043" or osd_right is None or osd_right.findtext("onleft") != "603":
-            raise SystemExit("Player OSD transport rails do not have visible cross-rail focus targets")
+          osd_seek = osd.find("./controls/control[@type='slider'][@id='9000']")
+          osd_buttons = {node.get("id"): node for node in osd.findall("./controls/control[@type='group']/control[@type='button']")}
+          if (osd.findtext("defaultcontrol") != "9001" or osd_seek is None
+              or osd_seek.findtext("info") != "Player.Progress"
+              or set(osd_buttons) != {"9001", "9002", "9003", "9004"}
+              or any(not button.findtext("onright", "").startswith("SetFocus(") for button in osd_buttons.values())):
+            raise SystemExit("Player OSD controls are missing a connected D-pad path or seek slider")
           search = ET.parse("skin.cineva/xml/custom11112.xml").getroot()
           search_controls = search.find("controls")
           if (search.findtext("defaultcontrol") != "9705"
