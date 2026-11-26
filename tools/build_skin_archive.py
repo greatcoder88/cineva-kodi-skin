@@ -719,6 +719,8 @@ def update_xml(data, path):
                         if row_child.get("id") in (
                             {str(control_id) for control_id in range(9160, 9164)}
                             | {str(control_id) for control_id in range(9360, 9376)}
+                            | {str(control_id) for control_id in range(9401, 9405)}
+                            | {str(control_id) for control_id in range(9521, 9525)}
                         ):
                             continue
                         # Row accents belong inside their shelf group. Older
@@ -1574,6 +1576,9 @@ def update_xml(data, path):
         # First-run initialization happens asynchronously after Home is shown.
         # Keep the cinematic backdrop and navigation visible, but never present
         # an unexplained empty canvas while the widget registry is prepared.
+        previous_startup_state = controls.find("./control[@id='9480']")
+        if previous_startup_state is not None:
+            controls.remove(previous_startup_state)
         startup_state = ET.Element("control", {"type": "group", "id": "9480"})
         for tag, value in (("left", 96), ("top", 520), ("width", 1100), ("height", 150),
                            ("visible", "!Skin.HasSetting(Cineva.Initialized)")):
