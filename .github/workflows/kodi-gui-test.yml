@@ -354,7 +354,7 @@ jobs:
             row_group = rail_list.find(f"./control[@type='group'][@id='{9060 + container_id - 9000}']") if rail_list is not None else None
             shelf = row_group.find(f"./control[@type='fixedlist'][@id='{container_id}']") if row_group is not None else None
             row_index = container_id - 9000
-            expected_up = ([(None, f"SetFocus({9159 + row_index})")] if row_index == 1 else [(None, str(9060 + row_index - 1))])
+            expected_up = ([(None, f"SetFocus({9159 + row_index})")] if row_index == 1 else [(None, str(9000 + row_index - 1))])
             actual_up = [(node.get("condition"), node.text) for node in shelf.findall("onup")] if shelf is not None else []
             if shelf is None or actual_up != expected_up or row_group.findtext("onup") != f"SetFocus({play_id})" or row_group.findtext("defaultcontrol") != str(container_id):
               raise SystemExit(f"Home row {container_id} does not navigate Up to the nearest populated/configured shelf above it")
@@ -395,10 +395,10 @@ jobs:
               raise SystemExit(f"Home widget {index} is missing its configured VIEW ALL action")
             if row_accent is None or row_accent.get("type") != "image" or (row_accent.findtext("left"), row_accent.findtext("top"), row_accent.findtext("width"), row_accent.findtext("height")) != ("0", "42", "58", "3") or row_accent.findtext("texture") != "focus-bar.png" or row_accent.findtext("visible") != f"Control.HasFocus({9000 + index})":
               raise SystemExit(f"Home widget {index} is missing its active-rail accent")
-            expected_up = ([(None, f"SetFocus({9159 + index})")] if index == 1 else [(None, str(9059 + index))])
+            expected_up = ([(None, f"SetFocus({9159 + index})")] if index == 1 else [(None, str(9000 + index - 1))])
             actual_up = [(node.get("condition"), node.text) for node in shelf.findall("onup")] if shelf is not None else []
             if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("55", "440") or actual_up != expected_up or row_group.findtext("defaultcontrol") != str(9000 + index):
-              raise SystemExit(f"Home widget {index} shelf geometry or previous-row group focus route is incorrect")
+              raise SystemExit(f"Home widget {index} shelf geometry or previous-shelf focus route is incorrect")
             # Previous poster rails must remain focusable for D-pad Up.
             # Their groups are scrolled outside the viewport; only the later
             # row's hero actions and VIEW ALL should hide the earlier rail.
