@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths-ignore:
       - "repository-site/**"
+      - "skin.cineva-0.5.57.zip"
   pull_request:
     branches: [main]
   workflow_dispatch:

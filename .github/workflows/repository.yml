@@ -8,7 +8,6 @@ on:
       - "tools/script.cineva.widgets/**"
       - ".github/workflows/repository.yml"
       - "skin.cineva/**"
-      - "skin.cineva-*.zip"
   workflow_dispatch:
 permissions:
   contents: write
