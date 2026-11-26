@@ -13,9 +13,9 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.44.zip"
-PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.43.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.42.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.45.zip"
+PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.44.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.43.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -586,23 +586,12 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.44")
+        root.set("version", "0.5.45")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
     elif path == "skin.cineva/xml/SettingsCategory.xml":
         root = settings_category_template()
-    elif path == "skin.cineva/xml/MyVideoNav.xml":
-        # The video directory's poster panel must return D-pad Up to its
-        # dedicated Back action. A bare control ID was ignored by Kodi Piers
-        # when focus sat on the native panel, leaving Back visually present
-        # but unreachable after opening a plugin directory.
-        back = root.find(".//control[@type='button'][@id='49']")
-        panel = root.find(".//control[@type='panel'][@id='50']")
-        if back is None or panel is None:
-            raise SystemExit("MyVideoNav is missing its Back button or native poster panel")
-        set_child_text(back, "ondown", "SetFocus(50)")
-        set_child_text(panel, "onup", "SetFocus(49)")
     elif path in {
         "skin.cineva/xml/MyMusicNav.xml",
         "skin.cineva/xml/MyPrograms.xml",
@@ -1848,8 +1837,8 @@ def update_xml(data, path):
     elif path == "skin.cineva/xml/MyVideoNav.xml":
         # Kodi initializes MyVideoNav before an asynchronous plugin URL has
         # populated Container(50). Keep the visible Back button as the safe
-        # default, then use Kodi's native control-ID navigation once the user
-        # presses Down. The panel returns to Back when moving Up off its first row.
+        # default, preserve its native Down link into panel 50, and explicitly
+        # return D-pad Up to Back when the poster panel is focused.
         views = root.find("views")
         if views is None:
             views = ET.Element("views")
@@ -1916,7 +1905,7 @@ def update_xml(data, path):
             ET.SubElement(back_button, "ondown").text = "50"
             panel = controls.find("./control[@type='panel'][@id='50']")
             if panel is not None:
-                set_child_text(panel, "onup", "49")
+                set_child_text(panel, "onup", "SetFocus(49)")
         # Unified cinematic catalogue: larger portrait cards, generous gutters,
         # restrained metadata and a full-width grid that uses the screen.
         panel = root.find("./controls/control[@type='panel']")
@@ -2267,15 +2256,15 @@ def update_xml(data, path):
 def main():
     # Start the new distributable version from the immediately previous package.
     # Keep the older archive as a recovery fallback for shallow checkouts.
-    # Subsequent builds transform 0.5.44 in place and remain byte-stable.
+    # Subsequent builds transform 0.5.45 in place and remain byte-stable.
     if not ARCHIVE.exists():
         source_archive = PREVIOUS_ARCHIVE if PREVIOUS_ARCHIVE.is_file() else LEGACY_ARCHIVE
         if source_archive.is_file():
             ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
         raise SystemExit(
-            "Missing skin.cineva-0.5.44.zip and migration sources "
-            "skin.cineva-0.5.43.zip / skin.cineva-0.5.42.zip"
+            "Missing skin.cineva-0.5.45.zip and migration sources "
+            "skin.cineva-0.5.44.zip / skin.cineva-0.5.43.zip"
         )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
@@ -2367,9 +2356,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.44":
-                        addon_root.set("version", "0.5.44")
-                        changed.append(info.filename + " (bump skin version to 0.5.44)")
+                    if addon_root.get("version") != "0.5.45":
+                        addon_root.set("version", "0.5.45")
+                        changed.append(info.filename + " (bump skin version to 0.5.45)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2377,18 +2366,18 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.44 - Restore D-pad Back navigation from video add-on directories",
-                        "- Route D-pad Up from the native poster panel to the visible Back control in MyVideoNav.",
-                        "- Use explicit SetFocus navigation in both directions between the Back button and poster panel.",
-                        "- Keep the calling Home window reachable after opening a widget through VIEW ALL.",
+                        "0.5.45 - Make the MyVideoNav Back control reachable from poster shelves",
+                        "- Route D-pad Up from the native poster panel to the visible Back control with explicit SetFocus.",
+                        "- Preserve Kodi native Down navigation into panel 50 and first-playable-item focus behavior.",
+                        "- Return to the calling Home window through the visible PreviousMenu action.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.44 - Restore D-pad Back navigation from video add-on directories"):
+                    if changelog.startswith("0.5.45 - Make the MyVideoNav Back control reachable from poster shelves"):
                         pass
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.44 D-pad Back navigation changelog)")
+                        changed.append(info.filename + " (prepend 0.5.45 MyVideoNav Back focus changelog)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:
