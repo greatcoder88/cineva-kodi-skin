@@ -1262,7 +1262,7 @@ def update_xml(data, path):
                 set_child_text(shelf, "onup", f"SetFocus({view_all_id})")
             else:
                 for previous_index in range(index - 1, 0, -1):
-                    previous_up = ET.SubElement(shelf, "onup", {"condition": f"!String.IsEmpty(Skin.String(Cineva.Widget{previous_index}.Path))"})
+                    previous_up = ET.SubElement(shelf, "onup", {"condition": f"!String.IsEmpty(Container({9000 + previous_index}).ListItem.Label)"})
                     previous_up.text = f"SetFocus({9000 + previous_index})"
                 ET.SubElement(shelf, "onup").text = f"SetFocus({view_all_id})"
             set_child_text(shelf, "ondown", f"SetFocus({next_target})")
