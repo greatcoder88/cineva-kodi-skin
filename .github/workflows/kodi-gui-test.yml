@@ -1961,6 +1961,61 @@ jobs:
           print(f"Opened Kodi Add-on Browser on native view 50 with {addon_item_count} directory items; D-pad selection movement verified.")
           press("Escape")
           wait_for_window(10004)
+
+          # Open a real POV plugin directory, not just the Add-on Browser root.
+          # This exercises MyVideoNav.xml, which previously had panel 50 but no
+          # <views> registration and therefore could not receive focus.
+          pov_directory = (
+            "plugin://plugin.video.pov/?mode=build_movie_list"
+            "&action=tmdb_movies_trending&name=Trending%20Movies"
+          )
+          rpc("Input.ExecuteAction", {
+            "action": f"activatewindow(videos,{pov_directory})"
+          })
+          deadline = time.time() + 12
+          while time.time() < deadline:
+            pov_state = gui()
+            if pov_state.get("currentwindow", {}).get("id") == 10025:
+              break
+            time.sleep(0.2)
+          else:
+            raise SystemExit(f"POV plugin directory did not open the Kodi video window: {pov_state}")
+          pov_items = rpc("XBMC.GetInfoLabels", {
+            "labels":["Container(50).NumItems", "Container(50).CurrentItem"]
+          })
+          pov_count = int(pov_items.get("Container(50).NumItems", "0"))
+          if pov_count < 1:
+            subprocess.run(["import", "-display", ":99", "-window", "root",
+                            "artifacts/cineva-pov-directory-blank.png"], check=True)
+            raise SystemExit(
+              f"POV opened MyVideoNav but its registered panel 50 has no content: "
+              f"{pov_items}; GUI={pov_state}"
+            )
+          subprocess.run(["import", "-display", ":99", "-window", "root",
+                          "artifacts/cineva-pov-directory.png"], check=True)
+          initial_pov_item = int(pov_items.get("Container(50).CurrentItem", "-1"))
+          if pov_count > 1:
+            press("Down")
+            deadline = time.time() + 5
+            moved_pov_item = initial_pov_item
+            while time.time() < deadline:
+              moved_pov_item = int(rpc("XBMC.GetInfoLabels", {
+                "labels":["Container(50).CurrentItem"]
+              }).get("Container(50).CurrentItem", "-1"))
+              if moved_pov_item != initial_pov_item:
+                break
+              time.sleep(0.2)
+            if moved_pov_item == initial_pov_item:
+              raise SystemExit(
+                f"D-pad Down did not move inside the POV plugin directory: "
+                f"before={pov_items}; after={gui()}"
+              )
+            press("Up")
+          if "Control 50 in window 10025 has been asked to focus" in log_text():
+            raise SystemExit("Kodi still reports that MyVideoNav cannot focus panel 50")
+          print(f"Verified real POV directory rendering and D-pad navigation: {pov_count} items.")
+          press("Escape")
+          wait_for_window(10004)
           wait_for_control("ADD-ONS")
           press("Down")
           wait_for_control("SYSTEM INFORMATION")
