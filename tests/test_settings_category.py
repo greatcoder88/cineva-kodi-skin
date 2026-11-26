@@ -20,6 +20,7 @@ class SettingsCategoryTests(unittest.TestCase):
         settings_list = root.find(".//control[@type='grouplist'][@id='5']")
         self.assertIsNotNone(settings_list)
         self.assertEqual(settings_list.findtext("pagecontrol"), "60")
+        self.assertNotIn("DefaultSettingButton", [node.text for node in root.findall(".//include") if node.text])
 
         for control_id, control_type in (
             ("7", "button"), ("8", "radiobutton"), ("9", "spincontrolex"),
