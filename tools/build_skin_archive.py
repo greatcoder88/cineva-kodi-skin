@@ -1365,7 +1365,7 @@ def update_xml(data, path):
             for placeholder_index in range(5):
                 placeholder = ET.SubElement(
                     loading, "control",
-                    {"type": "image", "id": str(9430 + index * 5 + placeholder_index)}
+                    {"type": "image", "id": str(9500 + (index - 1) * 5 + placeholder_index)}
                 )
                 for tag, value in (
                     ("left", placeholder_index * 256), ("top", 76),
@@ -1380,7 +1380,7 @@ def update_xml(data, path):
 
             # A completed empty response is not a loading screen. Explain why
             # the shelf is empty without inventing an add-on-specific error.
-            empty_state = ET.Element("control", {"type": "group", "id": str(9450 + index)})
+            empty_state = ET.Element("control", {"type": "group", "id": str(9520 + index)})
             empty_visible = (
                 f"{base_row_visibility} + !Container({container_id}).IsUpdating"
                 f" + Integer.IsEqual(Container({container_id}).NumItems,0)"
@@ -1388,13 +1388,13 @@ def update_xml(data, path):
             for tag, value in (("left", 0), ("top", 112), ("width", 1100), ("height", 110),
                                ("visible", empty_visible)):
                 set_child_text(empty_state, tag, value)
-            empty_label = ET.SubElement(empty_state, "control", {"type": "label", "id": str(9460 + index)})
+            empty_label = ET.SubElement(empty_state, "control", {"type": "label", "id": str(9530 + index)})
             for tag, value in (("left", 0), ("top", 0), ("width", 1000), ("height", 42),
                                ("font", "font16"), ("textcolor", "white"),
                                ("label", "NO TITLES AVAILABLE"), ("align", "left"),
                                ("aligny", "center")):
                 set_child_text(empty_label, tag, value)
-            empty_hint = ET.SubElement(empty_state, "control", {"type": "label", "id": str(9470 + index)})
+            empty_hint = ET.SubElement(empty_state, "control", {"type": "label", "id": str(9540 + index)})
             for tag, value in (("left", 0), ("top", 42), ("width", 1100), ("height", 38),
                                ("font", "font11"), ("textcolor", "FFB8BBC4"),
                                ("label", "Check this add-on or choose a different widget in CINÉVA Skin Settings."),
