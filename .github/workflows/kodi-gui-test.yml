@@ -873,6 +873,31 @@ jobs:
             return log_path.read_text(errors="replace") if log_path.exists() else ""
           def gui():
             return rpc("GUI.GetProperties", {"properties":["currentwindow","currentcontrol","skin"]})
+
+          # Shared remote/navigation helpers are defined before the Home
+          # VIEW ALL checks that use them. Python executes top-to-bottom, so
+          # keeping these above the first call avoids a late-definition NameError.
+          def wait_for_control(label, timeout=10):
+            deadline = time.time() + timeout
+            while time.time() < deadline:
+              state = gui()
+              if state.get("currentcontrol", {}).get("label", "").strip().upper() == label.upper():
+                return state
+              time.sleep(0.2)
+            raise SystemExit(f"Timed out waiting for focused navigation control {label!r}: {state}")
+
+          def wait_for_window(window_id, timeout=12):
+            deadline = time.time() + timeout
+            while time.time() < deadline:
+              state = gui()
+              if state.get("currentwindow", {}).get("id") == window_id:
+                return state
+              time.sleep(0.25)
+            raise SystemExit(f"Timed out waiting for Kodi window {window_id}: {state}")
+
+          def press(key):
+            subprocess.run(["xdotool", "key", key], check=True)
+            time.sleep(0.18)
           pov_details = rpc("Addons.GetAddonDetails", {"addonid":"plugin.video.pov","properties":["enabled","version"]})
           print("POV GUI fixture before enable:", pov_details)
           rpc("Addons.SetAddonEnabled", {"addonid":"plugin.video.pov","enabled":True})
@@ -1850,28 +1875,6 @@ jobs:
           # Exercise the new catalogue navigation in the real Kodi GUI,
           # not only through XML assertions. Every category must open Kodi's
           # native Video database window and Escape must return to its caller.
-          def wait_for_control(label, timeout=10):
-            deadline = time.time() + timeout
-            while time.time() < deadline:
-              state = gui()
-              if state.get("currentcontrol", {}).get("label", "").strip().upper() == label.upper():
-                return state
-              time.sleep(0.2)
-            raise SystemExit(f"Timed out waiting for focused navigation control {label!r}: {state}")
-
-          def wait_for_window(window_id, timeout=12):
-            deadline = time.time() + timeout
-            while time.time() < deadline:
-              state = gui()
-              if state.get("currentwindow", {}).get("id") == window_id:
-                return state
-              time.sleep(0.25)
-            raise SystemExit(f"Timed out waiting for Kodi window {window_id}: {state}")
-
-          def press(key):
-            subprocess.run(["xdotool", "key", key], check=True)
-            time.sleep(0.18)
-
           nav_labels = {
             "HOME", "MOVIES", "TV SHOWS", "ALL MOVIES", "ALL SHOWS",
             "GENRES", "YEARS", "COLLECTIONS", "STUDIOS", "RECENT",
