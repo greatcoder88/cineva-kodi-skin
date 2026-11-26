@@ -1275,18 +1275,25 @@ jobs:
             # unwinding the plugin directory. Follow the native Back action
             # until the originating Home window is restored; never assume a
             # single Back closes both the plugin path and its window.
-            # MyVideoNav exposes an explicit BACK button (control 49) whose
-            # PreviousMenu action restores the calling Home window. Input.Back
-            # instead walks Kodi's plugin parent-directory stack and can remain
-            # inside Videos, so exercise the actual on-screen navigation action.
-            press("Up")
-            back_state = wait_for_control("BACK")
-            if back_state.get("currentwindow", {}).get("id") != 10025:
-              raise SystemExit(f"POV directory BACK control was not focused in MyVideoNav: {back_state}")
-            press("Return")
-            returned_home = wait_for_window(10000)
+            # Exercise the same physical Back key used by a TV remote. Kodi's
+            # JSON-RPC Input.Back method does not reproduce the X11 key path,
+            # so send Escape through the GUI and allow the plugin parent stack
+            # to unwind before asserting that the calling Home window returns.
+            returned_home = gui()
+            for back_attempt in range(3):
+              if returned_home.get("currentwindow", {}).get("id") == 10000:
+                break
+              press("Escape")
+              deadline = time.time() + 5
+              while time.time() < deadline:
+                returned_home = gui()
+                if returned_home.get("currentwindow", {}).get("id") == 10000:
+                  break
+                time.sleep(0.2)
             if returned_home.get("currentwindow", {}).get("id") != 10000:
-              raise SystemExit(f"MyVideoNav BACK action did not restore the calling Home window: {returned_home}")
+              subprocess.run(["import", "-display", ":99", "-window", "root",
+                              "artifacts/cineva-view-all-back-failed.png"], check=True)
+              raise SystemExit(f"Remote Back did not restore Home after three Escape keypresses: {returned_home}")
             if returned_home.get("currentcontrol", {}).get("label", "").strip().upper() == "VIEW ALL":
               press("Down")
             deadline = time.time() + 5
