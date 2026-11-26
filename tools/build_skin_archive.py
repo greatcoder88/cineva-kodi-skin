@@ -13,9 +13,9 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.43.zip"
-PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.42.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.35.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.44.zip"
+PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.43.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.42.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -586,12 +586,23 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.43")
+        root.set("version", "0.5.44")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
     elif path == "skin.cineva/xml/SettingsCategory.xml":
         root = settings_category_template()
+    elif path == "skin.cineva/xml/MyVideoNav.xml":
+        # The video directory's poster panel must return D-pad Up to its
+        # dedicated Back action. A bare control ID was ignored by Kodi Piers
+        # when focus sat on the native panel, leaving Back visually present
+        # but unreachable after opening a plugin directory.
+        back = root.find(".//control[@type='button'][@id='49']")
+        panel = root.find(".//control[@type='panel'][@id='50']")
+        if back is None or panel is None:
+            raise SystemExit("MyVideoNav is missing its Back button or native poster panel")
+        set_child_text(back, "ondown", "SetFocus(50)")
+        set_child_text(panel, "onup", "SetFocus(49)")
     elif path in {
         "skin.cineva/xml/MyMusicNav.xml",
         "skin.cineva/xml/MyPrograms.xml",
@@ -2256,15 +2267,15 @@ def update_xml(data, path):
 def main():
     # Start the new distributable version from the immediately previous package.
     # Keep the older archive as a recovery fallback for shallow checkouts.
-    # Subsequent builds transform 0.5.43 in place and remain byte-stable.
+    # Subsequent builds transform 0.5.44 in place and remain byte-stable.
     if not ARCHIVE.exists():
         source_archive = PREVIOUS_ARCHIVE if PREVIOUS_ARCHIVE.is_file() else LEGACY_ARCHIVE
         if source_archive.is_file():
             ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
         raise SystemExit(
-            "Missing skin.cineva-0.5.43.zip and migration sources "
-            "skin.cineva-0.5.42.zip / skin.cineva-0.5.35.zip"
+            "Missing skin.cineva-0.5.44.zip and migration sources "
+            "skin.cineva-0.5.43.zip / skin.cineva-0.5.42.zip"
         )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
@@ -2356,9 +2367,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.43":
-                        addon_root.set("version", "0.5.43")
-                        changed.append(info.filename + " (bump skin version to 0.5.43)")
+                    if addon_root.get("version") != "0.5.44":
+                        addon_root.set("version", "0.5.44")
+                        changed.append(info.filename + " (bump skin version to 0.5.44)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2366,18 +2377,18 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.43 - Focus the first playable item in add-on directories",
-                        "- Make the native add-on browser skip its synthetic parent entry when D-pad focus enters the poster grid.",
-                        "- Keep the dedicated Back control as the safe default while selecting the first real directory item.",
-                        "- Preserve the configured Home widget path and make the first poster immediately reachable.",
+                        "0.5.44 - Restore D-pad Back navigation from video add-on directories",
+                        "- Route D-pad Up from the native poster panel to the visible Back control in MyVideoNav.",
+                        "- Use explicit SetFocus navigation in both directions between the Back button and poster panel.",
+                        "- Keep the calling Home window reachable after opening a widget through VIEW ALL.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.43 - Focus the first playable item in add-on directories"):
+                    if changelog.startswith("0.5.44 - Restore D-pad Back navigation from video add-on directories"):
                         pass
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.43 add-on directory focus changelog)")
+                        changed.append(info.filename + " (prepend 0.5.44 D-pad Back navigation changelog)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:
