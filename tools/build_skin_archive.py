@@ -13,9 +13,9 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.46.zip"
-PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.45.zip"
-LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.44.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.47.zip"
+PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.47.zip"
+LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.45.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
 # The external ActivateWindow IDs therefore use the 111xx range, while the
@@ -586,7 +586,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.46")
+        root.set("version", "0.5.47")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -1906,6 +1906,9 @@ def update_xml(data, path):
             panel = controls.find("./control[@type='panel'][@id='50']")
             if panel is not None:
                 set_child_text(panel, "onup", "49")
+                # The panel consumes the remote Back action unless an explicit
+                # back target is provided. Route it to the visible BACK control.
+                set_child_text(panel, "onback", "49")
         # Unified cinematic catalogue: larger portrait cards, generous gutters,
         # restrained metadata and a full-width grid that uses the screen.
         panel = root.find("./controls/control[@type='panel']")
@@ -1919,7 +1922,9 @@ def update_xml(data, path):
             if panel_onfocus is None:
                 panel_onfocus = ET.SubElement(panel, "onfocus")
             panel_onfocus.attrib.clear()
-            panel_onfocus.set("condition", "Container.HasParent(50)")
+            # Test the focused item itself: plugin roots can expose the
+            # synthetic parent tile even when Container.HasParent is false.
+            panel_onfocus.set("condition", "Container(50).ListItem.IsParentFolder")
             panel_onfocus.text = "Control.SetFocus(50,1,absolute)"
             set_child_text(panel, "left", 54)
             set_child_text(panel, "top", 252)
@@ -2259,15 +2264,15 @@ def update_xml(data, path):
 def main():
     # Start the new distributable version from the immediately previous package.
     # Keep the older archive as a recovery fallback for shallow checkouts.
-    # Subsequent builds transform 0.5.46 in place and remain byte-stable.
+    # Subsequent builds transform 0.5.47 in place and remain byte-stable.
     if not ARCHIVE.exists():
         source_archive = PREVIOUS_ARCHIVE if PREVIOUS_ARCHIVE.is_file() else LEGACY_ARCHIVE
         if source_archive.is_file():
             ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
         raise SystemExit(
-            "Missing skin.cineva-0.5.46.zip and migration sources "
-            "skin.cineva-0.5.45.zip / skin.cineva-0.5.44.zip"
+            "Missing skin.cineva-0.5.47.zip and migration sources "
+            "skin.cineva-0.5.47.zip / skin.cineva-0.5.45.zip"
         )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
     os.close(fd)
@@ -2359,9 +2364,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.46":
-                        addon_root.set("version", "0.5.46")
-                        changed.append(info.filename + " (bump skin version to 0.5.46)")
+                    if addon_root.get("version") != "0.5.47":
+                        addon_root.set("version", "0.5.47")
+                        changed.append(info.filename + " (bump skin version to 0.5.47)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2369,18 +2374,18 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.46 - Fill missing posters in add-on directories",
-                        "- Use the branded portrait placeholder when an add-on item does not provide poster art.",
-                        "- Apply the fallback in both normal and focused MyVideoNav poster layouts.",
-                        "- Keep native panel navigation and the Home screen poster fallback consistent.",
+                        "0.5.47 - Fix remote Back and parent-item focus in add-on directories",
+                        "- Route Back from the native poster panel to the visible BACK control.",
+                        "- Detect Kodi's synthetic parent tile from the focused ListItem instead of a path-level flag.",
+                        "- Keep the originating window reachable after leaving a plugin directory.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.46 - Fill missing posters in add-on directories"):
+                    if changelog.startswith("0.5.47 - Fix remote Back and parent-item focus in add-on directories"):
                         pass
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.46 add-on poster fallback changelog)")
+                        changed.append(info.filename + " (prepend 0.5.47 add-on navigation changelog)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:
