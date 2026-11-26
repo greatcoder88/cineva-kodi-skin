@@ -252,21 +252,21 @@ jobs:
             artwork = next((node for node in hero_artwork if f"Container({container_id})" in node.findtext("texture", "")), None)
             expected_art_visibility = " | ".join(
               f"Control.HasFocus({focus_id})"
-              for focus_id in (container_id, play_id, play_id + 1)
+              for focus_id in (container_id, play_id, play_id + 1, 9159 + (container_id - 9000))
             )
             texture_node = artwork.find("texture") if artwork is not None else None
             if artwork is None or texture_node is None or texture_node.attrib.get("fallback") != "hero-placeholder.png" or artwork.findtext("visible") != expected_art_visibility:
               raise SystemExit(f"Home row {container_id} hero must keep fanart or the branded fallback visible through action focus")
           if any((node.find("texture") is None or node.find("texture").attrib.get("fallback") != "hero-placeholder.png") for node in hero_artwork):
             raise SystemExit("All four Home hero artwork controls must use the missing-fanart fallback")
-          row1_exclusions = (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118)
+          row1_exclusions = (9002, 9113, 9114, 9161, 9003, 9115, 9116, 9162, 9004, 9117, 9118, 9163)
           for row_index, container_id in enumerate((9001, 9002, 9003, 9004), start=1):
             art_conditions = (f"String.IsEmpty(Container({container_id}).ListItem.Art(fanart))", f"!String.IsEmpty(Container({container_id}).ListItem.Art(poster))")
             if row_index == 1:
               expected_visible = " + ".join([f"!Control.HasFocus({focus_id})" for focus_id in row1_exclusions] + list(art_conditions))
             else:
               play_id = 9111 + (row_index - 1) * 2
-              expected_visible = " | ".join(" + ".join((f"Control.HasFocus({focus_id})",) + art_conditions) for focus_id in (container_id, play_id, play_id + 1))
+              expected_visible = " | ".join(" + ".join((f"Control.HasFocus({focus_id})",) + art_conditions) for focus_id in (container_id, play_id, play_id + 1, 9159 + row_index))
             poster = controls.find(f"./control[@id='{9139 + row_index}']")
             vignette = controls.find(f"./control[@id='{9143 + row_index}']")
             if poster is None or (poster.findtext("left"), poster.findtext("top"), poster.findtext("width"), poster.findtext("height"), poster.findtext("texture"), poster.findtext("visible")) != ("1280", "0", "640", "750", f"$INFO[Container({container_id}).ListItem.Art(poster)]", expected_visible):
@@ -309,12 +309,12 @@ jobs:
           rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
           if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("60", "444", "1860", "670") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "180"):
             raise SystemExit("Home rails are missing their vertical scrolling viewport")
-          lower_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118))
+          lower_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9161, 9003, 9115, 9116, 9162, 9004, 9117, 9118, 9163))
           lower_slide = rail_list.find("./animation[@effect='slide']") if rail_list is not None else None
           if lower_slide is None or (lower_slide.get("start"), lower_slide.get("end"), lower_slide.get("time"), lower_slide.get("condition"), lower_slide.text) != ("0,0", "0,-40", "180", lower_focus, "Conditional"):
             raise SystemExit("Home lower-row focus must lift the poster viewport 40px to keep captions clear of the screen edge")
           scroll_mask = controls.find("./control[@id='9107']")
-          expected_scroll_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9003, 9115, 9116, 9004, 9117, 9118))
+          expected_scroll_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9161, 9003, 9115, 9116, 9162, 9004, 9117, 9118, 9163))
           if scroll_mask is None or (scroll_mask.findtext("left"), scroll_mask.findtext("top"), scroll_mask.findtext("width"), scroll_mask.findtext("height")) != ("0", "320", "1920", "430") or scroll_mask.findtext("texture") != "rail-scroll-mask.png" or scroll_mask.findtext("visible") != expected_scroll_focus:
             raise SystemExit("Home lower-row focus is missing its conditional hero-to-rail scroll mask")
           if list(controls).index(scroll_mask) >= list(controls).index(rail_list):
@@ -347,7 +347,7 @@ jobs:
               raise SystemExit(f"Home row {container_id} hero actions are missing their branded nine-slice focus surfaces")
             row_group = rail_list.find(f"./control[@type='group'][@id='{9060 + container_id - 9000}']") if rail_list is not None else None
             shelf = row_group.find(f"./control[@type='fixedlist'][@id='{container_id}']") if row_group is not None else None
-            if shelf is None or shelf.findtext("onup") != f"SetFocus({play_id})" or row_group.findtext("onup") != f"SetFocus({play_id})":
+            if shelf is None or shelf.findtext("onup") != f"SetFocus({9159 + (container_id - 9000)})" or row_group.findtext("onup") != f"SetFocus({play_id})":
               raise SystemExit(f"Home row {container_id} cannot navigate up to its hero actions")
           for index in range(1, 5):
             row_group = rail_children[index - 1] if len(rail_children) == 4 else None
@@ -366,12 +366,16 @@ jobs:
               raise SystemExit(f"Home widget {index} is not a single scrollable row group")
             if heading is None or heading.get("type") != "label" or heading.findtext("label") != f"$INFO[Skin.String(Cineva.Widget{index}.Name)]" or (heading.findtext("top"), heading.findtext("height")) != ("0", "38") or heading.findtext("font") != "font18":
               raise SystemExit(f"Home widget {index} heading is missing from its row group")
+             view_all_id = 9159 + index
+             view_all = row_group.find(f"./control[@type='button'][@id='{view_all_id}']") if row_group is not None else None
+             if view_all is None or view_all.findtext("label") != "VIEW ALL" or view_all.findtext("onclick") != f"ActivateWindow(Videos,$INFO[Skin.String(Cineva.Widget{index}.Path)],return)" or view_all.findtext("visible") != (heading.findtext("visible") if heading is not None else None):
+               raise SystemExit(f"Home widget {index} is missing its configured VIEW ALL action")
             if row_accent is None or row_accent.get("type") != "image" or (row_accent.findtext("left"), row_accent.findtext("top"), row_accent.findtext("width"), row_accent.findtext("height")) != ("0", "42", "58", "3") or row_accent.findtext("texture") != "focus-bar.png" or row_accent.findtext("visible") != f"Control.HasFocus({9000 + index})":
               raise SystemExit(f"Home widget {index} is missing its active-rail accent")
-            if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("55", "440") or shelf.findtext("onup") != f"SetFocus({9111 + (index - 1) * 2})":
+            if shelf is None or shelf.get("type") != "fixedlist" or shelf.get("id") != str(9000 + index) or (shelf.findtext("top"), shelf.findtext("height")) != ("55", "440") or shelf.findtext("onup") != f"SetFocus({9159 + index})":
               raise SystemExit(f"Home widget {index} shelf geometry or upward focus route is incorrect")
             later_focus_ids = [control_id for later_index in range(index + 1, 5)
-                               for control_id in (9000 + later_index, 9111 + (later_index - 1) * 2, 9112 + (later_index - 1) * 2)]
+                               for control_id in (9000 + later_index, 9111 + (later_index - 1) * 2, 9112 + (later_index - 1) * 2, 9159 + later_index)]
             if later_focus_ids:
               hide_previous_row = " + ".join(f"!Control.HasFocus({control_id})" for control_id in later_focus_ids)
               expected_visibility = f"!String.IsEmpty(Skin.String(Cineva.Widget{index}.Path)) + {hide_previous_row}"
