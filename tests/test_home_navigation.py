@@ -72,7 +72,7 @@ class HomeNavigationTests(unittest.TestCase):
             self.assertIsNotNone(shelf)
             self.assertEqual(row.findtext("defaultcontrol"), str(container_id),
                              "each Home row must restore its last focused poster, or default to its shelf")
-            expected_up = f"SetFocus({view_all_id})" if index == 1 else str(9060 + index - 1)
+            expected_up = f"SetFocus({view_all_id})" if index == 1 else str(9000 + index - 1)
             self.assertEqual(
                 [(node.get("condition"), node.text) for node in shelf.findall("onup")],
                 [(None, expected_up)],
