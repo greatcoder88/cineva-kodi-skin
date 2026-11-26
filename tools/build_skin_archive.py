@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.61.zip"
-PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.60.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.62.zip"
+PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.61.zip"
 LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.58.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
@@ -690,7 +690,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.61")
+        root.set("version", "0.5.62")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -1654,6 +1654,38 @@ def update_xml(data, path):
                     set_child_text(button, tag, value)
                 set_child_text(button, "font", "font12")
                 set_child_text(button, "height", 48)
+            # Kodi keeps the Home grouplist's last scroll position when a
+            # top-level page opens. Move the first configured shelf back into
+            # the viewport, then restore the activated tab before leaving.
+            # This prevents a stale lower-row offset from returning beneath
+            # the pinned row-1 hero after Settings, Search or catalogue pages.
+            nav_actions = {
+                "1001": "ActivateWindow(Home)",
+                "1002": "ActivateWindow(11117)",
+                "1003": "ActivateWindow(11118)",
+                "1004": "ActivateWindow(11112)",
+                "1005": "ActivateWindow(Settings)",
+            }
+            for button in nav_group.findall("./control[@type='button']"):
+                action = nav_actions.get(button.get("id"))
+                if action is None:
+                    continue
+                for stale_click in list(button.findall("onclick")):
+                    button.remove(stale_click)
+                for row_number in range(1, 5):
+                    conditions = [
+                        f"String.IsEmpty(Skin.String(Cineva.Widget{previous}.Path))"
+                        for previous in range(1, row_number)
+                    ]
+                    conditions.append(
+                        f"!String.IsEmpty(Skin.String(Cineva.Widget{row_number}.Path))"
+                    )
+                    reset = ET.SubElement(
+                        button, "onclick", {"condition": " + ".join(conditions)}
+                    )
+                    reset.text = f"SetFocus({9000 + row_number})"
+                ET.SubElement(button, "onclick").text = f"SetFocus({button.get('id')})"
+                ET.SubElement(button, "onclick").text = action
             # Track D-pad focus with a compact underline. Home remains marked
             # while browsing its shelves; moving to another header tab transfers
             # the underline to that tab instead of filling its full rectangle.
@@ -2683,14 +2715,14 @@ def update_xml(data, path):
 def main():
     # Start the new distributable version from the immediately previous package.
     # Keep the older archive as a recovery fallback for shallow checkouts.
-    # Subsequent builds transform 0.5.61 in place and remain byte-stable.
+    # Subsequent builds transform 0.5.62 in place and remain byte-stable.
     if not ARCHIVE.exists():
         source_archive = PREVIOUS_ARCHIVE if PREVIOUS_ARCHIVE.is_file() else LEGACY_ARCHIVE
         if source_archive.is_file():
             ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
         raise SystemExit(
-            "Missing skin.cineva-0.5.61.zip and migration sources skin.cineva-0.5.60.zip / "
+            "Missing skin.cineva-0.5.62.zip and migration sources skin.cineva-0.5.61.zip / "
             "skin.cineva-0.5.58.zip"
         )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
@@ -2787,9 +2819,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.61":
-                        addon_root.set("version", "0.5.61")
-                        changed.append(info.filename + " (bump skin version to 0.5.61)")
+                    if addon_root.get("version") != "0.5.62":
+                        addon_root.set("version", "0.5.62")
+                        changed.append(info.filename + " (bump skin version to 0.5.62)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2803,6 +2835,7 @@ def main():
                         data = changelog.encode("utf-8")
                         changed.append(info.filename + " (refresh 0.5.58 release notes)")
                     release_entries = [
+                        ("0.5.62", "0.5.62 - Restore the Home shelf viewport after top-level navigation\n- Bring the first configured Home shelf back into view before opening Movies, TV Shows, Search or Settings.\n- Restore the activated navigation tab before leaving so returning to Home keeps the hero and poster rail aligned."),
                         ("0.5.61", "0.5.61 - Match Home hero context to the selected shelf\n- Label the first in-progress movie rail CONTINUE WATCHING and the second in-progress TV rail IN PROGRESS.\n- Keep trending and custom collection labels source-aware across all four Home rows."),
                         ("0.5.60", "0.5.60 - Give Home heroes concise provider taglines\n- Prefer a supplied ListItem.Tagline for the selected poster before PlotOutline and full Plot fallbacks.\n- Keep all three synopsis sources in the same title-safe hero band so the copy updates with each focused item."),
                         ("0.5.59", "0.5.59 - Align Home poster captions consistently\n- Anchor one-, two- and three-line titles to the same top baseline beneath every poster.\n- Keep focused and inactive caption placement consistent across all four Home rails."),

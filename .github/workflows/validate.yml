@@ -4,7 +4,7 @@ on:
     branches: [main]
     paths-ignore:
       - "repository-site/**"
-      - "skin.cineva-0.5.61.zip"
+      - "skin.cineva-0.5.62.zip"
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -24,9 +24,9 @@ jobs:
       - name: Build release ZIP and verify true idempotence
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.61.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.62.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.61.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.62.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
@@ -34,8 +34,8 @@ jobs:
           echo "Archive SHA-256 is stable across consecutive builds: $after"
       - name: Expand uploaded CINÉVA archive
         run: |
-          test -s skin.cineva-0.5.61.zip
-          unzip -q skin.cineva-0.5.61.zip -d .
+          test -s skin.cineva-0.5.62.zip
+          unzip -q skin.cineva-0.5.62.zip -d .
       - name: Validate Settings-only widget configuration navigation
         run: |
           python - <<'PY'
@@ -49,8 +49,23 @@ jobs:
           if any(b.findtext("label", "").strip().upper() == "MY WIDGETS" or "ActivateWindow(11119)" in b.findtext("onclick", "") for b in buttons):
               raise SystemExit("Separate My Widgets destination must not appear in Home navigation")
           settings = nav.find("./control[@id='1005']")
-          if settings is None or (settings.findtext("label"), settings.findtext("left"), settings.findtext("width"), settings.findtext("onclick")) != ("SETTINGS", "670", "150", "ActivateWindow(Settings)"):
-              raise SystemExit("Settings must occupy the reclaimed Home navigation slot")
+          expected_clicks = []
+          for row_number in range(1, 5):
+              conditions = [
+                  f"String.IsEmpty(Skin.String(Cineva.Widget{previous}.Path))"
+                  for previous in range(1, row_number)
+              ]
+              conditions.append(f"!String.IsEmpty(Skin.String(Cineva.Widget{row_number}.Path))")
+              expected_clicks.append((" + ".join(conditions), f"SetFocus({9000 + row_number})"))
+          expected_clicks.extend([(None, "SetFocus(1005)"), (None, "ActivateWindow(Settings)")])
+          actual_clicks = (
+              [(node.get("condition"), (node.text or "").strip()) for node in settings.findall("onclick")]
+              if settings is not None else []
+          )
+          if (settings is None
+              or (settings.findtext("label"), settings.findtext("left"), settings.findtext("width")) != ("SETTINGS", "670", "150")
+              or actual_clicks != expected_clicks):
+              raise SystemExit("Settings navigation must reset the first configured Home shelf, restore tab focus and open Settings")
           if nav.find("./control[@id='1006']") is not None:
               raise SystemExit("Obsolete Home navigation control 1006 remains")
           if Path("skin.cineva/xml/CinevaWidgetHub.xml").exists():
@@ -814,8 +829,8 @@ jobs:
                  for button in search.findall(".//control[@type='button']")):
               errors.append("CINÉVA search actions are missing their branded focus surface")
           skin = ET.parse(root / "addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.61":
-              errors.append("Skin ZIP version is not 0.5.61")
+          if skin.attrib.get("version") != "0.5.62":
+              errors.append("Skin ZIP version is not 0.5.62")
           settings = ET.parse("tools/script.cineva.widgets/resources/settings.xml").getroot()
           registry = settings.find(".//setting[@id='widget_registry']")
           if registry is None or registry.attrib.get("type") != "string":

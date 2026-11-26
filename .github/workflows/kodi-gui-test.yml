@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths-ignore:
       - "repository-site/**"
-      - "skin.cineva-0.5.61.zip"
+      - "skin.cineva-0.5.62.zip"
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -27,29 +27,29 @@ jobs:
       - name: Build release ZIP, verify idempotence, and commit source fixes
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.61.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.62.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.61.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.62.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
           fi
           echo "Archive SHA-256 is stable across consecutive builds: $after"
           mkdir -p artifacts
-          cp skin.cineva-0.5.61.zip artifacts/
-          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.61.zip)" ]; then
+          cp skin.cineva-0.5.62.zip artifacts/
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.62.zip)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add skin.cineva-0.5.61.zip
-            git commit -m "Build updated CINÉVA 0.5.61 skin archive"
+            git add skin.cineva-0.5.62.zip
+            git commit -m "Build updated CINÉVA 0.5.62 skin archive"
             git push origin HEAD:main || echo "::warning::Could not push rebuilt skin ZIP; GUI test still uses the rebuilt local ZIP."
           fi
 
       - name: Expand uploaded skin archive and prepare add-ons
         run: |
           mkdir -p artifacts
-          test -s skin.cineva-0.5.61.zip
-          unzip -q skin.cineva-0.5.61.zip -d .
+          test -s skin.cineva-0.5.62.zip
+          unzip -q skin.cineva-0.5.62.zip -d .
           test -f skin.cineva/addon.xml
           test -d skin.cineva/xml
           test -f skin.cineva/xml/Home.xml
@@ -70,8 +70,23 @@ jobs:
           if any((b.findtext("label", "").strip().upper() == "MY WIDGETS" or "ActivateWindow(11119)" in b.findtext("onclick", "")) for b in nav_buttons):
             raise SystemExit("Home must not expose a separate My Widgets destination; widget slots belong in Skin Settings")
           settings = nav_group.find("./control[@id='1005']")
-          if settings is None or (settings.findtext("label"), settings.findtext("left"), settings.findtext("width"), settings.findtext("onclick")) != ("SETTINGS", "670", "150", "ActivateWindow(Settings)"):
-            raise SystemExit("Home navigation must place the single Settings destination in the reclaimed final slot")
+          expected_settings_clicks = []
+          for row_number in range(1, 5):
+            conditions = [
+              f"String.IsEmpty(Skin.String(Cineva.Widget{previous}.Path))"
+              for previous in range(1, row_number)
+            ]
+            conditions.append(f"!String.IsEmpty(Skin.String(Cineva.Widget{row_number}.Path))")
+            expected_settings_clicks.append((" + ".join(conditions), f"SetFocus({9000 + row_number})"))
+          expected_settings_clicks.extend([(None, "SetFocus(1005)"), (None, "ActivateWindow(Settings)")])
+          actual_settings_clicks = (
+            [(node.get("condition"), (node.text or "").strip()) for node in settings.findall("onclick")]
+            if settings is not None else []
+          )
+          if (settings is None
+              or (settings.findtext("label"), settings.findtext("left"), settings.findtext("width")) != ("SETTINGS", "670", "150")
+              or actual_settings_clicks != expected_settings_clicks):
+            raise SystemExit("Home Settings navigation must reset the first configured shelf, restore tab focus and open Settings")
           if nav_group.find("./control[@id='1006']") is not None:
             raise SystemExit("Obsolete navigation control 1006 must not remain")
           if Path("skin.cineva/xml/CinevaWidgetHub.xml").exists():
@@ -561,8 +576,8 @@ jobs:
                  for button in search.findall(".//control[@type='button']")):
             raise SystemExit("CINÉVA search actions are missing their branded focus surface")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.61":
-            raise SystemExit("Skin archive version must be 0.5.61")
+          if skin.attrib.get("version") != "0.5.62":
+            raise SystemExit("Skin archive version must be 0.5.62")
           widget = ET.parse("tools/script.cineva.widgets/addon.xml").getroot()
           if widget.attrib.get("version") != "0.1.8":
             raise SystemExit("Widget manager version must be 0.1.8")
@@ -2539,7 +2554,41 @@ jobs:
             )
           print("Settings hub focus after returning from File Manager:", settings_after_file_manager)
           press("Escape")
-          wait_for_window(10000)
+          home_return_state = wait_for_window(10000)
+          if home_return_state.get("currentwindow", {}).get("id") != 10000:
+            raise SystemExit(f"Returning from Settings did not restore Home: {home_return_state}")
+          home_return_focus = home_return_state.get("currentcontrol", {}).get("label", "").strip().upper()
+          if home_return_focus != "SETTINGS":
+            raise SystemExit(f"Home did not restore the Settings navigation tab after the Settings round trip: {home_return_state}")
+          time.sleep(0.8)
+          subprocess.run(["import", "-display", ":99", "-window", "root",
+                          "artifacts/cineva-home-return-from-settings.png"], check=True)
+          # Compare a real first-row poster against the initial Home capture.
+          # The old scroll offset left only captions visible under the pinned hero.
+          subprocess.run(["convert", "artifacts/cineva-home-initial.png",
+                          "-crop", "172x258+72+429", "+repage",
+                          "/tmp/cineva-home-initial-poster.png"], check=True)
+          subprocess.run(["convert", "artifacts/cineva-home-return-from-settings.png",
+                          "-crop", "172x258+72+429", "+repage",
+                          "/tmp/cineva-home-return-poster.png"], check=True)
+          poster_diff = subprocess.run([
+            "compare", "-metric", "AE", "/tmp/cineva-home-initial-poster.png",
+            "/tmp/cineva-home-return-poster.png", "null:"
+          ], text=True, capture_output=True, check=False)
+          poster_metric = (poster_diff.stderr or poster_diff.stdout).strip().split()
+          try:
+            changed_poster_pixels = int(poster_metric[0])
+          except (IndexError, ValueError):
+            raise SystemExit(f"Could not compare the Home poster after returning from Settings: {poster_diff.stderr} {poster_diff.stdout}")
+          if changed_poster_pixels > 10000:
+            raise SystemExit(
+              "Home returned from Settings with its first configured poster shelf clipped "
+              f"beneath the pinned hero ({changed_poster_pixels} poster pixels changed)"
+            )
+          print(
+            "Verified Home resets its first configured shelf before leaving through Settings "
+            f"and restores the first poster on return ({changed_poster_pixels} pixels differ)."
+          )
 
           # Verify the category rails still expose a complete, unique set of
           # focusable actions in the packaged XML used by this Kodi process.

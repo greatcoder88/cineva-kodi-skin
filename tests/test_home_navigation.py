@@ -5,7 +5,7 @@ from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.61.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.62.zip"
 HUB_WINDOW = "skin.cineva/xml/CinevaWidgetHub.xml"
 
 
@@ -35,12 +35,55 @@ class HomeNavigationTests(unittest.TestCase):
         self.assertIn("1005", buttons, "Settings must occupy the reclaimed navigation slot")
         self.assertEqual(buttons["1005"].findtext("label"), "SETTINGS")
         self.assertEqual(buttons["1005"].findtext("left"), "670")
-        self.assertEqual(buttons["1005"].findtext("onclick"), "ActivateWindow(Settings)")
+        self.assertEqual(buttons["1005"].findall("onclick")[-2].text, "SetFocus(1005)")
+        self.assertEqual(buttons["1005"].findall("onclick")[-1].text, "ActivateWindow(Settings)")
         self.assertFalse(
             any((button.findtext("label") or "").strip().upper() == "MY WIDGETS"
                 for button in buttons.values())
         )
         self.assertNotIn("ActivateWindow(11119)", ET.tostring(home, encoding="unicode"))
+
+    def test_top_navigation_resets_the_first_configured_home_shelf_before_leaving(self):
+        with ZipFile(ARCHIVE) as archive:
+            home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
+        nav = next(
+            node for node in home.findall("./controls/control")
+            if node.get("type") == "group"
+            and node.find("./control[@id='1001']") is not None
+        )
+        actions = {
+            "1001": "ActivateWindow(Home)",
+            "1002": "ActivateWindow(11117)",
+            "1003": "ActivateWindow(11118)",
+            "1004": "ActivateWindow(11112)",
+            "1005": "ActivateWindow(Settings)",
+        }
+        for control_id, final_action in actions.items():
+            button = nav.find(f"./control[@id='{control_id}']")
+            self.assertIsNotNone(button)
+            expected = []
+            for row_number in range(1, 5):
+                conditions = [
+                    f"String.IsEmpty(Skin.String(Cineva.Widget{previous}.Path))"
+                    for previous in range(1, row_number)
+                ]
+                conditions.append(
+                    f"!String.IsEmpty(Skin.String(Cineva.Widget{row_number}.Path))"
+                )
+                expected.append((
+                    " + ".join(conditions),
+                    f"SetFocus({9000 + row_number})",
+                ))
+            expected.extend([
+                (None, f"SetFocus({control_id})"),
+                (None, final_action),
+            ])
+            self.assertEqual(
+                [(node.get("condition"), (node.text or "").strip())
+                 for node in button.findall("onclick")],
+                expected,
+                f"Home navigation {control_id} must reset the first configured shelf, restore tab focus, then navigate",
+            )
 
     def test_home_poster_captions_share_a_top_aligned_baseline(self):
         with ZipFile(ARCHIVE) as archive:

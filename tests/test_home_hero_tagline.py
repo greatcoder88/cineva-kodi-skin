@@ -6,7 +6,7 @@ from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.61.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.62.zip"
 FIXTURE = ROOT / "tools/test-fixtures/plugin.video.pov/default.py"
 
 
