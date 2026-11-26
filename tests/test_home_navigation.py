@@ -534,6 +534,6 @@ if __name__ == "__main__":
                     for focus_id in later_focus_ids:
                         self.assertIn(
                             f"!Control.HasFocus({focus_id})", visible,
-                            f"{include_name} must hide off-screen artwork while a later row is active",
+                            f"{include_name} must hide off-screen artwork while a later row is active (row {row_index})",
                         )
 
