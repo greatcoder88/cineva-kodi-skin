@@ -1246,15 +1246,19 @@ jobs:
             view_all_focus = gui()
             while time.time() < deadline:
               current = view_all_focus.get("currentcontrol", {})
+              # Kodi Piers omits the focused container control ID from
+              # GUI.GetProperties for list items. The focused item label plus
+              # the Videos window ID is the reliable live signal here.
               if (
                 view_all_focus.get("currentwindow", {}).get("id") == 10025
-                and current.get("id") == 50
                 and current.get("label", "").strip() == expected_first_item
               ):
                 break
               time.sleep(0.2)
               view_all_focus = gui()
             else:
+              subprocess.run(["import", "-display", ":99", "-window", "root",
+                              "artifacts/cineva-view-all-focus-failed.png"], check=True)
               raise SystemExit(
                 f"Home VIEW ALL opened its directory but D-pad Down did not "
                 f"focus the first real poster in panel 50: {view_all_focus}; "
