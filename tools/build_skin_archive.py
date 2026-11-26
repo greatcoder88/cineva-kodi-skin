@@ -2833,9 +2833,7 @@ def main():
                         data = changelog.encode("utf-8")
                         changed.append(info.filename + " (refresh 0.5.58 release notes)")
                     release_entries = [
-                        ("0.5.63", "0.5.63 - Simplify the focused Home poster state
-- Remove the detached red underline below selected posters; the crimson artwork border and restrained zoom remain the focus cue.
-- Keep the multi-line caption and resume progress layout clean across all four Home rails."),
+                        ("0.5.63", "0.5.63 - Simplify the focused Home poster state\n- Remove the detached red underline below selected posters; the crimson artwork border and restrained zoom remain the focus cue.\n- Keep the multi-line caption and resume progress layout clean across all four Home rails."),
                         ("0.5.62", "0.5.62 - Restore the Home shelf viewport after top-level navigation\n- Bring the first configured Home shelf back into view before opening Movies, TV Shows, Search or Settings.\n- Restore the activated navigation tab before leaving so returning to Home keeps the hero and poster rail aligned."),
                         ("0.5.61", "0.5.61 - Match Home hero context to the selected shelf\n- Label the first in-progress movie rail CONTINUE WATCHING and the second in-progress TV rail IN PROGRESS.\n- Keep trending and custom collection labels source-aware across all four Home rows."),
                         ("0.5.60", "0.5.60 - Give Home heroes concise provider taglines\n- Prefer a supplied ListItem.Tagline for the selected poster before PlotOutline and full Plot fallbacks.\n- Keep all three synopsis sources in the same title-safe hero band so the copy updates with each focused item."),
