@@ -1362,16 +1362,17 @@ def update_xml(data, path):
             if index == 1:
                 set_child_text(shelf, "onclick", "PlayMedia($INFO[ListItem.FileNameAndPath])")
             set_child_text(shelf, "itemgap", 8)
-            # Kodi's navigation tags accept one target. Point to the previous
-            # row GROUP, which remembers its last focused child (normally the
-            # selected poster). Multiple conditional <onup> nodes are ambiguous
-            # to Kodi and were falling through to this row's VIEW ALL button.
+            # Kodi's grouplist row-group target is not a reliable focus
+            # destination from a child fixedlist on all Kodi 22 builds: the
+            # GUI smoke test showed Up leaving focus on the current poster.
+            # Target the previous fixedlist directly so Kodi restores its
+            # remembered selected item in that shelf.
             for stale_up in shelf.findall("onup"):
                 shelf.remove(stale_up)
             if index == 1:
                 set_child_text(shelf, "onup", f"SetFocus({view_all_id})")
             else:
-                set_child_text(shelf, "onup", str(9060 + index - 1))
+                set_child_text(shelf, "onup", str(9000 + index - 1))
             set_child_text(shelf, "ondown", f"SetFocus({next_target})")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
                 layout.set("width", "248")
