@@ -4,7 +4,7 @@ from pathlib import Path
 from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.50.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.51.zip"
 
 
 class SettingsHubFileManagerTests(unittest.TestCase):
