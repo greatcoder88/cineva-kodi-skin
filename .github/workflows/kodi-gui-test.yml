@@ -1897,7 +1897,7 @@ jobs:
                 rail_signal = subprocess.run([
                   "convert", "artifacts/cineva-home-row2-actions.png",
                   "-crop", "1860x240+60+540",
-                  "-colorspace", "Gray", "-threshold", "55",
+                  "-colorspace", "Gray", "-threshold", "55%",
                   "-format", "%[fx:mean]", "info:"
                 ], text=True, capture_output=True, check=True)
                 try:
