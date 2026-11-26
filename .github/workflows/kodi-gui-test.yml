@@ -2020,7 +2020,7 @@ jobs:
                     break
                   time.sleep(0.25)
                 else:
-                  raise SystemExit(f"Row-2 Right did not focus MORE INFO: {state}")
+                  raise SystemExit(f"Row-1 Right did not focus MORE INFO: {state}")
                 subprocess.run(["xdotool","key","Down"],check=True)
                 deadline = time.time() + 8
                 while time.time() < deadline:
@@ -2033,6 +2033,25 @@ jobs:
                     f"Row-1 More Info Down did not return to its selected poster "
                     f"{expected_focus_label!r}: {state}"
                   )
+                # The row-1 hero-action probe intentionally ends on the row-1
+                # poster. Restore row 2 before the outer loop advances to row 3;
+                # otherwise its next single Down would start from the wrong row.
+                subprocess.run(["xdotool","key","Down"],check=True)
+                deadline = time.time() + 8
+                while time.time() < deadline:
+                  state = gui()
+                  if state.get("currentcontrol",{}).get("label","").strip() == expected_row_labels[2]:
+                    break
+                  time.sleep(0.25)
+                else:
+                  raise SystemExit(
+                    f"Returning from row-1 hero actions did not restore row 2 "
+                    f"{expected_row_labels[2]!r}: {state}"
+                  )
+                print("Restored row 2 after the row-1 hero-action probe.")
+              if row_number == 3:
+                time.sleep(0.8)
+                subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row3-focus.png"],check=True)
               if row_number == 4:
                 time.sleep(0.8)
                 subprocess.run(["import","-display",":99","-window","root","artifacts/cineva-home-row4-scroll.png"],check=True)
