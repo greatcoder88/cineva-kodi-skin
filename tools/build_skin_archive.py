@@ -1187,9 +1187,13 @@ def update_xml(data, path):
         # continuously or layering multiple transitions.
         set_child_text(rail_list, "scrolltime", 180)
         set_child_text(rail_list, "usecontrolcoords", "false")
+        # Keep the short lift for shelves that are actually focused inside
+        # the scrolling viewport. Hero actions live outside that viewport, so
+        # they need a row-specific translation to bring their matching shelf
+        # back into view instead of leaving it stranded below the screen.
         lower_row_focus = " | ".join(
             f"Control.HasFocus({control_id})"
-            for control_id in (9002, 9113, 9114, 9161, 9003, 9115, 9116, 9162, 9004, 9117, 9118, 9163)
+            for control_id in (9002, 9161, 9003, 9162, 9004, 9163)
         )
         ET.SubElement(
             rail_list,
@@ -1197,6 +1201,23 @@ def update_xml(data, path):
             {"effect": "slide", "start": "0,0", "end": "0,-40",
              "time": "180", "condition": lower_row_focus},
         ).text = "Conditional"
+        # The hero action groups are pinned above the rails. When one receives
+        # focus, align its corresponding row with the normal focused-shelf
+        # position (the same vertical lane used when the poster itself is focused).
+        for control_ids, offset in (
+            ((9113, 9114), -384),
+            ((9115, 9116), -896),
+            ((9117, 9118), -1408),
+        ):
+            hero_action_focus = " | ".join(
+                f"Control.HasFocus({control_id})" for control_id in control_ids
+            )
+            ET.SubElement(
+                rail_list,
+                "animation",
+                {"effect": "slide", "start": "0,0", "end": f"0,{offset}",
+                 "time": "180", "condition": hero_action_focus},
+            ).text = "Conditional"
         first_row_index = None
         for index in range(1, 5):
             heading_label = f"$INFO[Skin.String(Cineva.Widget{index}.Name)]"

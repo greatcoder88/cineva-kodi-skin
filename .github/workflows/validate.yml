@@ -474,10 +474,15 @@ jobs:
           rail_list = controls.find("./control[@type='grouplist'][@id='9050']")
           if rail_list is None or (rail_list.findtext("left"), rail_list.findtext("top"), rail_list.findtext("width"), rail_list.findtext("height")) != ("60", "444", "1860", "670") or (rail_list.findtext("orientation"), rail_list.findtext("itemgap"), rail_list.findtext("scrolltime")) != ("vertical", "12", "180"):
               errors.append("Home rails must use the pinned-hero vertical scrolling viewport")
-          lower_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9161, 9003, 9115, 9116, 9162, 9004, 9117, 9118, 9163))
-          lower_slide = rail_list.find("./animation[@effect='slide']") if rail_list is not None else None
-          if lower_slide is None or (lower_slide.get("start"), lower_slide.get("end"), lower_slide.get("time"), lower_slide.get("condition"), lower_slide.text) != ("0,0", "0,-40", "180", lower_focus, "Conditional"):
-              errors.append("Home lower-row focus must use the short, conditional viewport slide")
+          lower_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9161, 9003, 9162, 9004, 9163))
+          lower_slide = rail_list.find("./animation[@effect='slide'][@end='0,-40']") if rail_list is not None else None
+          if lower_slide is None or (lower_slide.get("start"), lower_slide.get("time"), lower_slide.get("condition"), lower_slide.text) != ("0,0", "180", lower_focus, "Conditional"):
+              errors.append("Home focused shelves must use the short, conditional viewport lift")
+          for control_ids, offset in (((9113, 9114), -384), ((9115, 9116), -896), ((9117, 9118), -1408)):
+              hero_action_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in control_ids)
+              hero_action_slide = rail_list.find(f"./animation[@effect='slide'][@end='0,{offset}']") if rail_list is not None else None
+              if hero_action_slide is None or (hero_action_slide.get("start"), hero_action_slide.get("time"), hero_action_slide.get("condition"), hero_action_slide.text) != ("0,0", "180", hero_action_focus, "Conditional"):
+                  errors.append(f"Home hero actions must bring their matching shelf into view (offset {offset})")
           scroll_mask = controls.find("./control[@id='9107']")
           expected_scroll_focus = " | ".join(f"Control.HasFocus({control_id})" for control_id in (9002, 9113, 9114, 9161, 9003, 9115, 9116, 9162, 9004, 9117, 9118, 9163))
           if scroll_mask is None or (scroll_mask.findtext("left"), scroll_mask.findtext("top"), scroll_mask.findtext("width"), scroll_mask.findtext("height")) != ("0", "320", "1920", "430") or scroll_mask.findtext("texture") != "rail-scroll-mask.png" or scroll_mask.findtext("visible") != expected_scroll_focus:
