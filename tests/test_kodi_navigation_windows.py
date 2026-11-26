@@ -4,7 +4,7 @@ from zipfile import ZipFile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.47.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.48.zip"
 XML = "skin.cineva/xml/"
 
 
