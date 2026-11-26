@@ -2024,43 +2024,67 @@ jobs:
             time.sleep(0.2)
           else:
             raise SystemExit(f"Kodi Add-on Browser opened without a focused control: {addons_state}")
-          # GUI.GetProperties exposes the focused control label but does not
-          # expose its numeric control ID. Verify native view 50 through Kodi's
-          # own container labels and prove D-pad movement changes its selection.
+          # Kodi Piers can leave Container(50).CurrentItem blank for the
+          # Add-on Browser even while NumItems is populated. Verify D-pad
+          # movement with the selected item label and the focused-control label.
           def addon_view_state():
             return rpc("XBMC.GetInfoLabels", {
-              "labels":["Container(50).NumItems", "Container(50).CurrentItem"]
+              "labels":["Container(50).NumItems", "Container(50).ListItem.Label"]
             })
+          def addon_selection_state():
+            info = addon_view_state()
+            state = gui()
+            return {
+              "item": info.get("Container(50).ListItem.Label", "").strip(),
+              "control": state.get("currentcontrol", {}).get("label", "").strip()
+            }, state, info
+          def changed_selection_keys(before, after):
+            return [
+              key for key, value in before.items()
+              if value and after.get(key) and after.get(key) != value
+            ]
           addon_items = addon_view_state()
           addon_item_count = int(addon_items.get("Container(50).NumItems", "0"))
           if addon_item_count < 1:
             raise SystemExit(f"Kodi Add-on Browser view 50 has no populated directory items: {addon_items}; GUI={addons_state}")
-          initial_addon_item = int(addon_items.get("Container(50).CurrentItem", "-1"))
-          if addon_item_count > 1 and initial_addon_item < 0:
-            raise SystemExit(f"Kodi Add-on Browser view 50 has no valid selected item: {addon_items}; GUI={addons_state}")
+          initial_addon_selection, addons_state, addon_items = addon_selection_state()
+          if addon_item_count > 1 and not any(initial_addon_selection.values()):
+            raise SystemExit(f"Kodi Add-on Browser view 50 has no readable selected item label: {addon_items}; GUI={addons_state}")
           if addon_item_count > 1:
             press("Down")
             deadline = time.time() + 5
-            moved_addon_item = initial_addon_item
+            moved_addon_selection = initial_addon_selection
+            moved_state = addons_state
+            moved_items = addon_items
+            changed_keys = []
             while time.time() < deadline:
-              moved_state = addon_view_state()
-              moved_addon_item = int(moved_state.get("Container(50).CurrentItem", "-1"))
-              if moved_addon_item != initial_addon_item:
+              moved_addon_selection, moved_state, moved_items = addon_selection_state()
+              changed_keys = changed_selection_keys(initial_addon_selection, moved_addon_selection)
+              if changed_keys:
                 break
               time.sleep(0.2)
-            if moved_addon_item == initial_addon_item:
-              raise SystemExit(f"D-pad Down did not move the native Add-on Browser view 50 selection: before={addon_items}; after={moved_state}; GUI={gui()}")
+            if not changed_keys:
+              raise SystemExit(
+                f"D-pad Down did not change the native Add-on Browser selection: "
+                f"before={initial_addon_selection}; after={moved_addon_selection}; "
+                f"items={moved_items}; GUI={moved_state}"
+              )
             press("Up")
             deadline = time.time() + 5
-            restored_addon_item = moved_addon_item
+            restored_addon_selection = moved_addon_selection
+            restored_state = moved_state
+            restored_items = moved_items
             while time.time() < deadline:
-              restored_state = addon_view_state()
-              restored_addon_item = int(restored_state.get("Container(50).CurrentItem", "-1"))
-              if restored_addon_item == initial_addon_item:
+              restored_addon_selection, restored_state, restored_items = addon_selection_state()
+              if all(restored_addon_selection.get(key) == initial_addon_selection.get(key) for key in changed_keys):
                 break
               time.sleep(0.2)
-            if restored_addon_item != initial_addon_item:
-              raise SystemExit(f"D-pad Up did not restore the native Add-on Browser view 50 selection: expected={initial_addon_item}; after={restored_state}; GUI={gui()}")
+            if not all(restored_addon_selection.get(key) == initial_addon_selection.get(key) for key in changed_keys):
+              raise SystemExit(
+                f"D-pad Up did not restore the native Add-on Browser selection: "
+                f"expected={initial_addon_selection}; after={restored_addon_selection}; "
+                f"items={restored_items}; GUI={restored_state}"
+              )
           subprocess.run(["import", "-display", ":99", "-window", "root",
                           "artifacts/cineva-addons-navigation.png"], check=True)
           print(f"Opened Kodi Add-on Browser on native view 50 with {addon_item_count} directory items; D-pad selection movement verified.")
@@ -2116,41 +2140,55 @@ jobs:
             time.sleep(0.2)
           else:
             raise SystemExit(f"D-pad Down did not enter the populated POV panel 50: {pov_focus_state}")
-          initial_pov_item = int(rpc("XBMC.GetInfoLabels", {
-            "labels":["Container(50).CurrentItem"]
-          }).get("Container(50).CurrentItem", "-1"))
-          if initial_pov_item < 0:
-            raise SystemExit(f"POV panel 50 did not select its first item after focus: {gui()}")
+          def pov_selection_state():
+            info = rpc("XBMC.GetInfoLabels", {
+              "labels":["Container(50).ListItem.Label"]
+            })
+            state = gui()
+            item_label = info.get("Container(50).ListItem.Label", "").strip()
+            control_label = state.get("currentcontrol", {}).get("label", "").strip()
+            return item_label or control_label, state, info
+          initial_pov_label, initial_pov_state, initial_pov_labels = pov_selection_state()
+          if not initial_pov_label or initial_pov_label.upper() == "BACK" or initial_pov_label == "..":
+            raise SystemExit(
+              f"POV panel 50 did not focus its first real item after D-pad Down: "
+              f"label={initial_pov_label!r}; info={initial_pov_labels}; GUI={initial_pov_state}"
+            )
           subprocess.run(["import", "-display", ":99", "-window", "root",
                           "artifacts/cineva-pov-directory-focused.png"], check=True)
           if pov_count > 1:
             press("Down")
             deadline = time.time() + 5
-            moved_pov_item = initial_pov_item
+            moved_pov_label = initial_pov_label
+            moved_pov_state = initial_pov_state
+            moved_pov_labels = initial_pov_labels
             while time.time() < deadline:
-              moved_pov_item = int(rpc("XBMC.GetInfoLabels", {
-                "labels":["Container(50).CurrentItem"]
-              }).get("Container(50).CurrentItem", "-1"))
-              if moved_pov_item != initial_pov_item:
+              moved_pov_label, moved_pov_state, moved_pov_labels = pov_selection_state()
+              if moved_pov_label and moved_pov_label != initial_pov_label:
                 break
               time.sleep(0.2)
-            if moved_pov_item == initial_pov_item:
+            if moved_pov_label == initial_pov_label:
               raise SystemExit(
                 f"D-pad Down did not move inside the focused POV plugin directory: "
-                f"before={initial_pov_item}; after={gui()}"
+                f"before={initial_pov_label!r}; after={moved_pov_label!r}; "
+                f"info={moved_pov_labels}; GUI={moved_pov_state}"
               )
             press("Up")
             deadline = time.time() + 5
-            restored_pov_item = moved_pov_item
+            restored_pov_label = moved_pov_label
+            restored_pov_state = moved_pov_state
+            restored_pov_labels = moved_pov_labels
             while time.time() < deadline:
-              restored_pov_item = int(rpc("XBMC.GetInfoLabels", {
-                "labels":["Container(50).CurrentItem"]
-              }).get("Container(50).CurrentItem", "-1"))
-              if restored_pov_item == initial_pov_item:
+              restored_pov_label, restored_pov_state, restored_pov_labels = pov_selection_state()
+              if restored_pov_label == initial_pov_label:
                 break
               time.sleep(0.2)
-            if restored_pov_item != initial_pov_item:
-              raise SystemExit(f"D-pad Up did not restore the first POV item: {restored_pov_item}")
+            if restored_pov_label != initial_pov_label:
+              raise SystemExit(
+                f"D-pad Up did not restore the first POV item: "
+                f"expected={initial_pov_label!r}; after={restored_pov_label!r}; "
+                f"info={restored_pov_labels}; GUI={restored_pov_state}"
+              )
           pov_log_delta = log_text()[len(log_before_pov):]
           if "Control 50 in window 10025 has been asked to focus" in pov_log_delta:
             raise SystemExit("Kodi still reports that MyVideoNav cannot focus panel 50")
