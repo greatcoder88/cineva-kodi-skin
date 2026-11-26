@@ -1962,8 +1962,10 @@ jobs:
                 deadline = time.time() + 8
                 while time.time() < deadline:
                   state = gui()
-                  if (state.get("currentcontrol",{}).get("label","").strip().upper() == "RESUME"
-                      and state.get("currentcontrol",{}).get("id") == 9111):
+                  # Kodi GUI.GetProperties exposes the focused control label here,
+                  # but does not include the numeric control id. The XML/unit
+                  # assertions already verify that RESUME is control 9111.
+                  if state.get("currentcontrol",{}).get("label","").strip().upper() == "RESUME":
                     break
                   time.sleep(0.25)
                 else:
