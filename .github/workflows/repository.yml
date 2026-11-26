@@ -80,7 +80,7 @@ jobs:
           dependency=skin.find("./requires/import[@addon='script.cineva.widgets']")
           helper=next(x for x in ET.fromstring(xml).findall("addon") if x.get("id") == "script.cineva.widgets")
           helper_version=helper.get("version")
-          assert skin.get("version") == "0.5.34"
+          assert skin.get("version") == "0.5.35"
           assert dependency is not None
           assert dependency.get("version") == helper_version
           helper_dir=Path("tools/script.cineva.widgets")

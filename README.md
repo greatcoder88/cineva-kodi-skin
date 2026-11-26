@@ -27,7 +27,7 @@ Add this source in Kodi's **Settings → File manager → Add source**:
 
 `https://greatcoder88.github.io/cineva-kodi-skin/`
 
-Then open **Add-ons → Install from ZIP file → CINÉVA**, choose `repository.cineva-0.1.3.zip` at the source root, and finish through **Install from repository → CINÉVA Add-on Repository**. No separate browser download or custom domain is required. The repository workflow publishes the generated feed to the `gh-pages` branch root. GitHub Pages must serve the `gh-pages` branch from `/(root)`. The root page is a Kodi-compatible directory listing, not this README.
+Then open **Add-ons → Install from ZIP file → CINÉVA**, choose `repository.cineva-0.1.4.zip` at the source root, and finish through **Install from repository → CINÉVA Add-on Repository**. No separate browser download or custom domain is required. The repository workflow publishes the generated feed to the `gh-pages` branch root. GitHub Pages must serve the `gh-pages` branch from `/(root)`. The root page is a Kodi-compatible directory listing, not this README.
 
 See [the complete Kodi installation guide](docs/KODI_REPOSITORY.md) for details.
 
@@ -54,7 +54,7 @@ A Linux GUI pass is useful evidence, not a substitute for these checks. Do not p
 
 ## Repository layout
 
-- `skin.cineva-0.5.31.zip` — distributable skin package.
+- `skin.cineva-0.5.35.zip` — distributable skin package.
 - `tools/build_skin_archive.py` — deterministic package builder and source patcher.
 - `tools/script.cineva.widgets/` — per-screen widget source picker.
 - `tests/` and `.github/workflows/` — automated validation.
