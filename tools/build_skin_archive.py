@@ -778,6 +778,7 @@ def update_xml(data, path):
                     # This prevents empty duration metadata from leaving doubled bullets
                     # (and keeps the same compact format for all four dynamic hero rows).
                     container_id = int(source_label.split("Container(", 1)[1].split(")", 1)[0])
+                    row_index = container_id - 9000
                     episode_context = (
                         f"$INFO[Container({container_id}).ListItem.Season,  •  S]"
                         f"$INFO[Container({container_id}).ListItem.Episode,  ·  E]"
@@ -795,7 +796,6 @@ def update_xml(data, path):
                     set_child_text(labels[1], "font", "font10")
                     set_child_text(labels[1], "textcolor", "silver")
                     set_child_text(labels[1], "width", 400)
-                    row_index = int(source_label.split("Container(", 1)[1].split(")", 1)[0]) - 9000
                     rating_id = 9340 + (row_index - 1) * 3
                     for old_rating in list(group.findall("control")):
                         if (old_rating.findtext("texture") in {"rating-badge.png", "imdb-logo.png"}
