@@ -2783,6 +2783,12 @@ def main():
                     data = ET.tostring(addon_root, encoding="UTF-8", xml_declaration=True)
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
+                    previous_release_entry = "0.5.58 - Restore previous Home poster focus\n- Route D-pad Up to the previous row group so Kodi restores its last focused poster.\n- Give each Home row an explicit default poster target.\n- Replace ambiguous conditional navigation tags with Kodi's native group focus memory."
+                    updated_release_entry = "0.5.58 - Restore previous Home poster focus\n- Route D-pad Up directly to the previous poster shelf so Kodi restores its remembered selection.\n- Keep each Home row on an explicit default poster target for predictable remote navigation.\n- Preserve earlier shelf focusability while hiding only off-screen artwork behind the pinned hero."
+                    if previous_release_entry in changelog:
+                        changelog = changelog.replace(previous_release_entry, updated_release_entry, 1)
+                        data = changelog.encode("utf-8")
+                        changed.append(info.filename + " (refresh 0.5.58 release notes)")
                     release_entries = [
                         ("0.5.58", "0.5.58 - Restore previous Home poster focus\n- Route D-pad Up directly to the previous poster shelf so Kodi restores its remembered selection.\n- Keep each Home row on an explicit default poster target for predictable remote navigation.\n- Preserve earlier shelf focusability while hiding only off-screen artwork behind the pinned hero."),
                         ("0.5.57", "0.5.57 - Restore D-pad Up between scrolled Home shelves\n- Keep earlier poster rails focusable when navigating Up from any later row.\n- Preserve the pinned-hero layout; off-screen rails remain clipped by the Home viewport."),

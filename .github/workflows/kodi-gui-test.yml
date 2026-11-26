@@ -2427,15 +2427,30 @@ jobs:
                           "artifacts/cineva-skin-settings-navigation.png"], check=True)
           print("Opened native Skin Settings and verified D-pad focus starts on widget slot 1.")
           press("Escape")
-          wait_for_window(10004)
+          settings_return_state = wait_for_window(10004)
+          settings_return_label = settings_return_state.get("currentcontrol", {}).get("label", "").strip().upper()
+          print("Settings hub focus after returning from Skin Settings:", settings_return_state)
+          # Settings.xml deliberately defaults to ADD-ONS on re-entry. Accept
+          # that native reset as well as a restored Skin Settings focus, then
+          # route to FILE MANAGER through SYSTEM INFORMATION.
+          if settings_return_label == "CINÉVA SKIN SETTINGS":
+            press("Left")
+            wait_for_control("SYSTEM INFORMATION")
+          elif settings_return_label == "ADD-ONS":
+            press("Down")
+            wait_for_control("SYSTEM INFORMATION")
+          elif settings_return_label == "SYSTEM INFORMATION":
+            pass
+          elif settings_return_label != "FILE MANAGER":
+            raise SystemExit(
+              f"Settings hub returned with unexpected focus after Skin Settings: {settings_return_state}"
+            )
+          if settings_return_label != "FILE MANAGER":
+            press("Down")
+            wait_for_control("FILE MANAGER")
 
           # The Settings hub must open Kodi's native two-pane File Manager.
           # This directly guards the blank-screen regression reported on Fire TV.
-          wait_for_control("CINÉVA SKIN SETTINGS")
-          press("Left")
-          wait_for_control("SYSTEM INFORMATION")
-          press("Down")
-          wait_for_control("FILE MANAGER")
           time.sleep(0.8)
           subprocess.run(["import", "-display", ":99", "-window", "root",
                           "artifacts/cineva-file-manager-entry.png"], check=True)
