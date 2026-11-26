@@ -417,13 +417,10 @@ jobs:
             # row's hero actions and VIEW ALL should hide the earlier rail.
             later_focus_ids = [control_id for later_index in range(index + 1, 5)
                                for control_id in (9111 + (later_index - 1) * 2, 9112 + (later_index - 1) * 2, 9159 + later_index)]
-            if later_focus_ids:
-              hide_previous_row = " + ".join(f"!Control.HasFocus({control_id})" for control_id in later_focus_ids)
-              expected_visibility = f"!String.IsEmpty(Skin.String(Cineva.Widget{index}.Path)) + {hide_previous_row}"
-              if heading is None or heading.findtext("visible") != expected_visibility or shelf is None or shelf.findtext("visible") != expected_visibility:
-                raise SystemExit(f"Home widget {index} still paints a passed shelf behind the pinned hero")
-            elif heading is None or heading.findtext("visible") != f"!String.IsEmpty(Skin.String(Cineva.Widget{index}.Path))" or shelf is None or shelf.findtext("visible") != f"!String.IsEmpty(Skin.String(Cineva.Widget{index}.Path))":
-              raise SystemExit("Final Home shelf must remain visible without a later-row focus gate")
+            expected_visibility = f"!String.IsEmpty(Skin.String(Cineva.Widget{index}.Path))"
+            if (heading is None or heading.findtext("visible") != expected_visibility
+                or shelf is None or shelf.findtext("visible") != expected_visibility):
+              raise SystemExit(f"Home widget {index} poster rail must stay focusable when navigating Up")
             expected_down = f"SetFocus({9000 + index + 1})" if index < 4 else "SetFocus(1001)"
             if shelf.findtext("ondown") != expected_down or row_group.findtext("ondown") != expected_down:
               raise SystemExit(f"Home widget {index} cannot navigate down to the next rail")
