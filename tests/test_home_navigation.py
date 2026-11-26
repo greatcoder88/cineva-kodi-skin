@@ -166,8 +166,11 @@ class HomeNavigationTests(unittest.TestCase):
             search = ET.fromstring(archive.read("skin.cineva/xml/custom11112.xml"))
             settings = ET.fromstring(archive.read("skin.cineva/xml/SkinSettings.xml"))
         controls = search.find("controls")
-        self.assertEqual(search.findtext("defaultcontrol"), "9703")
+        self.assertEqual(search.findtext("defaultcontrol"), "9705")
         self.assertEqual(controls.findtext("./control[@id='9703']/label"), "SEARCH")
+        self.assertIsNotNone(controls.find("./control[@type='button'][@id='9705']"),
+                             "Search must default to a focusable control, not the title label")
+        self.assertEqual(controls.findtext("./control[@id='9705']/label"), "NEW SEARCH")
         self.assertEqual(controls.findtext("./control[@id='9705']/onclick"),
                          "RunScript(script.cineva.widgets,action=search)")
         movie = controls.find("./control[@type='panel'][@id='9701']")

@@ -805,8 +805,14 @@ jobs:
           if osd_progress is None or (osd_progress.findtext("left"), osd_progress.findtext("top"), osd_progress.findtext("width")) != ("80", "880", "1760"):
               errors.append("Player OSD seek bar is not using the full-width layout")
           search = ET.parse(root / "xml/custom11112.xml").getroot()
-          if any(button.findtext("texturefocus") != "focus-bar.png" for button in search.findall(".//control[@type='button']")):
-              errors.append("Search hub buttons are missing the unified focus treatment")
+          search_controls = search.find("controls")
+          if (search.findtext("defaultcontrol") != "9705"
+              or search_controls is None
+              or search_controls.find("./control[@type='button'][@id='9705']") is None):
+              errors.append("CINÉVA search must default to its focusable NEW SEARCH action")
+          if any(button.findtext("texturefocus") != "hero-secondary-focus.png"
+                 for button in search.findall(".//control[@type='button']")):
+              errors.append("CINÉVA search actions are missing their branded focus surface")
           skin = ET.parse(root / "addon.xml").getroot()
           if skin.attrib.get("version") != "0.5.53":
               errors.append("Skin ZIP version is not 0.5.53")

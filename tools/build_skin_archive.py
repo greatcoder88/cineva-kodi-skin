@@ -2428,7 +2428,7 @@ def update_xml(data, path):
             default = ET.Element("defaultcontrol")
             root.insert(0, default)
         default.set("always", "true")
-        default.text = "9703"
+        default.text = "9705"
         def add_control(kind, control_id, specs, parent=controls):
             node = ET.SubElement(parent, "control", {"type": kind, "id": str(control_id)})
             for tag, value in specs:
