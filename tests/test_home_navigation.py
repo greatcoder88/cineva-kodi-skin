@@ -5,7 +5,7 @@ from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.53.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.54.zip"
 HUB_WINDOW = "skin.cineva/xml/CinevaWidgetHub.xml"
 
 
@@ -150,6 +150,19 @@ class HomeNavigationTests(unittest.TestCase):
                 self.assertEqual(button.findtext("onright"), f"SetFocus({side_id})")
                 self.assertEqual(button.findtext("onup"), f"SetFocus({up_id})")
                 self.assertEqual(button.findtext("ondown"), f"SetFocus({down_id})")
+
+    def test_file_manager_keeps_kodis_native_dual_pane_focus(self):
+        with ZipFile(ARCHIVE) as archive:
+            file_manager = ET.fromstring(archive.read("skin.cineva/xml/FileManager.xml"))
+        self.assertEqual(file_manager.findtext("defaultcontrol"), "20")
+        self.assertIsNone(file_manager.find("views"),
+                          "File Manager is a native dual-pane window, not a media view")
+        controls = file_manager.find("controls")
+        self.assertIsNotNone(controls)
+        self.assertIsNotNone(controls.find(".//*[@id='20']"),
+                             "Left file pane must remain present")
+        self.assertIsNotNone(controls.find(".//*[@id='21']"),
+                             "Right file pane must remain present")
 
     def test_addon_browser_uses_kodis_native_media_window_view(self):
         with ZipFile(ARCHIVE) as archive:
