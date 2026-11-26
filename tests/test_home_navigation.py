@@ -17,6 +17,11 @@ class HomeNavigationTests(unittest.TestCase):
             self.assertNotIn(HUB_WINDOW, names, "legacy standalone widget hub must not ship")
             home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
 
+        home_default = home.find("defaultcontrol")
+        self.assertIsNotNone(home_default)
+        self.assertEqual((home_default.text or "").strip(), "1001")
+        self.assertNotIn("always", home_default.attrib, "Home must restore the last focused control on re-entry")
+
         nav = next(
             node for node in home.findall("./controls/control")
             if node.get("type") == "group"
