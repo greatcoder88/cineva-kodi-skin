@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.40.zip"
-PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.39.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.41.zip"
+PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.40.zip"
 LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.35.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
@@ -586,7 +586,7 @@ def update_xml(data, path):
     if path in CUSTOM_WINDOW_IDS:
         root.set("id", str(CUSTOM_WINDOW_IDS[path]))
     if path == "skin.cineva/addon.xml":
-        root.set("version", "0.5.40")
+        root.set("version", "0.5.41")
         for imp in root.findall("./requires/import"):
             if imp.get("addon") == "script.cineva.widgets":
                 imp.set("version", "0.1.8")
@@ -1199,7 +1199,9 @@ def update_xml(data, path):
             row_group = ET.Element("control", {"type": "group", "id": str(9060 + index)})
             for tag, value in (("left", 0), ("top", 0), ("width", 1860), ("height", 500)):
                 set_child_text(row_group, tag, value)
+            container_id = 9000 + index
             play_id = 9111 + (index - 1) * 2
+            view_all_id = 9159 + index
             next_target = 9000 + index + 1 if index < 4 else 1001
             set_child_text(row_group, "onup", f"SetFocus({play_id})")
             set_child_text(row_group, "ondown", f"SetFocus({next_target})")
@@ -1219,7 +1221,7 @@ def update_xml(data, path):
             set_child_text(shelf, "focusposition", 3)
             set_child_text(shelf, "movement", 3)
             set_child_text(shelf, "itemgap", 8)
-            set_child_text(shelf, "onup", f"SetFocus({play_id})")
+            set_child_text(shelf, "onup", f"SetFocus({view_all_id})")
             set_child_text(shelf, "ondown", f"SetFocus({next_target})")
             for layout in shelf.findall("./itemlayout") + shelf.findall("./focusedlayout"):
                 layout.set("width", "248")
@@ -1247,6 +1249,27 @@ def update_xml(data, path):
                 )
                 set_child_text(heading, "visible", f"{base_row_visibility} + {hide_previous_row}")
                 set_child_text(shelf, "visible", f"{base_row_visibility} + {hide_previous_row}")
+            # A visible VIEW ALL action turns each configured widget heading
+            # into a real destination. Up from the poster rail enters this
+            # action; Down returns to the same rail without losing selection.
+            view_all = ET.Element("control", {"type": "button", "id": str(view_all_id)})
+            for tag, value in (
+                ("left", 1420), ("top", 0), ("width", 180), ("height", 38),
+                ("font", "font9"), ("label", "VIEW ALL"),
+                ("textcolor", "silver"), ("focusedcolor", "white"),
+                ("align", "center"), ("aligny", "center"),
+                ("onclick", f"ActivateWindow(10025,$INFO[Skin.String(Cineva.Widget{index}.Path)])"),
+                ("onup", f"SetFocus({play_id})"),
+                ("ondown", f"SetFocus({container_id})"),
+                ("onleft", f"SetFocus({view_all_id})"),
+                ("onright", f"SetFocus({view_all_id})"),
+                ("visible", heading.findtext("visible", base_row_visibility)),
+            ):
+                set_child_text(view_all, tag, value)
+            view_all_focus = ET.SubElement(view_all, "texturefocus", {"border": "8"})
+            view_all_focus.text = "hero-secondary-focus.png"
+            view_all_normal = ET.SubElement(view_all, "texturenofocus", {"border": "8"})
+            view_all_normal.text = "hero-secondary.png"
             # A restrained red underline makes the active Home rail legible
             # even when the selected poster is several cards into the row.
             row_accent = ET.Element("control", {"type": "image"})
@@ -1255,6 +1278,7 @@ def update_xml(data, path):
             set_child_text(row_accent, "texture", "focus-bar.png")
             set_child_text(row_accent, "visible", f"Control.HasFocus({9000 + index})")
             row_group.append(heading)
+            row_group.append(view_all)
             row_group.append(row_accent)
             row_group.append(shelf)
             # Show live horizontal position only while this shelf owns focus.
@@ -2214,14 +2238,14 @@ def update_xml(data, path):
 def main():
     # Start the new distributable version from the immediately previous package.
     # Keep the older archive as a recovery fallback for shallow checkouts.
-    # Subsequent builds transform 0.5.40 in place and remain byte-stable.
+    # Subsequent builds transform 0.5.41 in place and remain byte-stable.
     if not ARCHIVE.exists():
         source_archive = PREVIOUS_ARCHIVE if PREVIOUS_ARCHIVE.is_file() else LEGACY_ARCHIVE
         if source_archive.is_file():
             ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
         raise SystemExit(
-            "Missing skin.cineva-0.5.40.zip and migration sources "
+            "Missing skin.cineva-0.5.41.zip and migration sources "
             "skin.cineva-0.5.38.zip / skin.cineva-0.5.35.zip"
         )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
@@ -2314,9 +2338,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.40":
-                        addon_root.set("version", "0.5.40")
-                        changed.append(info.filename + " (bump skin version to 0.5.40)")
+                    if addon_root.get("version") != "0.5.41":
+                        addon_root.set("version", "0.5.41")
+                        changed.append(info.filename + " (bump skin version to 0.5.41)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2324,18 +2348,18 @@ def main():
                 if info.filename == "skin.cineva/changelog.txt":
                     changelog = data.decode("utf-8")
                     entry = chr(10).join((
-                        "0.5.40 - Fix native D-pad entry into video directories",
-                        "- Keep the visible Back action as the safe initial focus target while Kodi resolves plugin directories.",
-                        "- Use Kodi's native panel control ID for Down navigation instead of a conditional built-in action.",
-                        "- Return Up from the first panel row to Back while preserving the full-width poster grid.",
+                        "0.5.41 - Add per-rail VIEW ALL navigation to Home",
+                        "- Add a visible VIEW ALL action to every configured Home widget heading.",
+                        "- Route D-pad Up from each poster rail to its action and Down back into the same rail.",
+                        "- Open the exact configured widget path in Kodi's native video browser.",
                         "",
                         "",
                     ))
-                    if changelog.startswith("0.5.40 - Fix native D-pad entry into video directories"):
+                    if changelog.startswith("0.5.41 - Add per-rail VIEW ALL navigation to Home"):
                         pass
                     else:
                         data = (entry + changelog).encode("utf-8")
-                        changed.append(info.filename + " (prepend 0.5.40 native D-pad focus changelog)")
+                        changed.append(info.filename + " (prepend 0.5.41 Home VIEW ALL changelog)")
                 if info.filename in generated_assets:
                     generated = generated_assets[info.filename]
                     if data != generated:

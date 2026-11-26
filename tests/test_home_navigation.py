@@ -5,7 +5,7 @@ from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.33.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.41.zip"
 HUB_WINDOW = "skin.cineva/xml/CinevaWidgetHub.xml"
 
 
@@ -36,6 +36,36 @@ class HomeNavigationTests(unittest.TestCase):
                 for button in buttons.values())
         )
         self.assertNotIn("ActivateWindow(11119)", ET.tostring(home, encoding="unicode"))
+
+    def test_each_configured_home_row_has_a_focusable_view_all_action(self):
+        with ZipFile(ARCHIVE) as archive:
+            home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
+        rail = home.find("./controls/control[@type='grouplist'][@id='9050']")
+        self.assertIsNotNone(rail)
+        for index in range(1, 5):
+            container_id = 9000 + index
+            play_id = 9111 + (index - 1) * 2
+            view_all_id = 9159 + index
+            row = rail.find(f"./control[@type='group'][@id='{9060 + index}']")
+            self.assertIsNotNone(row, f"Home widget row {index} is missing")
+            button = row.find(f"./control[@type='button'][@id='{view_all_id}']")
+            self.assertIsNotNone(button, f"Home widget row {index} needs VIEW ALL")
+            self.assertEqual(button.findtext("label"), "VIEW ALL")
+            self.assertEqual(
+                button.findtext("onclick"),
+                f"ActivateWindow(10025,$INFO[Skin.String(Cineva.Widget{index}.Path)])",
+            )
+            self.assertEqual(button.findtext("onup"), f"SetFocus({play_id})")
+            self.assertEqual(button.findtext("ondown"), f"SetFocus({container_id})")
+            self.assertEqual(button.findtext("onleft"), f"SetFocus({view_all_id})")
+            self.assertEqual(button.findtext("onright"), f"SetFocus({view_all_id})")
+            self.assertEqual(button.findtext("texturefocus"), "hero-secondary-focus.png")
+            self.assertEqual(button.findtext("texturenofocus"), "hero-secondary.png")
+            heading = row.find("./control[@type='label']")
+            self.assertEqual(button.findtext("visible"), heading.findtext("visible"))
+            shelf = row.find(f"./control[@type='fixedlist'][@id='{container_id}']")
+            self.assertIsNotNone(shelf)
+            self.assertEqual(shelf.findtext("onup"), f"SetFocus({view_all_id})")
 
     def test_kodi_settings_exposes_addons_and_native_skin_settings(self):
         with ZipFile(ARCHIVE) as archive:

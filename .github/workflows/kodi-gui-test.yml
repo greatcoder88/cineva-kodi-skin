@@ -26,29 +26,29 @@ jobs:
       - name: Build release ZIP, verify idempotence, and commit source fixes
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.40.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.41.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.40.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.41.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
           fi
           echo "Archive SHA-256 is stable across consecutive builds: $after"
           mkdir -p artifacts
-          cp skin.cineva-0.5.40.zip artifacts/
-          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.40.zip)" ]; then
+          cp skin.cineva-0.5.41.zip artifacts/
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && [ -n "$(git status --porcelain -- skin.cineva-0.5.41.zip)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add skin.cineva-0.5.40.zip
-            git commit -m "Build updated CINÉVA 0.5.40 skin archive"
+            git add skin.cineva-0.5.41.zip
+            git commit -m "Build updated CINÉVA 0.5.41 skin archive"
             git push origin HEAD:main || echo "::warning::Could not push rebuilt skin ZIP; GUI test still uses the rebuilt local ZIP."
           fi
 
       - name: Expand uploaded skin archive and prepare add-ons
         run: |
           mkdir -p artifacts
-          test -s skin.cineva-0.5.40.zip
-          unzip -q skin.cineva-0.5.40.zip -d .
+          test -s skin.cineva-0.5.41.zip
+          unzip -q skin.cineva-0.5.41.zip -d .
           test -f skin.cineva/addon.xml
           test -d skin.cineva/xml
           test -f skin.cineva/xml/Home.xml
@@ -503,8 +503,8 @@ jobs:
           if any(button.findtext("texturefocus") != "focus-bar.png" for button in search.findall(".//control[@type='button']")):
             raise SystemExit("Search hub buttons are missing the unified focus treatment")
           skin = ET.parse("skin.cineva/addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.40":
-            raise SystemExit("Skin archive version must be 0.5.40")
+          if skin.attrib.get("version") != "0.5.41":
+            raise SystemExit("Skin archive version must be 0.5.41")
           widget = ET.parse("tools/script.cineva.widgets/addon.xml").getroot()
           if widget.attrib.get("version") != "0.1.8":
             raise SystemExit("Widget manager version must be 0.1.8")
@@ -1173,6 +1173,52 @@ jobs:
                 f"{focus_position + 1}/{len(first_row_items)} ({expected_focus_label!r}): {state}"
               )
             print("Home poster shelf focused on:", focused_label)
+            # The row heading now has a real VIEW ALL action. Exercise it with
+            # remote keys and verify that it opens the configured plugin path.
+            rpc("Input.Up")
+            deadline = time.time() + 5
+            view_all_state = gui()
+            while time.time() < deadline:
+              view_control = view_all_state.get("currentcontrol", {})
+              if str(view_control.get("id", "")) == "9160" and view_control.get("label", "").strip().upper() == "VIEW ALL":
+                break
+              time.sleep(0.2)
+              view_all_state = gui()
+            else:
+              raise SystemExit(f"D-pad Up from the first Home rail did not focus VIEW ALL: {view_all_state}")
+            subprocess.run(["import", "-display", ":99", "-window", "root",
+                            "artifacts/cineva-home-view-all-focused.png"], check=True)
+            press("Return")
+            wait_for_window(10025)
+            view_all_items = rpc("XBMC.GetInfoLabels", {"labels":["Container(50).NumItems"]})
+            view_all_count = int(view_all_items.get("Container(50).NumItems", "0"))
+            if view_all_count < 1:
+              raise SystemExit(f"Home VIEW ALL did not open the configured widget directory: {view_all_items}; GUI={gui()}")
+            press("Down")
+            deadline = time.time() + 5
+            view_all_focus = gui()
+            while time.time() < deadline:
+              current = view_all_focus.get("currentcontrol", {})
+              if view_all_focus.get("currentwindow", {}).get("id") == 10025 and str(current.get("id", "")) == "50":
+                break
+              time.sleep(0.2)
+              view_all_focus = gui()
+            else:
+              raise SystemExit(f"Home VIEW ALL opened its directory but D-pad Down did not focus panel 50: {view_all_focus}")
+            print(f"Verified Home VIEW ALL opens the configured plugin directory and enters its native poster panel: {view_all_count} items.")
+            press("Escape")
+            wait_for_window(10000)
+            returned_home = gui()
+            if str(returned_home.get("currentcontrol", {}).get("id", "")) == "9160":
+              press("Down")
+            deadline = time.time() + 5
+            while time.time() < deadline:
+              returned_home = gui()
+              if returned_home.get("currentwindow", {}).get("id") == 10000 and returned_home.get("currentcontrol", {}).get("label", "").strip() == expected_focus_label:
+                break
+              time.sleep(0.2)
+            if returned_home.get("currentcontrol", {}).get("label", "").strip() != expected_focus_label:
+              raise SystemExit(f"Returning from Home VIEW ALL did not restore the selected poster rail: {returned_home}")
             # Save the exact focused poster state, then follow the visible
             # hero actions with real D-pad keys. Poster focus selects the title;
             # the dedicated RESUME/PLAY button is the explicit playback action.
