@@ -586,6 +586,65 @@ def settings_category_template():
   </controls>
 </window>""")
 
+
+
+def file_manager_template():
+    """Build Kodi's native dual-pane File Manager with explicit D-pad routing."""
+    return ET.fromstring("""<?xml version="1.0" encoding="UTF-8"?>
+<window id="10003">
+  <defaultcontrol always="true">20</defaultcontrol>
+  <backgroundcolor>background</backgroundcolor>
+  <controls>
+    <include>CinevaBackground</include>
+    <include>CinevaTopBar</include>
+    <control type="label">
+      <left>72</left><top>132</top><width>1500</width><height>62</height>
+      <font>font24</font><textcolor>white</textcolor><label>FILE MANAGER</label>
+    </control>
+    <control type="label">
+      <left>72</left><top>190</top><width>850</width><height>34</height>
+      <font>font12</font><textcolor>silver</textcolor><label>LEFT PANE</label>
+    </control>
+    <control type="label">
+      <left>998</left><top>190</top><width>850</width><height>34</height>
+      <font>font12</font><textcolor>silver</textcolor><label>RIGHT PANE</label>
+    </control>
+    <control type="fixedlist" id="20">
+      <left>72</left><top>232</top><width>850</width><height>700</height>
+      <orientation>vertical</orientation><focusposition>0</focusposition>
+      <pagecontrol>60</pagecontrol><onleft>60</onleft><onright>21</onright>
+      <onup>20</onup><ondown>20</ondown><scrolltime>180</scrolltime>
+      <itemlayout width="850" height="72">
+        <control type="image"><left>16</left><top>12</top><width>48</width><height>48</height><aspectratio>keep</aspectratio><texture>$INFO[ListItem.Icon]</texture></control>
+        <control type="label"><left>82</left><top>8</top><width>748</width><height>56</height><font>font14</font><textcolor>silver</textcolor><aligny>center</aligny><label>$INFO[ListItem.Label]</label></control>
+      </itemlayout>
+      <focusedlayout width="850" height="72">
+        <control type="image"><left>0</left><top>0</top><width>850</width><height>72</height><texture>hero-secondary-focus.png</texture></control>
+        <control type="image"><left>16</left><top>12</top><width>48</width><height>48</height><aspectratio>keep</aspectratio><texture>$INFO[ListItem.Icon]</texture></control>
+        <control type="label"><left>82</left><top>8</top><width>748</width><height>56</height><font>font14</font><textcolor>white</textcolor><aligny>center</aligny><label>$INFO[ListItem.Label]</label></control>
+      </focusedlayout>
+    </control>
+    <control type="fixedlist" id="21">
+      <left>998</left><top>232</top><width>850</width><height>700</height>
+      <orientation>vertical</orientation><focusposition>0</focusposition>
+      <pagecontrol>61</pagecontrol><onleft>20</onleft><onright>61</onright>
+      <onup>21</onup><ondown>21</ondown><scrolltime>180</scrolltime>
+      <itemlayout width="850" height="72">
+        <control type="image"><left>16</left><top>12</top><width>48</width><height>48</height><aspectratio>keep</aspectratio><texture>$INFO[ListItem.Icon]</texture></control>
+        <control type="label"><left>82</left><top>8</top><width>748</width><height>56</height><font>font14</font><textcolor>silver</textcolor><aligny>center</aligny><label>$INFO[ListItem.Label]</label></control>
+      </itemlayout>
+      <focusedlayout width="850" height="72">
+        <control type="image"><left>0</left><top>0</top><width>850</width><height>72</height><texture>hero-secondary-focus.png</texture></control>
+        <control type="image"><left>16</left><top>12</top><width>48</width><height>48</height><aspectratio>keep</aspectratio><texture>$INFO[ListItem.Icon]</texture></control>
+        <control type="label"><left>82</left><top>8</top><width>748</width><height>56</height><font>font14</font><textcolor>white</textcolor><aligny>center</aligny><label>$INFO[ListItem.Label]</label></control>
+      </focusedlayout>
+    </control>
+    <control type="scrollbar" id="60"><left>930</left><top>232</top><width>10</width><height>700</height><orientation>vertical</orientation><texturesliderbackground>black.png</texturesliderbackground><onleft>20</onleft><onright>21</onright></control>
+    <control type="scrollbar" id="61"><left>1850</left><top>232</top><width>10</width><height>700</height><orientation>vertical</orientation><texturesliderbackground>black.png</texturesliderbackground><onleft>21</onleft><onright>21</onright></control>
+    <control type="label"><left>72</left><top>956</top><width>1776</width><height>36</height><font>font11</font><textcolor>grey</textcolor><label>SELECT TO OPEN   •   BACK TO GO UP   •   LEFT / RIGHT TO SWITCH PANE</label></control>
+  </controls>
+</window>""")
+
 def update_xml(data, path):
     root = ET.fromstring(data)
     if path in CUSTOM_WINDOW_IDS:
@@ -618,17 +677,7 @@ def update_xml(data, path):
         default.set("always", "true")
         default.text = "50"
     elif path == "skin.cineva/xml/FileManager.xml":
-        # Restore Kodi's native dual-pane focus model; a forced container 50
-        # has no corresponding control and produces a completely blank screen.
-        views = root.find("views")
-        if views is not None:
-            root.remove(views)
-        default = root.find("defaultcontrol")
-        if default is None:
-            default = ET.Element("defaultcontrol", {"always": "true"})
-            root.insert(0, default)
-        default.set("always", "true")
-        default.text = "20"
+        root = file_manager_template()
     elif path in {
         "skin.cineva/xml/FileBrowser.xml",
         "skin.cineva/xml/DialogAddonSettings.xml",
