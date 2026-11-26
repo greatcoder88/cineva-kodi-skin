@@ -1406,12 +1406,8 @@ def update_xml(data, path):
             # append duplicate Kodi boolean conditions to the same control.
             set_child_text(heading, "visible", base_row_visibility)
             set_child_text(shelf, "visible", base_row_visibility)
-            if later_focus_ids:
-                hide_previous_row = " + ".join(
-                    f"!Control.HasFocus({control_id})" for control_id in later_focus_ids
-                )
-                set_child_text(heading, "visible", f"{base_row_visibility} + {hide_previous_row}")
-                set_child_text(shelf, "visible", f"{base_row_visibility} + {hide_previous_row}")
+            # Keep earlier rails visible and focusable for D-pad Up. The scrolling
+            # Home grouplist viewport clips off-screen rows without disabling them.
             # A visible VIEW ALL action turns each configured widget heading
             # into a real destination. Up from the poster rail enters this
             # action; Down returns to the same rail without losing selection.
@@ -1628,7 +1624,7 @@ def update_xml(data, path):
                 set_child_text(nav_group, tag, value)
             for button in nav_group.findall("./control[@type='button']"):
                 # Text-first navigation: remove the heavy black button slabs.
-                action_targets = {"1001": "9111", "1002": "9115", "1003": "9117"}
+                action_targets = {"1001": "9111", "1002": "9113", "1003": "9115", "1004": "9117", "1005": "9111"}
                 nav_ids = ("1001", "1002", "1003", "1004", "1005")
                 if button.get("id") in nav_ids:
                     position = nav_ids.index(button.get("id"))
@@ -1706,7 +1702,10 @@ def update_xml(data, path):
         controls.append(startup_state)
         # Apply the Up-navigation repair after all four rails have been rebuilt.
         root = restore_previous_home_shelf_focus(root)
-        root.set("menucontrol", "9001")
+        menucontrol = root.find("menucontrol")
+        if menucontrol is None:
+            menucontrol = ET.SubElement(root, "menucontrol")
+        menucontrol.text = "9001"
     elif path == "skin.cineva/xml/Includes.xml":
         # Use RESUME for continue-watching sources and PLAY for other shelves.
         # Keep the label in a skin variable so each row's action remains one
@@ -1875,7 +1874,10 @@ def update_xml(data, path):
                 clone.append(child)
             root.append(clone)
     elif path == "skin.cineva/xml/AddonBrowser.xml":
-        root.set("menucontrol", "50")
+        menucontrol = root.find("menucontrol")
+        if menucontrol is None:
+            menucontrol = ET.SubElement(root, "menucontrol")
+        menucontrol.text = "50"
         # Kodi's native Add-on Browser is a media window. Its directory items
         # are delivered to the view container with id 50; an arbitrary id=3
         # panel cannot receive the browser list and leaves remote focus nowhere.
@@ -2264,7 +2266,10 @@ def update_xml(data, path):
             root.insert(0, default)
         default.set("always", "true")
         default.text = "602"
-        root.set("menucontrol", "602")
+        menucontrol = root.find("menucontrol")
+        if menucontrol is None:
+            menucontrol = ET.SubElement(root, "menucontrol")
+        menucontrol.text = "602"
         controls = root.find("controls")
         overlay = next((node for node in controls.findall("control")
                         if node.get("type") == "group" and node.find("./control[@id='200']") is not None), None)
