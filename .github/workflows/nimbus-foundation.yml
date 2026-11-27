@@ -144,44 +144,89 @@ jobs:
           sleep 2
           USERDATA="$HOME/.var/app/tv.kodi.Kodi/data/userdata"
           SETTINGS="$USERDATA/guisettings.xml"
+          KODI_LOG="$USERDATA/temp/kodi.log"
           boot_kodi_once() {
             local attempt="$1"
+            local previous_size=""
+            local stable_samples=0
             flatpak run --user tv.kodi.Kodi//beta --standalone > "/tmp/nimbus-firstboot-$attempt.log" 2>&1 &
             FIRST_PID=$!
-            for i in $(seq 1 60); do
-              test -s "$SETTINGS" && return 0
-              if ! kill -0 "$FIRST_PID" 2>/dev/null && ! pgrep -x kodi.bin >/dev/null; then break; fi
+            for i in $(seq 1 120); do
+              if ! pgrep -x kodi.bin >/dev/null && ! kill -0 "$FIRST_PID" 2>/dev/null; then
+                echo "Kodi exited before completing first-run initialization."
+                return 1
+              fi
+              # File existence is not readiness: Kodi creates guisettings.xml
+              # before it has finished writing it. Wait until Home is loaded,
+              # the XML parses, and its byte size is stable for four polls.
+              if grep -q "Loading skin file: Home.xml" "$KODI_LOG" 2>/dev/null; then
+                if python - "$SETTINGS" <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+          try:
+              root = ET.parse(sys.argv[1]).getroot()
+              if root.tag != "settings":
+                  raise ValueError("unexpected guisettings root")
+          except Exception:
+              raise SystemExit(1)
+          PY
+                then
+                  current_size="$(stat -c '%s' "$SETTINGS")"
+                  if [ "$current_size" = "$previous_size" ]; then
+                    stable_samples=$((stable_samples + 1))
+                  else
+                    stable_samples=0
+                  fi
+                  previous_size="$current_size"
+                  if [ "$stable_samples" -ge 4 ]; then
+                    echo "Kodi reached Home with a valid, stable guisettings.xml ($current_size bytes)."
+                    return 0
+                  fi
+                else
+                  previous_size=""
+                  stable_samples=0
+                fi
+              fi
               sleep 2
             done
+            echo "Kodi did not reach Home with a valid, stable guisettings.xml."
+            tail -n 100 "$KODI_LOG" 2>/dev/null || true
             return 1
           }
           if ! boot_kodi_once 1; then
             cat /tmp/nimbus-firstboot-1.log || true
             exit 1
           fi
-          kill "$FIRST_PID" 2>/dev/null || true
+          # Ask Flatpak to stop Kodi normally, then wait for Kodi itself to
+          # exit before touching its settings file. Never kill it mid-write.
           flatpak kill --user tv.kodi.Kodi 2>/dev/null || true
-          pkill -x kodi.bin 2>/dev/null || true
-          pkill -x kodi-x11 2>/dev/null || true
-          # A Flatpak wrapper can exit before Kodi's JSON-RPC listener and
-          # settings writer have stopped. Do not edit guisettings.xml while
-          # that first instance can still overwrite it.
-          if ss -ltnp | grep -q ':9090'; then
-            echo "Releasing stale Kodi JSON-RPC listener before Nimbus launch:"
-            ss -ltnp | grep ':9090' || true
-            sudo fuser -k 9090/tcp || true
-          fi
-          for i in $(seq 1 30); do
-            if ! pgrep -x kodi.bin >/dev/null && ! pgrep -x kodi-x11 >/dev/null && ! ss -ltn | grep -q ':9090'; then
+          for i in $(seq 1 60); do
+            if ! pgrep -x kodi.bin >/dev/null && ! pgrep -x kodi-x11 >/dev/null; then
               break
             fi
             sleep 1
           done
+          if pgrep -x kodi.bin >/dev/null || pgrep -x kodi-x11 >/dev/null; then
+            echo "Kodi did not exit cleanly after the first-run shutdown request."
+            pgrep -a -x kodi.bin || true
+            pgrep -a -x kodi-x11 || true
+            exit 1
+          fi
+          kill "$FIRST_PID" 2>/dev/null || true
+          wait "$FIRST_PID" 2>/dev/null || true
           if ss -ltnp | grep -q ':9090'; then
-            echo "Kodi still owns port 9090 after first-boot shutdown:"
+            echo "Kodi still owns JSON-RPC port 9090 after first-boot shutdown:"
             ss -ltnp | grep ':9090' || true
             exit 1
           fi
+          python - "$SETTINGS" <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+          root = ET.parse(sys.argv[1]).getroot()
+          if root.tag != "settings":
+              raise SystemExit("Kodi first-run settings are not a complete <settings> document")
+          print("First-run guisettings.xml validated after clean Kodi shutdown.")
+          PY
           sleep 2
           mkdir -p artifacts
           python - <<'PY'
