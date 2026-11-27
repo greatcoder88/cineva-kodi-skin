@@ -183,13 +183,12 @@ def patch_skin_manifest(skin_root: Path) -> None:
 def write_default_skin_includes(skin_root: Path) -> None:
     """Ship empty Nimbus menu/widget includes before Kodi parses Includes.xml."""
     xml_root = skin_root / "xml"
-    template = (
-        '<?xml version="1.0" encoding="UTF-8"?>\\n'
-        '<includes>\\n'
-        '  <include name="{include_name}">\\n'
-        '  </include>\\n'
-        '</includes>\\n'
-    )
+    template = """<?xml version="1.0" encoding="UTF-8"?>
+<includes>
+  <include name="{include_name}">
+  </include>
+</includes>
+"""
     for filename, include_name in DEFAULT_SKIN_INCLUDE_NAMES.items():
         path = xml_root / f"{filename}.xml"
         if not path.exists():
