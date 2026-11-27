@@ -23,7 +23,7 @@ NIMBUS_REPO = "ivarbrandt/skin.nimbus"
 NIMBUS_SHA = "8b5071b8cd0db3a8e813eb00e9a821d3efad2454"
 HELPER_REPO = "ivarbrandt/script.nimbus.helper"
 HELPER_SHA = "e42d2ffffbccaa58386ef2e4a054049e5fcb7664"
-SKIN_VERSION = "0.6.4"
+SKIN_VERSION = "0.6.5"
 BRIDGE_VERSION = "0.1.0"
 OUT_DIR = ROOT / "dist" / "nimbus-foundation"
 NOTICE = """CINÉVA Nimbus foundation
@@ -386,6 +386,36 @@ def patch_nimbus_animation_param_conditions(skin_root: Path) -> None:
                 f"{filename}: expected {expected} PARAM focus animation patterns, found {count}"
             )
         path.write_text(text.replace(old, new), encoding="utf-8", newline="")
+        ET.parse(path)
+
+    # Kodi 22 rejects Control.HasFocus($PARAM[...]) inside animation attributes
+    # before include parameters are expanded. Use Nimbus's shared Home widget
+    # focus group instead, preserving existing view-visibility and progress logic.
+    dynamic_focus = re.compile(
+        r'(<animation\b[^>]*\bcondition="[^"]*)'
+        r'Control\.HasFocus\(\$PARAM\[list_id\]\)'
+        r'([^"]*")',
+        re.S,
+    )
+    expected_dynamic = (
+        ("Includes_HomeLayouts.xml", 2),
+        ("View_51_PosterFlow.xml", 1),
+        ("View_54_Flix.xml", 1),
+        ("View_55_FlixScape.xml", 2),
+    )
+    for filename, expected in expected_dynamic:
+        path = xml_root / filename
+        if not path.is_file():
+            raise RuntimeError(f"Nimbus source is missing animation file: {filename}")
+        text = path.read_text(encoding="utf-8")
+        text, count = dynamic_focus.subn(
+            r"\1ControlGroup(2000).HasFocus\2", text
+        )
+        if count != expected:
+            raise RuntimeError(
+                f"{filename}: expected {expected} Kodi 22 animation focus substitutions, found {count}"
+            )
+        path.write_text(text, encoding="utf-8", newline="")
         ET.parse(path)
 
 

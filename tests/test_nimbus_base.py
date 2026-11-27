@@ -45,7 +45,11 @@ NIMBUS_FILES = {
       <onload>RunScript(script.nimbus.helper,mode=check_for_profile_change&amp;skin_id=skin.nimbus)</onload>
       <onfocus>RunScript(script.nimbus.helper,mode=set_widget_count,$PARAM[list_id])</onfocus>
     </includes>""",
-    "xml/Includes_HomeLayouts.xml": "<includes><include name=\"WidgetGroupListCommon\"/></includes>",
+    "xml/Includes_HomeLayouts.xml": """<includes>
+      <include name="WidgetGroupListCommon"/>
+      <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(54)">Conditional</animation>
+      <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(55)">Conditional</animation>
+    </includes>""",
     "xml/Startup.xml": "<window><onload>RunScript(script.nimbus.helper,mode=refresh_search_history)</onload></window>",
     "xml/SkinSettings.xml": """<window><controls>
       <control type="button"><onclick>RunScript(script.nimbus.helper,mode=manage_widgets&amp;cpath_setting=movie.widget)</onclick></control>
@@ -58,6 +62,7 @@ NIMBUS_FILES = {
       <include name="FlixMovieLayout"><visible>Control.HasFocus($PARAM[list_id])</visible></include>
       <include>FlixMovieLayout</include>
       <include content="FlixMovieLayout"><param name="focused" value="true" /></include>
+      <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(54)">Conditional</animation>
     </includes>""",
     "xml/View_500_Wall.xml": """<includes>
       <include>FlixMovieLayout</include>
@@ -66,6 +71,8 @@ NIMBUS_FILES = {
     "xml/View_55_FlixScape.xml": """<includes>
       <include>FlixScapeMovieLayout</include>
       <include content="FlixScapeMovieLayout"><param name="focused" value="true" /></include>
+      <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(55)">Conditional</animation>
+      <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(501)">Conditional</animation>
     </includes>""",
     "xml/View_501_WallScape.xml": """<includes>
       <include>FlixScapeMovieLayout</include>
@@ -74,24 +81,7 @@ NIMBUS_FILES = {
     "xml/View_51_PosterFlow.xml": """<includes>
       <include>PosterFlowLayout</include>
       <include content="PosterFlowLayout"><param name="focused" value="true" /></include>
-    </includes>""",
-    "xml/Includes_PVR.xml": """<includes>
-      <include name="ChannelManagerList"><animation effect="fade" start="100" end="60" time="0" condition="!Control.HasFocus($PARAM[list_id])">conditional</animation></include>
-    </includes>""",
-    "xml/Includes_Animations.xml": """<includes>
-      <include name="WidgetVisibilityAnimations"><animation condition="!Control.HasFocus($PARAM[list_id]) + ControlGroup(2000).HasFocus" reversible="true"><effect type="faded" start="100" end="80" time="300" /></animation></include>
-    </includes>""",
-    "xml/View_50_List.xml": """<includes>
-      <include>ListLandscapeSlideAnimations</include>
-      <include name="ListFocusAnimations">
-        <animation effect="fade" start="100" end="0" time="300" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation>
-        <animation effect="fade" start="100" end="0" time="300" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation>
-        <animation effect="fade" start="100" end="0" time="300" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation>
-        <animation effect="fade" start="100" end="0" time="300" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation>
-        <animation effect="fade" start="100" end="0" time="300" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation>
-        <animation effect="fade" start="100" end="0" time="300" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation>
-        <animation effect="fade" start="100" end="0" time="300" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation>
-      </include>
+      <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(51)">Conditional</animation>
     </includes>""",
     "fonts/Inter-Regular.ttf": b"test-font",
     "resources/icon.png": b"test-icon",
@@ -172,7 +162,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 self.assertIn("skin.cineva/NOTICE.txt", names)
                 manifest = archive.read("skin.cineva/addon.xml").decode()
                 self.assertIn('id="skin.cineva"', manifest)
-                self.assertIn('version="0.6.4"', manifest)
+                self.assertIn('version="0.6.5"', manifest)
                 self.assertIn('addon="xbmc.gui" version="5.18.0"', manifest)
                 self.assertIn('addon="script.cineva.nimbus" version="0.1.0"', manifest)
                 self.assertNotIn("script.nimbus.helper", manifest)
@@ -246,6 +236,19 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 animations = ET.fromstring(archive.read("skin.cineva/xml/Includes_Animations.xml"))
                 widget_visibility = animations.find('.//include[@name="WidgetVisibilityAnimations"]/animation')
                 self.assertEqual(widget_visibility.get("condition"), "ControlGroup(2000).HasFocus")
+                expected_home_focus = {
+                    "Includes_HomeLayouts.xml": 2,
+                    "View_51_PosterFlow.xml": 1,
+                    "View_54_Flix.xml": 1,
+                    "View_55_FlixScape.xml": 2,
+                }
+                for filename, expected in expected_home_focus.items():
+                    root = ET.fromstring(archive.read("skin.cineva/xml/" + filename))
+                    substituted = [
+                        animation for animation in root.findall(".//animation")
+                        if "ControlGroup(2000).HasFocus" in animation.get("condition", "")
+                    ]
+                    self.assertEqual(len(substituted), expected, filename)
 
     def test_bridge_keeps_local_widget_logic_and_api_free_service_entry(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -318,8 +321,8 @@ class NimbusWorkflowPathTests(unittest.TestCase):
     def test_workflow_uses_the_builder_skin_version(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
         source = workflow.read_text(encoding="utf-8")
-        self.assertIn("skin.cineva-0.6.4-nimbus.zip", source)
-        self.assertIn('manifest.get("version") == "0.6.4"', source)
+        self.assertIn("skin.cineva-0.6.5-nimbus.zip", source)
+        self.assertIn('manifest.get("version") == "0.6.5"', source)
 
     def test_first_boot_reads_kodis_actual_flatpak_log_location(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
