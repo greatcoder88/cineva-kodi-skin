@@ -205,28 +205,53 @@ jobs:
             cat /tmp/nimbus-firstboot-1.log || true
             exit 1
           fi
-          # Ask Flatpak to stop Kodi normally, then wait for Kodi itself to
-          # exit before touching its settings file. Never kill it mid-write.
+          # First boot has reached Home and Kodi has finished writing its
+          # generated profile. Use the same process cleanup proven by the
+          # legacy Kodi GUI workflow: stop the Flatpak launcher, request a
+          # graceful app shutdown, ignore zombies, and only force-kill if a
+          # live isolated Kodi process remains after the grace period.
+          kill "$FIRST_PID" 2>/dev/null || true
           flatpak kill --user tv.kodi.Kodi 2>/dev/null || true
-          for i in $(seq 1 60); do
-            if ! pgrep -x kodi.bin >/dev/null && ! pgrep -x kodi-x11 >/dev/null; then
-              break
-            fi
+          pkill -TERM -x kodi.bin 2>/dev/null || true
+          pkill -TERM -x kodi-x11 2>/dev/null || true
+          pkill -TERM -x kodi 2>/dev/null || true
+          kodi_processes() {
+            ps -eo pid=,stat=,comm= | awk '
+              ($3 == "kodi.bin" || $3 == "kodi-x11" || $3 == "kodi") &&
+              $2 !~ /^Z/ { print $1 }
+            '
+          }
+          for attempt in $(seq 1 12); do
+            if ! kodi_processes | grep -q .; then break; fi
             sleep 1
           done
-          if pgrep -x kodi.bin >/dev/null || pgrep -x kodi-x11 >/dev/null; then
-            echo "Kodi did not exit cleanly after the first-run shutdown request."
-            pgrep -a -x kodi.bin || true
-            pgrep -a -x kodi-x11 || true
+          if kodi_processes | grep -q .; then
+            echo "Kodi did not exit after graceful first-boot shutdown; forcing the isolated test instance down:"
+            ps -eo pid,ppid,stat,comm,args | grep -E '[k]odi(\.bin|-x11)?'
+            pkill -KILL -x kodi.bin 2>/dev/null || true
+            pkill -KILL -x kodi-x11 2>/dev/null || true
+            pkill -KILL -x kodi 2>/dev/null || true
+            sleep 2
+          fi
+          if kodi_processes | grep -q .; then
+            echo "A live first-boot Kodi process survived forced shutdown:"
+            ps -eo pid,ppid,stat,comm,args | grep -E '[k]odi(\.bin|-x11)?'
             exit 1
           fi
-          kill "$FIRST_PID" 2>/dev/null || true
-          wait "$FIRST_PID" 2>/dev/null || true
+          # Do not edit Kodi's profile while its JSON-RPC listener is still
+          # held by an app process left behind by Flatpak.
           if ss -ltnp | grep -q ':9090'; then
-            echo "Kodi still owns JSON-RPC port 9090 after first-boot shutdown:"
+            echo "Releasing stale first-boot JSON-RPC listener:"
+            ss -ltnp | grep ':9090' || true
+            sudo fuser -k 9090/tcp || true
+            sleep 2
+          fi
+          if ss -ltnp | grep -q ':9090'; then
+            echo "Port 9090 remains occupied after first-boot cleanup:"
             ss -ltnp | grep ':9090' || true
             exit 1
           fi
+          sleep 2
           python - "$SETTINGS" <<'PY'
           import sys
           import xml.etree.ElementTree as ET

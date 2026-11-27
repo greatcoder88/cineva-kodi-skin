@@ -197,6 +197,15 @@ class NimbusWorkflowPathTests(unittest.TestCase):
         self.assertIn('KODI_LOG="$KODI_DATA/temp/kodi.log"', source)
         self.assertNotIn('KODI_LOG="$USERDATA/temp/kodi.log"', source)
 
+    def test_first_boot_uses_the_proven_kodi_process_cleanup(self):
+        workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
+        source = workflow.read_text(encoding="utf-8")
+        self.assertIn('pkill -TERM -x kodi.bin', source)
+        self.assertIn('pkill -KILL -x kodi.bin', source)
+        self.assertIn('kodi_processes()', source)
+        self.assertIn('$2 !~ /^Z/', source)
+        self.assertIn("Port 9090 remains occupied after first-boot cleanup", source)
+
 
 if __name__ == "__main__":
     unittest.main()
