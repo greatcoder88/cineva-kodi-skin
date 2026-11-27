@@ -23,8 +23,8 @@ NIMBUS_REPO = "ivarbrandt/skin.nimbus"
 NIMBUS_SHA = "8b5071b8cd0db3a8e813eb00e9a821d3efad2454"
 HELPER_REPO = "ivarbrandt/script.nimbus.helper"
 HELPER_SHA = "e42d2ffffbccaa58386ef2e4a054049e5fcb7664"
-SKIN_VERSION = "0.7.1"
-BRIDGE_VERSION = "0.1.0"
+SKIN_VERSION = "0.8.0"
+BRIDGE_VERSION = "0.1.1"
 OUT_DIR = ROOT / "dist" / "nimbus-foundation"
 NOTICE = """CINÉVA Nimbus foundation
 
@@ -65,6 +65,7 @@ SAFE_CUSTOM_ACTIONS = {
 # invoke remake_all_cpaths(). Ship empty defaults so the first skin parse is
 # clean; the local bridge replaces them with configured paths later.
 DEFAULT_SKIN_INCLUDE_NAMES = {
+    "script-nimbus-widget_home": "HomeWidgets",
     "script-nimbus-widget_movies": "MovieWidgets",
     "script-nimbus-widget_tvshows": "TVShowWidgets",
     "script-nimbus-widget_custom1": "Custom1Widgets",
@@ -618,6 +619,181 @@ def apply_cineva_home_layout(skin_root: Path) -> None:
     includes_path.write_text(includes_source, encoding="utf-8", newline="")
 
 
+
+
+def apply_cineva_widget_dashboard(skin_root: Path) -> None:
+    """Add Home navigation, HomeWidgets, and per-screen widget manager entry points."""
+    xml_root = skin_root / "xml"
+    home_path = xml_root / "Home.xml"
+    if not home_path.is_file():
+        return
+    tree = ET.parse(home_path)
+    root = tree.getroot()
+    menu = root.find(".//control[@id='9000']")
+    content_group = root.find(".//control[@id='2000']")
+    if menu is None or content_group is None:
+        return
+
+    content = menu.find("content")
+    if content is None:
+        content = ET.SubElement(menu, "content")
+    for child in list(content):
+        content.remove(child)
+    for label, menu_id, item_id in (
+        ("Home", 18000, "home"),
+        ("Movies", 19000, "movies"),
+        ("TV Shows", 22000, "tvshows"),
+        ("Add-ons", 27000, "addons"),
+    ):
+        item = ET.SubElement(content, "item")
+        ET.SubElement(item, "label").text = label
+        ET.SubElement(item, "onclick").text = f"SetFocus({menu_id})"
+        ET.SubElement(item, "property", {"name": "menu_id"}).text = f"$NUMBER[{menu_id}]"
+        ET.SubElement(item, "property", {"name": "id"}).text = item_id
+
+    for child in list(content_group):
+        if child.tag == "control" and child.get("id") == "18000":
+            content_group.remove(child)
+    home_group = ET.SubElement(content_group, "control", {"type": "group", "id": "18000"})
+    ET.SubElement(home_group, "visible").text = (
+        "String.IsEqual(Container(9000).ListItem.Property(id),home)"
+    )
+    ET.SubElement(home_group, "defaultcontrol").text = "18001"
+    ET.SubElement(home_group, "onback").text = "SetFocus(9000)"
+    ET.SubElement(home_group, "onup").text = "SetFocus(9000)"
+    for tag, value in (
+        ("left", "0"), ("top", "0"), ("width", "1776"), ("height", "505")
+    ):
+        ET.SubElement(home_group, tag).text = value
+
+    widget_list = ET.SubElement(home_group, "control", {"type": "grouplist", "id": "18001"})
+    for tag, value in (
+        ("left", "50"), ("top", "0"), ("width", "1815"), ("height", "33000"),
+        ("orientation", "vertical"), ("itemgap", "-100"), ("scrolltime", "500"),
+        ("onback", "SetFocus(9000)"), ("pagecontrol", "18099"),
+    ):
+        ET.SubElement(widget_list, tag).text = value
+    animation = ET.SubElement(widget_list, "include", {"content": "Animation_Widget_Poster_Slide"})
+    ET.SubElement(animation, "param", {"name": "container_id", "value": "18001"})
+    ET.SubElement(widget_list, "include").text = "WidgetGroupListCommon"
+    ET.SubElement(widget_list, "include").text = "HomeWidgets"
+    arrows = ET.SubElement(widget_list, "include", {"content": "WidgetUpDownArrows"})
+    ET.SubElement(arrows, "param", {"name": "container_id", "value": "18001"})
+    scrollbar = ET.SubElement(widget_list, "include", {"content": "WidgetScrollbar"})
+    ET.SubElement(scrollbar, "param", {"name": "container_id", "value": "18099"})
+
+    def add_manage_button(parent, control_id: str, label: str, setting: str) -> None:
+        for existing in list(parent):
+            if existing.tag == "control" and existing.get("id") == control_id:
+                parent.remove(existing)
+        button = ET.SubElement(parent, "control", {"type": "button", "id": control_id})
+        for tag, value in (
+            ("left", "1515"), ("top", "0"), ("width", "330"), ("height", "42"),
+            ("label", label), ("font", "font14"), ("textcolor", "FFFFFFFF"),
+            ("focusedcolor", "accent_color"),
+            ("onclick", f"RunScript(script.cineva.nimbus,mode=manage_widgets&cpath_setting={setting})"),
+            ("onback", "SetFocus(9000)"),
+        ):
+            ET.SubElement(button, tag).text = value
+
+    add_manage_button(home_group, "18005", "MANAGE HOME WIDGETS", "home.widget")
+    for group_id, button_id, label, setting in (
+        ("19000", "19005", "MANAGE MOVIE WIDGETS", "movie.widget"),
+        ("22000", "22005", "MANAGE TV WIDGETS", "tvshow.widget"),
+    ):
+        group = root.find(f".//control[@id='{group_id}']")
+        if group is not None:
+            add_manage_button(group, button_id, label, setting)
+    tree.write(home_path, encoding="utf-8", xml_declaration=True)
+
+    includes_path = xml_root / "Includes.xml"
+    if includes_path.is_file():
+        includes_tree = ET.parse(includes_path)
+        includes_root = includes_tree.getroot()
+        if not any(node.get("file") == "script-nimbus-widget_home.xml"
+                   for node in includes_root.findall("include")):
+            imports = list(includes_root.findall("include"))
+            cineva_index = next(
+                (i for i, node in enumerate(imports)
+                 if node.get("file") == "Includes_Cineva.xml"),
+                len(imports) - 1,
+            )
+            includes_root.insert(
+                cineva_index + 1,
+                ET.Element("include", {"file": "script-nimbus-widget_home.xml"}),
+            )
+        includes_tree.write(includes_path, encoding="utf-8", xml_declaration=True)
+
+    settings_path = xml_root / "SkinSettings.xml"
+    if settings_path.is_file():
+        settings_tree = ET.parse(settings_path)
+        settings_root = settings_tree.getroot()
+        settings_controls = settings_root.find("controls")
+        settings_menu = settings_root.find(".//control[@id='9000']")
+        if settings_controls is not None and settings_menu is not None:
+            settings_content = settings_menu.find("content")
+            labels = [
+                (item.findtext("label") or "").strip().lower()
+                for item in (settings_content.findall("item") if settings_content is not None else [])
+            ]
+            widget_index = next((i for i, label in enumerate(labels) if "widget" in label), 2)
+            for child in list(settings_controls):
+                if child.tag == "control" and child.get("id") == "18000":
+                    settings_controls.remove(child)
+            manager_group = ET.SubElement(
+                settings_controls, "control", {"type": "group", "id": "18000"}
+            )
+            ET.SubElement(manager_group, "visible").text = (
+                f"Integer.IsEqual(Container(9000).Position,{widget_index})"
+            )
+            ET.SubElement(manager_group, "defaultcontrol").text = "18001"
+            for tag, value in (
+                ("left", "940"), ("top", "205"), ("width", "850"), ("height", "520")
+            ):
+                ET.SubElement(manager_group, tag).text = value
+            heading = ET.SubElement(manager_group, "control", {"type": "label", "id": "18004"})
+            for tag, value in (
+                ("left", "0"), ("top", "0"), ("width", "820"), ("height", "48"),
+                ("label", "CINÉVA WIDGET MANAGER"), ("font", "font24_title"),
+                ("textcolor", "FFFFFFFF"),
+            ):
+                ET.SubElement(heading, tag).text = value
+            hint = ET.SubElement(manager_group, "control", {"type": "label", "id": "18006"})
+            for tag, value in (
+                ("left", "0"), ("top", "55"), ("width", "820"), ("height", "54"),
+                ("label", "Choose up to four add-on shelves for each screen."),
+                ("font", "font16"), ("textcolor", "FFE0E0E0"),
+            ):
+                ET.SubElement(hint, tag).text = value
+            for button_id, top, label, setting in (
+                ("18001", "135", "MANAGE HOME WIDGETS", "home.widget"),
+                ("18002", "220", "MANAGE MOVIES WIDGETS", "movie.widget"),
+                ("18003", "305", "MANAGE TV SHOWS WIDGETS", "tvshow.widget"),
+            ):
+                button = ET.SubElement(manager_group, "control", {"type": "button", "id": button_id})
+                for tag, value in (
+                    ("left", "0"), ("top", top), ("width", "820"), ("height", "64"),
+                    ("label", label), ("font", "font18"), ("textcolor", "FFFFFFFF"),
+                    ("focusedcolor", "accent_color"),
+                    ("onclick", f"RunScript(script.cineva.nimbus,mode=manage_widgets&cpath_setting={setting})"),
+                    ("onleft", "SetFocus(9000)"),
+                ):
+                    ET.SubElement(button, tag).text = value
+                if button_id == "18001":
+                    ET.SubElement(button, "onup").text = "SetFocus(9000)"
+                if button_id == "18003":
+                    ET.SubElement(button, "ondown").text = "SetFocus(9000)"
+            right = settings_menu.find("onright")
+            if right is None:
+                right = ET.SubElement(settings_menu, "onright")
+            right.text = "SetFocus(18001)"
+            settings_tree.write(settings_path, encoding="utf-8", xml_declaration=True)
+
+    for path in (home_path, includes_path, settings_path):
+        if path.is_file():
+            ET.parse(path)
+
+
 def patch_nimbus_parameterized_container_conditions(skin_root: Path) -> None:
     """Avoid Kodi 22 parser failures for Container($PARAM[list_id]) expressions.
 
@@ -957,6 +1133,113 @@ def write_deterministic_zip(source_root: Path, output_path: Path) -> None:
             archive.writestr(info, path.read_bytes())
 
 
+
+def patch_bridge_home_widgets(bridge_root: Path) -> None:
+    """Extend Nimbus CPaths with four default POV Home shelves."""
+    path = bridge_root / "resources/lib/modules/cpath_maker.py"
+    source = path.read_text(encoding="utf-8")
+    if "max_widgets = 50" not in source:
+        raise RuntimeError("Nimbus CPaths max_widgets anchor changed")
+    source = source.replace("max_widgets = 50", "max_widgets = 4", 1)
+    source = source.replace(
+        "    custom3_widgets_xml,\n) = (",
+        "    custom3_widgets_xml,\n    home_widgets_xml,\n) = (",
+        1,
+    )
+    source = source.replace(
+        '    "script-nimbus-widget_custom3",\n)',
+        '    "script-nimbus-widget_custom3",\n    "script-nimbus-widget_home",\n)',
+        1,
+    )
+    source = source.replace(
+        '    "custom3.widget": (custom3_widgets_xml, xmls.default_widget, "Custom3Widgets"),',
+        '    "custom3.widget": (custom3_widgets_xml, xmls.default_widget, "Custom3Widgets"),\n'
+        '    "home.widget": (home_widgets_xml, xmls.default_widget, "HomeWidgets"),',
+        1,
+    )
+    source = source.replace(
+        '    "custom3": {"main_menu": None, "widget": "Custom3Widgets"},',
+        '    "custom3": {"main_menu": None, "widget": "Custom3Widgets"},\n'
+        '    "home": {"main_menu": None, "widget": "HomeWidgets"},',
+        1,
+    )
+    source = source.replace(
+        '            "custom3": custom3_widgets_xml,',
+        '            "custom3": custom3_widgets_xml,\n            "home": home_widgets_xml,',
+        1,
+    )
+    source = source.replace(
+        '            "custom3": 25010,',
+        '            "custom3": 25010,\n            "home": 18010,',
+        1,
+    )
+    seed_function = '''DEFAULT_HOME_WIDGETS = (
+    ("plugin://plugin.video.pov/?mode=build_movie_list&action=in_progress_movies&name=Continue%20Watching%20Movies", "Continue Watching Movies"),
+    ("plugin://plugin.video.pov/?mode=build_tvshow_list&action=in_progress_tvshows&name=In%20Progress%20Shows", "In Progress Shows"),
+    ("plugin://plugin.video.pov/?mode=build_movie_list&action=tmdb_movies_trending&name=Trending%20Movies", "Trending Movies"),
+    ("plugin://plugin.video.pov/?mode=build_tvshow_list&action=tmdb_tv_trending&name=Trending%20TV%20Shows", "Trending TV Shows"),
+)
+
+
+def seed_default_home_widgets():
+    cpaths = CPaths("home.widget")
+    cpaths.dbcur.execute(
+        "CREATE TABLE IF NOT EXISTS cineva_metadata (meta_key TEXT PRIMARY KEY, meta_value TEXT)"
+    )
+    seeded = cpaths.dbcur.execute(
+        "SELECT meta_value FROM cineva_metadata WHERE meta_key = ?",
+        ("home_defaults_seeded",),
+    ).fetchone()
+    if not seeded:
+        current = cpaths.fetch_current_cpaths()
+        if not current:
+            for index, (widget_path, header) in enumerate(DEFAULT_HOME_WIDGETS, 1):
+                cpaths.add_cpath_to_database(
+                    "home.widget.%d" % index,
+                    widget_path,
+                    header,
+                    "WidgetListPoster",
+                    header + " | Poster",
+                )
+        cpaths.dbcur.execute(
+            "INSERT OR REPLACE INTO cineva_metadata(meta_key, meta_value) VALUES (?, ?)",
+            ("home_defaults_seeded", "1"),
+        )
+        cpaths.dbcon.commit()
+    active = cpaths.fetch_current_cpaths()
+    xbmc.log("CINEVA_NIMBUS_HOME_WIDGETS_READY=%d" % len(active), xbmc.LOGINFO)
+
+
+'''
+    marker = "def remake_all_cpaths(silent=False):\n"
+    if marker not in source:
+        raise RuntimeError("Nimbus CPaths remake_all_cpaths anchor changed")
+    if "DEFAULT_HOME_WIDGETS =" not in source:
+        source = source.replace(marker, seed_function + marker, 1)
+    source = source.replace(
+        "def remake_all_cpaths(silent=False):\n    for item in (\n        \"movie.widget\",",
+        "def remake_all_cpaths(silent=False):\n    seed_default_home_widgets()\n    for item in (\n        \"home.widget\",\n        \"movie.widget\",",
+        1,
+    )
+    source = source.replace(
+        '        xbmcgui.Dialog().ok("Nimbus", "Menus and widgets remade")',
+        '        xbmcgui.Dialog().ok("CINÉVA", "Home, Movies and TV Shows widgets are ready")',
+        1,
+    )
+    required = (
+        '"home.widget": (home_widgets_xml, xmls.default_widget, "HomeWidgets")',
+        '"home": {"main_menu": None, "widget": "HomeWidgets"}',
+        '"home": home_widgets_xml',
+        '"home": 18010',
+        '"home.widget",',
+        "CINEVA_NIMBUS_HOME_WIDGETS_READY=%d",
+    )
+    missing = [value for value in required if value not in source]
+    if missing:
+        raise RuntimeError("Nimbus CPaths Home integration incomplete: " + ", ".join(missing))
+    path.write_text(source, encoding="utf-8")
+
+
 def build(output_dir: Path = OUT_DIR, fetcher=fetch_archive) -> dict[str, Path]:
     if output_dir.exists():
         shutil.rmtree(output_dir)
@@ -989,6 +1272,7 @@ def build(output_dir: Path = OUT_DIR, fetcher=fetch_archive) -> dict[str, Path]:
         remove_unsupported_startup_checks(skin_root)
         apply_cineva_visuals(skin_root)
         apply_cineva_home_layout(skin_root)
+        apply_cineva_widget_dashboard(skin_root)
         write_default_skin_includes(skin_root)
         (skin_root / "NOTICE.txt").write_text(NOTICE, encoding="utf-8")
         manifest = {
@@ -1006,6 +1290,7 @@ def build(output_dir: Path = OUT_DIR, fetcher=fetch_archive) -> dict[str, Path]:
             encoding="utf-8",
         )
         write_bridge(helper_source, bridge_root)
+        patch_bridge_home_widgets(bridge_root)
         upstream_license = skin_root / "LICENSE.txt"
         if upstream_license.is_file():
             shutil.copy2(upstream_license, bridge_root / "LICENSE-NIMBUS.txt")

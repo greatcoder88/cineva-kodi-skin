@@ -163,7 +163,70 @@ HELPER_FILES = {
 </addon>""",
     "resources/lib/default.py": "from modules.router import routing\nrouting()\n",
     "resources/lib/modules/__init__.py": "",
-    "resources/lib/modules/cpath_maker.py": 'settings_path = "special://profile/addon_data/script.nimbus.helper/"\n',
+    "resources/lib/modules/cpath_maker.py": """import xbmc
+from modules import xmls
+settings_path = "special://profile/addon_data/script.nimbus.helper/"
+class CPaths:
+    max_widgets = 50
+    def __init__(self, setting):
+        self.setting = setting
+    def fetch_current_cpaths(self):
+        return {}
+    def add_cpath_to_database(self, *args):
+        return None
+
+(
+    movies_widgets_xml,
+    tvshows_widgets_xml,
+    custom1_widgets_xml,
+    custom2_widgets_xml,
+    custom3_widgets_xml,
+) = (
+    "script-nimbus-widget_movies",
+    "script-nimbus-widget_tvshows",
+    "script-nimbus-widget_custom1",
+    "script-nimbus-widget_custom2",
+    "script-nimbus-widget_custom3",
+)
+default_xmls = {
+    "movie.widget": (movies_widgets_xml, xmls.default_widget, "MovieWidgets"),
+    "tvshow.widget": (tvshows_widgets_xml, xmls.default_widget, "TVShowWidgets"),
+    "custom1.widget": (custom1_widgets_xml, xmls.default_widget, "Custom1Widgets"),
+    "custom2.widget": (custom2_widgets_xml, xmls.default_widget, "Custom2Widgets"),
+    "custom3.widget": (custom3_widgets_xml, xmls.default_widget, "Custom3Widgets"),
+}
+main_include_dict = {
+    "movie": {"main_menu": None, "widget": "MovieWidgets"},
+    "tvshow": {"main_menu": None, "widget": "TVShowWidgets"},
+    "custom1": {"main_menu": None, "widget": "Custom1Widgets"},
+    "custom2": {"main_menu": None, "widget": "Custom2Widgets"},
+    "custom3": {"main_menu": None, "widget": "Custom3Widgets"},
+}
+def make_widget_xml():
+    media_type_to_xml = {
+        "movie": movies_widgets_xml,
+        "tvshow": tvshows_widgets_xml,
+        "custom1": custom1_widgets_xml,
+        "custom2": custom2_widgets_xml,
+        "custom3": custom3_widgets_xml,
+    }
+    media_type_id = {
+        "movie": 19010,
+        "tvshow": 22010,
+        "custom1": 23010,
+        "custom2": 24010,
+        "custom3": 25010,
+    }
+def remake_all_cpaths(silent=False):
+    for item in (
+        "movie.widget",
+        "tvshow.widget",
+        "custom1.widget",
+        "custom2.widget",
+        "custom3.widget",
+    ):
+        pass
+""",
     "resources/lib/modules/search_utils.py": 'SETTINGS_PATH = "special://profile/addon_data/script.nimbus.helper/"\n',
     "resources/lib/modules/xmls.py": 'history = "RunScript(script.nimbus.helper,mode=re_search)"\n',
     "resources/lib/modules/custom_actions.py": """import requests
@@ -211,6 +274,8 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 self.assertIn("skin.cineva/xml/Home.xml", names)
                 self.assertIn("skin.cineva/xml/Includes_Home.xml", names)
                 self.assertIn("skin.cineva/xml/Includes_HomeLayouts.xml", names)
+                self.assertIn("skin.cineva/xml/script-nimbus-widget_home.xml", names)
+                self.assertIn('<include name="HomeWidgets">', archive.read("skin.cineva/xml/script-nimbus-widget_home.xml").decode("utf-8"))
                 self.assertIn("skin.cineva/xml/View_54_Flix.xml", names)
                 for filename, include_name in builder.DEFAULT_SKIN_INCLUDE_NAMES.items():
                     member = f"skin.cineva/xml/{filename}.xml"
@@ -223,9 +288,9 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 self.assertIn("skin.cineva/NOTICE.txt", names)
                 manifest = archive.read("skin.cineva/addon.xml").decode()
                 self.assertIn('id="skin.cineva"', manifest)
-                self.assertIn('version="0.7.1"', manifest)
+                self.assertIn('version="0.8.0"', manifest)
                 self.assertIn('addon="xbmc.gui" version="5.18.0"', manifest)
-                self.assertIn('addon="script.cineva.nimbus" version="0.1.0"', manifest)
+                self.assertIn('addon="script.cineva.nimbus" version="0.1.1"', manifest)
                 self.assertNotIn("script.nimbus.helper", manifest)
                 home_includes = archive.read("skin.cineva/xml/Includes_Home.xml").decode()
                 self.assertNotIn("check_for_update", home_includes)
@@ -239,6 +304,21 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 baseline = archive.read("skin.cineva/CINEVA_BASELINE.json").decode()
                 self.assertIn(builder.NIMBUS_SHA, baseline)
                 self.assertIn("CC BY-SA 4.0", baseline)
+            with zipfile.ZipFile(paths["bridge"]) as archive:
+                cpaths = archive.read(
+                    "script.cineva.nimbus/resources/lib/modules/cpath_maker.py"
+                ).decode("utf-8")
+                self.assertIn("max_widgets = 4", cpaths)
+                self.assertIn('"home.widget"', cpaths)
+                self.assertIn('"home": 18010', cpaths)
+                self.assertIn("CINEVA_NIMBUS_HOME_WIDGETS_READY=%d", cpaths)
+                for title in (
+                    "Continue Watching Movies",
+                    "In Progress Shows",
+                    "Trending Movies",
+                    "Trending TV Shows",
+                ):
+                    self.assertIn(title, cpaths)
 
 
     def test_flix_focus_layouts_receive_their_real_container_ids(self):
@@ -550,6 +630,11 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
             )
 
             builder.apply_cineva_home_layout(skin)
+            (skin / "xml/SkinSettings.xml").write_text(
+                '<window><controls><control type="fixedlist" id="9000"><content><item><label>General</label></item><item><label>Home</label></item><item><label>Widget options</label></item></content><onright>10000</onright></control></controls></window>',
+                encoding="utf-8",
+            )
+            builder.apply_cineva_widget_dashboard(skin)
 
             root = ET.parse(skin / "xml/Home.xml").getroot()
             self.assertEqual(root.findtext("defaultcontrol"), "20000")
@@ -560,6 +645,14 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
             self.assertEqual(menu_list.findtext("top"), "26")
             self.assertEqual(menu_list.findtext("width"), "1260")
             self.assertIsNotNone(menu_list.find("./include[@content='CinevaMainMenuList']"))
+            self.assertEqual(
+                [item.findtext("label") for item in menu_list.findall("./content/item")],
+                ["Home", "Movies", "TV Shows", "Add-ons"],
+            )
+            home_group = root.find(".//control[@id='18000']")
+            self.assertIsNotNone(home_group)
+            self.assertEqual(home_group.findtext("defaultcontrol"), "18001")
+            self.assertIsNotNone(home_group.find(".//include[.='HomeWidgets']"))
             self.assertIsNone(root.find(".//include[@content='MenuContentPanel']"))
             flix = ET.parse(skin / "xml/Includes_FlixPanel.xml").getroot()
             self.assertEqual(flix.findtext(".//include[@name='FlixPanel']//left"), "72")
@@ -567,6 +660,14 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
             ET.parse(skin / "xml/Includes_Cineva.xml")
             skin_includes = ET.parse(skin / "xml/Includes.xml").getroot()
             self.assertIsNotNone(skin_includes.find("./include[@file='Includes_Cineva.xml']"))
+            self.assertIsNotNone(skin_includes.find("./include[@file='script-nimbus-widget_home.xml']"))
+            settings = ET.parse(skin / "xml/SkinSettings.xml").getroot()
+            manager_group = settings.find(".//control[@id='18000']")
+            self.assertIsNotNone(manager_group)
+            self.assertIn("MANAGE HOME WIDGETS", " ".join(
+                button.findtext("label") or ""
+                for button in manager_group.findall(".//control[@type='button']")
+            ))
             home_includes = ET.parse(skin / "xml/Includes_Home.xml").getroot()
             common = home_includes.find(".//include[@name='WidgetGroupListCommon']")
             self.assertEqual(common.findtext("onback"), "SetFocus(9000)")
@@ -607,8 +708,8 @@ class NimbusWorkflowPathTests(unittest.TestCase):
     def test_workflow_uses_the_builder_skin_version(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
         source = workflow.read_text(encoding="utf-8")
-        self.assertIn("skin.cineva-0.7.1-nimbus.zip", source)
-        self.assertIn('manifest.get("version") == "0.7.1"', source)
+        self.assertIn("skin.cineva-0.8.0-nimbus.zip", source)
+        self.assertIn('manifest.get("version") == "0.8.0"', source)
 
     def test_first_boot_reads_kodis_actual_flatpak_log_location(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
@@ -643,9 +744,11 @@ class NimbusWorkflowPathTests(unittest.TestCase):
     def test_skin_first_run_welcome_generates_includes_before_home_capture(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
         source = workflow.read_text(encoding="utf-8")
-        self.assertIn('currentwindow",{}).get("id") == 11112', source)
+        self.assertIn('currentwindow",{}).get("id") in (11112, 12002)', source)
         self.assertIn("Acknowledging Nimbus first-run welcome", source)
         self.assertIn("required_default_includes", source)
+        self.assertIn("script-nimbus-widget_home.xml", source)
+        self.assertIn("CINEVA_NIMBUS_HOME_WIDGETS_READY=4", source)
         self.assertIn("before_welcome_home_inits", source)
         self.assertIn("Window Init (Home.xml)", source)
         self.assertNotIn("before_welcome_skin_loads", source)

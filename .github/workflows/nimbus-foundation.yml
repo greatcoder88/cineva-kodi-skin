@@ -37,8 +37,8 @@ jobs:
           import xml.etree.ElementTree as ET
 
           root = Path("dist/nimbus-foundation")
-          skin_zip = root / "skin.cineva-0.7.1-nimbus.zip"
-          bridge_zip = root / "script.cineva.nimbus-0.1.0.zip"
+          skin_zip = root / "skin.cineva-0.8.0-nimbus.zip"
+          bridge_zip = root / "script.cineva.nimbus-0.1.1.zip"
           assert skin_zip.is_file() and bridge_zip.is_file()
           with ZipFile(skin_zip) as skin, ZipFile(bridge_zip) as bridge:
               skin_names = set(skin.namelist())
@@ -56,7 +56,7 @@ jobs:
                   assert path in skin_names, f"Missing Nimbus foundation file: {path}"
               manifest = ET.fromstring(skin.read("skin.cineva/addon.xml"))
               assert manifest.get("id") == "skin.cineva"
-              assert manifest.get("version") == "0.7.1"
+              assert manifest.get("version") == "0.8.0"
               assert manifest.find("./requires/import[@addon='xbmc.gui']").get("version") == "5.18.0"
               assert manifest.find("./requires/import[@addon='script.cineva.nimbus']").get("version") == "0.1.0"
               assert "script.nimbus.helper" not in skin.read("skin.cineva/addon.xml").decode()
@@ -152,6 +152,10 @@ jobs:
           echo $! > /tmp/xvfb.pid
           sleep 2
           KODI_DATA="$HOME/.var/app/tv.kodi.Kodi/data"
+POV_FIXTURE="$GITHUB_WORKSPACE/tools/test-fixtures/plugin.video.pov"
+POV_ADDON="$KODI_DATA/addons/plugin.video.pov"
+mkdir -p "$POV_ADDON"
+cp -a "$POV_FIXTURE"/. "$POV_ADDON"/
           USERDATA="$KODI_DATA/userdata"
           SETTINGS="$USERDATA/guisettings.xml"
           # Kodi writes kodi.log beside userdata, not inside userdata/temp.
@@ -308,6 +312,14 @@ jobs:
           # enable the local bridge and skin after Kodi's add-on scan, then
           # select CINÉVA through Settings.SetSettingValue so Kodi opens the
           # native Keep Skin confirmation.
+          pov_before = rpc_retry("Addons.GetAddonDetails", {
+              "addonid":"plugin.video.pov", "properties":["enabled","version"]
+          })
+          print("CINÉVA POV test fixture before enable:", pov_before)
+          pov_enable = rpc_retry("Addons.SetAddonEnabled", {
+              "addonid":"plugin.video.pov", "enabled":True
+          })
+          print("CINÉVA POV test fixture enable result:", pov_enable)
           initial_skin = rpc_retry("Settings.GetSettingValue", {"setting":"lookandfeel.skin"})
           print("Kodi skin after first startup:", initial_skin)
           bridge_before = rpc_retry("Addons.GetAddonDetails", {
@@ -440,7 +452,7 @@ jobs:
               raise SystemExit(f"CINÉVA was not retained after Keep Skin: setting={selected}; GUI={state}")
 
           state = gui()
-          if state.get("currentwindow",{}).get("id") == 11112:
+          if state.get("currentwindow",{}).get("id") in (11112, 12002):
               welcome_label = state.get("currentcontrol",{}).get("label","").strip()
               if welcome_label.lower() != "ok":
                   raise SystemExit(f"Nimbus first-run welcome did not focus OK: {state}")
@@ -453,7 +465,8 @@ jobs:
                   "script-nimbus-main_menu_custom1.xml",
                   "script-nimbus-main_menu_custom2.xml",
                   "script-nimbus-main_menu_custom3.xml",
-                  "script-nimbus-widget_movies.xml",
+                  "script-nimbus-widget_home.xml",
+                   "script-nimbus-widget_movies.xml",
                   "script-nimbus-widget_tvshows.xml",
                   "script-nimbus-widget_custom1.xml",
                   "script-nimbus-widget_custom2.xml",
@@ -476,11 +489,13 @@ jobs:
                       if not (skin_xml_dir/name).is_file() or (skin_xml_dir/name).stat().st_size == 0
                   ]
                   home_reloaded = log_text().count("Window Init (Home.xml)") > before_welcome_home_inits
+                  home_widgets_ready = "CINEVA_NIMBUS_HOME_WIDGETS_READY=4" in log_text()
                   if (
                       skin_id(state) == "skin.cineva"
                       and state.get("currentwindow",{}).get("id") == 10000
                       and not missing
                       and home_reloaded
+                      and home_widgets_ready
                   ):
                       break
                   time.sleep(0.25)
