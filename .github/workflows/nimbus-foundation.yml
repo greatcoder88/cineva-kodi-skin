@@ -286,7 +286,46 @@ jobs:
           print("Prelaunch Kodi skin setting:", root.find("./setting[@id='lookandfeel.skin']").text)
           PY
           cp "$HOME/.var/app/tv.kodi.Kodi/data/userdata/guisettings.xml" artifacts/guisettings-before-launch.xml
-          nohup setsid -f flatpak run --user tv.kodi.Kodi//beta --standalone --windowing=x11 </dev/null > /tmp/nimbus-kodi.log 2>&1
+          # A detached Flatpak launcher returns before Kodi has necessarily
+          # created kodi.bin or opened JSON-RPC. Do not interpret that startup
+          # window as an application exit. Reuse the two-attempt readiness gate
+          # proven by the legacy GUI workflow, and accept both Kodi executable
+          # names used by the Piers Flatpak.
+          launch_kodi() {
+            nohup setsid -f flatpak run --user tv.kodi.Kodi//beta --standalone --windowing=x11 </dev/null > /tmp/nimbus-kodi.log 2>&1
+          }
+          for launch_attempt in 1 2; do
+            launch_kodi
+            for i in $(seq 1 45); do
+              if kodi_processes | grep -q . && ss -ltn | grep -q ':9090'; then
+                break
+              fi
+              if ! kodi_processes | grep -q . && [ "$i" -gt 5 ]; then
+                break
+              fi
+              sleep 2
+            done
+            if ss -ltn | grep -q ':9090'; then
+              break
+            fi
+            echo "Kodi did not keep its GUI/JSON-RPC listener alive on Nimbus launch attempt $launch_attempt; restarting once."
+            ps -eo pid,ppid,stat,comm,args | grep -E '[k]odi(\\.bin|-x11)?' || true
+            cat /tmp/nimbus-kodi.log || true
+            flatpak kill --user tv.kodi.Kodi 2>/dev/null || true
+            pkill -TERM -x kodi.bin 2>/dev/null || true
+            pkill -TERM -x kodi-x11 2>/dev/null || true
+            pkill -TERM -x kodi 2>/dev/null || true
+            sleep 2
+          done
+          if ! ss -ltn | grep -q ':9090'; then
+            echo "Kodi did not expose JSON-RPC after two detached Nimbus launch attempts."
+            ps -ef | grep -E '[k]odi|[f]latpak' || true
+            cat /tmp/nimbus-kodi.log || true
+            exit 1
+          fi
+          echo "Kodi process and JSON-RPC listener are ready:"
+          ps -eo pid,ppid,stat,comm,args | grep -E '[k]odi(\\.bin|-x11)?' || true
+          sleep 3
           python - <<'PY'
           import json, socket, time, subprocess, shutil
           from pathlib import Path
