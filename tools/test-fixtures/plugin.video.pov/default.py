@@ -68,6 +68,11 @@ PLOTS = {
 PLOT_OUTLINES = {
     "Inception": "A skilled thief enters dreams to steal secrets, then takes on an impossible job: plant an idea."
 }
+TOMATO_PERCENT = {
+    # The GUI test selects Inception (the fourth item in a 1-based list).
+    # Keep this explicit instead of relying on an index-parity shortcut.
+    "Inception": "92",
+}
 
 
 def main():
@@ -113,8 +118,8 @@ def main():
         item.setInfo("video", video_info)
         # Exercise both supported Rotten Tomatoes paths with deterministic fixture data.
         item.getVideoInfoTag().setRating(9.2, 1800, "tomatometerallcritics", False)
-        if index % 2 == 1:
-            item.setProperty("Rating.tomatoes.Percent", "92")
+        if title in TOMATO_PERCENT:
+            item.setProperty("Rating.tomatoes.Percent", TOMATO_PERCENT[title])
         # Keep poster art portrait and thumb/fanart landscape, matching common
         # provider metadata. This catches skins that accidentally use thumb as a poster.
         backdrop_name = "tv-backdrop-{}.jpg".format(index) if is_tv else "backdrop-{}.jpg".format(index)
