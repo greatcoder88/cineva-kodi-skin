@@ -358,6 +358,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
             self.assertEqual(values["unfocused_text"], "FFF5F5F1")
 
             home = ET.parse(skin / "xml/Home.xml").getroot()
+            self.assertEqual(home.findtext("defaultcontrol"), "20000")
             controls = home.find("controls")
             self.assertIsNotNone(controls.find("./include"))
             self.assertIsNotNone(controls.find("./control[@id='9000']"))
