@@ -116,6 +116,7 @@ def main():
             video_info["season"] = 2
             video_info["episode"] = 5
         item.setInfo("video", video_info)
+        item.getVideoInfoTag().setRating(8.4, 50000, "imdb", True)
         # Exercise both supported Rotten Tomatoes paths with deterministic fixture data.
         item.getVideoInfoTag().setRating(9.2, 1800, "tomatometerallcritics", False)
         if title in TOMATO_PERCENT:
