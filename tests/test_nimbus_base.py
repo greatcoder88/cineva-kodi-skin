@@ -145,6 +145,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 self.assertIn("script.cineva.nimbus/resources/lib/modules/cpath_maker.py", names)
                 self.assertIn("script.cineva.nimbus/resources/lib/modules/search_utils.py", names)
                 self.assertIn("script.cineva.nimbus/resources/lib/modules/router.py", names)
+                self.assertIn("script.cineva.nimbus/LICENSE-NIMBUS.txt", names)
                 self.assertNotIn("script.cineva.nimbus/resources/lib/service.py", names)
                 self.assertFalse(any("/apis/" in name or "/monitors/" in name for name in names))
                 manifest = archive.read("script.cineva.nimbus/addon.xml").decode()
