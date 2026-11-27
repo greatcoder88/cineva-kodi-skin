@@ -688,7 +688,7 @@ def apply_cineva_widget_dashboard(skin_root: Path) -> None:
                 parent.remove(existing)
         button = ET.SubElement(parent, "control", {"type": "button", "id": control_id})
         for tag, value in (
-            ("left", "1515"), ("top", "0"), ("width", "330"), ("height", "42"),
+            ("left", "1425"), ("top", "0"), ("width", "420"), ("height", "42"),
             ("label", label), ("font", "font14"), ("textcolor", "FFFFFFFF"),
             ("focusedcolor", "accent_color"),
             ("onclick", f"RunScript(script.cineva.nimbus,mode=manage_widgets&cpath_setting={setting})"),
@@ -704,6 +704,24 @@ def apply_cineva_widget_dashboard(skin_root: Path) -> None:
         group = root.find(f".//control[@id='{group_id}']")
         if group is not None:
             add_manage_button(group, button_id, label, setting)
+    for candidate in root.findall(".//control[@type='group']"):
+        labels = [
+            label.text or ""
+            for label in candidate.findall(".//control[@type='label']/label")
+        ]
+        if (
+            candidate.findtext("top") == "90"
+            and candidate.findtext("left") == "90"
+            and any("$INFO[System.Time]" in label for label in labels)
+        ):
+            visible = candidate.find("visible")
+            if visible is None:
+                visible = ET.SubElement(candidate, "visible")
+            existing = (visible.text or "").strip()
+            hide_on_home = "!String.IsEqual(Container(9000).ListItem.Property(id),home)"
+            if hide_on_home not in existing:
+                visible.text = f"{existing} + {hide_on_home}" if existing else hide_on_home
+
     tree.write(home_path, encoding="utf-8", xml_declaration=True)
 
     includes_path = xml_root / "Includes.xml"

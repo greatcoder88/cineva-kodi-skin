@@ -607,6 +607,8 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
             home = (
                 '<window><defaultcontrol>20000</defaultcontrol><controls>'
                 '<control type="group" id="2000"><top>510</top></control>'
+                '<control type="group"><top>90</top><left>90</left><width>380</width>'
+                '<control type="label"><label>$INFO[System.Time]</label></control></control>'
                 + menu +
                 '<control type="rss"></control></controls></window>'
             )
@@ -655,6 +657,15 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
             self.assertIsNotNone(home_group)
             self.assertEqual(home_group.findtext("defaultcontrol"), "18001")
             self.assertIsNotNone(home_group.find(".//include[.='HomeWidgets']"))
+            manage_home = home_group.find(".//control[@id='18005']")
+            self.assertEqual(manage_home.findtext("left"), "1425")
+            self.assertEqual(manage_home.findtext("width"), "420")
+            clock_group = root.find(".//control[@type='group'][top='90'][left='90']")
+            self.assertIsNotNone(clock_group)
+            self.assertIn(
+                "!String.IsEqual(Container(9000).ListItem.Property(id),home)",
+                clock_group.findtext("visible"),
+            )
             self.assertIsNone(root.find(".//include[@content='MenuContentPanel']"))
             flix = ET.parse(skin / "xml/Includes_FlixPanel.xml").getroot()
             self.assertEqual(flix.findtext(".//include[@name='FlixPanel']//left"), "72")
