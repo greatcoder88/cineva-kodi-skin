@@ -366,9 +366,10 @@ class HomeHeroActionTests(unittest.TestCase):
             )
             self.assertIn("!Control.HasFocus(9002)", focused_image.findtext("visible", ""))
             self.assertIn("!Control.HasFocus(9002)", focused_title.findtext("visible", ""))
-            focus_accent = next(
-                node for node in focused.findall("./control[@type='image']")
-                if node.findtext("texture") == "focus-bar.png"
+            self.assertFalse(
+                any(node.findtext("texture") == "focus-bar.png"
+                    for node in focused.findall("./control[@type='image']")),
+                "Focused poster must not add the detached underline removed in 0.5.63",
             )
             self.assertEqual(
                 (focused_image.findtext("left"), focused_image.findtext("top"),
@@ -402,11 +403,6 @@ class HomeHeroActionTests(unittest.TestCase):
             self.assertEqual(
                 (focused_title.findtext("top"), focused_title.findtext("height")),
                 ("316", "108"),
-            )
-            self.assertEqual(
-                (focus_accent.findtext("left"), focus_accent.findtext("top"),
-                 focus_accent.findtext("width"), focus_accent.findtext("height")),
-                ("84", "430", "80", "4"),
             )
             focus_progresses = focused.findall("./control[@type='progress']")
             self.assertEqual(len(focus_progresses), 2)
