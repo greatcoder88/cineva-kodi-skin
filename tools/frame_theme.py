@@ -170,10 +170,15 @@ def feature_metadata(theme):
     fields = {
         "Title": ("Label", ""), "Art": ("Art(fanart)", ""), "Year": ("Year", ""),
         "Genre": ("Genre", ",  •  "), "Plot": ("Plot", ""), "Logo": ("Art(clearlogo)", ""),
-        "Rating": ("Rating", "★  "),
+        "Rating": ("Rating", ",★  "),
+        "Tomatometer": ("Property(Rating.tomatoes.Percent)", ",   ·   RT  ,%"),
     }
     for name, (field, prefix) in fields.items():
         variable = ET.SubElement(theme, "variable", {"name": f"FrameFeature{name}"})
+        if name == "Rating":
+            ET.SubElement(variable, "value", {
+                "condition": "ControlGroup(2000).HasFocus + Integer.IsGreater(ListItem.Votes(imdb),0)",
+            }).text = "$INFO[ListItem.Rating(imdb),IMDb  ]"
         ET.SubElement(variable, "value", {"condition": "ControlGroup(2000).HasFocus"}).text = (
             f"$INFO[ListItem.{field}{prefix}]"
         )

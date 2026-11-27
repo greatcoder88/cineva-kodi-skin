@@ -234,7 +234,7 @@
             <height>40</height>
             <font>FrameTab</font>
             <textcolor>unfocused_text</textcolor>
-            <label>$VAR[FrameFeatureRating]</label>
+            <label>$VAR[FrameFeatureRating]$VAR[FrameFeatureTomatometer]</label>
             <visible>String.IsEmpty(Skin.String(valid_api_key)) | !ControlGroup(2000).HasFocus</visible>
           </control>
           <control type="group">
