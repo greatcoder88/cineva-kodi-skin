@@ -87,6 +87,8 @@
           <visible>ListItem.IsResumable</visible>
         </control>
         <control type="image">
+          <width>306</width>
+          <height>172</height>
           <texture border="15" infill="false" colordiffuse="frame_card_focus">masks/flixscape-border-widget.png</texture>
           <visible>$PARAM[focused] + Control.HasFocus($PARAM[list_id])</visible>
         </control>
@@ -128,6 +130,8 @@
           <visible>ListItem.IsResumable</visible>
         </control>
         <control type="image">
+          <width>188</width>
+          <height>280</height>
           <texture border="12" infill="false" colordiffuse="frame_card_focus">masks/poster-big-border.png</texture>
           <visible>$PARAM[focused] + Control.HasFocus($PARAM[list_id])</visible>
         </control>

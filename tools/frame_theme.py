@@ -210,7 +210,7 @@ def apply_search(xml):
         elif label.text and label.text.startswith("Search results for:"):
             heading = next(control for control in root.iter("control") if label in control)
             label.text = "Results for ‘$INFO[Window(home).Property(nimbus.search.input)]’"
-            set_fields(heading, {"top": "472", "font": "FrameTVLabel", "textcolor": "unfocused_text"})
+            set_fields(heading, {"left": "64", "top": "436", "font": "FrameTVLabel", "textcolor": "grey"})
         elif label.text == "$INFO[Window(home).Property(nimbus.search.history.empty)]":
             message = next(control for control in root.iter("control") if label in control)
             set_fields(message, {"left": "570", "top": "205", "width": "960", "height": "95",
@@ -262,6 +262,8 @@ def apply_title_details(xml):
     for control in root.iter("control"):
         label = control.findtext("label")
         if label == "[B]$VAR[DialogInfoTitle][/B]":
+            metadata = next(group for group in root.iter("control") if control in group)
+            set_fields(metadata, {"width": "610"})
             control.set("id", "8982")
             set_fields(control, {"font": "FrameHeroTitle", "align": "left"})
             # Stock Nimbus omits the closing group delimiter in this expression.
