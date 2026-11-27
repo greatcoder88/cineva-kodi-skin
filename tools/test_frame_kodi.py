@@ -335,7 +335,10 @@ def verify_playback_osd():
     wait_for("Selecting the embedded subtitle enables it",
              lambda: rpc("Player.GetProperties", playerid=player,
                          properties=["subtitleenabled"])["subtitleenabled"])
-    press("up")
+    wait_for("Subtitle selector stays focused after selection", lambda: has_focus(8709))
+    selected = "Container(8709).ListItem.Property(FrameTrackIndex)"
+    if rpc("XBMC.GetInfoLabels", labels=[selected])[selected] != "off":
+        press("up")
     press("select")
     wait_for("Off disables subtitles",
              lambda: not rpc("Player.GetProperties", playerid=player,

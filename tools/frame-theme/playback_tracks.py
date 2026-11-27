@@ -52,7 +52,7 @@ def main():
         return
 
     if not audio:
-        add_track(handle, ("✓  " if active is None else "") + xbmc.getLocalizedString(1223), "off")
+        add_track(handle, ("✓  " if active is None else "") + xbmc.getLocalizedString(351), "off")
     for track in tracks:
         language = track.get("language", "")
         language = xbmc.convertLanguage(language, xbmc.ENGLISH_NAME) or language

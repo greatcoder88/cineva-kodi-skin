@@ -342,9 +342,7 @@
           <orientation>vertical</orientation>
           <scrolltime>100</scrolltime>
           <onup>$PARAM[id]</onup>
-          <ondown condition="Container($PARAM[id]).HasNext">$PARAM[id]</ondown>
-          <ondown condition="!Container($PARAM[id]).HasNext">SetFocus($PARAM[button])</ondown>
-          <ondown condition="!Container($PARAM[id]).HasNext">ClearProperty(FrameTrackPicker)</ondown>
+          <ondown>$PARAM[id]</ondown>
           <onback>SetFocus($PARAM[button])</onback>
           <onback>ClearProperty(FrameTrackPicker)</onback>
           <onleft>SetFocus($PARAM[button])</onleft>
