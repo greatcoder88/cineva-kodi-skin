@@ -4,6 +4,7 @@ import sys
 import tempfile
 import unittest
 import zipfile
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
@@ -120,6 +121,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                     self.assertIn(member, names)
                     include_xml = archive.read(member).decode("utf-8")
                     self.assertIn(f'<include name="{include_name}">', include_xml)
+                    ET.fromstring(include_xml)
                 self.assertIn("skin.cineva/fonts/Inter-Regular.ttf", names)
                 self.assertIn("skin.cineva/LICENSE.txt", names)
                 self.assertIn("skin.cineva/NOTICE.txt", names)
