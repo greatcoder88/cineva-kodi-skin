@@ -202,21 +202,21 @@ main_include_dict = {
     "custom2": {"main_menu": None, "widget": "Custom2Widgets"},
     "custom3": {"main_menu": None, "widget": "Custom3Widgets"},
 }
-def make_widget_xml():
-    media_type_to_xml = {
-        "movie": movies_widgets_xml,
-        "tvshow": tvshows_widgets_xml,
-        "custom1": custom1_widgets_xml,
-        "custom2": custom2_widgets_xml,
-        "custom3": custom3_widgets_xml,
-    }
-    media_type_id = {
-        "movie": 19010,
-        "tvshow": 22010,
-        "custom1": 23010,
-        "custom2": 24010,
-        "custom3": 25010,
-    }
+    def make_widget_xml(self):
+        media_type_to_xml = {
+            "movie": movies_widgets_xml,
+            "tvshow": tvshows_widgets_xml,
+            "custom1": custom1_widgets_xml,
+            "custom2": custom2_widgets_xml,
+            "custom3": custom3_widgets_xml,
+        }
+        media_type_id = {
+            "movie": 19010,
+            "tvshow": 22010,
+            "custom1": 23010,
+            "custom2": 24010,
+            "custom3": 25010,
+        }
 def remake_all_cpaths(silent=False):
     for item in (
         "movie.widget",
