@@ -50,10 +50,11 @@ def write_http_directory_index(directory: Path, title: str, entries: list[tuple[
 
 
 def main() -> None:
-    skin_zip = ROOT / "skin.cineva-0.5.65.zip"
-    helper_dir = ROOT / "tools/script.cineva.widgets"
-    if not skin_zip.is_file():
-        raise SystemExit("Build the skin ZIP before assembling the repository.")
+    build_dir = ROOT / "dist" / "nimbus-foundation"
+    skin_zip = build_dir / "skin.cineva-0.8.0-nimbus.zip"
+    bridge_zip = build_dir / "script.cineva.nimbus-0.1.1.zip"
+    if not skin_zip.is_file() or not bridge_zip.is_file():
+        raise SystemExit("Build the pinned Nimbus foundation packages before assembling the repository.")
     OUT.mkdir(exist_ok=True)
     zips = OUT / "zips"
     for child in (zips,):
@@ -61,15 +62,14 @@ def main() -> None:
             shutil.rmtree(child)
         child.mkdir(parents=True)
     skin_id, skin_xml = addon_xml_from_zip(skin_zip)
-    helper_xml_path = helper_dir / "addon.xml"
-    helper_root = ET.parse(helper_xml_path).getroot()
-    helper_id = helper_root.attrib["id"]
-    if skin_id != "skin.cineva" or helper_id != "script.cineva.widgets":
-        raise SystemExit(f"Unexpected add-on IDs: {skin_id}, {helper_id}")
-    helper_version = helper_root.attrib["version"]
+    bridge_id, bridge_xml = addon_xml_from_zip(bridge_zip)
+    bridge_root = ET.fromstring(bridge_xml)
+    if skin_id != "skin.cineva" or bridge_id != "script.cineva.nimbus":
+        raise SystemExit(f"Unexpected add-on IDs: {skin_id}, {bridge_id}")
+    bridge_version = bridge_root.attrib["version"]
     skin_root = ET.fromstring(skin_xml)
     skin_version = skin_root.attrib["version"]
-    expected_skin_version = "0.5.65"  # Synchronized Home hero row transitions
+    expected_skin_version = "0.8.0"  # Pinned Nimbus base with CINÉVA presentation
     if skin_version != expected_skin_version:
         raise SystemExit(
             f"Skin archive manifest version is {skin_version!r}; "
@@ -78,22 +78,16 @@ def main() -> None:
     if skin_zip.name != f"{skin_id}-{skin_version}.zip":
         raise SystemExit(f"Skin archive filename/version mismatch: {skin_zip.name}")
     packages = [
-        (skin_id, skin_version, skin_zip),
-        (helper_id, helper_version, None),
+        (skin_id, skin_version, skin_zip, skin_xml),
+        (bridge_id, bridge_version, bridge_zip, bridge_xml),
     ]
-    helper_zip = zips / helper_id / f"{helper_id}-{helper_version}.zip"
-    helper_zip.parent.mkdir(parents=True)
-    skin_package_dir = zips / skin_id
-    skin_package_dir.mkdir(parents=True)
-    zip_directory(helper_dir, helper_zip, helper_id)
-    # Preserve the exact tested release archive name; do not silently publish
-    # a differently-versioned package based on stale manifest metadata.
-    shutil.copy2(skin_zip, skin_package_dir / skin_zip.name)
+    for addon_id, version, package, _raw in packages:
+        package_dir = zips / addon_id
+        package_dir.mkdir(parents=True)
+        shutil.copy2(package, package_dir / package.name)
     addons = ET.Element("addons")
-    for addon_id, version, package in packages:
-        raw = skin_xml if addon_id == skin_id else helper_xml_path.read_bytes()
-        node = ET.fromstring(raw)
-        addons.append(node)
+    for addon_id, version, package, raw in packages:
+        addons.append(ET.fromstring(raw))
     ET.indent(addons, space="  ")
     addons_bytes = ET.tostring(addons, encoding="utf-8", xml_declaration=True)
     (OUT / "addons.xml").write_bytes(addons_bytes)
@@ -130,7 +124,7 @@ def main() -> None:
         "CINÉVA Kodi Repository",
         [(repo_zip.name, repo_zip.name), ("zips/", "zips/")],
     )
-    package_ids = (REPO_ID, skin_id, helper_id)
+    package_ids = (REPO_ID, skin_id, bridge_id)
     write_http_directory_index(
         zips,
         "CINÉVA add-on packages",
@@ -145,7 +139,7 @@ def main() -> None:
             [(name, name) for name in package_files],
         )
     print(f"Repository assembled: {OUT}")
-    print(f"Packages: {skin_id}-{skin_version}, {helper_id}-{helper_version}, {REPO_ID}-{REPO_VERSION}")
+    print(f"Packages: {skin_id}-{skin_version}, {bridge_id}-{bridge_version}, {REPO_ID}-{REPO_VERSION}")
 
 
 if __name__ == "__main__":
