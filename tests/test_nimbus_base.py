@@ -52,6 +52,8 @@ NIMBUS_FILES = {
     </controls></window>""",
     "xml/Variables_Ratings.xml": "<includes><variable name=\"rating\"><value>$INFO[ListItem.Rating]</value></variable></includes>",
     "xml/View_54_Flix.xml": """<includes>
+      <include name="FlixSquareLayout"><visible>Control.HasFocus($PARAM[list_id])</visible></include>
+      <include name="FlixMovieLayout"><visible>Control.HasFocus($PARAM[list_id])</visible></include>
       <include>FlixMovieLayout</include>
       <include content="FlixMovieLayout"><param name="focused" value="true" /></include>
     </includes>""",
@@ -151,7 +153,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 self.assertIn("skin.cineva/NOTICE.txt", names)
                 manifest = archive.read("skin.cineva/addon.xml").decode()
                 self.assertIn('id="skin.cineva"', manifest)
-                self.assertIn('version="0.6.2"', manifest)
+                self.assertIn('version="0.6.3"', manifest)
                 self.assertIn('addon="xbmc.gui" version="5.18.0"', manifest)
                 self.assertIn('addon="script.cineva.nimbus" version="0.1.0"', manifest)
                 self.assertNotIn("script.nimbus.helper", manifest)
@@ -193,6 +195,22 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 includes = archive.read("skin.cineva/xml/Includes.xml").decode("utf-8")
                 self.assertNotIn('name="fallback_image"', includes)
                 self.assertIn('name="fallback_icon"', includes)
+
+
+    def test_all_include_definitions_using_list_id_have_safe_defaults(self):
+        with tempfile.TemporaryDirectory() as temp:
+            paths = self.build_fixture(Path(temp) / "dist")
+            with zipfile.ZipFile(paths["skin"]) as archive:
+                for filename in archive.namelist():
+                    if not filename.endswith(".xml"):
+                        continue
+                    root = ET.fromstring(archive.read(filename))
+                    for include in root.findall(".//include[@name]"):
+                        block = ET.tostring(include, encoding="unicode")
+                        if "$PARAM[list_id]" not in block:
+                            continue
+                        direct_params = {param.get("name") for param in include.findall("param")}
+                        self.assertIn("list_id", direct_params, f"{filename}:{include.get('name')}")
 
     def test_bridge_keeps_local_widget_logic_and_api_free_service_entry(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -265,8 +283,8 @@ class NimbusWorkflowPathTests(unittest.TestCase):
     def test_workflow_uses_the_builder_skin_version(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
         source = workflow.read_text(encoding="utf-8")
-        self.assertIn("skin.cineva-0.6.2-nimbus.zip", source)
-        self.assertIn('manifest.get("version") == "0.6.2"', source)
+        self.assertIn("skin.cineva-0.6.3-nimbus.zip", source)
+        self.assertIn('manifest.get("version") == "0.6.3"', source)
 
     def test_first_boot_reads_kodis_actual_flatpak_log_location(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"

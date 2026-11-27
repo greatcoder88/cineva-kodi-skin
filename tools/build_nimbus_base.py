@@ -23,7 +23,7 @@ NIMBUS_REPO = "ivarbrandt/skin.nimbus"
 NIMBUS_SHA = "8b5071b8cd0db3a8e813eb00e9a821d3efad2454"
 HELPER_REPO = "ivarbrandt/script.nimbus.helper"
 HELPER_SHA = "e42d2ffffbccaa58386ef2e4a054049e5fcb7664"
-SKIN_VERSION = "0.6.2"
+SKIN_VERSION = "0.6.3"
 BRIDGE_VERSION = "0.1.0"
 OUT_DIR = ROOT / "dist" / "nimbus-foundation"
 NOTICE = """CINÉVA Nimbus foundation
@@ -279,6 +279,78 @@ def patch_nimbus_focus_include_ids(skin_root: Path) -> None:
         if not path.is_file():
             raise RuntimeError(f"Nimbus source is missing focus-layout file: {filename}")
         add_list_id_to_include_calls(path, include_name, list_id, expected, renames)
+
+
+
+def patch_nimbus_include_list_id_defaults(skin_root: Path) -> None:
+    """Give every Nimbus include using list_id a safe default before skin parsing."""
+    xml_root = skin_root / "xml"
+    tag_pattern = re.compile(r"</?include\b[^>]*>")
+    opening_pattern = re.compile(r"<include\b[^>]*>")
+
+    for path in xml_root.glob("*.xml"):
+        text = path.read_text(encoding="utf-8")
+        scan_text = re.sub(
+            r"<!--.*?-->",
+            lambda match: " " * len(match.group(0)),
+            text,
+            flags=re.S,
+        )
+        insertions: list[tuple[int, str, str]] = []
+        for opening in opening_pattern.finditer(scan_text):
+            token = opening.group(0)
+            if token.rstrip().endswith("/>"):
+                continue
+            name_match = re.search(r'\bname="([^"]+)"', token)
+            if not name_match:
+                continue
+
+            depth = 0
+            block_end = None
+            for tag in tag_pattern.finditer(scan_text, opening.start()):
+                tag_text = tag.group(0)
+                if tag_text.startswith("</"):
+                    depth -= 1
+                    if depth == 0:
+                        block_end = tag.end()
+                        break
+                elif not tag_text.rstrip().endswith("/>"):
+                    depth += 1
+            if block_end is None:
+                raise RuntimeError(
+                    f"{path.name}: unterminated include definition {name_match.group(1)}"
+                )
+
+            block = text[opening.start():block_end]
+            if "$PARAM[list_id]" not in block:
+                continue
+            try:
+                definition = ET.fromstring(block)
+            except ET.ParseError as exc:
+                raise RuntimeError(
+                    f"{path.name}: invalid include definition {name_match.group(1)}: {exc}"
+                ) from exc
+            if any(param.get("name") == "list_id" for param in definition.findall("param")):
+                continue
+
+            after_open = text[opening.end():block_end]
+            indentation = re.match(r"(\r?\n)([ \t]*)", after_open)
+            if indentation:
+                insertion = (
+                    indentation.group(1)
+                    + indentation.group(2)
+                    + '<param name="list_id" value="999999" />'
+                )
+            else:
+                insertion = '<param name="list_id" value="999999" />'
+            insertions.append((opening.end(), insertion, name_match.group(1)))
+
+        for position, insertion, _name in reversed(insertions):
+            text = text[:position] + insertion + text[position:]
+        if insertions:
+            path.write_text(text, encoding="utf-8", newline="")
+            ET.parse(path)
+
 
 
 def write_default_skin_includes(skin_root: Path) -> None:
@@ -565,6 +637,7 @@ def build(output_dir: Path = OUT_DIR, fetcher=fetch_archive) -> dict[str, Path]:
             ),
         )
         patch_nimbus_focus_include_ids(skin_root)
+        patch_nimbus_include_list_id_defaults(skin_root)
         patch_skin_manifest(skin_root)
         remove_api_controls(skin_root)
         remove_unsupported_startup_checks(skin_root)
