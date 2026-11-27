@@ -545,7 +545,7 @@ def apply_cineva_home_layout(skin_root: Path) -> None:
     home_path.write_text(home, encoding="utf-8", newline="")
 
     home_includes_path = xml_root / "Includes_Home.xml"
-    home_includes = home_includes_path.read_text(encoding="utf-8").replace("\\r\\n", "\\n")
+    home_includes = home_includes_path.read_text(encoding="utf-8").replace("\r\n", "\n")
     common_group = """<include name="WidgetGroupListCommon">
 		<orientation>vertical</orientation>
 		<height>33000</height>
@@ -560,7 +560,7 @@ def apply_cineva_home_layout(skin_root: Path) -> None:
         common_group,
         common_group.replace(
             "<usecontrolcoords>true</usecontrolcoords>",
-            "<onback>SetFocus(9000)</onback>\\n\\t\\t<usecontrolcoords>true</usecontrolcoords>",
+            "<onback>SetFocus(9000)</onback>\n\t\t<usecontrolcoords>true</usecontrolcoords>",
         ),
         1,
     )
