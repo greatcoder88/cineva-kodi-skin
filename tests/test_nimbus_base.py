@@ -188,5 +188,15 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
             self.assertEqual(first_hashes, second_hashes)
 
 
+
+class NimbusWorkflowPathTests(unittest.TestCase):
+    def test_first_boot_reads_kodis_actual_flatpak_log_location(self):
+        workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
+        source = workflow.read_text(encoding="utf-8")
+        self.assertIn('KODI_DATA="$HOME/.var/app/tv.kodi.Kodi/data"', source)
+        self.assertIn('KODI_LOG="$KODI_DATA/temp/kodi.log"', source)
+        self.assertNotIn('KODI_LOG="$USERDATA/temp/kodi.log"', source)
+
+
 if __name__ == "__main__":
     unittest.main()
