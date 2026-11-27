@@ -32,7 +32,26 @@ NIMBUS_FILES = {
   <extension point="xbmc.gui.skin"><res width="1920" height="1080" aspect="16:9" default="true" folder="xml"/></extension>
   <extension point="xbmc.addon.metadata"><license>GPL-2.0-only</license><summary>Nimbus</summary><description>Nimbus Skin</description></extension>
 </addon>""",
-    "xml/Home.xml": "<window><defaultcontrol>9000</defaultcontrol></window>",
+    "xml/Home.xml": "<window><defaultcontrol>9000</defaultcontrol><controls><include>DefaultBackground</include></controls></window>",
+    "colors/defaults.xml": """<colors>
+      <color name="primary_background">FF303232</color>
+      <color name="dialog_tint">FF050505</color>
+      <color name="dialog_bg">BF050505</color>
+      <color name="dialog_bg2">F2050505</color>
+      <color name="dialog_bg3">F7050505</color>
+      <color name="button_focus">FFCCCCCC</color>
+      <color name="button_focus2">FF040505</color>
+      <color name="focused_text">FF141515</color>
+      <color name="unfocused_text">FFE0E0E8</color>
+      <color name="artwork_dim">FFE9E9E9</color>
+      <color name="accent_color">FFCCCCCC</color>
+      <color name="selected">FF1773CD</color>
+      <color name="keyboard_selected">FF1773CD</color>
+      <color name="primary_content_panel_bg">FF354CCF</color>
+      <color name="background">FF000000</color>
+      <color name="bg_overlay">4DFFFFFF</color>
+      <color name="red">FFCE4421</color>
+    </colors>""",
     "xml/Includes.xml": """<includes>
       <include file="Includes_Home.xml"/>
       <include content="FlixSquareLayout"><param name="fallback_image" value="DefaultAddon.png" /></include>
