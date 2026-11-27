@@ -475,7 +475,7 @@ def apply_cineva_home_layout(skin_root: Path) -> None:
     """Convert Nimbus Home to Netflix-style horizontal navigation and a larger hero."""
     xml_root = skin_root / "xml"
     home_path = xml_root / "Home.xml"
-    home = home_path.read_text(encoding="utf-8")
+    home = home_path.read_text(encoding="utf-8").replace("\r\n", "\n")
     if 'id="9000"' not in home or 'id="2000"' not in home:
         return
 
@@ -494,6 +494,7 @@ def apply_cineva_home_layout(skin_root: Path) -> None:
 					<left>0</left>""", 1)
 
     patches = (
+        ("<defaultcontrol>20000</defaultcontrol>", "<defaultcontrol>9000</defaultcontrol>"),
         ("<left>25</left>\n\t\t\t\t\t\t<top>215</top>\n            <width>825</width>\n\t\t\t\t\t\t<height>605</height>",
          "<left>270</left>\n\t\t\t\t\t\t<top>26</top>\n\t\t\t\t\t\t<width>1260</width>\n\t\t\t\t\t\t<height>82</height>\n\t\t\t\t\t\t<orientation>horizontal</orientation>"),
         ("<movement>7</movement>", "<movement>1</movement>"),
@@ -525,7 +526,7 @@ def apply_cineva_home_layout(skin_root: Path) -> None:
 						<width>360</width>""", 1)
 
     flix_path = xml_root / "Includes_FlixPanel.xml"
-    flix = flix_path.read_text(encoding="utf-8")
+    flix = flix_path.read_text(encoding="utf-8").replace("\r\n", "\n")
     hero = '<left>50</left>\n\t\t\t\t<width>815</width>\n\t\t\t\t<top>45</top>'
     if hero not in flix:
         raise RuntimeError("Includes_FlixPanel.xml: Nimbus hero geometry not found")
