@@ -208,46 +208,57 @@ jobs:
                               return obj.get("result")
               raise RuntimeError(f"No JSON-RPC result for {method}: {data[:300]}")
 
+          def rpc_retry(method, params=None, attempts=20):
+              last = None
+              for attempt in range(attempts):
+                  try:
+                      return rpc(method, params)
+                  except Exception as exc:
+                      last = exc
+                      print(f"JSON-RPC retry {attempt + 1}/{attempts} for {method}: {exc}")
+                      time.sleep(1)
+              raise RuntimeError(f"JSON-RPC did not recover for {method}: {last}")
+
           def gui():
-              return rpc("GUI.GetProperties", {"properties":["currentwindow","currentcontrol","skin"]})
+              return rpc_retry("GUI.GetProperties", {"properties":["currentwindow","currentcontrol","skin"]})
 
           def skin_id(state):
               value = state.get("skin", {})
               return value.get("id") if isinstance(value, dict) else str(value)
 
-          last = None
-          for attempt in range(30):
-              try:
-                  rpc("Settings.GetSettingValue", {"setting":"lookandfeel.skin"})
-                  break
-              except Exception as exc:
-                  last = exc
-                  time.sleep(2)
-          else:
-              raise SystemExit(f"Kodi JSON-RPC did not become ready: {last}")
+          # The bridge is a skin dependency. Enable the skin once and let
+          # Kodi's add-on manager enable that dependency in the same operation.
+          details = rpc_retry("Addons.GetAddonDetails", {
+              "addonid":"skin.cineva", "properties":["enabled","version"]
+          })
+          print("CINÉVA add-on before enable:", details)
+          enabled = rpc_retry("Addons.SetAddonEnabled", {
+              "addonid":"skin.cineva", "enabled":True
+          })
+          print("CINÉVA Addons.SetAddonEnabled result:", enabled)
+          time.sleep(5)
+          details = rpc_retry("Addons.GetAddonDetails", {
+              "addonid":"skin.cineva", "properties":["enabled","version"]
+          })
+          bridge = rpc_retry("Addons.GetAddonDetails", {
+              "addonid":"script.cineva.nimbus", "properties":["enabled","version"]
+          })
+          print("CINÉVA after enable:", details)
+          print("CINÉVA Nimbus Bridge after dependency resolution:", bridge)
+          addon_details = details.get("addon", details)
+          bridge_details = bridge.get("addon", bridge)
+          if addon_details.get("enabled") is not True:
+              raise SystemExit(f"Kodi did not enable skin.cineva: {details}")
+          if bridge_details.get("enabled") is not True:
+              raise SystemExit(f"Kodi did not enable the required Nimbus bridge: {bridge}")
 
-          # Kodi discovers manually installed add-ons but does not activate a
-          # skin merely because its id was written to guisettings.xml. Enable
-          # the local bridge and skin explicitly, then switch through Kodi's
-          # supported Settings API so the Keep Skin confirmation is handled.
-          for addon_id in ("script.cineva.nimbus", "skin.cineva"):
-              details = rpc("Addons.GetAddonDetails", {
-                  "addonid":addon_id, "properties":["enabled","version"]
-              })
-              print("Add-on before enable:", addon_id, details)
-              rpc("Addons.SetAddonEnabled", {"addonid":addon_id,"enabled":True})
-              time.sleep(1)
-              print("Add-on after enable:", addon_id, rpc("Addons.GetAddonDetails", {
-                  "addonid":addon_id, "properties":["enabled","version"]
-              }))
-
-          result = rpc("Settings.SetSettingValue", {
+          result = rpc_retry("Settings.SetSettingValue", {
               "setting":"lookandfeel.skin", "value":"skin.cineva"
           })
           print("Kodi skin switch result:", result)
 
           state = None
-          deadline = time.time() + 35
+          deadline = time.time() + 45
           while time.time() < deadline:
               state = gui()
               if skin_id(state) == "skin.cineva" and state.get("currentwindow",{}).get("id") in (10100,10000):
@@ -278,13 +289,12 @@ jobs:
               else:
                   raise SystemExit(f"Keep Skin confirmation did not close: {state}")
 
-          # Close any first-run help overlay and explicitly return to Home.
           subprocess.run(["xdotool","key","Escape"],check=False)
           time.sleep(1)
           state = gui()
           if state.get("currentwindow",{}).get("id") != 10000:
-              rpc("GUI.ActivateWindow", {"window":"home"})
-          deadline = time.time() + 15
+              rpc_retry("GUI.ActivateWindow", {"window":"home"})
+          deadline = time.time() + 20
           while time.time() < deadline:
               state = gui()
               if skin_id(state) == "skin.cineva" and state.get("currentwindow",{}).get("id") == 10000:
