@@ -1,7 +1,7 @@
 name: CINÉVA Kodi repository
 on:
   push:
-    branches: [main]
+    branches: [main, redesign/nimbus-foundation]
     paths:
       - "tools/build_repository.py"
       - "tools/build_skin_archive.py"
@@ -39,7 +39,7 @@ jobs:
           xml = (root / "addons.xml").read_bytes()
           assert hashlib.md5(xml).hexdigest() == (root / "addons.xml.md5").read_text().strip()
           ids = {x.get("id") for x in ET.fromstring(xml).findall("addon")}
-          assert ids == {"skin.cineva", "script.cineva.widgets"}, ids
+          assert ids == {"skin.cineva", "script.cineva.nimbus"}, ids
           repo_zip = root / "repository.cineva-0.1.4.zip"
           assert repo_zip.is_file(), "root-level repository installer missing"
           with ZipFile(repo_zip) as z:
@@ -68,13 +68,13 @@ jobs:
               p=Links(); p.feed(path.read_text()); return set(p.links)
           assert ("repository.cineva-0.1.4.zip","repository.cineva-0.1.4.zip") in links(root/"index.html")
           assert ("zips/","zips/") in links(root/"index.html")
-          for addon_id in ("repository.cineva","skin.cineva","script.cineva.widgets"):
+          for addon_id in ("repository.cineva","skin.cineva","script.cineva.nimbus"):
               folder=root/"zips"/addon_id
               files=list(folder.glob("*.zip"))
               assert files, f"missing ZIP in {folder}"
               found=links(folder/"index.html")
               assert all((f.name,f.name) in found for f in files), (addon_id,found)
-          skin_zip=root/"zips"/"skin.cineva"/"skin.cineva-0.5.65.zip"
+          skin_zip=root/"zips"/"skin.cineva"/"skin.cineva-0.8.0-nimbus.zip"
           with ZipFile(skin_zip) as z:
               skin=ET.fromstring(z.read("skin.cineva/addon.xml"))
               file_manager=ET.fromstring(z.read("skin.cineva/xml/FileManager.xml"))
@@ -84,29 +84,21 @@ jobs:
               for node in file_manager.findall("./controls/control[@type='fixedlist']")
           }
           assert pane_ids == {"20", "21"}, pane_ids
-          dependency=skin.find("./requires/import[@addon='script.cineva.widgets']")
-          helper=next(x for x in ET.fromstring(xml).findall("addon") if x.get("id") == "script.cineva.widgets")
-          helper_version=helper.get("version")
-          assert skin.get("version") == "0.5.65"
+          dependency=skin.find("./requires/import[@addon='script.cineva.nimbus']")
+          bridge=next(x for x in ET.fromstring(xml).findall("addon") if x.get("id") == "script.cineva.nimbus")
+          assert skin.get("version") == "0.8.0"
           assert dependency is not None
-          assert dependency.get("version") == helper_version
-          helper_dir=Path("tools/script.cineva.widgets")
-          helper_zip=root/"zips"/"script.cineva.widgets"/f"script.cineva.widgets-{helper_version}.zip"
-          with ZipFile(helper_zip) as z:
-              helper_manifest=ET.fromstring(z.read("script.cineva.widgets/addon.xml"))
-          assert helper_manifest.get("version") == helper_version
-          expected={
-              "script.cineva.widgets/"+p.relative_to(helper_dir).as_posix():p.read_bytes()
-              for p in helper_dir.rglob("*") if p.is_file()
-          }
-          with ZipFile(helper_zip) as z:
-              packaged={name for name in z.namelist() if not name.endswith("/")}
-              assert packaged == set(expected), (packaged, set(expected))
-              for name, data in expected.items():
-                  assert z.read(name) == data, f"packaged helper differs from source: {name}"
-          print("CINÉVA feed, skin/helper dependency versions, and every packaged helper source file validated byte-for-byte.")
+          assert dependency.get("version") == bridge.get("version") == "0.1.1"
+          bridge_zip=root/"zips"/"script.cineva.nimbus"/"script.cineva.nimbus-0.1.1.zip"
+          with ZipFile(bridge_zip) as z:
+              bridge_manifest=ET.fromstring(z.read("script.cineva.nimbus/addon.xml"))
+              assert bridge_manifest.get("id") == "script.cineva.nimbus"
+              assert bridge_manifest.get("version") == "0.1.1"
+              assert "script.cineva.nimbus/resources/lib/service.py" in z.namelist()
+          print("CINÉVA feed, Nimbus-derived skin package, bridge dependency and directory indexes validated.")
           PY
       - name: Publish browsable repository to GitHub Pages branch
+        if: github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
