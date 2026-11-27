@@ -145,15 +145,6 @@ def focused_card(container, prefix):
     return rpc("XBMC.GetInfoLabels", labels=[field])[field].startswith(prefix)
 
 
-def accept_confirmation(window, label):
-    if window not in {10100, 12002}:
-        return
-    if label in {"yes", "ok"}:
-        press("select")
-    elif label == "no":
-        press("left")
-
-
 def verify_home():
     wait_for("Kodi JSON-RPC is ready", lambda: rpc("JSONRPC.Ping") == "pong", timeout=100)
     for name in DEPENDENCIES:
@@ -182,10 +173,16 @@ def verify_home():
     press("select")
 
     settings = PROFILE / "addons/skin.frame/xml/script-nimbus-widget_movies.xml"
+    setup_confirmation_dismissed = False
 
     def populated_home():
+        nonlocal setup_confirmation_dismissed
         state = gui()
-        accept_confirmation(state["currentwindow"]["id"], state["currentcontrol"]["label"].lower())
+        if (not setup_confirmation_dismissed and state["currentwindow"]["id"] == 12002
+                and state["currentcontrol"]["label"].strip().lower() == "ok"):
+            setup_confirmation_dismissed = True
+            press("select")
+            return False
         field = "Container(9000).ListItem.Property(id)"
         return (state["skin"]["id"] == "skin.frame" and state["currentwindow"]["id"] == 10000
                 and settings.is_file() and "Fixture shows" in settings.read_text()
