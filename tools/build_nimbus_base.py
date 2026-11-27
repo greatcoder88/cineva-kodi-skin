@@ -425,7 +425,6 @@ def apply_cineva_visuals(skin_root: Path) -> None:
     colors_path = skin_root / "colors" / "defaults.xml"
     if not colors_path.is_file():
         raise RuntimeError("Nimbus source is missing colors/defaults.xml")
-    colors = colors_path.read_text(encoding="utf-8")
     palette = {
         "primary_background": "FF080808",
         "dialog_tint": "FF050505",
@@ -445,17 +444,18 @@ def apply_cineva_visuals(skin_root: Path) -> None:
         "bg_overlay": "99000000",
         "red": "FFE50914",
     }
+    parser = ET.XMLParser(target=ET.TreeBuilder(insert_comments=True))
+    color_tree = ET.parse(colors_path, parser=parser)
+    color_root = color_tree.getroot()
     for name, value in palette.items():
-        pattern = re.compile(
-            r'(<color\s+name="' + re.escape(name) + r'"\s*>).*?(</color>)',
-            re.S,
-        )
-        colors, count = pattern.subn(lambda match: match.group(1) + value + match.group(2), colors)
-        if count != 1:
+        matches = [node for node in color_root.findall("color") if node.get("name") == name]
+        if len(matches) != 1:
             raise RuntimeError(
-                f"colors/defaults.xml: expected one {name} color, found {count}"
+                f"colors/defaults.xml: expected one active {name} color, found {len(matches)}"
             )
-    colors_path.write_text(colors, encoding="utf-8", newline="")
+        matches[0].text = value
+    ET.indent(color_root, space="  ")
+    color_tree.write(colors_path, encoding="UTF-8", xml_declaration=True)
     ET.parse(colors_path)
 
     home_path = skin_root / "xml" / "Home.xml"
