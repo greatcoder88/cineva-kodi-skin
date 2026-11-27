@@ -111,6 +111,10 @@ def main():
             video_info["season"] = 2
             video_info["episode"] = 5
         item.setInfo("video", video_info)
+        # Exercise both supported Rotten Tomatoes paths with deterministic fixture data.
+        item.getVideoInfoTag().setRating(9.2, 1800, "tomatometerallcritics", False)
+        if index % 2 == 0:
+            item.setProperty("Rating.tomatoes.Percent", "92")
         # Keep poster art portrait and thumb/fanart landscape, matching common
         # provider metadata. This catches skins that accidentally use thumb as a poster.
         backdrop_name = "tv-backdrop-{}.jpg".format(index) if is_tv else "backdrop-{}.jpg".format(index)

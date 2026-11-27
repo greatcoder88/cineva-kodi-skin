@@ -13,7 +13,7 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.63.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.64.zip"
 PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.62.zip"
 LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.58.zip"
 
@@ -365,6 +365,83 @@ def imdb_logo_png():
     return (b"\x89PNG\r\n\x1a\n"
             + png_chunk(b"IHDR", header)
             + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
+            + png_chunk(b"IEND", b""))
+
+
+
+def tomatoes_badge_png():
+    """Create a dark, tomato-red edged capsule for the Rotten Tomatoes critics score."""
+    width, height = 148, 32
+    pixels = bytearray()
+    radius = 15
+    for y in range(height):
+        pixels.append(0)
+        for x in range(width):
+            dx = min(x, width - 1 - x)
+            dy = min(y, height - 1 - y)
+            inside = (dx >= radius or dy >= radius
+                      or (dx - radius) ** 2 + (dy - radius) ** 2 <= radius ** 2)
+            edge = inside and (x <= 1 or x >= width - 2 or y <= 1 or y >= height - 2)
+            if not inside:
+                pixels.extend((0, 0, 0, 0))
+            elif edge:
+                pixels.extend((205, 54, 57, 230))
+            else:
+                pixels.extend((19, 21, 28, 236))
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return (b"\x89PNG\r\n\x1a\n"
+            + png_chunk(b"IHDR", header)
+            + png_chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
+            + png_chunk(b"IEND", b""))
+
+
+def tomatoes_logo_png():
+    """Draw a compact tomato mark and RT letters without external image assets."""
+    width, height = 48, 24
+    pixels = bytearray(width * height * 4)
+
+    def pixel(x, y, color):
+        if 0 <= x < width and 0 <= y < height:
+            offset = (y * width + x) * 4
+            pixels[offset:offset + 4] = bytes(color)
+
+    for y in range(6, 21):
+        for x in range(2, 19):
+            dx = (x - 10) / 8.0
+            dy = (y - 13) / 7.5
+            if dx * dx + dy * dy <= 1.0:
+                pixel(x, y, (224, 57, 61, 255))
+    for x, y in ((8, 6), (9, 5), (10, 4), (11, 5), (12, 6),
+                 (7, 7), (13, 7), (9, 8), (11, 8)):
+        pixel(x, y, (104, 165, 91, 255))
+    for y in range(9, 15):
+        pixel(5, y, (255, 119, 112, 255))
+
+    glyphs = {
+        "R": ("11110", "10001", "10001", "11110", "10100", "10010", "10001"),
+        "T": ("11111", "00100", "00100", "00100", "00100", "00100", "00100"),
+    }
+    scale, gap = 2, 3
+    x = 23
+    start_y = 5
+    for character in "RT":
+        for gy, row in enumerate(glyphs[character]):
+            for gx, bit in enumerate(row):
+                if bit == "1":
+                    for sy in range(scale):
+                        for sx in range(scale):
+                            pixel(x + gx * scale + sx, start_y + gy * scale + sy,
+                                  (255, 255, 255, 255))
+        x += 5 * scale + gap
+
+    rows = bytearray()
+    for y in range(height):
+        rows.append(0)
+        rows.extend(pixels[y * width * 4:(y + 1) * width * 4])
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return (b"\x89PNG\r\n\x1a\n"
+            + png_chunk(b"IHDR", header)
+            + png_chunk(b"IDAT", zlib.compress(bytes(rows), 9))
             + png_chunk(b"IEND", b""))
 
 
@@ -1038,12 +1115,15 @@ def update_xml(data, path):
                     set_child_text(labels[1], "width", 400)
                     rating_id = 9340 + (row_index - 1) * 3
                     for old_rating in list(group.findall("control")):
-                        if (old_rating.findtext("texture") in {"rating-badge.png", "imdb-logo.png"}
-                                or "ListItem.Rating" in old_rating.findtext("label", "")):
+                        old_texture = old_rating.findtext("texture", "")
+                        old_label = old_rating.findtext("label", "")
+                        if (old_texture in {"rating-badge.png", "imdb-logo.png",
+                                             "tomatoes-badge.png", "tomatoes-logo.png"}
+                                or "ListItem.Rating" in old_label
+                                or "Rating.tomatoes.Percent" in old_label
+                                or "tomatometerallcritics" in old_label):
                             group.remove(old_rating)
                     rating_bg = ET.SubElement(group, "control", {"type": "image", "id": str(rating_id)})
-                    # Keep the IMDb score on the metadata baseline instead of
-                    # spending a separate vertical row beneath year/duration/genre.
                     for tag, value in (("left", 420), ("top", 126), ("width", 148), ("height", 32),
                                        ("texture", "rating-badge.png")):
                         set_child_text(rating_bg, tag, value)
@@ -1061,6 +1141,35 @@ def update_xml(data, path):
                                        ("align", "left"), ("aligny", "center"),
                                        ("visible", f"!String.IsEmpty(Container({9000 + row_index}).ListItem.Rating)")):
                         set_child_text(rating_text, tag, value)
+
+                    # Rotten Tomatoes critics data comes only from the selected Kodi ListItem.
+                    # Prefer an explicit percent property; otherwise show the native /10 value.
+                    rt_base_id = 9440 + (row_index - 1) * 4
+                    rt_percent_info = f"Container({9000 + row_index}).ListItem.Property(Rating.tomatoes.Percent)"
+                    rt_native_info = f"Container({9000 + row_index}).ListItem.Rating(tomatometerallcritics)"
+                    rt_visible = f"!String.IsEmpty({rt_percent_info}) | !String.IsEmpty({rt_native_info})"
+                    rt_badge = ET.SubElement(group, "control", {"type": "image", "id": str(rt_base_id)})
+                    for tag, value in (("left", 580), ("top", 126), ("width", 148), ("height", 32),
+                                       ("texture", "tomatoes-badge.png"), ("visible", rt_visible)):
+                        set_child_text(rt_badge, tag, value)
+                    rt_logo = ET.SubElement(group, "control", {"type": "image", "id": str(rt_base_id + 1)})
+                    for tag, value in (("left", 588), ("top", 130), ("width", 48), ("height", 24),
+                                       ("texture", "tomatoes-logo.png"), ("visible", rt_visible)):
+                        set_child_text(rt_logo, tag, value)
+                    rt_percent = ET.SubElement(group, "control", {"type": "label", "id": str(rt_base_id + 2)})
+                    for tag, value in (("left", 642), ("top", 126), ("width", 84), ("height", 32),
+                                       ("font", "font10"), ("textcolor", "white"),
+                                       ("label", f"$INFO[{rt_percent_info}]%"),
+                                       ("align", "left"), ("aligny", "center"),
+                                       ("visible", f"!String.IsEmpty({rt_percent_info})")):
+                        set_child_text(rt_percent, tag, value)
+                    rt_fallback = ET.SubElement(group, "control", {"type": "label", "id": str(rt_base_id + 3)})
+                    for tag, value in (("left", 642), ("top", 126), ("width", 84), ("height", 32),
+                                       ("font", "font10"), ("textcolor", "white"),
+                                       ("label", f"$INFO[{rt_native_info}]/10"),
+                                       ("align", "left"), ("aligny", "center"),
+                                       ("visible", f"String.IsEmpty({rt_percent_info}) + !String.IsEmpty({rt_native_info})")):
+                        set_child_text(rt_fallback, tag, value)
                 for child in group.findall("control"):
                     if child.get("type") == "textbox":
                         # The metadata and optional rating now share one line;
@@ -2713,14 +2822,14 @@ def update_xml(data, path):
 def main():
     # Start the new distributable version from the immediately previous package.
     # Keep the older archive as a recovery fallback for shallow checkouts.
-    # Subsequent builds transform 0.5.63 in place and remain byte-stable.
+    # Subsequent builds transform 0.5.64 in place and remain byte-stable.
     if not ARCHIVE.exists():
         source_archive = PREVIOUS_ARCHIVE if PREVIOUS_ARCHIVE.is_file() else LEGACY_ARCHIVE
         if source_archive.is_file():
             ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
         raise SystemExit(
-            "Missing skin.cineva-0.5.63.zip and migration sources skin.cineva-0.5.62.zip / "
+            "Missing skin.cineva-0.5.64.zip and migration sources skin.cineva-0.5.62.zip / "
             "skin.cineva-0.5.58.zip"
         )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
@@ -2800,6 +2909,8 @@ def main():
                 "skin.cineva/media/rating-badge.png": rating_badge_png(),
                 "skin.cineva/media/shelf-navigation-pill.png": shelf_navigation_pill_png(),
                 "skin.cineva/media/imdb-logo.png": imdb_logo_png(),
+                "skin.cineva/media/tomatoes-badge.png": tomatoes_badge_png(),
+                "skin.cineva/media/tomatoes-logo.png": tomatoes_logo_png(),
                 "skin.cineva/media/poster-placeholder.png": poster_placeholder_png(),
             }
             written_assets = set()
@@ -2817,9 +2928,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.63":
-                        addon_root.set("version", "0.5.63")
-                        changed.append(info.filename + " (bump skin version to 0.5.63)")
+                    if addon_root.get("version") != "0.5.64":
+                        addon_root.set("version", "0.5.64")
+                        changed.append(info.filename + " (bump skin version to 0.5.64)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2833,7 +2944,8 @@ def main():
                         data = changelog.encode("utf-8")
                         changed.append(info.filename + " (refresh 0.5.58 release notes)")
                     release_entries = [
-                        ("0.5.63", "0.5.63 - Simplify the focused Home poster state\n- Remove the detached red underline below selected posters; the crimson artwork border and restrained zoom remain the focus cue.\n- Keep the multi-line caption and resume progress layout clean across all four Home rails."),
+                        ("0.5.64", "0.5.64 - Add Rotten Tomatoes critics ratings to Home heroes\n- Render the Tomatometer critics score alongside IMDb when the selected provider item supplies Kodi rating metadata.\n- Prefer an explicit Rating.tomatoes.Percent property; fall back to Kodi's normalized 0-10 Tomatometer rating without calling external rating APIs."),
+                        ("0.5.63", "0.5.63 - Simplify the focused Home poster state\n- Remove the detached red underline below selected posters; the crimson artwork border and restrained zoom remain the focus cue."),
                         ("0.5.62", "0.5.62 - Restore the Home shelf viewport after top-level navigation\n- Bring the first configured Home shelf back into view before opening Movies, TV Shows, Search or Settings.\n- Restore the activated navigation tab before leaving so returning to Home keeps the hero and poster rail aligned."),
                         ("0.5.61", "0.5.61 - Match Home hero context to the selected shelf\n- Label the first in-progress movie rail CONTINUE WATCHING and the second in-progress TV rail IN PROGRESS.\n- Keep trending and custom collection labels source-aware across all four Home rows."),
                         ("0.5.60", "0.5.60 - Give Home heroes concise provider taglines\n- Prefer a supplied ListItem.Tagline for the selected poster before PlotOutline and full Plot fallbacks.\n- Keep all three synopsis sources in the same title-safe hero band so the copy updates with each focused item."),

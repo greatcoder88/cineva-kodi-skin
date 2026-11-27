@@ -4,7 +4,7 @@ on:
     branches: [main]
     paths-ignore:
       - "repository-site/**"
-      - "skin.cineva-0.5.63.zip"
+      - "skin.cineva-0.5.64.zip"
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -24,9 +24,9 @@ jobs:
       - name: Build release ZIP and verify true idempotence
         run: |
           python tools/build_skin_archive.py
-          before="$(sha256sum skin.cineva-0.5.63.zip | cut -d' ' -f1)"
+          before="$(sha256sum skin.cineva-0.5.64.zip | cut -d' ' -f1)"
           python tools/build_skin_archive.py
-          after="$(sha256sum skin.cineva-0.5.63.zip | cut -d' ' -f1)"
+          after="$(sha256sum skin.cineva-0.5.64.zip | cut -d' ' -f1)"
           if [ "$before" != "$after" ]; then
             echo "::error::The second archive build changed the ZIP; generated XML is not idempotent."
             exit 1
@@ -34,8 +34,8 @@ jobs:
           echo "Archive SHA-256 is stable across consecutive builds: $after"
       - name: Expand uploaded CINÉVA archive
         run: |
-          test -s skin.cineva-0.5.63.zip
-          unzip -q skin.cineva-0.5.63.zip -d .
+          test -s skin.cineva-0.5.64.zip
+          unzip -q skin.cineva-0.5.64.zip -d .
       - name: Validate Settings-only widget configuration navigation
         run: |
           python - <<'PY'
@@ -320,8 +320,29 @@ jobs:
                                 if node.get("id") in {str(value) for value in range(9340, 9352)}]
           if len(rating_control_ids) != 12 or len(set(rating_control_ids)) != 12:
               errors.append("All four Home IMDb rating chips must use twelve unique control IDs")
+          rt_control_ids = [node.get("id") for node in home.iter()
+                            if node.get("id") in {str(value) for value in range(9440, 9456)}]
+          if len(rt_control_ids) != 16 or len(set(rt_control_ids)) != 16:
+              errors.append("All four Home Rotten Tomatoes chips must use sixteen unique control IDs")
+          for container_id, play_id in ((9001, 9111), (9002, 9113), (9003, 9115), (9004, 9117)):
+              hero = next((group for group in controls.findall("control")
+                           if group.get("type") == "group"
+                           and group.find(f"./control[@id='{play_id}']") is not None), None)
+              base = 9440 + (container_id - 9001) * 4
+              prop = f"Container({container_id}).ListItem.Property(Rating.tomatoes.Percent)"
+              native = f"Container({container_id}).ListItem.Rating(tomatometerallcritics)"
+              visible = f"!String.IsEmpty({prop}) | !String.IsEmpty({native})"
+              badge, logo = hero.find(f"./control[@id='{base}']"), hero.find(f"./control[@id='{base + 1}']")
+              percent, fallback = hero.find(f"./control[@id='{base + 2}']"), hero.find(f"./control[@id='{base + 3}']")
+              if (badge is None or (badge.findtext("left"), badge.findtext("top"), badge.findtext("width"), badge.findtext("height"), badge.findtext("texture"), badge.findtext("visible")) != ("580", "126", "148", "32", "tomatoes-badge.png", visible)
+                  or logo is None or (logo.findtext("left"), logo.findtext("top"), logo.findtext("width"), logo.findtext("height"), logo.findtext("texture"), logo.findtext("visible")) != ("588", "130", "48", "24", "tomatoes-logo.png", visible)
+                  or percent is None or (percent.findtext("left"), percent.findtext("top"), percent.findtext("width"), percent.findtext("height"), percent.findtext("label"), percent.findtext("visible")) != ("642", "126", "84", "32", f"$INFO[{prop}]%", f"!String.IsEmpty({prop})")
+                  or fallback is None or (fallback.findtext("left"), fallback.findtext("top"), fallback.findtext("width"), fallback.findtext("height"), fallback.findtext("label"), fallback.findtext("visible")) != ("642", "126", "84", "32", f"$INFO[{native}]/10", f"String.IsEmpty({prop}) + !String.IsEmpty({native})")):
+                  errors.append(f"Home hero {container_id} must show Rotten Tomatoes percent metadata or a clearly normalized Kodi /10 fallback")
           rating_badge = (root / "media/rating-badge.png").read_bytes()
           imdb_logo = (root / "media/imdb-logo.png").read_bytes()
+          tomatoes_badge = (root / "media/tomatoes-badge.png").read_bytes()
+          tomatoes_logo = (root / "media/tomatoes-logo.png").read_bytes()
           for asset_name in ("hero-primary.png", "hero-primary-focus.png", "hero-secondary.png", "hero-secondary-focus.png"):
               asset = (root / "media" / asset_name).read_bytes()
               if asset[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(asset[16:20], "big"), int.from_bytes(asset[20:24], "big")) != (32, 32):
@@ -333,6 +354,10 @@ jobs:
               errors.append("Packaged rating badge must be a valid 148x32 PNG")
           if imdb_logo[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(imdb_logo[16:20], "big"), int.from_bytes(imdb_logo[20:24], "big")) != (48, 24):
               errors.append("Packaged IMDb wordmark must be a valid 48x24 PNG")
+          if tomatoes_badge[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(tomatoes_badge[16:20], "big"), int.from_bytes(tomatoes_badge[20:24], "big")) != (148, 32):
+              errors.append("Packaged Rotten Tomatoes badge must be a valid 148x32 PNG")
+          if tomatoes_logo[:8] != bytes.fromhex("89504e470d0a1a0a") or (int.from_bytes(tomatoes_logo[16:20], "big"), int.from_bytes(tomatoes_logo[20:24], "big")) != (48, 24):
+              errors.append("Packaged Rotten Tomatoes wordmark must be a valid 48x24 PNG")
           topbar_index = next((i for i, node in enumerate(list(controls))
                                if node.tag == "include" and (node.text or "").strip() == "CinevaTopBar"), -1)
           shade_index = next((i for i, node in enumerate(list(controls))
@@ -831,8 +856,8 @@ jobs:
                  for button in search.findall(".//control[@type='button']")):
               errors.append("CINÉVA search actions are missing their branded focus surface")
           skin = ET.parse(root / "addon.xml").getroot()
-          if skin.attrib.get("version") != "0.5.63":
-              errors.append("Skin ZIP version is not 0.5.63")
+          if skin.attrib.get("version") != "0.5.64":
+              errors.append("Skin ZIP version is not 0.5.64")
           settings = ET.parse("tools/script.cineva.widgets/resources/settings.xml").getroot()
           registry = settings.find(".//setting[@id='widget_registry']")
           if registry is None or registry.attrib.get("type") != "string":
