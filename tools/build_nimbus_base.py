@@ -34,8 +34,10 @@ Upstream skin: https://github.com/ivarbrandt/skin.nimbus
 Upstream helper: https://github.com/ivarbrandt/script.nimbus.helper
 
 The CINÉVA Nimbus Bridge retains local widget/menu path generation and search
-history functions. The upstream MDBList/TMDb rating service and API modules are
-not included. CINÉVA renders Kodi ListItems and does not make those API calls.
+history functions. A minimal local-only Kodi service entry is kept so Kodi can
+resolve the bridge dependency; it performs no network work. The upstream
+MDBList/TMDb rating service and API modules are not included. CINÉVA renders
+Kodi ListItems and does not make those API calls.
 """
 
 TEXT_SUFFIXES = {".xml", ".py", ".txt", ".md", ".po", ".json"}
@@ -229,9 +231,11 @@ def patch_helper_manifest(helper_root: Path) -> None:
         for item in list(requires):
             if item.get("addon") != "xbmc.python":
                 requires.remove(item)
-    for extension in list(root.findall("extension")):
-        if extension.get("point") == "xbmc.service":
-            root.remove(extension)
+    service_extension = root.find("./extension[@point='xbmc.service']")
+    if service_extension is None:
+        service_extension = ET.SubElement(root, "extension", {"point": "xbmc.service"})
+    service_extension.set("library", "resources/lib/service.py")
+    service_extension.set("start", "startup")
     metadata = root.find("./extension[@point='xbmc.addon.metadata']")
     if metadata is not None:
         set_child_text(metadata, "license", "GPL-2.0-only")
@@ -369,6 +373,23 @@ def calculate_cache_size():
     return total
 '''
     (bridge_root / "resources/lib/modules/cache.py").write_text(cache_module, encoding="utf-8")
+
+    service_module = '''# -*- coding: utf-8 -*-
+"""Minimal API-free service entry for Kodi's Nimbus bridge dependency."""
+import xbmc
+
+
+class NimbusBridgeService(xbmc.Monitor):
+    def run(self):
+        xbmc.log("CINEVA_NIMBUS_BRIDGE_SERVICE_STARTED", xbmc.LOGINFO)
+        while not self.abortRequested():
+            self.waitForAbort(1)
+
+
+if __name__ == "__main__":
+    NimbusBridgeService().run()
+'''
+    (bridge_root / "resources/lib/service.py").write_text(service_module, encoding="utf-8")
     (bridge_root / "NOTICE.txt").write_text(NOTICE, encoding="utf-8")
 
 

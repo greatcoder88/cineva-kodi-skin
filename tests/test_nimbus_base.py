@@ -137,7 +137,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 self.assertIn(builder.NIMBUS_SHA, baseline)
                 self.assertIn("CC BY-SA 4.0", baseline)
 
-    def test_bridge_contains_local_widget_logic_but_no_api_service(self):
+    def test_bridge_keeps_local_widget_logic_and_api_free_service_entry(self):
         with tempfile.TemporaryDirectory() as temp:
             paths = self.build_fixture(Path(temp) / "dist")
             with zipfile.ZipFile(paths["bridge"]) as archive:
@@ -146,17 +146,24 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 self.assertIn("script.cineva.nimbus/resources/lib/modules/search_utils.py", names)
                 self.assertIn("script.cineva.nimbus/resources/lib/modules/router.py", names)
                 self.assertIn("script.cineva.nimbus/LICENSE-NIMBUS.txt", names)
-                self.assertNotIn("script.cineva.nimbus/resources/lib/service.py", names)
+                self.assertIn("script.cineva.nimbus/resources/lib/service.py", names)
                 self.assertFalse(any("/apis/" in name or "/monitors/" in name for name in names))
                 manifest = archive.read("script.cineva.nimbus/addon.xml").decode()
                 self.assertIn('id="script.cineva.nimbus"', manifest)
-                self.assertNotIn("xbmc.service", manifest)
+                self.assertIn('point="xbmc.service"', manifest)
+                self.assertIn('library="resources/lib/service.py"', manifest)
                 self.assertNotIn("script.module.requests", manifest)
                 self.assertNotIn("script.module.pil", manifest)
                 router = archive.read("script.cineva.nimbus/resources/lib/modules/router.py").decode()
                 self.assertIn('mode == "manage_widgets"', router)
                 self.assertIn('"toggle_search_provider"', router)
                 self.assertNotIn("MDbListClient", router)
+                service = archive.read("script.cineva.nimbus/resources/lib/service.py").decode()
+                self.assertIn("CINEVA_NIMBUS_BRIDGE_SERVICE_STARTED", service)
+                self.assertNotIn("requests", service.lower())
+                self.assertNotIn("urlopen", service.lower())
+                self.assertNotIn("http://", service.lower())
+                self.assertNotIn("https://", service.lower())
                 actions = archive.read("script.cineva.nimbus/resources/lib/modules/custom_actions.py").decode()
                 self.assertNotIn("import requests", actions)
                 for name in builder.API_FUNCTIONS:

@@ -26,8 +26,10 @@ notice.
 The upstream Nimbus Helper includes an MDBList/TMDb ratings service and API
 modules. Those are deliberately excluded from the CINÉVA bridge:
 
-- no xbmc.service extension is packaged;
-- no resources/lib/modules/apis, ratings monitors or ratings database is packaged;
+- no MDBList/TMDb ratings monitor, API module or ratings database is packaged;
+- a minimal local-only xbmc.service entry remains so Kodi can resolve and enable
+  the Nimbus bridge dependency; it only waits for Kodi shutdown and performs no
+  network requests;
 - API-key and rating-cache controls are removed from the skin settings;
 - the bridge retains local menu-path/widget XML generation, search history,
   local cache cleanup and non-network UI actions.
