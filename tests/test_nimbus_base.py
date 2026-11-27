@@ -490,6 +490,10 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
+            (skin / "xml/Includes.xml").write_text(
+                '<includes><include file="Includes_Home.xml" /></includes>',
+                encoding="utf-8",
+            )
             (skin / "xml/Includes_Home.xml").write_text(
                 '<includes>\n\t<include name="WidgetGroupListCommon">\n'
                 '\t\t<orientation>vertical</orientation>\n'
@@ -515,6 +519,8 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
             self.assertEqual(flix.findtext(".//include[@name='FlixPanel']//left"), "72")
             self.assertEqual(flix.findtext(".//include[@name='FlixPanel']//top"), "150")
             ET.parse(skin / "xml/Includes_Cineva.xml")
+            skin_includes = ET.parse(skin / "xml/Includes.xml").getroot()
+            self.assertIsNotNone(skin_includes.find("./include[@file='Includes_Cineva.xml']"))
             home_includes = ET.parse(skin / "xml/Includes_Home.xml").getroot()
             common = home_includes.find(".//include[@name='WidgetGroupListCommon']")
             self.assertEqual(common.findtext("onback"), "SetFocus(9000)")
