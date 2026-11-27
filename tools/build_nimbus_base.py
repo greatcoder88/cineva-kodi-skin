@@ -543,6 +543,30 @@ def apply_cineva_home_layout(skin_root: Path) -> None:
 
     ET.fromstring(home)
     home_path.write_text(home, encoding="utf-8", newline="")
+
+    home_includes_path = xml_root / "Includes_Home.xml"
+    home_includes = home_includes_path.read_text(encoding="utf-8").replace("\\r\\n", "\\n")
+    common_group = """<include name="WidgetGroupListCommon">
+		<orientation>vertical</orientation>
+		<height>33000</height>
+		<itemgap>-100</itemgap>
+		<onup>20000</onup>
+		<ondown>20001</ondown>
+		<usecontrolcoords>true</usecontrolcoords>
+	</include>"""
+    if common_group not in home_includes:
+        raise RuntimeError("Includes_Home.xml: Nimbus widget navigation include changed")
+    home_includes = home_includes.replace(
+        common_group,
+        common_group.replace(
+            "<usecontrolcoords>true</usecontrolcoords>",
+            "<onback>SetFocus(9000)</onback>\\n\\t\\t<usecontrolcoords>true</usecontrolcoords>",
+        ),
+        1,
+    )
+    ET.fromstring(home_includes)
+    home_includes_path.write_text(home_includes, encoding="utf-8", newline="")
+
     (xml_root / "Includes_Cineva.xml").write_text("""<?xml version="1.0" encoding="UTF-8"?>
 <includes>
   <include name="CinevaMainMenuList">
