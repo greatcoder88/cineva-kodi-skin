@@ -180,14 +180,17 @@ jobs:
           import json, socket, time, subprocess, shutil
           from pathlib import Path
 
-          def rpc(method, params=None):
+          def rpc(method, params=None, response_timeout=8):
               request = {"jsonrpc":"2.0","method":method,"params":params or {},"id":1}
               decoder = json.JSONDecoder()
               with socket.create_connection(("127.0.0.1", 9090), timeout=5) as sock:
-                  sock.settimeout(2)
-                  sock.sendall(json.dumps(request).encode())
+                  sock.settimeout(min(2, response_timeout))
+                  # Kodi's TCP JSON-RPC transport is newline-delimited. Sending
+                  # the terminator also avoids leaving a request buffered while
+                  # the GUI thread is rebuilding the active skin.
+                  sock.sendall(json.dumps(request).encode() + b"\\n")
                   data = ""
-                  deadline = time.time() + 8
+                  deadline = time.time() + response_timeout
                   while time.time() < deadline:
                       try:
                           chunk = sock.recv(65536)
@@ -223,7 +226,9 @@ jobs:
               raise RuntimeError(f"JSON-RPC did not recover for {method}: {last}")
 
           def gui():
-              return rpc_retry("GUI.GetProperties", {"properties":["currentwindow","currentcontrol","skin"]})
+              # Keep each poll short. Skin reload can temporarily close JSON-RPC
+              # connections; the outer readiness loop owns the full timeout.
+              return rpc("GUI.GetProperties", {"properties":["currentwindow","currentcontrol","skin"]}, response_timeout=2)
 
           def skin_id(state):
               value = state.get("skin", {})
@@ -263,24 +268,55 @@ jobs:
           print("Kodi skin switch result:", result)
 
           state = None
-          deadline = time.time() + 60
+          last_gui_error = None
+          deadline = time.time() + 120
+          next_status = time.time()
           while time.time() < deadline:
-              state = gui()
-              logs = log_text()
-              loaded_cineva = (
-                  logs.count("load skin from:") > before_loads
-                  and "skin.cineva" in logs
-              )
-              if loaded_cineva and (
-                  state.get("currentwindow",{}).get("id") == 10100
-                  or skin_id(state) == "skin.cineva"
-              ):
-                  break
-              time.sleep(0.5)
+              try:
+                  state = gui()
+                  last_gui_error = None
+                  logs = log_text()
+                  loaded_cineva = (
+                      logs.count("load skin from:") > before_loads
+                      and "skin.cineva" in logs
+                  )
+                  if loaded_cineva and (
+                      state.get("currentwindow",{}).get("id") == 10100
+                      or skin_id(state) == "skin.cineva"
+                  ):
+                      break
+              except Exception as exc:
+                  # Kodi may close JSON-RPC while the new skin is being parsed.
+                  # Retry the connection instead of failing on the first reload gap.
+                  last_gui_error = exc
+              if time.time() >= next_status:
+                  print(
+                      "Waiting for Nimbus-derived CINÉVA to finish loading:",
+                      "GUI=", state,
+                      "RPC error=", last_gui_error,
+                      "skin load seen=", "skin.cineva" in log_text(),
+                  )
+                  next_status = time.time() + 10
+              if subprocess.run(["pgrep","-x","kodi.bin"],capture_output=True).returncode != 0:
+                  raise SystemExit(
+                      "Kodi exited while loading skin.cineva. "
+                      f"Last GUI={state}; RPC error={last_gui_error}; "
+                      f"Kodi log tail:\\n{log_text()[-10000:]}"
+                  )
+              time.sleep(1)
           else:
+              failure_screenshot = Path("artifacts/cineva-nimbus-load-timeout.png")
+              subprocess.run(
+                  ["import","-display",":99","-window","root",str(failure_screenshot)],
+                  check=False,
+              )
+              settings_path = Path.home()/".var/app/tv.kodi.Kodi/data/userdata/guisettings.xml"
+              if settings_path.is_file():
+                  shutil.copy2(settings_path, "artifacts/guisettings-load-timeout.xml")
               raise SystemExit(
-                  "Kodi accepted the skin setting but did not load skin.cineva. "
-                  f"GUI={state}; Kodi log tail:\n{log_text()[-8000:]}"
+                  "Kodi accepted the skin setting but did not finish loading skin.cineva within 120 seconds. "
+                  f"GUI={state}; last RPC error={last_gui_error}; "
+                  f"Kodi log tail:\\n{log_text()[-10000:]}"
               )
 
           # Confirm the Keep Skin dialog when Kodi presents it.
@@ -348,6 +384,8 @@ jobs:
           cp /tmp/xvfb.log artifacts/ 2>/dev/null || true
           LOG="$(find "$HOME/.var/app/tv.kodi.Kodi" -type f -name kodi.log -print -quit 2>/dev/null || true)"
           if [ -n "$LOG" ] && [ ! -f artifacts/kodi.log ]; then cp "$LOG" artifacts/kodi.log; fi
+          SETTINGS="$HOME/.var/app/tv.kodi.Kodi/data/userdata/guisettings.xml"
+          if [ -f "$SETTINGS" ] && [ ! -f artifacts/guisettings.xml ]; then cp "$SETTINGS" artifacts/guisettings.xml; fi
       - name: Stop Kodi and Xvfb
         if: always()
         run: |
