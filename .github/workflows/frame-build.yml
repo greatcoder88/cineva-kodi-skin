@@ -63,7 +63,7 @@ jobs:
             fi
           done
           sudo apt-get update -o Acquire::Retries=3
-          sudo apt-get install -y flatpak xvfb xdotool imagemagick
+          sudo apt-get install -y flatpak xvfb imagemagick
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
           flatpak remote-add --user --if-not-exists flathub-beta https://dl.flathub.org/beta-repo/flathub-beta.flatpakrepo
           flatpak install --user --noninteractive -y flathub org.freedesktop.Platform//26.08

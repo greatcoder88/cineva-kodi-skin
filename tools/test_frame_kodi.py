@@ -82,15 +82,25 @@ def rpc(method, **params):
     with socket.create_connection(("127.0.0.1", 9090), timeout=3) as connection:
         connection.sendall(payload.encode())
         buffer = bytearray()
+        position = 0
         while chunk := connection.recv(65536):
             buffer.extend(chunk)
             try:
-                response, _ = decoder.raw_decode(buffer.decode())
-            except (UnicodeDecodeError, json.JSONDecodeError):
+                incoming = buffer.decode()
+            except UnicodeDecodeError:
                 continue
-            if "error" in response:
-                raise RuntimeError(f"{method}: {response['error']}")
-            return response["result"]
+            while position < len(incoming):
+                while position < len(incoming) and incoming[position].isspace():
+                    position += 1
+                try:
+                    response, position = decoder.raw_decode(incoming, position)
+                except json.JSONDecodeError:
+                    break
+                if response.get("id") != 1:
+                    continue
+                if "error" in response:
+                    raise RuntimeError(f"{method}: {response['error']}")
+                return response["result"]
     raise RuntimeError(f"No result for {method}")
 
 
@@ -117,8 +127,8 @@ def window_id():
     return gui()["currentwindow"]["id"]
 
 
-def press(key):
-    subprocess.run(["xdotool", "key", key], check=True)
+def press(action):
+    rpc("Input.ExecuteAction", action=action)
 
 
 def screenshot(name):
@@ -133,6 +143,15 @@ def focused_card(container, prefix):
     return rpc("XBMC.GetInfoLabels", labels=[field])[field].startswith(prefix)
 
 
+def accept_confirmation(window, label):
+    if window not in {10100, 12002}:
+        return
+    if label in {"yes", "ok"}:
+        press("select")
+    elif label == "no":
+        press("left")
+
+
 def verify_home():
     wait_for("Kodi JSON-RPC is ready", lambda: rpc("JSONRPC.Ping") == "pong", timeout=100)
     for name in DEPENDENCIES:
@@ -141,46 +160,43 @@ def verify_home():
         rpc("Addons.SetAddonEnabled", addonid=addon_id, enabled=True)
     rpc("Settings.SetSettingValue", setting="lookandfeel.skin", value="skin.frame")
 
-    def activation_prompt():
+    def accept_startup_prompts():
         state = gui()
+        if state["skin"]["id"] != "skin.frame":
+            return False
         window = state["currentwindow"]["id"]
-        if state["skin"]["id"] == "skin.frame" and window in {10100, 11112}:
-            return state
+        label = state["currentcontrol"]["label"].lower()
+        accept_confirmation(window, label)
+        if window == 11112 and label == "ok":
+            press("select")
+            return True
+        return False
 
-    state = wait_for("Kodi activates Frame and opens its first prompt", activation_prompt, timeout=30)
-    if state["currentwindow"]["id"] == 10100:
-        if state["currentcontrol"]["label"].lower() != "yes":
-            press("Left")
-        wait_for("Keep skin confirmation focuses Yes", lambda: gui()["currentcontrol"]["label"].lower() == "yes")
-        press("Return")
-    wait_for("Nimbus first-run welcome", lambda: window_id() in {1112, 11112}, timeout=40)
-    press("Return")
+    wait_for("Kodi activates Frame and accepts the Nimbus welcome", accept_startup_prompts, timeout=35)
 
     settings = PROFILE / "addons/skin.frame/xml/script-nimbus-widget_movies.xml"
 
     def populated_home():
         state = gui()
-        if state["currentwindow"]["id"] in {10100, 12002} and state["currentcontrol"]["label"].lower() == "ok":
-            press("Return")
-            return False
+        accept_confirmation(state["currentwindow"]["id"], state["currentcontrol"]["label"].lower())
         field = "Container(9000).ListItem.Property(id)"
         return (state["skin"]["id"] == "skin.frame" and state["currentwindow"]["id"] == 10000
                 and settings.is_file() and "Fixture shows" in settings.read_text()
                 and rpc("XBMC.GetInfoLabels", labels=[field])[field] == "movies")
 
     wait_for("stock helper creates the configured widget rows and Home opens", populated_home, timeout=70)
-    press("Right")
+    press("right")
     wait_for("Right focuses the first movie card", lambda: focused_card(19011, "The Shawshank Redemption"))
     screenshot("home-first-widget")
-    press("Right")
+    press("right")
     wait_for("Right moves to a second movie card", lambda: focused_card(19011, "The Dark Knight"))
-    press("Down")
+    press("down")
     wait_for("Down focuses the second widget row", lambda: focused_card(19012, "Breaking Bad"))
     screenshot("home-second-widget")
-    press("c")
+    press("contextmenu")
     wait_for("context action opens Kodi's context menu", lambda: window_id() == 10106)
     screenshot("home-context-menu")
-    press("Escape")
+    press("back")
     wait_for("closing context menu restores card focus",
              lambda: window_id() == 10000 and focused_card(19012, "Breaking Bad"))
 
