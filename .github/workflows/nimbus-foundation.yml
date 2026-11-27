@@ -269,9 +269,11 @@ jobs:
           tree = ET.parse(path)
           root = tree.getroot()
           values = {
-              # Keep Kodi on its installed default during startup. Kodi resets
-              # manually staged, not-yet-enabled skins to Estuary while loading
-              # the profile; CINÉVA is selected later through JSON-RPC.
+              # Keep the installed default skin until Kodi's add-on scan is
+              # complete; CINÉVA is then enabled and selected through JSON-RPC.
+              # Explicitly enable both Kodi's TCP JSON-RPC/EventServer endpoint
+              # and its local HTTP control service for the isolated test profile.
+              "services.esenabled": "true",
               "services.webserver": "true",
               "services.webserverport": "8080",
               "services.webserverauthentication": "false",
@@ -285,21 +287,59 @@ jobs:
           print("Prelaunch Kodi skin setting:", root.find("./setting[@id='lookandfeel.skin']").text)
           PY
           cp "$HOME/.var/app/tv.kodi.Kodi/data/userdata/guisettings.xml" artifacts/guisettings-before-launch.xml
-          # A detached Flatpak launcher returns before Kodi has necessarily
-          # created kodi.bin or opened JSON-RPC. Do not interpret that startup
-          # window as an application exit. Reuse the two-attempt readiness gate
-          # proven by the legacy GUI workflow, and accept both Kodi executable
-          # names used by the Piers Flatpak.
+          # Keep the Flatpak launcher attached to this Actions step instead
+          # of orphaning it with setsid/nohup. The detached launch left live
+          # kodi.bin processes without a JSON-RPC listener and an empty stdout
+          # log, so retries could overlap two unresponsive Kodi instances.
+          KODI_PID=""
           launch_kodi() {
-            nohup setsid -f flatpak run --user tv.kodi.Kodi//beta --standalone --windowing=x11 </dev/null > /tmp/nimbus-kodi.log 2>&1
+            flatpak run --user tv.kodi.Kodi//beta --standalone --windowing=x11 \\
+              > /tmp/nimbus-kodi.log 2>&1 &
+            KODI_PID=$!
+            echo "Started managed Kodi launcher PID $KODI_PID."
+          }
+          stop_kodi_attempt() {
+            flatpak kill --user tv.kodi.Kodi 2>/dev/null || true
+            if [ -n "${KODI_PID:-}" ]; then
+              kill "$KODI_PID" 2>/dev/null || true
+            fi
+            pkill -TERM -x kodi.bin 2>/dev/null || true
+            pkill -TERM -x kodi-x11 2>/dev/null || true
+            pkill -TERM -x kodi 2>/dev/null || true
+            for attempt in $(seq 1 12); do
+              if ! kodi_processes | grep -q .; then break; fi
+              sleep 1
+            done
+            if kodi_processes | grep -q .; then
+              echo "Graceful Nimbus Kodi shutdown timed out; forcing the isolated processes down:"
+              ps -eo pid,ppid,stat,comm,args | grep -E '[k]odi(\\.bin|-x11)?' || true
+              pkill -KILL -x kodi.bin 2>/dev/null || true
+              pkill -KILL -x kodi-x11 2>/dev/null || true
+              pkill -KILL -x kodi 2>/dev/null || true
+              for attempt in $(seq 1 5); do
+                if ! kodi_processes | grep -q .; then break; fi
+                sleep 1
+              done
+            fi
+            if kodi_processes | grep -q .; then
+              echo "A previous Nimbus Kodi process is still alive; refusing to start an overlapping instance."
+              ps -eo pid,ppid,stat,comm,args | grep -E '[k]odi(\\.bin|-x11)?' || true
+              return 1
+            fi
+            if [ -n "${KODI_PID:-}" ]; then
+              wait "$KODI_PID" 2>/dev/null || true
+            fi
+            KODI_PID=""
+            return 0
           }
           for launch_attempt in 1 2; do
+            : > /tmp/nimbus-kodi.log
             launch_kodi
-            for i in $(seq 1 45); do
+            for i in $(seq 1 60); do
               if kodi_processes | grep -q . && ss -ltn | grep -q ':9090'; then
                 break
               fi
-              if ! kodi_processes | grep -q . && [ "$i" -gt 5 ]; then
+              if ! kill -0 "$KODI_PID" 2>/dev/null && ! kodi_processes | grep -q . && [ "$i" -gt 5 ]; then
                 break
               fi
               sleep 2
@@ -307,17 +347,13 @@ jobs:
             if ss -ltn | grep -q ':9090'; then
               break
             fi
-            echo "Kodi did not keep its GUI/JSON-RPC listener alive on Nimbus launch attempt $launch_attempt; restarting once."
+            echo "Kodi did not expose its GUI/JSON-RPC listener on Nimbus launch attempt $launch_attempt."
             ps -eo pid,ppid,stat,comm,args | grep -E '[k]odi(\\.bin|-x11)?' || true
             cat /tmp/nimbus-kodi.log || true
-            flatpak kill --user tv.kodi.Kodi 2>/dev/null || true
-            pkill -TERM -x kodi.bin 2>/dev/null || true
-            pkill -TERM -x kodi-x11 2>/dev/null || true
-            pkill -TERM -x kodi 2>/dev/null || true
-            sleep 2
+            if ! stop_kodi_attempt; then exit 1; fi
           done
           if ! ss -ltn | grep -q ':9090'; then
-            echo "Kodi did not expose JSON-RPC after two detached Nimbus launch attempts."
+            echo "Kodi did not expose JSON-RPC after two managed Nimbus launch attempts."
             ps -ef | grep -E '[k]odi|[f]latpak' || true
             cat /tmp/nimbus-kodi.log || true
             exit 1
