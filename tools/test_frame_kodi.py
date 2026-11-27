@@ -18,6 +18,7 @@ PROFILE = Path.home() / ".var/app/tv.kodi.Kodi/data"
 ARTIFACTS = ROOT / "artifacts/frame-gui"
 MOVIES = "plugin://plugin.video.pov/?action=movies"
 SHOWS = "plugin://plugin.video.pov/?action=tvshows"
+PLAYBACK_FIXTURE = PROFILE / "userdata/frame-playback.mp4"
 DEPENDENCIES = {
     "certifi": "2023.5.7",
     "chardet": "5.1.0",
@@ -76,6 +77,10 @@ def stage_profile():
             ("movie.widget.1", MOVIES, "Fixture movies", "WidgetListLandscape", "Fixture movies"),
             ("movie.widget.2", SHOWS, "Fixture shows", "WidgetListLandscape", "Fixture shows"),
         ))
+    subprocess.run([
+        "ffmpeg", "-v", "error", "-f", "lavfi", "-i", "smptebars=size=640x360:rate=24", "-t", "20",
+        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-metadata", "title=Frame CI Playback", str(PLAYBACK_FIXTURE),
+    ], check=True)
 
 
 def rpc(method, **params):
@@ -137,9 +142,13 @@ def screenshot(name):
     subprocess.run(["import", "-window", "root", str(ARTIFACTS / f"{name}.png")], check=True)
 
 
-def focused_card(container, prefix):
+def has_focus(container):
     condition = f"Control.HasFocus({container})"
-    if not rpc("XBMC.GetInfoBooleans", booleans=[condition])[condition]:
+    return rpc("XBMC.GetInfoBooleans", booleans=[condition])[condition]
+
+
+def focused_card(container, prefix):
+    if not has_focus(container):
         return False
     field = f"Container({container}).ListItem.Label"
     return rpc("XBMC.GetInfoLabels", labels=[field])[field].startswith(prefix)
@@ -199,6 +208,12 @@ def verify_home():
     screenshot("home-first-widget")
     press("right")
     wait_for("Right moves to a second movie card", lambda: focused_card(19011, "The Dark Knight"))
+    press("info")
+    wait_for("Kodi opens the selected movie's title details", lambda: window_id() == 12003)
+    screenshot("title-details")
+    press("back")
+    wait_for("closing title details restores the selected movie card",
+             lambda: window_id() == 10000 and focused_card(19011, "The Dark Knight"))
     press("down")
     wait_for("Down focuses the second widget row", lambda: focused_card(19012, "Breaking Bad"))
     screenshot("home-second-widget")
@@ -210,6 +225,43 @@ def verify_home():
              lambda: window_id() == 10000 and focused_card(19012, "Breaking Bad"))
 
 
+def verify_search_and_settings():
+    press("back")
+    wait_for("Home top menu regains focus", lambda: has_focus(9000))
+    press("up")
+    wait_for("Home shortcuts receive focus", lambda: any(has_focus(control) for control in (801, 802, 803)))
+    for _ in range(2):
+        if has_focus(803):
+            break
+        press("right")
+        time.sleep(0.15)
+    wait_for("Home Search shortcut is focused", lambda: has_focus(803))
+    press("select")
+    wait_for("Search opens from Home", lambda: window_id() == 11121)
+    wait_for("new-search button is focused", lambda: has_focus(802))
+    screenshot("search")
+    press("select")
+    wait_for("Search opens Kodi's keyboard", lambda: window_id() == 10103)
+    screenshot("search-keyboard")
+    press("back")
+    wait_for("closing the keyboard reveals Search", lambda: window_id() == 11121)
+
+    rpc("GUI.ActivateWindow", window="skinsettings")
+    wait_for("Skin Settings opens and the category list is focused", lambda: window_id() == 10035 and has_focus(9000))
+    screenshot("skin-settings")
+
+
+def verify_playback_osd():
+    rpc("Player.Open", item={"file": str(PLAYBACK_FIXTURE)})
+    wait_for("Kodi starts the local video fixture", lambda: window_id() == 12005 and rpc("Player.GetActivePlayers"))
+    rpc("Input.ShowOSD")
+    wait_for("playback controls appear and Play/Pause receives focus",
+             lambda: window_id() == 12901 and has_focus(703))
+    screenshot("playback-osd")
+    press("right")
+    wait_for("OSD focus moves to Stop", lambda: has_focus(704))
+
+
 def main():
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
     stage_profile()
@@ -218,6 +270,8 @@ def main():
                                  "--standalone", "--windowing=x11"], stdout=console, stderr=subprocess.STDOUT)
         try:
             verify_home()
+            verify_search_and_settings()
+            verify_playback_osd()
         except Exception:
             try:
                 print(f"Final Kodi GUI state: {gui()}", flush=True)

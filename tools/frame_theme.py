@@ -48,6 +48,11 @@ def find_control(root, control_id):
     return root.find(f".//control[@id='{control_id}']")
 
 
+def add_section_header(controls, title):
+    header = ET.SubElement(controls, "include", {"content": "FrameSectionHeader"})
+    ET.SubElement(header, "param", {"name": "title", "value": title})
+
+
 def apply_palette(skin):
     path = skin / "colors/defaults.xml"
     tree = read_xml(path)
@@ -157,11 +162,118 @@ def feature_metadata(theme):
             )
 
 
+def apply_search(xml):
+    path = xml / "Custom_1121_SearchResults.xml"
+    tree = read_xml(path)
+    root = tree.getroot()
+    controls = root.find("controls")
+    add_section_header(controls, "$LOCALIZE[137]")
+
+    history = find_control(root, 9000)
+    set_fields(history, {"top": "254", "width": "590", "scrolltime": "200"})
+    for label in root.iter("label"):
+        if label.text == "$VAR[RecentSearchesCaseVar]":
+            heading = next(control for control in root.iter("control") if label in control)
+            set_fields(heading, {"top": "182", "height": "65", "font": "FrameTVLabel"})
+        elif label.text and label.text.startswith("Search results for:"):
+            heading = next(control for control in root.iter("control") if label in control)
+            set_fields(heading, {"font": "FrameTVLabel", "textcolor": "grey"})
+    write_xml(tree, path)
+
+
+def apply_title_details(xml):
+    path = xml / "DialogVideoInfo.xml"
+    tree = read_xml(path)
+    root = tree.getroot()
+    for control in root.iter("control"):
+        label = control.findtext("label")
+        if label == "[B]$VAR[DialogInfoTitle][/B]":
+            set_fields(control, {"font": "FrameHeroTitle", "align": "left"})
+        elif label == "$INFO[ListItem.Plot]":
+            set_fields(control, {"align": "left", "font": "FrameTVLabel", "textcolor": "unfocused_text"})
+        elif label in {"$INFO[ListItem.TagLine]", "[I]$INFO[ListItem.Genre][/I]"}:
+            set_fields(control, {"align": "left", "font": "FrameTVLabel", "textcolor": "grey"})
+        texture = control.find("texture")
+        if texture is not None and texture.text == "$INFO[ListItem.Art(fanart)]":
+            texture.set("colordiffuse", "FF4A4A4A")
+            texture.set("diffuse", "overlays/netflixfanartdiffuse.png")
+            set_fields(control, {"aspectratio": "scale", "fadetime": "165"})
+    write_xml(tree, path)
+
+
+def apply_settings_and_dialogs(xml):
+    path = xml / "SkinSettings.xml"
+    tree = read_xml(path)
+    root = tree.getroot()
+    add_section_header(root.find("controls"), "$LOCALIZE[166]")
+    categories = find_control(root, 9000)
+    for layout in (categories.find("itemlayout"), categories.find("focusedlayout")):
+        layout.set("height", "75")
+        for control in layout.findall("control"):
+            set_fields(control, {"height": "75"})
+            if control.get("type") == "label":
+                set_fields(control, {"font": "FrameTVLabel", "aligny": "center", "textoffsety": "0"})
+    write_xml(tree, path)
+
+    path = xml / "DialogContextMenu.xml"
+    tree = read_xml(path)
+    root = tree.getroot()
+    template = find_control(root, 1000)
+    set_fields(template, {"font": "FrameTVLabel", "textcolor": "unfocused_text"})
+    set_fields(template, {"align": "left", "aligny": "center", "textoffsetx": "32"})
+    header = next(control for control in root.iter("control")
+                  if control.findtext("label") == "$VAR[ContextMenuTitleVar]")
+    set_fields(header, {"font": "font32_title", "scroll": "true", "scrollspeed": "35"})
+    write_xml(tree, path)
+
+
+def apply_playback(xml):
+    path = xml / "VideoOSD.xml"
+    tree = read_xml(path)
+    controls = tree.getroot().find("controls")
+    # The audio stream count is useful to Kodi internally, but is not a title
+    # or playback status and should not appear at the top of the picture.
+    for control in controls.findall("control"):
+        if control.findtext("label") == "$INFO[VideoPlayer.AudioStreamCount]":
+            controls.remove(control)
+    write_xml(tree, path)
+
+    path = xml / "Includes_Seekbar.xml"
+    tree = read_xml(path)
+    for control in tree.getroot().iter("control"):
+        label = control.findtext("label", "")
+        if control.get("type") == "label" and any(
+            token in label for token in ("$INFO[VideoPlayer.Title]", "$INFO[Player.Title]", "$VAR[PlayerTitle")
+        ):
+            set_fields(control, {"font": "FrameTVLabel", "textcolor": "osd_light"})
+        for midtexture in control.findall("midtexture[@colordiffuse='accent_color']"):
+            midtexture.set("colordiffuse", "red")
+    write_xml(tree, path)
+
+    path = xml / "Includes_Buttons.xml"
+    tree = read_xml(path)
+    buttons = tree.getroot()
+    player = buttons.find("include[@name='PlayerButton']")
+    set_fields(player, {"textcolor": "osd_light", "focusedcolor": "focused_text"})
+    for tag in ("texturefocus", "alttexturefocus"):
+        player.find(tag).set("colordiffuse", "button_focus")
+    for name in ("DefaultDialogButton", "DefaultSettingButton", "DefaultAddonSettingsButton"):
+        definition = buttons.find(f"include[@name='{name}']/definition")
+        for font in definition.iter("font"):
+            if font.text == "font32":
+                font.text = "FrameTVLabel"
+    write_xml(tree, path)
+
+
 def apply_theme(skin, theme_source):
     xml = skin / "xml"
     apply_palette(skin)
     apply_typography(xml)
     apply_home(xml)
+    apply_search(xml)
+    apply_title_details(xml)
+    apply_settings_and_dialogs(xml)
+    apply_playback(xml)
     target = xml / theme_source.name
     theme = read_xml(theme_source)
     feature_metadata(theme.getroot())

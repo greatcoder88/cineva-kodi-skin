@@ -1,5 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <includes>
+  <include name="FrameSectionHeader">
+    <definition>
+      <control type="group">
+        <depth>DepthBars</depth>
+        <control type="image">
+          <width>100%</width>
+          <height>68</height>
+          <texture colordiffuse="background">colors/white.png</texture>
+        </control>
+        <control type="label">
+          <left>58</left>
+          <top>5</top>
+          <width>850</width>
+          <height>62</height>
+          <aligny>center</aligny>
+          <font>font36_title</font>
+          <textcolor>unfocused_text</textcolor>
+          <label>$PARAM[title]</label>
+        </control>
+      </control>
+    </definition>
+  </include>
   <include name="FrameTopBar">
     <control type="image">
       <width>1920</width>

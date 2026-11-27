@@ -7,14 +7,16 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from zipfile import ZipFile
 
-from build_nimbus_base import extract_archive, fetch_archive, write_deterministic_zip
+from build_nimbus_base import (
+    extract_archive, fetch_archive, patch_nimbus_timer_start_conditions, write_deterministic_zip,
+)
 from frame_theme import apply_theme
 
 
 ROOT = Path(__file__).resolve().parents[1]
 THEME_SOURCE = ROOT / "tools/frame-theme/Includes_FrameTheme.xml"
 SKIN_ID = "skin.frame"
-SKIN_VERSION = "0.1.44"
+SKIN_VERSION = "0.1.45"
 HELPER_ID = "script.frame.nimbus"
 ADDONS = (
     ("ivarbrandt/skin.nimbus", "8b5071b8cd0db3a8e813eb00e9a821d3efad2454", SKIN_ID, "Frame"),
@@ -35,6 +37,11 @@ def package_addon(archive, root, output, addon_id, name):
         if addon_id == SKIN_ID and path.name in {"Includes_Home.xml", "SkinSettings.xml"}:
             # Kodi registers the custom welcome window relative to Home (10000).
             contents = contents.replace(b"ActivateWindow(1112)", b"ActivateWindow(11112)")
+        if path.suffix == ".xml" and addon_id == SKIN_ID:
+            contents = contents.replace(b"Window.IsActive(1121)", b"Window.IsActive(11121)")
+            contents = contents.replace(b"Window.IsVisible(1121)", b"Window.IsVisible(11121)")
+        if addon_id == HELPER_ID and path.name == "search_utils.py":
+            contents = contents.replace(b"ActivateWindow(1121)", b"ActivateWindow(11121)")
         if path == manifest_path:
             contents = contents.replace(b'name="' + upstream_name + b'"',
                                         b'name="' + name.encode() + b'"', 1)
@@ -53,6 +60,7 @@ def package_addon(archive, root, output, addon_id, name):
     if addon_id == SKIN_ID:
         manifest.attrib["version"] = SKIN_VERSION
         ET.ElementTree(manifest).write(manifest_path, encoding="utf-8", xml_declaration=True)
+        patch_nimbus_timer_start_conditions(root)
         apply_theme(root, THEME_SOURCE)
 
     destination = output / f"{addon_id}-{manifest.attrib['version']}.zip"
