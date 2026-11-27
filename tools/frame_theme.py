@@ -358,9 +358,9 @@ def apply_playback(xml):
                 visible.text = f"[{visible.text}] | {availability}"
             for action in button.findall("onclick"):
                 action.set("condition", f"[{action.get('condition', 'true')}] + !{availability}")
-            for target, event in ((button, "onclick"), (parent, "onup")):
-                ET.SubElement(target, event, {"condition": availability}).text = f"SetProperty(FrameTrackPicker,{kind})"
-                ET.SubElement(target, event, {"condition": availability}).text = f"SetFocus({list_id})"
+            ET.SubElement(button, "onclick", {"condition": availability}).text = f"SetProperty(FrameTrackPicker,{kind})"
+            ET.SubElement(button, "onclick", {"condition": availability}).text = f"SetFocus({list_id})"
+            ET.SubElement(parent, "onup").text = str(list_id)
         picker = ET.SubElement(controls, "include", {"content": "FramePlaybackTracks"})
         for name, value in (("button", button_id), ("id", list_id), ("kind", kind),
                             ("available", availability), ("title", "$LOCALIZE[292]" if kind == "audio" else "$LOCALIZE[287]")):
