@@ -6,15 +6,15 @@ import zlib
 
 
 PALETTE = {
-    "primary_background": "FF141414",
-    "primary_content_panel_bg": "FF1F1F1F",
-    "background": "FF141414",
-    "dialog_tint": "FF181818",
-    "dialog_bg": "F5181818",
-    "dialog_bg2": "FA181818",
-    "dialog_bg3": "FF181818",
+    "primary_background": "FF121316",
+    "primary_content_panel_bg": "FF202226",
+    "background": "FF0E0F11",
+    "dialog_tint": "FF17181B",
+    "dialog_bg": "F517181B",
+    "dialog_bg2": "FA17181B",
+    "dialog_bg3": "FF17181B",
     "button_focus": "FFF5F5F5",
-    "button_focus2": "FF353535",
+    "button_focus2": "FF34373D",
     "focused_text": "FF141414",
     "unfocused_text": "FFF5F5F5",
     "artwork_dim": "FFFFFFFF",
@@ -22,7 +22,7 @@ PALETTE = {
     "selected": "FFE50914",
     "keyboard_selected": "FF505050",
     "bg_overlay": "55000000",
-    "grey": "FFB3B3B3",
+    "grey": "FFB6B8BE",
     "red": "FFE50914",
     "osd_dark": "E6191919",
     "player_cache": "FF666666",
@@ -107,7 +107,8 @@ def apply_home(xml):
         "type": "Conditional", "condition": "Control.HasFocus(9000) | ControlGroup(700).HasFocus",
         "reversible": "true",
     })
-    ET.SubElement(slide, "effect", {"type": "slide", "start": "0,0", "end": "580,0", "time": "170"})
+    ET.SubElement(slide, "effect", {"type": "slide", "start": "0,0", "end": "580,0",
+                                     "time": "150", "tween": "cubic", "easing": "out"})
     set_fields(menu, {"left": "50", "width": "420", "scrolltime": "180"})
     menu.remove(menu.find("include[@content='List']"))
     items = ET.Element("include")
@@ -121,7 +122,8 @@ def apply_home(xml):
     animation = ET.SubElement(widgets, "animation", {
         "type": "Conditional", "condition": "ControlGroup(2000).HasFocus", "reversible": "true",
     })
-    ET.SubElement(animation, "effect", {"type": "slide", "start": "0,0", "end": "0,-108", "time": "170"})
+    ET.SubElement(animation, "effect", {"type": "slide", "start": "0,0", "end": "0,-108",
+                                         "time": "160", "tween": "cubic", "easing": "out"})
 
     content = next(group for group in root.iter("control") if widgets in group)
     top_bar = content.find("include[@content='TopBar']")
@@ -271,7 +273,7 @@ def apply_title_details(xml):
             if label == "[I]$INFO[ListItem.Genre][/I]":
                 control.find("label").text = "$INFO[ListItem.Year]$INFO[ListItem.Genre,  •  ]"
         texture = control.find("texture")
-        if texture is not None and texture.text == "$INFO[ListItem.Art(fanart)]":
+        if control is not poster and texture is not None and texture.text == "$INFO[ListItem.Art(fanart)]":
             texture.set("colordiffuse", "FF575757")
             texture.set("diffuse", "overlays/netflixfanartdiffuse.png")
             set_fields(control, {"aspectratio": "scale", "fadetime": "165"})
@@ -407,6 +409,26 @@ def apply_video_cards(xml):
     write_xml(tree, path)
 
 
+def apply_motion(xml):
+    path = xml / "Includes_Animations.xml"
+    tree = read_xml(path)
+    root = tree.getroot()
+    dialogs = root.find("include[@name='Animation_DialogPopupOpenClose']")
+    for animation in dialogs.findall("animation"):
+        is_opening = animation.get("type") == "WindowOpen"
+        for effect in animation.findall("effect"):
+            effect.attrib.pop("delay", None)
+            effect.set("time", "145" if is_opening else "110")
+            if effect.get("type") == "zoom":
+                effect.attrib.update({"tween": "cubic", "easing": "out",
+                                      "start": "98" if is_opening else "100",
+                                      "end": "100" if is_opening else "99"})
+    widgets = root.find("include[@name='WidgetVisibilityAnimations']")
+    for effect in widgets.findall(".//effect"):
+        effect.set("time", "150" if effect.get("type") == "fade" else "105")
+    write_xml(tree, path)
+
+
 def apply_theme(skin, theme_source):
     xml = skin / "xml"
     apply_palette(skin)
@@ -417,6 +439,7 @@ def apply_theme(skin, theme_source):
     apply_settings_and_dialogs(xml)
     apply_playback(xml)
     apply_video_cards(xml)
+    apply_motion(xml)
     write_feature_scrim(skin)
     target = xml / theme_source.name
     theme = read_xml(theme_source)
