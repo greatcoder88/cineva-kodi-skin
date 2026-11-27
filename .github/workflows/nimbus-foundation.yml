@@ -387,6 +387,12 @@ jobs:
               path = Path.home()/".var/app/tv.kodi.Kodi/data/temp/kodi.log"
               return path.read_text(errors="replace") if path.exists() else ""
 
+          def kodi_process_alive():
+              return any(
+                  subprocess.run(["pgrep", "-x", name], capture_output=True).returncode == 0
+                  for name in ("kodi.bin", "kodi-x11", "kodi")
+              )
+
           # Kodi's startup selection in guisettings.xml is the proven way to
           # activate a manually staged skin. Do not try to enable a skin add-on
           # through Addons.SetAddonEnabled: Kodi returns OK while leaving its
@@ -420,7 +426,7 @@ jobs:
                       ),
                   )
                   next_status = time.time() + 10
-              if subprocess.run(["pgrep","-x","kodi.bin"],capture_output=True).returncode != 0:
+              if not kodi_process_alive():
                   raise SystemExit(
                       "Kodi exited before loading the startup-selected skin.cineva. "
                       f"Last GUI={state}; RPC error={last_gui_error}; "
