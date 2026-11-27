@@ -1,0 +1,264 @@
+name: CINÉVA Nimbus foundation
+
+on:
+  push:
+    branches: [redesign/nimbus-foundation]
+    paths:
+      - "tools/build_nimbus_base.py"
+      - "tests/test_nimbus_base.py"
+      - ".github/workflows/nimbus-foundation.yml"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cineva-nimbus-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build the pinned Nimbus-derived skin and API-free bridge
+        run: python tools/build_nimbus_base.py
+      - name: Test builder transformations with isolated upstream fixtures
+        run: python -m unittest tests.test_nimbus_base -v
+      - name: Verify real upstream XML, licenses, dependencies and package contents
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          import hashlib
+          import xml.etree.ElementTree as ET
+
+          root = Path("dist/nimbus-foundation")
+          skin_zip = root / "skin.cineva-0.6.0-nimbus.zip"
+          bridge_zip = root / "script.cineva.nimbus-0.1.0.zip"
+          assert skin_zip.is_file() and bridge_zip.is_file()
+          with ZipFile(skin_zip) as skin, ZipFile(bridge_zip) as bridge:
+              skin_names = set(skin.namelist())
+              bridge_names = set(bridge.namelist())
+              for path in (
+                  "skin.cineva/xml/Home.xml",
+                  "skin.cineva/xml/Includes_Home.xml",
+                  "skin.cineva/xml/Includes_HomeLayouts.xml",
+                  "skin.cineva/xml/View_54_Flix.xml",
+                  "skin.cineva/xml/SkinSettings.xml",
+                  "skin.cineva/LICENSE.txt",
+                  "skin.cineva/NOTICE.txt",
+                  "skin.cineva/CINEVA_BASELINE.json",
+              ):
+                  assert path in skin_names, f"Missing Nimbus foundation file: {path}"
+              manifest = ET.fromstring(skin.read("skin.cineva/addon.xml"))
+              assert manifest.get("id") == "skin.cineva"
+              assert manifest.get("version") == "0.6.0"
+              assert manifest.find("./requires/import[@addon='xbmc.gui']").get("version") == "5.18.0"
+              assert manifest.find("./requires/import[@addon='script.cineva.nimbus']").get("version") == "0.1.0"
+              assert "script.nimbus.helper" not in skin.read("skin.cineva/addon.xml").decode()
+              for path in skin_names:
+                  if path.endswith(".xml"):
+                      ET.fromstring(skin.read(path))
+              bridge_manifest = ET.fromstring(bridge.read("script.cineva.nimbus/addon.xml"))
+              assert bridge_manifest.get("id") == "script.cineva.nimbus"
+              assert bridge_manifest.find("./extension[@point='xbmc.service']") is None
+              assert not any("/apis/" in p or "/monitors/" in p or p.endswith("/service.py") for p in bridge_names)
+              assert not any(b"requests.get(" in bridge.read(p) for p in bridge_names if p.endswith(".py"))
+          for path in (skin_zip, bridge_zip):
+              print(path.name, path.stat().st_size, hashlib.sha256(path.read_bytes()).hexdigest())
+          print("Nimbus-derived skin package and API-free bridge validated.")
+          PY
+      - name: Verify deterministic ZIP output
+        run: |
+          before="$(sha256sum dist/nimbus-foundation/*.zip | sort | sha256sum | cut -d' ' -f1)"
+          python tools/build_nimbus_base.py
+          after="$(sha256sum dist/nimbus-foundation/*.zip | sort | sha256sum | cut -d' ' -f1)"
+          test "$before" = "$after"
+          echo "Deterministic Nimbus package hashes: $after"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cineva-nimbus-foundation-packages
+          path: dist/nimbus-foundation/*.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  kodi-gui:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build the exact packages used by the GUI test
+        run: python tools/build_nimbus_base.py
+      - name: Install GUI runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak xvfb xdotool imagemagick jq psmisc
+      - name: Install Kodi Piers beta
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak remote-add --user --if-not-exists flathub-beta https://dl.flathub.org/beta-repo/flathub-beta.flatpakrepo
+          flatpak install --user --noninteractive -y flathub org.freedesktop.Platform//26.08
+          flatpak install --user --noninteractive -y flathub-beta tv.kodi.Kodi//beta
+          flatpak info --user tv.kodi.Kodi//beta
+      - name: Install Nimbus-derived CINÉVA and its local bridge
+        run: |
+          ADDONS="$HOME/.var/app/tv.kodi.Kodi/data/addons"
+          mkdir -p "$ADDONS"
+          unzip -q dist/nimbus-foundation/skin.cineva-0.6.0-nimbus.zip -d "$ADDONS"
+          unzip -q dist/nimbus-foundation/script.cineva.nimbus-0.1.0.zip -d "$ADDONS"
+          test -f "$ADDONS/skin.cineva/xml/Home.xml"
+          test -f "$ADDONS/skin.cineva/xml/Includes_Home.xml"
+          test -f "$ADDONS/script.cineva.nimbus/resources/lib/modules/cpath_maker.py"
+          USERDATA="$HOME/.var/app/tv.kodi.Kodi/data/userdata"
+          mkdir -p "$USERDATA"
+          cat > "$USERDATA/advancedsettings.xml" <<'XML'
+          <advancedsettings><loglevel hide="false">2</loglevel></advancedsettings>
+          XML
+      - name: Launch Kodi, verify the Nimbus-based Home and capture screenshots
+        run: |
+          mkdir -p artifacts
+          export DISPLAY=:99
+          Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset > /tmp/xvfb.log 2>&1 &
+          echo $! > /tmp/xvfb.pid
+          sleep 2
+          USERDATA="$HOME/.var/app/tv.kodi.Kodi/data/userdata"
+          SETTINGS="$USERDATA/guisettings.xml"
+          boot_kodi_once() {
+            local attempt="$1"
+            flatpak run --user tv.kodi.Kodi//beta --standalone --windowing=x11 > "/tmp/nimbus-firstboot-$attempt.log" 2>&1 &
+            FIRST_PID=$!
+            for i in $(seq 1 60); do
+              test -s "$SETTINGS" && return 0
+              if ! kill -0 "$FIRST_PID" 2>/dev/null && ! pgrep -x kodi.bin >/dev/null; then break; fi
+              sleep 2
+            done
+            return 1
+          }
+          if ! boot_kodi_once 1; then
+            cat /tmp/nimbus-firstboot-1.log || true
+            exit 1
+          fi
+          kill "$FIRST_PID" 2>/dev/null || true
+          flatpak kill --user tv.kodi.Kodi 2>/dev/null || true
+          pkill -x kodi.bin 2>/dev/null || true
+          pkill -x kodi-x11 2>/dev/null || true
+          sleep 2
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          path = Path.home()/".var/app/tv.kodi.Kodi/data/userdata/guisettings.xml"
+          tree = ET.parse(path)
+          root = tree.getroot()
+          values = {
+              "lookandfeel.skin": "skin.cineva",
+              "services.webserver": "true",
+              "services.webserverport": "8080",
+              "services.webserverauthentication": "false",
+          }
+          for key, value in values.items():
+              node = root.find(f"./setting[@id='{key}']")
+              if node is None:
+                  node = ET.SubElement(root, "setting", {"id": key})
+              node.text = value
+          tree.write(path, encoding="UTF-8", xml_declaration=True)
+          PY
+          nohup setsid -f flatpak run --user tv.kodi.Kodi//beta --standalone --windowing=x11 </dev/null > /tmp/nimbus-kodi.log 2>&1
+          python - <<'PY'
+          import json, socket, time
+          def rpc(method, params=None):
+              request = {"jsonrpc":"2.0","method":method,"params":params or {},"id":1}
+              decoder = json.JSONDecoder()
+              with socket.create_connection(("127.0.0.1", 9090), timeout=5) as sock:
+                  sock.settimeout(2)
+                  sock.sendall(json.dumps(request).encode())
+                  data = ""
+                  deadline = time.time() + 8
+                  while time.time() < deadline:
+                      try:
+                          chunk = sock.recv(65536)
+                      except socket.timeout:
+                          continue
+                      if not chunk:
+                          break
+                      data += chunk.decode("utf-8", "replace")
+                      pos = 0
+                      while pos < len(data):
+                          while pos < len(data) and data[pos].isspace():
+                              pos += 1
+                          try:
+                              obj, end = decoder.raw_decode(data, pos)
+                          except json.JSONDecodeError:
+                              break
+                          pos = end
+                          if isinstance(obj, dict) and obj.get("id") == 1:
+                              if "error" in obj:
+                                  raise RuntimeError(obj["error"])
+                              return obj.get("result")
+              raise RuntimeError(f"No JSON-RPC result for {method}: {data[:300]}")
+          last = None
+          for attempt in range(60):
+              try:
+                  state = rpc("GUI.GetProperties", {"properties":["currentwindow","currentcontrol","skin"]})
+                  skin = state.get("skin", {})
+                  print("Kodi GUI state:", json.dumps(state, ensure_ascii=False))
+                  skin_id = skin.get("id") if isinstance(skin, dict) else str(skin)
+                  if skin_id and skin_id != "skin.cineva":
+                      raise RuntimeError(f"Expected skin.cineva, got {skin_id}")
+                  window_id = state.get("currentwindow", {}).get("id")
+                  if window_id == 10000:
+                      break
+                  rpc("GUI.ActivateWindow", {"window":"home"})
+              except Exception as exc:
+                  last = exc
+              time.sleep(2)
+          else:
+              raise SystemExit(f"Kodi did not reach the CINÉVA Home window: {last}")
+          print("Nimbus-derived CINÉVA Home is active.")
+          PY
+          xdotool key Escape || true
+          sleep 3
+          import -display :99 -window root artifacts/cineva-nimbus-home.png
+          xdotool key Down || true
+          sleep 2
+          import -display :99 -window root artifacts/cineva-nimbus-home-down.png
+          test -s artifacts/cineva-nimbus-home.png
+          test -s artifacts/cineva-nimbus-home-down.png
+          LOG="$HOME/.var/app/tv.kodi.Kodi/data/temp/kodi.log"
+          if [ -f "$LOG" ]; then
+            cp "$LOG" artifacts/kodi.log
+            grep -Ei 'ERROR|CRITICAL|Traceback|skin.cineva|script.cineva.nimbus' "$LOG" > artifacts/kodi-errors.txt || true
+          fi
+          flatpak info --user tv.kodi.Kodi//beta > artifacts/kodi-flatpak-version.txt 2>&1 || true
+      - name: Collect diagnostics
+        if: always()
+        run: |
+          mkdir -p artifacts
+          cp /tmp/nimbus-firstboot-1.log artifacts/ 2>/dev/null || true
+          cp /tmp/nimbus-kodi.log artifacts/ 2>/dev/null || true
+          cp /tmp/xvfb.log artifacts/ 2>/dev/null || true
+          LOG="$(find "$HOME/.var/app/tv.kodi.Kodi" -type f -name kodi.log -print -quit 2>/dev/null || true)"
+          if [ -n "$LOG" ] && [ ! -f artifacts/kodi.log ]; then cp "$LOG" artifacts/kodi.log; fi
+      - name: Stop Kodi and Xvfb
+        if: always()
+        run: |
+          flatpak kill --user tv.kodi.Kodi 2>/dev/null || true
+          pkill -x kodi.bin 2>/dev/null || true
+          pkill -x kodi-x11 2>/dev/null || true
+          kill "$(cat /tmp/xvfb.pid)" 2>/dev/null || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cineva-nimbus-foundation-gui
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 14
