@@ -604,6 +604,19 @@ def apply_cineva_home_layout(skin_root: Path) -> None:
 """, encoding="utf-8", newline="")
     ET.parse(xml_root / "Includes_Cineva.xml")
 
+    includes_path = xml_root / "Includes.xml"
+    includes_source = includes_path.read_text(encoding="utf-8").replace("\r\n", "\n")
+    cineva_import = '<include file="Includes_Cineva.xml" />'
+    if cineva_import not in includes_source:
+        home_import = '<include file="Includes_Home.xml" />'
+        if includes_source.count(home_import) != 1:
+            raise RuntimeError("Includes.xml: expected one Home include insertion point")
+        includes_source = includes_source.replace(
+            home_import, home_import + "\n\t" + cineva_import, 1
+        )
+    ET.fromstring(includes_source)
+    includes_path.write_text(includes_source, encoding="utf-8", newline="")
+
 
 def write_default_skin_includes(skin_root: Path) -> None:
     """Ship empty Nimbus menu/widget includes before Kodi parses Includes.xml."""
