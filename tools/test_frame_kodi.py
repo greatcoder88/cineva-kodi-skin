@@ -160,19 +160,20 @@ def verify_home():
         rpc("Addons.SetAddonEnabled", addonid=addon_id, enabled=True)
     rpc("Settings.SetSettingValue", setting="lookandfeel.skin", value="skin.frame")
 
-    def accept_startup_prompts():
+    def keep_skin_confirmation():
         state = gui()
-        if state["skin"]["id"] != "skin.frame":
-            return False
-        window = state["currentwindow"]["id"]
-        label = state["currentcontrol"]["label"].lower()
-        accept_confirmation(window, label)
-        if window == 11112 and label == "ok":
-            press("select")
-            return True
-        return False
+        if state["skin"]["id"] == "skin.frame" and state["currentwindow"]["id"] == 10100:
+            return state["currentcontrol"]["label"].strip().lower()
 
-    wait_for("Kodi activates Frame and accepts the Nimbus welcome", accept_startup_prompts, timeout=35)
+    # The welcome window can appear briefly before Kodi's confirmation overlays
+    # it. A Select during that transition can choose the default No button.
+    choice = wait_for("Kodi opens the Keep Skin confirmation", keep_skin_confirmation, timeout=30)
+    if choice == "no":
+        press("left")
+    wait_for("Keep Skin confirmation focuses Yes", lambda: keep_skin_confirmation() == "yes", timeout=5)
+    press("select")
+    wait_for("Nimbus welcome opens after keeping Frame", lambda: window_id() == 11112)
+    press("select")
 
     settings = PROFILE / "addons/skin.frame/xml/script-nimbus-widget_movies.xml"
 
