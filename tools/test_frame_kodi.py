@@ -74,7 +74,7 @@ def stage_profile():
                    cpath_path text, cpath_header text, cpath_type text, cpath_label text)""")
         db.executemany("INSERT INTO custom_paths VALUES (?, ?, ?, ?, ?)", (
             ("movie.main_menu", MOVIES, "Movies", "", "Movies"),
-            ("movie.widget.1", MOVIES, "Fixture movies", "WidgetListLandscape", "Fixture movies"),
+            ("movie.widget.1", MOVIES + "_in_progress", "In Progress", "WidgetListPoster", "In Progress"),
             ("movie.widget.2", SHOWS, "Fixture shows", "WidgetListLandscape", "Fixture shows"),
         ))
     subprocess.run([

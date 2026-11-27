@@ -92,6 +92,46 @@
       </control>
     </definition>
   </include>
+  <include name="FramePosterCard">
+    <param name="focused">false</param>
+    <definition>
+      <control type="group">
+        <width>188</width>
+        <height>280</height>
+        <control type="image">
+          <texture diffuse="masks/poster-big.png" colordiffuse="primary_content_panel_bg">colors/white.png</texture>
+        </control>
+        <control type="image">
+          <texture diffuse="masks/poster-big.png" background="true">$INFO[ListItem.Art(poster)]</texture>
+          <aspectratio scalediffuse="false">scale</aspectratio>
+        </control>
+        <control type="textbox">
+          <left>12</left>
+          <top>164</top>
+          <width>164</width>
+          <height>96</height>
+          <font>FrameTab</font>
+          <textcolor>unfocused_text</textcolor>
+          <label>$INFO[ListItem.Label]</label>
+          <visible>String.IsEmpty(ListItem.Art(poster))</visible>
+        </control>
+        <control type="progress">
+          <left>10</left>
+          <top>271</top>
+          <width>168</width>
+          <height>4</height>
+          <texturebg colordiffuse="osd_grey">osd/ProgressBack.png</texturebg>
+          <midtexture colordiffuse="red">osd/Progress.png</midtexture>
+          <info>ListItem.PercentPlayed</info>
+          <visible>ListItem.IsResumable</visible>
+        </control>
+        <control type="image">
+          <texture border="12" infill="false" colordiffuse="unfocused_text">masks/poster-big-border.png</texture>
+          <visible>$PARAM[focused] + Control.HasFocus($PARAM[list_id])</visible>
+        </control>
+      </control>
+    </definition>
+  </include>
   <include name="FrameSectionHeader">
     <definition>
       <control type="group">
@@ -154,13 +194,13 @@
   <include name="FrameHomeFeature">
     <control type="group" id="8980">
       <left>64</left>
-      <top>110</top>
+      <top>58</top>
       <width>1792</width>
-      <height>656</height>
+      <height>635</height>
       <visible>$EXP[FrameFeatureVisible]</visible>
       <control type="image">
         <left>-64</left>
-        <top>-110</top>
+        <top>-58</top>
         <width>1920</width>
         <height>1080</height>
         <texture colordiffuse="background">colors/white.png</texture>
@@ -168,12 +208,12 @@
       <control type="image">
         <visible>!$EXP[FrameFeatureHasFanart]</visible>
         <width>1792</width>
-        <height>656</height>
+        <height>635</height>
         <texture diffuse="masks/giant-landscape.png" colordiffuse="primary_content_panel_bg">colors/white.png</texture>
       </control>
       <control type="image" id="8983">
         <width>1792</width>
-        <height>656</height>
+        <height>635</height>
         <texture diffuse="masks/giant-landscape.png" background="true">$VAR[FrameFeatureArt]</texture>
         <aspectratio align="right" aligny="center" scalediffuse="false">scale</aspectratio>
         <visible>$EXP[FrameFeatureHasFanart]</visible>
@@ -181,13 +221,13 @@
       </control>
       <control type="image">
         <width>1792</width>
-        <height>656</height>
+        <height>635</height>
         <texture>frame/feature-scrim.png</texture>
         <visible>$EXP[FrameFeatureHasFanart]</visible>
       </control>
       <control type="group">
-        <left>42</left>
-        <top>258</top>
+        <left>50</left>
+        <top>220</top>
         <control type="image">
           <top>16</top>
           <width>630</width>
@@ -217,7 +257,7 @@
         </control>
         <control type="textbox">
           <top>199</top>
-          <width>925</width>
+          <width>790</width>
           <height>120</height>
           <font>FrameBody</font>
           <textcolor>unfocused_text</textcolor>

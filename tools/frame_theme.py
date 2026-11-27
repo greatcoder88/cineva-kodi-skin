@@ -382,20 +382,28 @@ def write_feature_scrim(skin):
                      + chunk(b"IDAT", zlib.compress(rows, 9)) + chunk(b"IEND", b""))
 
 
-def apply_landscape_cards(xml):
+def apply_video_cards(xml):
     path = xml / "Includes_Home.xml"
     tree = read_xml(path)
-    layout = tree.getroot().find("include[@name='WidgetListLandscape']/definition")
-    fixedlist = layout.find("control[@type='fixedlist']")
-    set_fields(fixedlist, {"movement": "5"})
-    for tag in ("itemlayout", "focusedlayout"):
-        item = fixedlist.find(tag)
-        item.set("width", "326")
-        group = item.find("control")
-        group.find("left").text = "58"
-        group.find("top").text = "12"
-        card = group.find("include[@content='FlixScapeWidgetMovieLayout']")
-        card.set("content", "FrameLandscapeCard")
+    root = tree.getroot()
+    for kind, original, width, movement in (
+        ("Landscape", "FlixScapeWidgetMovieLayout", "326", "5"),
+        ("Poster", "FlixWidgetMovieLayout", "208", "7"),
+    ):
+        layout = root.find(f"include[@name='WidgetList{kind}']/definition")
+        fixedlist = layout.find("control[@type='fixedlist']")
+        set_fields(fixedlist, {"movement": movement})
+        for tag in ("itemlayout", "focusedlayout"):
+            item = fixedlist.find(tag)
+            item.set("width", width)
+            group = item.find("control")
+            set_fields(group, {"left": "64", "top": "12"})
+            group.find(f"include[@content='{original}']").set("content", f"Frame{kind}Card")
+    category = root.find("include[@name='CategoryLabel']/definition/control")
+    set_fields(category, {"left": "64", "top": "67"})
+    for control in category.findall("control[@type='label']"):
+        set_fields(control, {"top": "15", "font": "FrameTVLabel", "textcolor": "unfocused_text",
+                             "label": "$PARAM[label]", "scroll": "false"})
     write_xml(tree, path)
 
 
@@ -408,7 +416,7 @@ def apply_theme(skin, theme_source):
     apply_title_details(xml)
     apply_settings_and_dialogs(xml)
     apply_playback(xml)
-    apply_landscape_cards(xml)
+    apply_video_cards(xml)
     write_feature_scrim(skin)
     target = xml / theme_source.name
     theme = read_xml(theme_source)
