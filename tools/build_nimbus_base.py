@@ -23,7 +23,7 @@ NIMBUS_REPO = "ivarbrandt/skin.nimbus"
 NIMBUS_SHA = "8b5071b8cd0db3a8e813eb00e9a821d3efad2454"
 HELPER_REPO = "ivarbrandt/script.nimbus.helper"
 HELPER_SHA = "e42d2ffffbccaa58386ef2e4a054049e5fcb7664"
-SKIN_VERSION = "0.6.5"
+SKIN_VERSION = "0.6.6"
 BRIDGE_VERSION = "0.1.0"
 OUT_DIR = ROOT / "dist" / "nimbus-foundation"
 NOTICE = """CINÉVA Nimbus foundation
@@ -283,10 +283,9 @@ def patch_nimbus_focus_include_ids(skin_root: Path) -> None:
 
 
 def patch_nimbus_include_list_id_defaults(skin_root: Path) -> None:
-    """Give every Nimbus include using list_id a safe default before skin parsing."""
+    """Add valid Kodi include params and wrap their bodies in <definition>."""
     xml_root = skin_root / "xml"
     tag_pattern = re.compile(r"</?include\b[^>]*>")
-    opening_pattern = re.compile(r"<include\b[^>]*>")
 
     for path in xml_root.glob("*.xml"):
         text = path.read_text(encoding="utf-8")
@@ -296,62 +295,89 @@ def patch_nimbus_include_list_id_defaults(skin_root: Path) -> None:
             text,
             flags=re.S,
         )
-        insertions: list[tuple[int, str, str]] = []
-        for opening in opening_pattern.finditer(scan_text):
-            token = opening.group(0)
-            if token.rstrip().endswith("/>"):
-                continue
-            name_match = re.search(r'\bname="([^"]+)"', token)
-            if not name_match:
-                continue
 
-            depth = 0
-            block_end = None
-            for tag in tag_pattern.finditer(scan_text, opening.start()):
-                tag_text = tag.group(0)
-                if tag_text.startswith("</"):
+        blocks: list[tuple[int, int]] = []
+        depth = 0
+        current_start = None
+        for tag in tag_pattern.finditer(scan_text):
+            token = tag.group(0)
+            if token.startswith("</"):
+                if depth:
                     depth -= 1
-                    if depth == 0:
-                        block_end = tag.end()
-                        break
-                elif not tag_text.rstrip().endswith("/>"):
-                    depth += 1
-            if block_end is None:
-                raise RuntimeError(
-                    f"{path.name}: unterminated include definition {name_match.group(1)}"
-                )
+                    if depth == 0 and current_start is not None:
+                        blocks.append((current_start, tag.end()))
+                        current_start = None
+            elif not token.rstrip().endswith("/>"):
+                if depth == 0:
+                    current_start = tag.start()
+                depth += 1
 
-            block = text[opening.start():block_end]
+        replacements: list[tuple[int, int, str]] = []
+        for block_start, block_end in blocks:
+            block = text[block_start:block_end]
             if "$PARAM[list_id]" not in block:
                 continue
             try:
-                definition = ET.fromstring(block)
+                parser = ET.XMLParser(target=ET.TreeBuilder(insert_comments=True))
+                include = ET.fromstring(block, parser=parser)
             except ET.ParseError as exc:
                 raise RuntimeError(
-                    f"{path.name}: invalid include definition {name_match.group(1)}: {exc}"
+                    f"{path.name}: invalid include definition: {exc}"
                 ) from exc
-            if any(param.get("name") == "list_id" for param in definition.findall("param")):
+
+            if include.tag != "include" or not include.get("name"):
                 continue
 
-            after_open = text[opening.end():block_end]
-            indentation = re.match(r"(\r?\n)([ \t]*)", after_open)
-            if indentation:
-                insertion = (
-                    indentation.group(1)
-                    + indentation.group(2)
-                    + '<param name="list_id" value="999999" />'
+            children = list(include)
+            params = [child for child in children if child.tag == "param"]
+            list_params = [param for param in params if param.get("name") == "list_id"]
+            if len(list_params) > 1:
+                raise RuntimeError(
+                    f"{path.name}: duplicate list_id params in {include.get('name')}"
                 )
-            else:
-                insertion = '<param name="list_id" value="999999" />'
-            insertions.append((opening.end(), insertion, name_match.group(1)))
 
-        for position, insertion, _name in reversed(insertions):
-            text = text[:position] + insertion + text[position:]
-        if insertions:
+            if list_params:
+                list_param = list_params[0]
+                legacy_value = list_param.attrib.pop("value", None)
+                if not list_param.get("default"):
+                    list_param.set("default", legacy_value or "999999")
+            else:
+                list_param = ET.Element(
+                    "param",
+                    {"name": "list_id", "default": "999999"},
+                )
+                params.append(list_param)
+
+            definition = next(
+                (child for child in children if child.tag == "definition"),
+                None,
+            )
+            body_children = [
+                child for child in children
+                if child.tag not in ("param", "definition")
+            ]
+            if definition is None:
+                definition = ET.Element("definition")
+            for child in body_children:
+                include.remove(child)
+                definition.append(child)
+
+            for child in list(include):
+                include.remove(child)
+            for param in params:
+                include.append(param)
+            include.append(definition)
+
+            ET.indent(include, space="\t")
+            replacements.append(
+                (block_start, block_end, ET.tostring(include, encoding="unicode"))
+            )
+
+        for block_start, block_end, new_block in reversed(replacements):
+            text = text[:block_start] + new_block + text[block_end:]
+        if replacements:
             path.write_text(text, encoding="utf-8", newline="")
             ET.parse(path)
-
-
 
 
 def patch_nimbus_animation_param_conditions(skin_root: Path) -> None:

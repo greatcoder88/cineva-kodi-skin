@@ -201,7 +201,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 self.assertIn("skin.cineva/NOTICE.txt", names)
                 manifest = archive.read("skin.cineva/addon.xml").decode()
                 self.assertIn('id="skin.cineva"', manifest)
-                self.assertIn('version="0.6.5"', manifest)
+                self.assertIn('version="0.6.6"', manifest)
                 self.assertIn('addon="xbmc.gui" version="5.18.0"', manifest)
                 self.assertIn('addon="script.cineva.nimbus" version="0.1.0"', manifest)
                 self.assertNotIn("script.nimbus.helper", manifest)
@@ -257,8 +257,32 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                         block = ET.tostring(include, encoding="unicode")
                         if "$PARAM[list_id]" not in block:
                             continue
-                        direct_params = {param.get("name") for param in include.findall("param")}
-                        self.assertIn("list_id", direct_params, f"{filename}:{include.get('name')}")
+                        list_params = [
+                            param for param in include.findall("param")
+                            if param.get("name") == "list_id"
+                        ]
+                        self.assertEqual(
+                            len(list_params), 1, f"{filename}:{include.get('name')}"
+                        )
+                        self.assertTrue(
+                            list_params[0].get("default"),
+                            f"{filename}:{include.get('name')} missing default",
+                        )
+                        self.assertNotIn(
+                            "value", list_params[0].attrib,
+                            f"{filename}:{include.get('name')} uses call-site value syntax",
+                        )
+                        self.assertIsNotNone(
+                            include.find("definition"),
+                            f"{filename}:{include.get('name')} body is not wrapped in definition",
+                        )
+                        self.assertFalse(
+                            [
+                                child for child in include
+                                if child.tag not in ("param", "definition")
+                            ],
+                            f"{filename}:{include.get('name')} has content outside definition",
+                        )
 
 
     def test_animation_conditions_do_not_embed_unresolved_list_id_parameters(self):
@@ -404,8 +428,8 @@ class NimbusWorkflowPathTests(unittest.TestCase):
     def test_workflow_uses_the_builder_skin_version(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
         source = workflow.read_text(encoding="utf-8")
-        self.assertIn("skin.cineva-0.6.5-nimbus.zip", source)
-        self.assertIn('manifest.get("version") == "0.6.5"', source)
+        self.assertIn("skin.cineva-0.6.6-nimbus.zip", source)
+        self.assertIn('manifest.get("version") == "0.6.6"', source)
 
     def test_first_boot_reads_kodis_actual_flatpak_log_location(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
