@@ -33,7 +33,11 @@ NIMBUS_FILES = {
   <extension point="xbmc.addon.metadata"><license>GPL-2.0-only</license><summary>Nimbus</summary><description>Nimbus Skin</description></extension>
 </addon>""",
     "xml/Home.xml": "<window><defaultcontrol>9000</defaultcontrol></window>",
-    "xml/Includes.xml": "<includes><include file=\"Includes_Home.xml\"/></includes>",
+    "xml/Includes.xml": """<includes>
+      <include file="Includes_Home.xml"/>
+      <include content="FlixSquareLayout"><param name="fallback_image" value="DefaultAddon.png" /></include>
+      <include content="FlixSquareLayout"><param name="fallback_image" value="DefaultAddon.png" /><param name="focused" value="true" /></include>
+    </includes>""",
     "xml/Includes_Home.xml": """<includes>
       <onload>RunScript(script.nimbus.helper,mode=check_for_update&amp;skin_id=skin.nimbus)</onload>
       <onload>RunScript(script.nimbus.helper,mode=check_for_profile_change&amp;skin_id=skin.nimbus)</onload>
@@ -47,7 +51,27 @@ NIMBUS_FILES = {
       <control type="button"><onclick>RunScript(script.nimbus.helper,mode=delete_all_ratings)</onclick></control>
     </controls></window>""",
     "xml/Variables_Ratings.xml": "<includes><variable name=\"rating\"><value>$INFO[ListItem.Rating]</value></variable></includes>",
-    "xml/View_54_Flix.xml": "<includes><include name=\"FlixView\"/></includes>",
+    "xml/View_54_Flix.xml": """<includes>
+      <include>FlixMovieLayout</include>
+      <include content="FlixMovieLayout"><param name="focused" value="true" /></include>
+    </includes>""",
+    "xml/View_500_Wall.xml": """<includes>
+      <include>FlixMovieLayout</include>
+      <include content="FlixMovieLayout"><param name="focused" value="true" /></include>
+    </includes>""",
+    "xml/View_55_FlixScape.xml": """<includes>
+      <include>FlixScapeMovieLayout</include>
+      <include content="FlixScapeMovieLayout"><param name="focused" value="true" /></include>
+    </includes>""",
+    "xml/View_501_WallScape.xml": """<includes>
+      <include>FlixScapeMovieLayout</include>
+      <include content="FlixScapeMovieLayout"><param name="focused" value="true" /></include>
+    </includes>""",
+    "xml/View_51_PosterFlow.xml": """<includes>
+      <include>PosterFlowLayout</include>
+      <include content="PosterFlowLayout"><param name="focused" value="true" /></include>
+    </includes>""",
+    "xml/View_50_List.xml": "<includes><include>ListLandscapeSlideAnimations</include></includes>",
     "fonts/Inter-Regular.ttf": b"test-font",
     "resources/icon.png": b"test-icon",
 }
@@ -127,7 +151,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 self.assertIn("skin.cineva/NOTICE.txt", names)
                 manifest = archive.read("skin.cineva/addon.xml").decode()
                 self.assertIn('id="skin.cineva"', manifest)
-                self.assertIn('version="0.6.1"', manifest)
+                self.assertIn('version="0.6.2"', manifest)
                 self.assertIn('addon="xbmc.gui" version="5.18.0"', manifest)
                 self.assertIn('addon="script.cineva.nimbus" version="0.1.0"', manifest)
                 self.assertNotIn("script.nimbus.helper", manifest)
@@ -143,6 +167,32 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 baseline = archive.read("skin.cineva/CINEVA_BASELINE.json").decode()
                 self.assertIn(builder.NIMBUS_SHA, baseline)
                 self.assertIn("CC BY-SA 4.0", baseline)
+
+
+    def test_flix_focus_layouts_receive_their_real_container_ids(self):
+        with tempfile.TemporaryDirectory() as temp:
+            paths = self.build_fixture(Path(temp) / "dist")
+            with zipfile.ZipFile(paths["skin"]) as archive:
+                expected = {
+                    "Includes.xml": ("$PARAM[group_id]50", 2),
+                    "View_54_Flix.xml": ("54", 2),
+                    "View_500_Wall.xml": ("500", 2),
+                    "View_55_FlixScape.xml": ("55", 2),
+                    "View_501_WallScape.xml": ("501", 2),
+                    "View_51_PosterFlow.xml": ("51", 2),
+                    "View_50_List.xml": ("$PARAM[list_id]", 1),
+                }
+                for filename, (list_id, count) in expected.items():
+                    xml = archive.read(f"skin.cineva/xml/{filename}").decode("utf-8")
+                    self.assertEqual(
+                        xml.count(f'<param name="list_id" value="{list_id}" />'),
+                        count,
+                        filename,
+                    )
+                    ET.fromstring(xml)
+                includes = archive.read("skin.cineva/xml/Includes.xml").decode("utf-8")
+                self.assertNotIn('name="fallback_image"', includes)
+                self.assertIn('name="fallback_icon"', includes)
 
     def test_bridge_keeps_local_widget_logic_and_api_free_service_entry(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -200,8 +250,8 @@ class NimbusWorkflowPathTests(unittest.TestCase):
     def test_workflow_uses_the_builder_skin_version(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
         source = workflow.read_text(encoding="utf-8")
-        self.assertIn("skin.cineva-0.6.1-nimbus.zip", source)
-        self.assertIn('manifest.get("version") == "0.6.1"', source)
+        self.assertIn("skin.cineva-0.6.2-nimbus.zip", source)
+        self.assertIn('manifest.get("version") == "0.6.2"', source)
 
     def test_first_boot_reads_kodis_actual_flatpak_log_location(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
@@ -241,6 +291,8 @@ class NimbusWorkflowPathTests(unittest.TestCase):
         self.assertIn("required_default_includes", source)
         self.assertIn("before_welcome_skin_loads", source)
         self.assertIn("Nimbus first-run defaults generated and skin reloaded", source)
+        self.assertIn("in (10100, 12002)", source)
+        self.assertIn("nimbus-first-run-failure.png", source)
 
 
 if __name__ == "__main__":

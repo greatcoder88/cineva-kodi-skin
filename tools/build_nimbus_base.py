@@ -10,6 +10,7 @@ from __future__ import annotations
 import ast
 import io
 import json
+import re
 import shutil
 import tempfile
 import urllib.request
@@ -22,7 +23,7 @@ NIMBUS_REPO = "ivarbrandt/skin.nimbus"
 NIMBUS_SHA = "8b5071b8cd0db3a8e813eb00e9a821d3efad2454"
 HELPER_REPO = "ivarbrandt/script.nimbus.helper"
 HELPER_SHA = "e42d2ffffbccaa58386ef2e4a054049e5fcb7664"
-SKIN_VERSION = "0.6.1"
+SKIN_VERSION = "0.6.2"
 BRIDGE_VERSION = "0.1.0"
 OUT_DIR = ROOT / "dist" / "nimbus-foundation"
 NOTICE = """CINÉVA Nimbus foundation
@@ -178,6 +179,102 @@ def patch_skin_manifest(skin_root: Path) -> None:
         )
     ET.indent(root, space="  ")
     ET.ElementTree(root).write(manifest_path, encoding="UTF-8", xml_declaration=True)
+
+
+
+def add_list_id_to_include_calls(
+    path: Path,
+    include_name: str,
+    list_id: str,
+    expected: int,
+    rename_params: tuple[tuple[str, str], ...] = (),
+) -> None:
+    """Bind focus-sensitive Nimbus layout includes to their owning container."""
+    text = path.read_text(encoding="utf-8")
+    changed = 0
+
+    plain_pattern = re.compile(
+        r"<include>\\s*" + re.escape(include_name) + r"\\s*</include>"
+    )
+
+    def replace_plain(match: re.Match[str]) -> str:
+        nonlocal changed
+        start = match.start()
+        line_start = text.rfind("\\n", 0, start) + 1
+        indent = text[line_start:start]
+        param_indent = indent + "\\t"
+        changed += 1
+        return (
+            f'<include content="{include_name}">\\n'
+            f'{param_indent}<param name="list_id" value="{list_id}" />\\n'
+            f'{indent}</include>'
+        )
+
+    text = plain_pattern.sub(replace_plain, text)
+    content_pattern = re.compile(
+        r'<include(?P<attrs>[^>]*\\bcontent=["\\\']'
+        + re.escape(include_name)
+        + r'["\\\'][^>]*)>'
+        r'(?P<body>(?:\\s*<param\\b[^>]*/>\\s*)*)</include>',
+        re.S,
+    )
+
+    def replace_content(match: re.Match[str]) -> str:
+        nonlocal changed
+        body = match.group("body")
+        if re.search(r'<param\\s+name=["\\\']list_id["\\\']', body):
+            return match.group(0)
+        for old_name, new_name in rename_params:
+            body = body.replace(f'name="{old_name}"', f'name="{new_name}"')
+        position = body.find("<param")
+        if position < 0:
+            start = match.start()
+            line_start = text.rfind("\\n", 0, start) + 1
+            indent = text[line_start:start]
+            param_indent = indent + "\\t"
+            body = (
+                f"\\n{param_indent}<param name=\"list_id\" value=\"{list_id}\" />"
+                f"\\n{indent}"
+            )
+        else:
+            param_line_start = body.rfind("\\n", 0, position) + 1
+            param_indent = body[param_line_start:position]
+            body = (
+                body[:position]
+                + f'<param name="list_id" value="{list_id}" />\\n{param_indent}'
+                + body[position:]
+            )
+        changed += 1
+        return f'<include{match.group("attrs")}>{body}</include>'
+
+    text = content_pattern.sub(replace_content, text)
+    if changed != expected:
+        raise RuntimeError(
+            f"{path.name}: expected {expected} {include_name} focus bindings, changed {changed}"
+        )
+    path.write_text(text, encoding="utf-8", newline="")
+    ET.parse(path)
+
+
+def patch_nimbus_focus_include_ids(skin_root: Path) -> None:
+    """Fix upstream Flix layouts that omit the list ID used by focus expressions."""
+    xml_root = skin_root / "xml"
+    patches = (
+        ("Includes.xml", "FlixSquareLayout", "$PARAM[group_id]50", 2,
+         (("fallback_image", "fallback_icon"),)),
+        ("View_54_Flix.xml", "FlixMovieLayout", "54", 2, ()),
+        ("View_500_Wall.xml", "FlixMovieLayout", "500", 2, ()),
+        ("View_55_FlixScape.xml", "FlixScapeMovieLayout", "55", 2, ()),
+        ("View_501_WallScape.xml", "FlixScapeMovieLayout", "501", 2, ()),
+        ("View_51_PosterFlow.xml", "PosterFlowLayout", "51", 2, ()),
+        ("View_50_List.xml", "ListLandscapeSlideAnimations", "$PARAM[list_id]", 1, ()),
+    )
+    for filename, include_name, list_id, expected, renames in patches:
+        path = xml_root / filename
+        if not path.is_file():
+            raise RuntimeError(f"Nimbus source is missing focus-layout file: {filename}")
+        add_list_id_to_include_calls(path, include_name, list_id, expected, renames)
+
 
 
 def write_default_skin_includes(skin_root: Path) -> None:
@@ -463,6 +560,7 @@ def build(output_dir: Path = OUT_DIR, fetcher=fetch_archive) -> dict[str, Path]:
                 ("skin.nimbus", "skin.cineva"),
             ),
         )
+        patch_nimbus_focus_include_ids(skin_root)
         patch_skin_manifest(skin_root)
         remove_api_controls(skin_root)
         remove_unsupported_startup_checks(skin_root)

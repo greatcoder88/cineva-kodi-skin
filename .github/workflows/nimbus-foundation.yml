@@ -37,7 +37,7 @@ jobs:
           import xml.etree.ElementTree as ET
 
           root = Path("dist/nimbus-foundation")
-          skin_zip = root / "skin.cineva-0.6.1-nimbus.zip"
+          skin_zip = root / "skin.cineva-0.6.2-nimbus.zip"
           bridge_zip = root / "script.cineva.nimbus-0.1.0.zip"
           assert skin_zip.is_file() and bridge_zip.is_file()
           with ZipFile(skin_zip) as skin, ZipFile(bridge_zip) as bridge:
@@ -56,7 +56,7 @@ jobs:
                   assert path in skin_names, f"Missing Nimbus foundation file: {path}"
               manifest = ET.fromstring(skin.read("skin.cineva/addon.xml"))
               assert manifest.get("id") == "skin.cineva"
-              assert manifest.get("version") == "0.6.1"
+              assert manifest.get("version") == "0.6.2"
               assert manifest.find("./requires/import[@addon='xbmc.gui']").get("version") == "5.18.0"
               assert manifest.find("./requires/import[@addon='script.cineva.nimbus']").get("version") == "0.1.0"
               assert "script.nimbus.helper" not in skin.read("skin.cineva/addon.xml").decode()
@@ -120,7 +120,7 @@ jobs:
           ADDONS="$HOME/.var/app/tv.kodi.Kodi/data/addons"
           STAGE="$GITHUB_WORKSPACE/nimbus-stage"
           mkdir -p "$ADDONS" "$STAGE"
-          unzip -q dist/nimbus-foundation/skin.cineva-0.6.1-nimbus.zip -d "$STAGE"
+          unzip -q dist/nimbus-foundation/skin.cineva-0.6.2-nimbus.zip -d "$STAGE"
           unzip -q dist/nimbus-foundation/script.cineva.nimbus-0.1.0.zip -d "$STAGE"
           cp -a "$STAGE/skin.cineva" "$ADDONS/"
           cp -a "$STAGE/script.cineva.nimbus" "$ADDONS/"
@@ -376,6 +376,14 @@ jobs:
                   f"Kodi log tail:\n{log_text()[-10000:]}"
               )
 
+          skin_parse_errors = [
+              line for line in log_text().splitlines()
+              if "Misplaced [" in line or "Error parsing boolean expression" in line
+          ]
+          if skin_parse_errors:
+              subprocess.run(["import", "-window", "root", "artifacts/nimbus-skin-parse-failure.png"], check=False)
+              raise SystemExit("Kodi reported skin boolean-expression errors: " + " | ".join(skin_parse_errors[-8:]))
+
           skin_details = rpc_retry("Addons.GetAddonDetails", {
               "addonid":"skin.cineva", "properties":["enabled","version"]
           })
@@ -447,7 +455,7 @@ jobs:
               while time.time() < deadline:
                   state = gui()
                   if (
-                      state.get("currentwindow",{}).get("id") == 10100
+                      state.get("currentwindow",{}).get("id") in (10100, 12002)
                       and state.get("currentcontrol",{}).get("label","").strip().lower() == "ok"
                   ):
                       print("Dismissing Nimbus's completed menu/widget setup confirmation.")
@@ -468,6 +476,7 @@ jobs:
                       break
                   time.sleep(0.25)
               else:
+                  subprocess.run(["import", "-window", "root", "artifacts/nimbus-first-run-failure.png"], check=False)
                   raise SystemExit(
                       f"Nimbus first-run setup did not return to Home with all default includes: "
                       f"missing={missing}; GUI={state}; log tail:\\n{log_text()[-6000:]}"
