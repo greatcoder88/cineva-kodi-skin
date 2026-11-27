@@ -655,32 +655,29 @@ def apply_cineva_widget_dashboard(skin_root: Path) -> None:
         if child.tag == "control" and child.get("id") == "18000":
             content_group.remove(child)
     home_group = ET.SubElement(content_group, "control", {"type": "group", "id": "18000"})
+    delayed = ET.SubElement(home_group, "include", {"content": "Visible_Right_Delayed"})
+    ET.SubElement(delayed, "param", {"name": "id", "value": "home"})
     ET.SubElement(home_group, "visible").text = (
         "String.IsEqual(Container(9000).ListItem.Property(id),home)"
     )
     ET.SubElement(home_group, "defaultcontrol").text = "18001"
     ET.SubElement(home_group, "onback").text = "SetFocus(9000)"
     ET.SubElement(home_group, "onup").text = "SetFocus(9000)"
-    for tag, value in (
-        ("left", "0"), ("top", "0"), ("width", "1776"), ("height", "505")
-    ):
-        ET.SubElement(home_group, tag).text = value
 
     widget_list = ET.SubElement(home_group, "control", {"type": "grouplist", "id": "18001"})
-    for tag, value in (
-        ("left", "50"), ("top", "0"), ("width", "1815"), ("height", "33000"),
-        ("orientation", "vertical"), ("itemgap", "-100"), ("scrolltime", "500"),
-        ("onback", "SetFocus(9000)"), ("pagecontrol", "18099"),
-    ):
-        ET.SubElement(widget_list, tag).text = value
     animation = ET.SubElement(widget_list, "include", {"content": "Animation_Widget_Poster_Slide"})
-    ET.SubElement(animation, "param", {"name": "container_id", "value": "18001"})
+    ET.SubElement(animation, "param", {"name": "container", "value": "18001"})
     ET.SubElement(widget_list, "include").text = "WidgetGroupListCommon"
+    ET.SubElement(widget_list, "pagecontrol").text = "18099"
     ET.SubElement(widget_list, "include").text = "HomeWidgets"
-    arrows = ET.SubElement(widget_list, "include", {"content": "WidgetUpDownArrows"})
+    arrows = ET.SubElement(home_group, "include", {"content": "WidgetUpDownArrows"})
     ET.SubElement(arrows, "param", {"name": "container_id", "value": "18001"})
-    scrollbar = ET.SubElement(widget_list, "include", {"content": "WidgetScrollbar"})
-    ET.SubElement(scrollbar, "param", {"name": "container_id", "value": "18099"})
+    scrollbar = ET.SubElement(
+        home_group,
+        "include",
+        {"content": "WidgetScrollbar", "condition": "Skin.HasSetting(touchmode)"},
+    )
+    ET.SubElement(scrollbar, "param", {"name": "scrollbar_id", "value": "18099"})
 
     def add_manage_button(parent, control_id: str, label: str, setting: str) -> None:
         for existing in list(parent):
@@ -741,6 +738,13 @@ def apply_cineva_widget_dashboard(skin_root: Path) -> None:
                 ET.Element("include", {"file": "script-nimbus-widget_home.xml"}),
             )
         includes_tree.write(includes_path, encoding="utf-8", xml_declaration=True)
+
+    home_widget_include_path = xml_root / "script-nimbus-widget_home.xml"
+    if not home_widget_include_path.is_file() or not home_widget_include_path.read_text(encoding="utf-8").strip():
+        home_widget_include_path.write_text(
+            "<includes><include name='HomeWidgets' /></includes>",
+            encoding="utf-8",
+        )
 
     settings_path = xml_root / "SkinSettings.xml"
     if settings_path.is_file():
