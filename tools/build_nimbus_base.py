@@ -471,6 +471,111 @@ def apply_cineva_visuals(skin_root: Path) -> None:
 
 
 
+def apply_cineva_home_layout(skin_root: Path) -> None:
+    """Convert Nimbus Home to Netflix-style horizontal navigation and a larger hero."""
+    xml_root = skin_root / "xml"
+    home_path = xml_root / "Home.xml"
+    home = home_path.read_text(encoding="utf-8")
+    if 'id="9000"' not in home or 'id="2000"' not in home:
+        return
+
+    menu_group = """<control type="group">
+					<left>-540</left>
+					<animation type="Conditional" condition="!ControlGroup(2000).HasFocus + !Control.IsVisible(20000) + !Control.IsVisible(20001)" reversible="true">
+						<effect type="slide" start="0" end="540" time="500" tween="cubic" easing="inout" />
+					</animation>
+					<include>OpenClose_Left</include>
+					<include content="MenuContentPanel">
+						<param name="width" value="549"/>
+					</include>"""
+    if menu_group not in home:
+        raise RuntimeError("Home.xml: Nimbus main-menu panel structure changed")
+    home = home.replace(menu_group, """<control type="group">
+					<left>0</left>""", 1)
+
+    patches = (
+        ("<left>25</left>\n\t\t\t\t\t\t<top>215</top>\n            <width>825</width>\n\t\t\t\t\t\t<height>605</height>",
+         "<left>270</left>\n\t\t\t\t\t\t<top>26</top>\n\t\t\t\t\t\t<width>1260</width>\n\t\t\t\t\t\t<height>82</height>\n\t\t\t\t\t\t<orientation>horizontal</orientation>"),
+        ("<movement>7</movement>", "<movement>1</movement>"),
+        ("<onright>SetFocus($INFO[Container(9000).ListItem.Property(menu_id)])</onright>",
+         "<ondown>SetFocus($INFO[Container(9000).ListItem.Property(menu_id)])</ondown>"),
+        ("<onback>700</onback>\n\t\t\t\t\t\t<onup>700</onup>\n\t\t\t\t\t\t<ondown>9000</ondown>",
+         "<onback>9000</onback>\n\t\t\t\t\t\t<onup>700</onup>\n\t\t\t\t\t\t<onright>9000</onright>"),
+        ("""<include content="List">
+              <param name="id" value="9000" />
+            </include>""",
+         """<include content="CinevaMainMenuList">
+							<param name="id" value="9000" />
+						</include>"""),
+    )
+    for old, new in patches:
+        if old not in home:
+            raise RuntimeError(f"Home.xml: expected Nimbus menu fragment not found: {old[:80]!r}")
+        home = home.replace(old, new, 1)
+
+    quick = """<control type="group">
+						<left>65</left>
+						<top>70</top>
+						<width>343</width>"""
+    if quick not in home:
+        raise RuntimeError("Home.xml: Nimbus quick-action group geometry not found")
+    home = home.replace(quick, """<control type="group">
+						<left>1515</left>
+						<top>18</top>
+						<width>360</width>""", 1)
+
+    flix_path = xml_root / "Includes_FlixPanel.xml"
+    flix = flix_path.read_text(encoding="utf-8")
+    hero = '<left>50</left>\n\t\t\t\t<width>815</width>\n\t\t\t\t<top>45</top>'
+    if hero not in flix:
+        raise RuntimeError("Includes_FlixPanel.xml: Nimbus hero geometry not found")
+    flix = flix.replace(hero, '<left>72</left>\n\t\t\t\t<width>900</width>\n\t\t\t\t<top>150</top>', 1)
+    flix_path.write_text(flix, encoding="utf-8", newline="")
+    ET.parse(flix_path)
+
+    clock = '<control type="group">\n\t\t\t\t\t<top>90</top>\n\t\t\t\t\t<left>90</left>'
+    if clock in home:
+        home = home.replace(clock, '<control type="group">\n\t\t\t\t\t<visible>false</visible>\n\t\t\t\t\t<top>90</top>\n\t\t\t\t\t<left>90</left>', 1)
+    rss = home.rfind('<control type="rss">')
+    if rss >= 0:
+        home = home[:rss] + home[rss:].replace('<control type="rss">', '<control type="rss">\n\t\t\t\t\t\t\t\t<visible>false</visible>', 1)
+
+    ET.fromstring(home)
+    home_path.write_text(home, encoding="utf-8", newline="")
+    (xml_root / "Includes_Cineva.xml").write_text("""<?xml version="1.0" encoding="UTF-8"?>
+<includes>
+  <include name="CinevaMainMenuList">
+    <param name="id" default="9000" />
+    <definition>
+      <focusedlayout width="210" height="72">
+        <control type="group">
+          <control type="label">
+            <left>12</left><top>0</top><width>186</width><height>62</height>
+            <font>font23_title</font><textcolor>FFFFFFFF</textcolor>
+            <align>center</align><aligny>center</aligny>
+            <label>$VAR[MenuCaseVar]</label><shadowcolor>text_shadow</shadowcolor>
+          </control>
+          <control type="image">
+            <left>86</left><bottom>2</bottom><width>38</width><height>4</height>
+            <texture colordiffuse="accent_color">colors/white.png</texture>
+          </control>
+        </control>
+      </focusedlayout>
+      <itemlayout width="210" height="72">
+        <control type="label">
+          <left>12</left><top>0</top><width>186</width><height>62</height>
+          <font>font23</font><textcolor>FFE0E0E0</textcolor>
+          <align>center</align><aligny>center</aligny>
+          <label>$VAR[MenuCaseVar]</label><shadowcolor>text_shadow</shadowcolor>
+        </control>
+      </itemlayout>
+    </definition>
+  </include>
+</includes>
+""", encoding="utf-8", newline="")
+    ET.parse(xml_root / "Includes_Cineva.xml")
+
+
 def write_default_skin_includes(skin_root: Path) -> None:
     """Ship empty Nimbus menu/widget includes before Kodi parses Includes.xml."""
     xml_root = skin_root / "xml"
@@ -760,6 +865,7 @@ def build(output_dir: Path = OUT_DIR, fetcher=fetch_archive) -> dict[str, Path]:
         remove_api_controls(skin_root)
         remove_unsupported_startup_checks(skin_root)
         apply_cineva_visuals(skin_root)
+        apply_cineva_home_layout(skin_root)
         write_default_skin_includes(skin_root)
         (skin_root / "NOTICE.txt").write_text(NOTICE, encoding="utf-8")
         manifest = {
