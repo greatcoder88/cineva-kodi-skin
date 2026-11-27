@@ -2,7 +2,7 @@ name: CINÉVA Nimbus foundation
 
 on:
   push:
-    branches: [main, redesign/nimbus-foundation]
+    branches: [main, redesign/nimbus-foundation, redesign/cineva-ratings]
     paths:
       - "tools/build_nimbus_base.py"
       - "tools/download_test_posters.py"
@@ -39,7 +39,7 @@ jobs:
           import xml.etree.ElementTree as ET
 
           root = Path("dist/nimbus-foundation")
-          skin_zip = root / "skin.cineva-0.8.2-nimbus.zip"
+          skin_zip = root / "skin.cineva-0.8.3-nimbus.zip"
           bridge_zip = root / "script.cineva.nimbus-0.1.1.zip"
           assert skin_zip.is_file() and bridge_zip.is_file()
           with ZipFile(skin_zip) as skin, ZipFile(bridge_zip) as bridge:
@@ -58,7 +58,7 @@ jobs:
                   assert path in skin_names, f"Missing Nimbus foundation file: {path}"
               manifest = ET.fromstring(skin.read("skin.cineva/addon.xml"))
               assert manifest.get("id") == "skin.cineva"
-              assert manifest.get("version") == "0.8.2"
+              assert manifest.get("version") == "0.8.3"
               assert manifest.find("./requires/import[@addon='xbmc.gui']").get("version") == "5.18.0"
               assert manifest.find("./requires/import[@addon='script.cineva.nimbus']").get("version") == "0.1.1"
               assert "script.nimbus.helper" not in skin.read("skin.cineva/addon.xml").decode()
@@ -131,7 +131,7 @@ jobs:
           ADDONS="$HOME/.var/app/tv.kodi.Kodi/data/addons"
           STAGE="$GITHUB_WORKSPACE/nimbus-stage"
           mkdir -p "$ADDONS" "$STAGE"
-          unzip -q dist/nimbus-foundation/skin.cineva-0.8.2-nimbus.zip -d "$STAGE"
+          unzip -q dist/nimbus-foundation/skin.cineva-0.8.3-nimbus.zip -d "$STAGE"
           unzip -q dist/nimbus-foundation/script.cineva.nimbus-0.1.1.zip -d "$STAGE"
           cp -a "$STAGE/skin.cineva" "$ADDONS/"
           cp -a "$STAGE/script.cineva.nimbus" "$ADDONS/"
@@ -220,7 +220,7 @@ jobs:
           cp -a "$POV_FIXTURE"/. "$POV_ADDON"/
           ARTWORK_STAGE="$GITHUB_WORKSPACE/nimbus-artwork-stage"
           mkdir -p "$ARTWORK_STAGE"
-          unzip -q dist/nimbus-foundation/skin.cineva-0.8.2-nimbus.zip -d "$ARTWORK_STAGE"
+          unzip -q dist/nimbus-foundation/skin.cineva-0.8.3-nimbus.zip -d "$ARTWORK_STAGE"
           (
             cd "$ARTWORK_STAGE"
             python "$GITHUB_WORKSPACE/tools/download_test_posters.py" "$POV_ADDON/resources/posters"
@@ -481,6 +481,7 @@ jobs:
                   raise SystemExit(f"Nimbus first-run welcome did not focus OK: {state}")
               print("Acknowledging Nimbus first-run welcome and generating default menu/widget includes.")
               before_welcome_home_inits = log_text().count("Window Init (Home.xml)")
+              before_dialog_confirm_inits = log_text().count("Window Init (DialogConfirm.xml)")
               subprocess.run(["xdotool","key","Return"],check=True)
               required_default_includes = [
                   "script-nimbus-main_menu_movies.xml",
@@ -499,12 +500,19 @@ jobs:
               deadline = time.time() + 45
               while time.time() < deadline:
                   state = gui()
+                  dialog_confirm_inits = log_text().count("Window Init (DialogConfirm.xml)")
+                  if dialog_confirm_inits > before_dialog_confirm_inits:
+                      print("Dismissing Nimbus's completed menu/widget setup confirmation.")
+                      subprocess.run(["xdotool","key","Return"],check=True)
+                      before_dialog_confirm_inits = dialog_confirm_inits
+                      time.sleep(0.5)
+                      continue
                   window_id = state.get("currentwindow",{}).get("id")
                   control_label = state.get("currentcontrol",{}).get("label","").strip().lower()
                   if window_id == 12002 or (window_id == 10100 and control_label == "ok"):
                       print("Dismissing Nimbus's completed menu/widget setup confirmation.")
                       subprocess.run(["xdotool","key","Return"],check=True)
-                      time.sleep(0.25)
+                      time.sleep(0.5)
                       continue
                   missing = [
                       name for name in required_default_includes
@@ -546,8 +554,43 @@ jobs:
           xdotool key Down || true
           sleep 2
           import -display :99 -window root artifacts/cineva-nimbus-home-down.png
+          xdotool key Up || true
+          sleep 1
+          xdotool key Right Right Right
+          sleep 2
+          python - <<'PY'
+          import json
+          import socket
+
+          def rpc(method, params):
+              request = {"jsonrpc": "2.0", "id": 1, "method": method, "params": params}
+              with socket.create_connection(("127.0.0.1", 9090), timeout=5) as connection:
+                  connection.sendall(json.dumps(request).encode("utf-8"))
+                  response = connection.recv(65536)
+              payload = json.loads(response.decode("utf-8"))
+              if "error" in payload:
+                  raise SystemExit("Kodi JSON-RPC failed: {}".format(payload["error"]))
+              return payload.get("result", {})
+
+          labels = rpc("XBMC.GetInfoLabels", {"labels": [
+              "Container(18011).ListItem.Label",
+              "Container(18011).ListItem.Rating",
+              "Container(18011).ListItem.Property(Rating.tomatoes.Percent)",
+          ]})
+          expected = {
+              "Container(18011).ListItem.Label": "Inception",
+              "Container(18011).ListItem.Rating": "8.4",
+              "Container(18011).ListItem.Property(Rating.tomatoes.Percent)": "92",
+          }
+          for key, value in expected.items():
+              if str(labels.get(key, "")).strip() != value:
+                  raise SystemExit("Expected Inception rating metadata {}={!r}; got {}".format(key, value, labels))
+          print("CINEVA_NIMBUS_ADDON_RATINGS_READY=IMDb 8.4; RT 92%")
+          PY
+          import -display :99 -window root artifacts/cineva-nimbus-home-ratings.png
           test -s artifacts/cineva-nimbus-home.png
           test -s artifacts/cineva-nimbus-home-down.png
+          test -s artifacts/cineva-nimbus-home-ratings.png
           LOG="$HOME/.var/app/tv.kodi.Kodi/data/temp/kodi.log"
           if [ -f "$LOG" ]; then
             cp "$LOG" artifacts/kodi.log

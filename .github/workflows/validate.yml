@@ -1,7 +1,7 @@
 name: CINÉVA automated checks
 on:
   push:
-    branches: [main, redesign/nimbus-foundation]
+    branches: [main, redesign/nimbus-foundation, redesign/cineva-ratings]
     paths-ignore:
       - "repository-site/**"
       - "skin.cineva-0.5.65.zip"

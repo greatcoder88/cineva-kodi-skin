@@ -23,7 +23,7 @@ NIMBUS_REPO = "ivarbrandt/skin.nimbus"
 NIMBUS_SHA = "8b5071b8cd0db3a8e813eb00e9a821d3efad2454"
 HELPER_REPO = "ivarbrandt/script.nimbus.helper"
 HELPER_SHA = "e42d2ffffbccaa58386ef2e4a054049e5fcb7664"
-SKIN_VERSION = "0.8.2"
+SKIN_VERSION = "0.8.3"
 BRIDGE_VERSION = "0.1.1"
 OUT_DIR = ROOT / "dist" / "nimbus-foundation"
 NOTICE = """CINÉVA Nimbus foundation
@@ -797,6 +797,55 @@ def apply_cineva_widget_dashboard(skin_root: Path) -> None:
             ET.parse(path)
 
 
+
+def apply_cineva_addon_ratings(skin_root: Path) -> None:
+    """Render IMDb and Rotten Tomatoes ratings already supplied by video add-ons."""
+    path = skin_root / "xml" / "Includes_FlixPanel.xml"
+    tree = ET.parse(path)
+    root = tree.getroot()
+    parents = {child: parent for parent in root.iter() for child in parent}
+    targets = []
+    for include in root.findall(".//include[@content='FlixInfoIcon']"):
+        params = {
+            param.get("name"): param.get("value", "")
+            for param in include.findall("param")
+        }
+        if "ListItem.Rating" in params.get("flixlabel", ""):
+            targets.append(include)
+    if len(targets) != 1:
+        raise RuntimeError(
+            "Expected one Nimbus FlixPanel default-rating badge; found {}".format(len(targets))
+        )
+
+    original = targets[0]
+    parent = parents[original]
+    index = list(parent).index(original)
+    parent.remove(original)
+
+    imdb = ET.Element("include", {"content": "FlixInfoIcon"})
+    ET.SubElement(imdb, "param", {
+        "name": "flixlabel",
+        "value": "$INFO[Container($PARAM[id]).ListItem.Rating,IMDb ,]",
+    })
+    ET.SubElement(imdb, "param", {
+        "name": "visible",
+        "value": "!String.IsEmpty(Container($PARAM[id]).ListItem.Rating) + !ListItem.IsCollection",
+    })
+
+    tomatoes = ET.Element("include", {"content": "FlixInfoIcon"})
+    ET.SubElement(tomatoes, "param", {
+        "name": "flixlabel",
+        "value": "$INFO[Container($PARAM[id]).ListItem.Property(Rating.tomatoes.Percent),RT ,%]",
+    })
+    ET.SubElement(tomatoes, "param", {
+        "name": "visible",
+        "value": "!String.IsEmpty(Container($PARAM[id]).ListItem.Property(Rating.tomatoes.Percent)) + !ListItem.IsCollection",
+    })
+
+    parent.insert(index, imdb)
+    parent.insert(index + 1, tomatoes)
+    tree.write(path, encoding="utf-8", xml_declaration=True)
+
 def patch_nimbus_parameterized_container_conditions(skin_root: Path) -> None:
     """Avoid Kodi 22 parser failures for Container($PARAM[list_id]) expressions.
 
@@ -1276,6 +1325,7 @@ def build(output_dir: Path = OUT_DIR, fetcher=fetch_archive) -> dict[str, Path]:
         apply_cineva_visuals(skin_root)
         apply_cineva_home_layout(skin_root)
         apply_cineva_widget_dashboard(skin_root)
+        apply_cineva_addon_ratings(skin_root)
         write_default_skin_includes(skin_root)
         (skin_root / "NOTICE.txt").write_text(NOTICE, encoding="utf-8")
         manifest = {
