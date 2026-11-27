@@ -520,22 +520,70 @@ jobs:
           if selected_value != "skin.cineva" or skin_id(state) != "skin.cineva":
               raise SystemExit(f"CINÉVA was not retained after Keep Skin: setting={selected}; GUI={state}")
 
-          subprocess.run(["xdotool","key","Escape"],check=False)
-          time.sleep(1)
           state = gui()
-          if state.get("currentwindow",{}).get("id") != 10000:
-              rpc_retry("GUI.ActivateWindow", {"window":"home"})
-          deadline = time.time() + 20
-          while time.time() < deadline:
-              state = gui()
-              if skin_id(state) == "skin.cineva" and state.get("currentwindow",{}).get("id") == 10000:
-                  break
-              time.sleep(0.25)
-          if skin_id(state) != "skin.cineva" or state.get("currentwindow",{}).get("id") != 10000:
-              raise SystemExit(f"Nimbus-derived CINÉVA did not reach Home: {state}")
+          if state.get("currentwindow",{}).get("id") == 11112:
+              welcome_label = state.get("currentcontrol",{}).get("label","").strip()
+              if welcome_label.lower() != "ok":
+                  raise SystemExit(f"Nimbus first-run welcome did not focus OK: {state}")
+              print("Acknowledging Nimbus first-run welcome and generating default menu/widget includes.")
+              before_welcome_skin_loads = log_text().count("load skin from:")
+              subprocess.run(["xdotool","key","Return"],check=True)
+              required_default_includes = [
+                  "script-nimbus-main_menu_movies.xml",
+                  "script-nimbus-main_menu_tvshows.xml",
+                  "script-nimbus-main_menu_custom1.xml",
+                  "script-nimbus-main_menu_custom2.xml",
+                  "script-nimbus-main_menu_custom3.xml",
+                  "script-nimbus-widget_movies.xml",
+                  "script-nimbus-widget_tvshows.xml",
+                  "script-nimbus-widget_custom1.xml",
+                  "script-nimbus-widget_custom2.xml",
+                  "script-nimbus-widget_custom3.xml",
+              ]
+              skin_xml_dir = Path.home()/".var/app/tv.kodi.Kodi/data/addons/skin.cineva/xml"
+              deadline = time.time() + 45
+              while time.time() < deadline:
+                  state = gui()
+                  if (
+                      state.get("currentwindow",{}).get("id") == 10100
+                      and state.get("currentcontrol",{}).get("label","").strip().lower() == "ok"
+                  ):
+                      print("Dismissing Nimbus's completed menu/widget setup confirmation.")
+                      subprocess.run(["xdotool","key","Return"],check=True)
+                      time.sleep(0.25)
+                      continue
+                  missing = [
+                      name for name in required_default_includes
+                      if not (skin_xml_dir/name).is_file() or (skin_xml_dir/name).stat().st_size == 0
+                  ]
+                  reloaded = log_text().count("load skin from:") > before_welcome_skin_loads
+                  if (
+                      skin_id(state) == "skin.cineva"
+                      and state.get("currentwindow",{}).get("id") == 10000
+                      and not missing
+                      and reloaded
+                  ):
+                      break
+                  time.sleep(0.25)
+              else:
+                  raise SystemExit(
+                      f"Nimbus first-run setup did not return to Home with all default includes: "
+                      f"missing={missing}; GUI={state}; log tail:\\n{log_text()[-6000:]}"
+                  )
+              print("Nimbus first-run defaults generated and skin reloaded:", required_default_includes)
+          else:
+              if state.get("currentwindow",{}).get("id") != 10000:
+                  rpc_retry("GUI.ActivateWindow", {"window":"home"})
+              deadline = time.time() + 20
+              while time.time() < deadline:
+                  state = gui()
+                  if skin_id(state) == "skin.cineva" and state.get("currentwindow",{}).get("id") == 10000:
+                      break
+                  time.sleep(0.25)
+              if skin_id(state) != "skin.cineva" or state.get("currentwindow",{}).get("id") != 10000:
+                  raise SystemExit(f"Nimbus-derived CINÉVA did not reach Home: {state}")
           print("Nimbus-derived CINÉVA Home is active:", json.dumps(state, ensure_ascii=False))
           PY
-          xdotool key Escape || true
           sleep 3
           import -display :99 -window root artifacts/cineva-nimbus-home.png
           xdotool key Down || true
