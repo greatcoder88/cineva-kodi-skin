@@ -2973,9 +2973,7 @@ def main():
                         data = changelog.encode("utf-8")
                         changed.append(info.filename + " (refresh 0.5.58 release notes)")
                     release_entries = [
-                        ("0.5.65", "0.5.65 - Smooth Home hero changes between poster rails
-- Fade each selected row's fanart, fallback poster and hero metadata as one 220 ms composition.
-- Keep the existing focus, playback and shelf navigation targets unchanged."),
+                        ("0.5.65", "0.5.65 - Smooth Home hero changes between poster rails\n- Fade each selected row's fanart, fallback poster and hero metadata as one 220 ms composition.\n- Keep the existing focus, playback and shelf navigation targets unchanged."),
                         ("0.5.64", "0.5.64 - Add Rotten Tomatoes critics ratings to Home heroes\n- Render the Tomatometer critics score alongside IMDb when the selected provider item supplies Kodi rating metadata.\n- Prefer an explicit Rating.tomatoes.Percent property; fall back to Kodi's normalized 0-10 Tomatometer rating without calling external rating APIs."),
                         ("0.5.63", "0.5.63 - Simplify the focused Home poster state\n- Remove the detached red underline below selected posters; the crimson artwork border and restrained zoom remain the focus cue."),
                         ("0.5.62", "0.5.62 - Restore the Home shelf viewport after top-level navigation\n- Bring the first configured Home shelf back into view before opening Movies, TV Shows, Search or Settings.\n- Restore the activated navigation tab before leaving so returning to Home keeps the hero and poster rail aligned."),
