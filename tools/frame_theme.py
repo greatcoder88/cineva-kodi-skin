@@ -73,6 +73,8 @@ def apply_typography(xml):
         # so the new TV labels accept the same character sets as stock Nimbus.
         title = fontset.find("font[name='font52_title']/filename").text
         label = fontset.find("font[name='font27_title']/filename").text
+        for name, size in (("PlayerIcon", "49"), ("PlayerIconSmall", "40")):
+            fontset.find(f"font[name='{name}']/size").text = size
         inter = title == "Inter-Regular.ttf"
         fonts = (
             ("FrameHeroTitle", "Inter-Bold.ttf" if inter else title, "61"),
@@ -90,34 +92,27 @@ def apply_home(xml):
     tree = read_xml(path)
     root = tree.getroot()
     menu = find_control(root, 9000)
-    shortcuts = find_control(root, 700)
     widgets = find_control(root, 2000)
     menu_group = next(group for group in root.iter("control") if menu in group)
-    shortcut_group = next(group for group in menu_group.findall("control") if shortcuts in group)
     for element in list(menu_group):
         if element.tag in {"animation", "include"}:
             menu_group.remove(element)
         elif element.tag == "control" and element.findtext("./control/label") == "[LIGHT]$INFO[System.Time][/LIGHT]":
             menu_group.remove(element)
-
-    set_fields(menu_group, {"left": "0"})
-    menu_group.insert(0, ET.Element("include"))
-    menu_group[0].text = "FrameTopBar"
-    set_fields(menu, {
-        "left": "456", "top": "22", "width": "1008", "height": "70", "orientation": "horizontal",
-        "movement": "5", "onleft": "9000", "onright": "9000", "onup": "700",
-        "ondown": "SetFocus($INFO[Container(9000).ListItem.Property(menu_id)])", "scrolltime": "180",
+    set_fields(menu_group, {"left": "-580"})
+    panel = ET.Element("include")
+    panel.text = "FrameSideMenuPanel"
+    menu_group.insert(0, panel)
+    slide = ET.SubElement(menu_group, "animation", {
+        "type": "Conditional", "condition": "Control.HasFocus(9000) | ControlGroup(700).HasFocus",
+        "reversible": "true",
     })
+    ET.SubElement(slide, "effect", {"type": "slide", "start": "0,0", "end": "580,0", "time": "170"})
+    set_fields(menu, {"left": "50", "width": "420", "scrolltime": "180"})
     menu.remove(menu.find("include[@content='List']"))
-    ET.SubElement(menu, "include").text = "FrameTopMenuItems"
-    contents = menu.find("content")
-    trailing_ids = {"music", "musicvideos", "livetv", "radio", "pictures", "weather"}
-    for item in contents.findall("item"):
-        if item.findtext("property[@name='id']") in trailing_ids:
-            contents.remove(item)
-            contents.append(item)
-    set_fields(shortcut_group, {"left": "46", "top": "5"})
-    set_fields(shortcuts, {"onup": "9000", "ondown": "9000", "onright": "9000", "height": "95"})
+    items = ET.Element("include")
+    items.text = "FrameSideMenuItems"
+    menu.insert(list(menu).index(menu.find("content")), items)
 
     # Keep all generated widget paths and list IDs. Present them below the
     # feature artwork and bring them up as soon as a shelf takes focus.
@@ -129,6 +124,9 @@ def apply_home(xml):
     ET.SubElement(animation, "effect", {"type": "slide", "start": "0,0", "end": "0,-108", "time": "170"})
 
     content = next(group for group in root.iter("control") if widgets in group)
+    top_bar = content.find("include[@content='TopBar']")
+    if top_bar is not None:
+        content.remove(top_bar)
     content.insert(list(content).index(widgets), ET.Element("include"))
     content[list(content).index(widgets) - 1].text = "FrameHomeFeature"
     # The Home feature owns artwork. Keep the built-in backdrop for Kodi's
@@ -172,6 +170,7 @@ def feature_metadata(theme):
     fields = {
         "Title": ("Label", ""), "Art": ("Art(fanart)", ""), "Year": ("Year", ""),
         "Genre": ("Genre", ",  •  "), "Plot": ("Plot", ""), "Logo": ("Art(clearlogo)", ""),
+        "Rating": ("Rating", "★  "),
     }
     for name, (field, prefix) in fields.items():
         variable = ET.SubElement(theme, "variable", {"name": f"FrameFeature{name}"})
@@ -313,6 +312,12 @@ def apply_playback(xml):
     for control in controls.findall("control"):
         if control.findtext("label") == "$INFO[VideoPlayer.AudioStreamCount]":
             controls.remove(control)
+    default_osd = next(group for group in controls.findall("control[@type='group']")
+                       if group.find("include[@content='Seekbar']") is not None)
+    set_fields(default_osd, {"height": "265"})
+    for group in default_osd.findall("control[@type='grouplist']"):
+        if group.findtext("top") == "120":
+            set_fields(group, {"top": "126", "height": "120"})
     write_xml(tree, path)
 
     path = xml / "Includes_Seekbar.xml"
@@ -331,7 +336,8 @@ def apply_playback(xml):
     tree = read_xml(path)
     buttons = tree.getroot()
     player = buttons.find("include[@name='PlayerButton']")
-    set_fields(player, {"textcolor": "osd_light", "focusedcolor": "focused_text"})
+    set_fields(player, {"width": "68", "height": "68", "textoffsetx": "8", "textoffsety": "9",
+                        "textcolor": "osd_light", "focusedcolor": "focused_text"})
     for tag in ("texturefocus", "alttexturefocus"):
         texture = player.find(tag)
         texture.text = "masks/focus.png"

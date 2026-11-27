@@ -204,9 +204,15 @@ def verify_home():
     wait_for("Home renders the featured title panel",
              lambda: rpc("XBMC.GetInfoBooleans", booleans=[feature])[feature])
     screenshot("home-feature")
-    press("down")
-    wait_for("Down from the top menu focuses the first movie card",
+    press("right")
+    wait_for("Right from the side menu focuses the first movie card",
              lambda: focused_card(19011, "The Shawshank Redemption"))
+    panel = "Control.IsVisible(8985)"
+    wait_for("the side menu hides while browsing cards",
+             lambda: not rpc("XBMC.GetInfoBooleans", booleans=[panel])[panel])
+    rating = "Control.GetLabel(8984)"
+    wait_for("the focused title's Kodi rating is present in the hero",
+             lambda: "8.4" in rpc("XBMC.GetInfoLabels", labels=[rating])[rating])
     fanart = "Control.IsVisible(8983)"
     wait_for("the focused movie's fanart is shown in the hero",
              lambda: rpc("XBMC.GetInfoBooleans", booleans=[fanart])[fanart])
@@ -238,7 +244,7 @@ def verify_home():
 
 def verify_search_and_settings():
     press("back")
-    wait_for("Home top menu regains focus", lambda: has_focus(9000))
+    wait_for("Home side menu regains focus", lambda: has_focus(9000))
     press("up")
     wait_for("Home shortcuts receive focus", lambda: any(has_focus(control) for control in (801, 802, 803)))
     for _ in range(2):
