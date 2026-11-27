@@ -288,4 +288,82 @@
       </control>
     </control>
   </include>
+  <include name="FramePlaybackTrackRow">
+    <param name="focused">false</param>
+    <definition>
+      <control type="image">
+        <left>8</left>
+        <width>502</width>
+        <height>52</height>
+        <texture border="22" colordiffuse="frame_selection">masks/focus-long.png</texture>
+        <visible>$PARAM[focused] + Control.HasFocus($PARAM[id])</visible>
+      </control>
+      <control type="label">
+        <left>25</left>
+        <width>466</width>
+        <height>52</height>
+        <aligny>center</aligny>
+        <font>FrameTVLabel</font>
+        <textcolor>unfocused_text</textcolor>
+        <label>$INFO[ListItem.Label]</label>
+        <scroll>false</scroll>
+      </control>
+    </definition>
+  </include>
+  <include name="FramePlaybackTracks">
+    <definition>
+      <control type="group">
+        <right>64</right>
+        <bottom>290</bottom>
+        <width>542</width>
+        <height>336</height>
+        <visible>[$PARAM[available]] + [Control.HasFocus($PARAM[button]) | Control.HasFocus($PARAM[id]) | String.IsEqual(Window(VideoOSD).Property(FrameTrackPicker),$PARAM[kind])]</visible>
+        <animation effect="fade" start="0" end="100" time="95" reversible="false">Visible</animation>
+        <control type="image">
+          <width>542</width>
+          <height>336</height>
+          <texture border="24" colordiffuse="frame_panel">masks/focus-long.png</texture>
+        </control>
+        <control type="label">
+          <left>28</left>
+          <top>12</top>
+          <width>486</width>
+          <height>42</height>
+          <aligny>center</aligny>
+          <font>FrameTVLabel</font>
+          <textcolor>unfocused_text</textcolor>
+          <label>$PARAM[title]</label>
+        </control>
+        <control type="list" id="$PARAM[id]">
+          <left>12</left>
+          <top>62</top>
+          <width>518</width>
+          <height>260</height>
+          <orientation>vertical</orientation>
+          <scrolltime>100</scrolltime>
+          <onup>$PARAM[id]</onup>
+          <ondown>$PARAM[id]</ondown>
+          <onback>ClearProperty(FrameTrackPicker)</onback>
+          <onback>$PARAM[button]</onback>
+          <onleft>ClearProperty(FrameTrackPicker)</onleft>
+          <onleft>$PARAM[button]</onleft>
+          <onright>ClearProperty(FrameTrackPicker)</onright>
+          <onright>$PARAM[button]</onright>
+          <onclick>RunPlugin(plugin://script.frame.nimbus/?kind=$PARAM[kind]&amp;select=$INFO[Container($PARAM[id]).ListItem.Property(FrameTrackIndex)])</onclick>
+          <itemlayout width="518" height="52">
+            <include content="FramePlaybackTrackRow">
+              <param name="id" value="$PARAM[id]" />
+            </include>
+          </itemlayout>
+          <focusedlayout width="518" height="52">
+            <include content="FramePlaybackTrackRow">
+              <param name="id" value="$PARAM[id]" />
+              <param name="focused" value="true" />
+            </include>
+          </focusedlayout>
+          <content target="video">plugin://script.frame.nimbus/?kind=$PARAM[kind]&amp;revision=$INFO[Window(VideoOSD).Property(FrameTracksRevision)]</content>
+        </control>
+      </control>
+    </definition>
+  </include>
 </includes>
