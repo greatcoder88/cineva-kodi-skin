@@ -510,7 +510,7 @@ class HomeHeroActionTests(unittest.TestCase):
                     (outline.findtext("left"), outline.findtext("top"), outline.findtext("width"),
                      outline.findtext("height"), outline.findtext("font"), outline.findtext("textcolor"),
                      outline.findtext("label"), outline.findtext("visible")),
-                    ("0", "172", "900", "56", "font13", "white",
+                    ("0", "172", "760", "56", "font13", "white",
                      f"$INFO[Container({container_id}).ListItem.PlotOutline]",
                      f"!String.IsEmpty(Container({container_id}).ListItem.PlotOutline)"),
                 )
@@ -518,7 +518,7 @@ class HomeHeroActionTests(unittest.TestCase):
                     (plot.findtext("left"), plot.findtext("top"), plot.findtext("width"),
                      plot.findtext("height"), plot.findtext("font"), plot.findtext("textcolor"),
                      plot.findtext("label"), plot.findtext("visible")),
-                    ("0", "172", "900", "56", "font13", "white",
+                    ("0", "172", "760", "56", "font13", "white",
                      f"$INFO[Container({container_id}).ListItem.Plot]",
                      f"String.IsEmpty(Container({container_id}).ListItem.PlotOutline) + "
                      f"!String.IsEmpty(Container({container_id}).ListItem.Plot)"),
