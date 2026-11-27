@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "skin.cineva-0.5.64.zip"
-PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.62.zip"
+ARCHIVE = ROOT / "skin.cineva-0.5.65.zip"
+PREVIOUS_ARCHIVE = ROOT / "skin.cineva-0.5.64.zip"
 LEGACY_ARCHIVE = ROOT / "skin.cineva-0.5.58.zip"
 
 # Kodi adds WINDOW_HOME (10000) to every custom window XML id.
@@ -970,6 +970,24 @@ def update_xml(data, path):
         ]
         if len(hero_artwork) != 4:
             raise SystemExit(f"Home.xml must have four dynamic fanart layers, found {len(hero_artwork)}")
+        def add_visible_fade(control):
+            # A row switch changes the active hero as one composition. Fade the
+            # artwork and its matching metadata group together, without adding
+            # continuous animations or changing the D-pad focus lifecycle.
+            for old_animation in list(control.findall("animation")):
+                if (old_animation.get("effect") == "fade"
+                        and (old_animation.text or "").strip() == "Visible"):
+                    control.remove(old_animation)
+            fade = ET.SubElement(
+                control, "animation",
+                {"effect": "fade", "start": "0", "end": "100",
+                 "time": "220", "tween": "sine"},
+            )
+            fade.text = "Visible"
+
+        for background in hero_artwork:
+            add_visible_fade(background)
+
         poster_layers = []
         row1_exclusions = (9002, 9113, 9114, 9161, 9003, 9115, 9116, 9162, 9004, 9117, 9118, 9163)
         for row_index, container_id in enumerate((9001, 9002, 9003, 9004), start=1):
@@ -1006,6 +1024,8 @@ def update_xml(data, path):
             ):
                 set_child_text(vignette, tag, value)
             set_child_text(vignette, "aspectratio", "scale")
+            add_visible_fade(poster)
+            add_visible_fade(vignette)
             poster_layers.extend((poster, vignette))
         insert_at = list(controls).index(hero_artwork[-1]) + 1
         for layer in poster_layers:
@@ -1398,6 +1418,15 @@ def update_xml(data, path):
         row1_exclusions = (9002, 9113, 9114, 9161, 9003, 9115, 9116, 9162, 9004, 9117, 9118, 9163)
         set_child_text(home_default_hero_group, "visible",
                        " + ".join(f"!Control.HasFocus({control_id})" for control_id in row1_exclusions))
+        hero_groups = [
+            group for group in controls.findall("control")
+            if group.get("type") == "group"
+            and group.findtext("control/label", "").startswith("$INFO[Container(")
+        ]
+        if len(hero_groups) != 4:
+            raise SystemExit(f"Home.xml must contain four dynamic hero metadata groups, found {len(hero_groups)}")
+        for hero_group in hero_groups:
+            add_visible_fade(hero_group)
         # Keep the cinematic hero pinned while the four Home rails scroll as one catalogue.
         # Each row is a single grouplist child so its non-focusable heading cannot
         # intercept Up from the nested fixedlist before the shelf's explicit route.
@@ -2820,16 +2849,16 @@ def update_xml(data, path):
 
 
 def main():
-    # Start the new distributable version from the immediately previous package.
-    # Keep the older archive as a recovery fallback for shallow checkouts.
-    # Subsequent builds transform 0.5.64 in place and remain byte-stable.
+    # Start the new distributable version from 0.5.64 when present; shallow
+    # repository checkouts can recover from the checked-in 0.5.58 migration base.
+    # Subsequent builds transform 0.5.65 in place and remain byte-stable.
     if not ARCHIVE.exists():
         source_archive = PREVIOUS_ARCHIVE if PREVIOUS_ARCHIVE.is_file() else LEGACY_ARCHIVE
         if source_archive.is_file():
             ARCHIVE.write_bytes(source_archive.read_bytes())
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size == 0:
         raise SystemExit(
-            "Missing skin.cineva-0.5.64.zip and migration sources skin.cineva-0.5.62.zip / "
+            "Missing skin.cineva-0.5.65.zip and migration sources skin.cineva-0.5.64.zip / "
             "skin.cineva-0.5.58.zip"
         )
     fd, tmp_name = tempfile.mkstemp(prefix="cineva-skin-", suffix=".zip", dir=str(ARCHIVE.parent))
@@ -2928,9 +2957,9 @@ def main():
                     )
                     if helper_dependency is None:
                         raise SystemExit("Skin manifest is missing its script.cineva.widgets dependency")
-                    if addon_root.get("version") != "0.5.64":
-                        addon_root.set("version", "0.5.64")
-                        changed.append(info.filename + " (bump skin version to 0.5.64)")
+                    if addon_root.get("version") != "0.5.65":
+                        addon_root.set("version", "0.5.65")
+                        changed.append(info.filename + " (bump skin version to 0.5.65)")
                     if helper_dependency.get("version") != "0.1.8":
                         helper_dependency.set("version", "0.1.8")
                         changed.append(info.filename + " (require widget manager 0.1.8)")
@@ -2944,6 +2973,9 @@ def main():
                         data = changelog.encode("utf-8")
                         changed.append(info.filename + " (refresh 0.5.58 release notes)")
                     release_entries = [
+                        ("0.5.65", "0.5.65 - Smooth Home hero changes between poster rails
+- Fade each selected row's fanart, fallback poster and hero metadata as one 220 ms composition.
+- Keep the existing focus, playback and shelf navigation targets unchanged."),
                         ("0.5.64", "0.5.64 - Add Rotten Tomatoes critics ratings to Home heroes\n- Render the Tomatometer critics score alongside IMDb when the selected provider item supplies Kodi rating metadata.\n- Prefer an explicit Rating.tomatoes.Percent property; fall back to Kodi's normalized 0-10 Tomatometer rating without calling external rating APIs."),
                         ("0.5.63", "0.5.63 - Simplify the focused Home poster state\n- Remove the detached red underline below selected posters; the crimson artwork border and restrained zoom remain the focus cue."),
                         ("0.5.62", "0.5.62 - Restore the Home shelf viewport after top-level navigation\n- Bring the first configured Home shelf back into view before opening Movies, TV Shows, Search or Settings.\n- Restore the activated navigation tab before leaving so returning to Home keeps the hero and poster rail aligned."),
