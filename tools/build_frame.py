@@ -29,6 +29,9 @@ def package_addon(archive, root, output, addon_id, name):
         original = path.read_bytes()
         contents = original.replace(b"script.nimbus.helper", HELPER_ID.encode())
         contents = contents.replace(b"skin.nimbus", SKIN_ID.encode())
+        if addon_id == SKIN_ID and path.name in {"Includes_Home.xml", "SkinSettings.xml"}:
+            # Kodi registers the custom welcome window relative to Home (10000).
+            contents = contents.replace(b"ActivateWindow(1112)", b"ActivateWindow(11112)")
         if path == manifest_path:
             contents = contents.replace(b'name="' + upstream_name + b'"',
                                         b'name="' + name.encode() + b'"', 1)

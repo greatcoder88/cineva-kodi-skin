@@ -141,11 +141,13 @@ def verify_home():
         rpc("Addons.SetAddonEnabled", addonid=addon_id, enabled=True)
     rpc("Settings.SetSettingValue", setting="lookandfeel.skin", value="skin.frame")
 
-    def selected_skin():
+    def activation_prompt():
         state = gui()
-        return state if state["skin"]["id"] == "skin.frame" else None
+        window = state["currentwindow"]["id"]
+        if state["skin"]["id"] == "skin.frame" and window in {10100, 11112}:
+            return state
 
-    state = wait_for("Kodi activates the packaged Frame skin", selected_skin, timeout=80)
+    state = wait_for("Kodi activates Frame and opens its first prompt", activation_prompt, timeout=30)
     if state["currentwindow"]["id"] == 10100:
         if state["currentcontrol"]["label"].lower() != "yes":
             press("Left")
@@ -192,6 +194,10 @@ def main():
         try:
             verify_home()
         except Exception:
+            try:
+                print(f"Final Kodi GUI state: {gui()}", flush=True)
+            except (OSError, RuntimeError) as exc:
+                print(f"Could not read final Kodi GUI state: {exc}", flush=True)
             subprocess.run(["import", "-window", "root", str(ARTIFACTS / "failure.png")], check=False)
             raise
         finally:
