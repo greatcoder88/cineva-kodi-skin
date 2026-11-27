@@ -23,7 +23,7 @@ NIMBUS_REPO = "ivarbrandt/skin.nimbus"
 NIMBUS_SHA = "8b5071b8cd0db3a8e813eb00e9a821d3efad2454"
 HELPER_REPO = "ivarbrandt/script.nimbus.helper"
 HELPER_SHA = "e42d2ffffbccaa58386ef2e4a054049e5fcb7664"
-SKIN_VERSION = "0.6.9"
+SKIN_VERSION = "0.7.0"
 BRIDGE_VERSION = "0.1.0"
 OUT_DIR = ROOT / "dist" / "nimbus-foundation"
 NOTICE = """CINÉVA Nimbus foundation
@@ -618,6 +618,57 @@ def apply_cineva_home_layout(skin_root: Path) -> None:
     includes_path.write_text(includes_source, encoding="utf-8", newline="")
 
 
+
+def patch_nimbus_parameterized_focus_expressions(skin_root: Path) -> None:
+    """Replace Kodi 22-invalid Control.HasFocus(PARAM) with container/group focus."""
+    xml_root = skin_root / "xml"
+    arrows = xml_root / "Includes.xml"
+    text = arrows.read_text(encoding="utf-8")
+    arrow_patches = (
+        (
+            '<visible allowhiddenfocus="true">Container($PARAM[list_id]).HasPrevious + [Control.HasFocus($PARAM[list_id]) | Control.HasFocus($PARAM[list_id]500)]</visible>',
+            '<visible allowhiddenfocus="true">Container($PARAM[list_id]).HasPrevious + ControlGroup(2000).HasFocus</visible>',
+        ),
+        (
+            '<visible allowhiddenfocus="true">Container($PARAM[list_id]).HasNext + [Control.HasFocus($PARAM[list_id]) | Control.HasFocus($PARAM[list_id]501)]</visible>',
+            '<visible allowhiddenfocus="true">Container($PARAM[list_id]).HasNext + ControlGroup(2000).HasFocus</visible>',
+        ),
+    )
+    for old, new in arrow_patches:
+        count = text.count(old)
+        if count != 1:
+            raise RuntimeError(
+                f"Includes.xml: expected one widget-arrow focus expression, found {count}"
+            )
+        text = text.replace(old, new)
+    arrows.write_text(text, encoding="utf-8", newline="")
+    ET.parse(arrows)
+
+    replaced = 0
+    for path in xml_root.glob("*.xml"):
+        text = path.read_text(encoding="utf-8")
+        count = text.count("Control.HasFocus($PARAM[list_id])")
+        if count:
+            text = text.replace(
+                "Control.HasFocus($PARAM[list_id])",
+                "Container($PARAM[list_id]).HasFocus",
+            )
+            replaced += count
+            path.write_text(text, encoding="utf-8", newline="")
+        if (
+            "Control.HasFocus($PARAM[list_id])" in text
+            or "Control.HasFocus($PARAM[list_id]500)" in text
+            or "Control.HasFocus($PARAM[list_id]501)" in text
+        ):
+            raise RuntimeError(f"{path.name}: unresolved parameterized Control.HasFocus remains")
+        ET.parse(path)
+    if replaced < 100:
+        raise RuntimeError(
+            f"Expected at least 100 Kodi 22 focus expressions to rewrite, found {replaced}"
+        )
+
+
+
 def write_default_skin_includes(skin_root: Path) -> None:
     """Ship empty Nimbus menu/widget includes before Kodi parses Includes.xml."""
     xml_root = skin_root / "xml"
@@ -903,6 +954,7 @@ def build(output_dir: Path = OUT_DIR, fetcher=fetch_archive) -> dict[str, Path]:
         )
         patch_nimbus_focus_include_ids(skin_root)
         patch_nimbus_include_list_id_defaults(skin_root)
+        patch_nimbus_parameterized_focus_expressions(skin_root)
         patch_skin_manifest(skin_root)
         remove_api_controls(skin_root)
         remove_unsupported_startup_checks(skin_root)

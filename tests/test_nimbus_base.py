@@ -213,7 +213,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 self.assertIn("skin.cineva/NOTICE.txt", names)
                 manifest = archive.read("skin.cineva/addon.xml").decode()
                 self.assertIn('id="skin.cineva"', manifest)
-                self.assertIn('version="0.6.9"', manifest)
+                self.assertIn('version="0.7.0"', manifest)
                 self.assertIn('addon="xbmc.gui" version="5.18.0"', manifest)
                 self.assertIn('addon="script.cineva.nimbus" version="0.1.0"', manifest)
                 self.assertNotIn("script.nimbus.helper", manifest)
@@ -297,44 +297,24 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                         )
 
 
-    def test_parameterized_focus_conditions_are_preserved_in_valid_include_definitions(self):
+    def test_parameterized_focus_conditions_use_kodi22_container_focus(self):
         with tempfile.TemporaryDirectory() as temp:
             paths = self.build_fixture(Path(temp) / "dist")
             with zipfile.ZipFile(paths["skin"]) as archive:
-                preserved = 0
+                rewritten = 0
                 for filename in archive.namelist():
                     if not filename.endswith(".xml"):
                         continue
-                    root = ET.fromstring(archive.read(filename))
-                    for include in root.findall(".//include[@name]"):
-                        block = ET.tostring(include, encoding="unicode")
-                        count = block.count("Control.HasFocus($PARAM[list_id])")
-                        if not count:
-                            continue
-                        list_params = [
-                            param for param in include.findall("param")
-                            if param.get("name") == "list_id"
-                        ]
-                        self.assertEqual(
-                            len(list_params), 1, f"{filename}:{include.get('name')}"
-                        )
-                        self.assertTrue(
-                            list_params[0].get("default"),
-                            f"{filename}:{include.get('name')} missing list_id default",
-                        )
-                        self.assertIsNotNone(
-                            include.find("definition"),
-                            f"{filename}:{include.get('name')} body is not wrapped",
-                        )
-                        self.assertFalse(
-                            [
-                                child for child in include
-                                if child.tag not in ("param", "definition")
-                            ],
-                            f"{filename}:{include.get('name')} has content outside definition",
-                        )
-                        preserved += count
-                self.assertGreater(preserved, 0)
+                    content = archive.read(filename).decode("utf-8")
+                    self.assertNotIn("Control.HasFocus($PARAM[list_id])", content, filename)
+                    self.assertNotIn("Control.HasFocus($PARAM[list_id]500)", content, filename)
+                    self.assertNotIn("Control.HasFocus($PARAM[list_id]501)", content, filename)
+                    rewritten += content.count("Container($PARAM[list_id]).HasFocus")
+                self.assertGreater(rewritten, 100)
+
+                includes_text = archive.read("skin.cineva/xml/Includes.xml").decode("utf-8")
+                self.assertIn("Container($PARAM[list_id]).HasPrevious + ControlGroup(2000).HasFocus", includes_text)
+                self.assertIn("Container($PARAM[list_id]).HasNext + ControlGroup(2000).HasFocus", includes_text)
 
                 animations = ET.fromstring(
                     archive.read("skin.cineva/xml/Includes_Animations.xml")
@@ -344,7 +324,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 )
                 self.assertEqual(
                     widget_visibility.get("condition"),
-                    "!Control.HasFocus($PARAM[list_id]) + ControlGroup(2000).HasFocus",
+                    "!Container($PARAM[list_id]).HasFocus + ControlGroup(2000).HasFocus",
                 )
                 expected_home_focus = {
                     "Includes_HomeLayouts.xml": 4,
@@ -358,7 +338,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                     )
                     dynamic = [
                         animation for animation in root.findall(".//animation")
-                        if "Control.HasFocus($PARAM[list_id])"
+                        if "Container($PARAM[list_id]).HasFocus"
                         in animation.get("condition", "")
                     ]
                     self.assertEqual(len(dynamic), expected, filename)
@@ -561,8 +541,8 @@ class NimbusWorkflowPathTests(unittest.TestCase):
     def test_workflow_uses_the_builder_skin_version(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
         source = workflow.read_text(encoding="utf-8")
-        self.assertIn("skin.cineva-0.6.9-nimbus.zip", source)
-        self.assertIn('manifest.get("version") == "0.6.9"', source)
+        self.assertIn("skin.cineva-0.7.0-nimbus.zip", source)
+        self.assertIn('manifest.get("version") == "0.7.0"', source)
 
     def test_first_boot_reads_kodis_actual_flatpak_log_location(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
