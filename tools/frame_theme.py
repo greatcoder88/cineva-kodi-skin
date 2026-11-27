@@ -78,7 +78,7 @@ def apply_typography(xml):
             ("FrameHeroTitle", "Inter-Bold.ttf" if inter else title, "61"),
             ("FrameTVLabel", "Inter-SemiBold.ttf" if inter else label, "27"),
             ("FrameBody", label, "29"),
-            ("FrameTab", "Inter-SemiBold.ttf" if inter else label, "23"),
+            ("FrameTab", "Inter-SemiBold.ttf" if inter else label, "26"),
         )
         for name, face, size in fonts:
             set_fields(ET.SubElement(fontset, "font"), {"name": name, "filename": face, "size": size})
@@ -104,12 +104,18 @@ def apply_home(xml):
     menu_group.insert(0, ET.Element("include"))
     menu_group[0].text = "FrameTopBar"
     set_fields(menu, {
-        "left": "404", "top": "22", "width": "1184", "height": "70", "orientation": "horizontal",
-        "movement": "7", "onleft": "9000", "onright": "9000", "onup": "700",
+        "left": "456", "top": "22", "width": "1008", "height": "70", "orientation": "horizontal",
+        "movement": "5", "onleft": "9000", "onright": "9000", "onup": "700",
         "ondown": "SetFocus($INFO[Container(9000).ListItem.Property(menu_id)])", "scrolltime": "180",
     })
     menu.remove(menu.find("include[@content='List']"))
     ET.SubElement(menu, "include").text = "FrameTopMenuItems"
+    contents = menu.find("content")
+    trailing_ids = {"music", "musicvideos", "livetv", "radio", "pictures", "weather"}
+    for item in contents.findall("item"):
+        if item.findtext("property[@name='id']") in trailing_ids:
+            contents.remove(item)
+            contents.append(item)
     set_fields(shortcut_group, {"left": "46", "top": "5"})
     set_fields(shortcuts, {"onup": "9000", "ondown": "9000", "onright": "9000", "height": "95"})
 
@@ -120,7 +126,7 @@ def apply_home(xml):
     animation = ET.SubElement(widgets, "animation", {
         "type": "Conditional", "condition": "ControlGroup(2000).HasFocus", "reversible": "true",
     })
-    ET.SubElement(animation, "effect", {"type": "slide", "start": "0,0", "end": "0,-174", "time": "170"})
+    ET.SubElement(animation, "effect", {"type": "slide", "start": "0,0", "end": "0,-108", "time": "170"})
 
     content = next(group for group in root.iter("control") if widgets in group)
     content.insert(list(content).index(widgets), ET.Element("include"))

@@ -118,10 +118,10 @@
     </control>
   </include>
   <include name="FrameTopMenuItems">
-    <itemlayout width="148" height="66">
+    <itemlayout width="168" height="66">
       <control type="label">
         <left>2</left>
-        <width>144</width>
+        <width>164</width>
         <height>60</height>
         <font>FrameTab</font>
         <align>center</align>
@@ -130,14 +130,13 @@
         <label>$INFO[ListItem.Label]</label>
       </control>
     </itemlayout>
-    <focusedlayout width="148" height="66">
+    <focusedlayout width="168" height="66">
       <control type="image">
         <left>6</left>
         <top>6</top>
-        <width>136</width>
+        <width>156</width>
         <height>50</height>
         <texture border="25" colordiffuse="button_focus2">masks/focus.png</texture>
-        <visible>Control.HasFocus(9000)</visible>
       </control>
       <control type="label">
         <left>2</left>
@@ -187,7 +186,7 @@
       </control>
       <control type="group">
         <left>42</left>
-        <top>213</top>
+        <top>258</top>
         <control type="image">
           <top>16</top>
           <width>630</width>
@@ -198,7 +197,7 @@
         </control>
         <control type="textbox">
           <width>1040</width>
-          <height>166</height>
+          <height>148</height>
           <font>FrameHeroTitle</font>
           <aligny>bottom</aligny>
           <textcolor>unfocused_text</textcolor>
@@ -207,7 +206,7 @@
           <visible>!$EXP[FrameFeatureHasLogo]</visible>
         </control>
         <control type="label">
-          <top>177</top>
+          <top>157</top>
           <width>720</width>
           <height>39</height>
           <font>FrameTVLabel</font>
@@ -216,7 +215,7 @@
           <label>$VAR[FrameFeatureYear]$VAR[FrameFeatureGenre]</label>
         </control>
         <control type="textbox">
-          <top>225</top>
+          <top>199</top>
           <width>925</width>
           <height>140</height>
           <font>FrameBody</font>
