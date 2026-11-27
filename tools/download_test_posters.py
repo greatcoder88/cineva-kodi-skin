@@ -103,11 +103,24 @@ def save_artwork(url, target, width, height):
     return convert_and_validate(raw, target, width, height)
 
 
+def resolve_clearlogo_font():
+    """Prefer the legacy Poppins face, then Nimbus's bundled Inter fonts."""
+    candidates = (
+        pathlib.Path("skin.cineva/fonts/Poppins-SemiBold.ttf"),
+        pathlib.Path("skin.cineva/fonts/Inter-SemiBold.ttf"),
+        pathlib.Path("skin.cineva/fonts/Inter-Bold.ttf"),
+    )
+    return next((font for font in candidates if font.is_file()), None)
+
+
 def create_clearlogo(output, filename, title, point_size):
     """Create deterministic transparent title art for the GUI fixture."""
-    font = pathlib.Path("skin.cineva/fonts/Poppins-SemiBold.ttf")
-    if not font.is_file():
-        raise SystemExit("CINÉVA Poppins font is required to generate clearlogo fixtures")
+    font = resolve_clearlogo_font()
+    if font is None:
+        raise SystemExit(
+            "CINÉVA requires Poppins-SemiBold.ttf or a bundled Nimbus Inter font "
+            "to generate clearlogo fixtures"
+        )
     target = output / filename
     subprocess.run([
         "convert", "-size", "1220x84", "xc:none",
