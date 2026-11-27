@@ -49,6 +49,8 @@ NIMBUS_FILES = {
       <include name="WidgetGroupListCommon"/>
       <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(54)">Conditional</animation>
       <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(55)">Conditional</animation>
+      <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(500)">Conditional</animation>
+      <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(501)">Conditional</animation>
     </includes>""",
     "xml/Startup.xml": "<window><onload>RunScript(script.nimbus.helper,mode=refresh_search_history)</onload></window>",
     "xml/SkinSettings.xml": """<window><controls>
@@ -237,7 +239,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 widget_visibility = animations.find('.//include[@name="WidgetVisibilityAnimations"]/animation')
                 self.assertEqual(widget_visibility.get("condition"), "ControlGroup(2000).HasFocus")
                 expected_home_focus = {
-                    "Includes_HomeLayouts.xml": 2,
+                    "Includes_HomeLayouts.xml": 4,
                     "View_51_PosterFlow.xml": 1,
                     "View_54_Flix.xml": 1,
                     "View_55_FlixScape.xml": 2,

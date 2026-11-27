@@ -398,7 +398,7 @@ def patch_nimbus_animation_param_conditions(skin_root: Path) -> None:
         re.S,
     )
     expected_dynamic = (
-        ("Includes_HomeLayouts.xml", 2),
+        ("Includes_HomeLayouts.xml", 4),
         ("View_51_PosterFlow.xml", 1),
         ("View_54_Flix.xml", 1),
         ("View_55_FlixScape.xml", 2),
