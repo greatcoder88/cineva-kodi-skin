@@ -194,54 +194,54 @@ def add_list_id_to_include_calls(
     changed = 0
 
     plain_pattern = re.compile(
-        r"<include>\\s*" + re.escape(include_name) + r"\\s*</include>"
+        r"<include>\s*" + re.escape(include_name) + r"\s*</include>"
     )
 
     def replace_plain(match: re.Match[str]) -> str:
         nonlocal changed
         start = match.start()
-        line_start = text.rfind("\\n", 0, start) + 1
+        line_start = text.rfind("\n", 0, start) + 1
         indent = text[line_start:start]
-        param_indent = indent + "\\t"
+        param_indent = indent + "\t"
         changed += 1
         return (
-            f'<include content="{include_name}">\\n'
-            f'{param_indent}<param name="list_id" value="{list_id}" />\\n'
+            f'<include content="{include_name}">\n'
+            f'{param_indent}<param name="list_id" value="{list_id}" />\n'
             f'{indent}</include>'
         )
 
     text = plain_pattern.sub(replace_plain, text)
     content_pattern = re.compile(
-        r'<include(?P<attrs>[^>]*\\bcontent=["\\\']'
+        r'<include(?P<attrs>[^>]*\bcontent="'
         + re.escape(include_name)
-        + r'["\\\'][^>]*)>'
-        r'(?P<body>(?:\\s*<param\\b[^>]*/>\\s*)*)</include>',
+        + r'"[^>]*)>'
+        r'(?P<body>(?:\s*<param\b[^>]*/>\s*)*)</include>',
         re.S,
     )
 
     def replace_content(match: re.Match[str]) -> str:
         nonlocal changed
         body = match.group("body")
-        if re.search(r'<param\\s+name=["\\\']list_id["\\\']', body):
+        if re.search(r'<param\s+name="list_id"', body):
             return match.group(0)
         for old_name, new_name in rename_params:
             body = body.replace(f'name="{old_name}"', f'name="{new_name}"')
         position = body.find("<param")
         if position < 0:
             start = match.start()
-            line_start = text.rfind("\\n", 0, start) + 1
+            line_start = text.rfind("\n", 0, start) + 1
             indent = text[line_start:start]
-            param_indent = indent + "\\t"
+            param_indent = indent + "\t"
             body = (
-                f"\\n{param_indent}<param name=\"list_id\" value=\"{list_id}\" />"
-                f"\\n{indent}"
+                f"\n{param_indent}<param name=\"list_id\" value=\"{list_id}\" />"
+                f"\n{indent}"
             )
         else:
-            param_line_start = body.rfind("\\n", 0, position) + 1
+            param_line_start = body.rfind("\n", 0, position) + 1
             param_indent = body[param_line_start:position]
             body = (
                 body[:position]
-                + f'<param name="list_id" value="{list_id}" />\\n{param_indent}'
+                + f'<param name="list_id" value="{list_id}" />\n{param_indent}'
                 + body[position:]
             )
         changed += 1
@@ -274,7 +274,6 @@ def patch_nimbus_focus_include_ids(skin_root: Path) -> None:
         if not path.is_file():
             raise RuntimeError(f"Nimbus source is missing focus-layout file: {filename}")
         add_list_id_to_include_calls(path, include_name, list_id, expected, renames)
-
 
 
 def write_default_skin_includes(skin_root: Path) -> None:
