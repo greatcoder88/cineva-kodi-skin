@@ -148,6 +148,13 @@ def feature_metadata(theme):
     source_visible = " | ".join([focused_card, *section_labels])
     visibility = ET.SubElement(theme, "expression", {"name": "FrameFeatureVisible"})
     visibility.text = f"!Player.HasMedia + !String.IsEqual(Skin.String(HomeArtworkChoice),2) + [{source_visible}]"
+    art_sources = ["[ControlGroup(2000).HasFocus + !String.IsEmpty(ListItem.Art(fanart))]"]
+    art_sources.extend(
+        f"[!ControlGroup(2000).HasFocus + String.IsEqual(Container(9000).ListItem.Property(id),{section}) + "
+        f"!String.IsEmpty(Container({container}).ListItem.Art(fanart))]"
+        for section, container in sections
+    )
+    ET.SubElement(theme, "expression", {"name": "FrameFeatureHasFanart"}).text = " | ".join(art_sources)
     logo_sources = [f"[{focused_card} + !String.IsEmpty(ListItem.Art(clearlogo))]"]
     logo_sources.extend(
         f"[!ControlGroup(2000).HasFocus + String.IsEqual(Container(9000).ListItem.Property(id),{section}) + "
@@ -162,19 +169,9 @@ def feature_metadata(theme):
     }
     for name, (field, prefix) in fields.items():
         variable = ET.SubElement(theme, "variable", {"name": f"FrameFeature{name}"})
-        condition = "ControlGroup(2000).HasFocus"
-        if name == "Art":
-            condition += " + !String.IsEmpty(ListItem.Art(fanart))"
-        ET.SubElement(variable, "value", {"condition": condition}).text = (
+        ET.SubElement(variable, "value", {"condition": "ControlGroup(2000).HasFocus"}).text = (
             f"$INFO[ListItem.{field}{prefix}]"
         )
-        if name == "Art":
-            ET.SubElement(variable, "value", {
-                "condition": "ControlGroup(2000).HasFocus + !String.IsEmpty(ListItem.Art(landscape))",
-            }).text = "$INFO[ListItem.Art(landscape)]"
-            ET.SubElement(variable, "value", {
-                "condition": "ControlGroup(2000).HasFocus + !String.IsEmpty(ListItem.Art(poster))",
-            }).text = "$INFO[ListItem.Art(poster)]"
         for section, container in sections:
             condition = f"String.IsEqual(Container(9000).ListItem.Property(id),{section})"
             ET.SubElement(variable, "value", {"condition": condition}).text = (

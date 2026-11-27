@@ -89,16 +89,24 @@
         <texture colordiffuse="background">colors/white.png</texture>
       </control>
       <control type="image">
+        <visible>!$EXP[FrameFeatureHasFanart]</visible>
         <width>1792</width>
         <height>656</height>
-        <texture diffuse="masks/giant-landscape.png" background="true" fallback="special://skin/resources/fallback.jpg">$VAR[FrameFeatureArt]</texture>
+        <texture diffuse="masks/giant-landscape.png" colordiffuse="primary_content_panel_bg">colors/white.png</texture>
+      </control>
+      <control type="image" id="8983">
+        <width>1792</width>
+        <height>656</height>
+        <texture diffuse="masks/giant-landscape.png" background="true">$VAR[FrameFeatureArt]</texture>
         <aspectratio align="right" aligny="center" scalediffuse="false">scale</aspectratio>
+        <visible>$EXP[FrameFeatureHasFanart]</visible>
         <fadetime>120</fadetime>
       </control>
       <control type="image">
         <width>1792</width>
         <height>656</height>
         <texture>frame/feature-scrim.png</texture>
+        <visible>$EXP[FrameFeatureHasFanart]</visible>
       </control>
       <control type="group">
         <left>42</left>

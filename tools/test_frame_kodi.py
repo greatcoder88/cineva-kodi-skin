@@ -207,6 +207,9 @@ def verify_home():
     press("down")
     wait_for("Down from the top menu focuses the first movie card",
              lambda: focused_card(19011, "The Shawshank Redemption"))
+    fanart = "Control.IsVisible(8983)"
+    wait_for("the focused movie's fanart is shown in the hero",
+             lambda: rpc("XBMC.GetInfoBooleans", booleans=[fanart])[fanart])
     screenshot("home-first-widget")
     press("right")
     wait_for("Right moves to a second movie card", lambda: focused_card(19011, "The Dark Knight"))
@@ -221,6 +224,9 @@ def verify_home():
              lambda: window_id() == 10000 and focused_card(19011, "The Dark Knight"))
     press("down")
     wait_for("Down focuses the second widget row", lambda: focused_card(19012, "Breaking Bad"))
+    wait_for("a title without fanart keeps its hero text and uses a neutral background", lambda: (
+        rpc("XBMC.GetInfoBooleans", booleans=[feature, fanart]) == {feature: True, fanart: False}
+    ))
     screenshot("home-second-widget")
     press("contextmenu")
     wait_for("context action opens Kodi's context menu", lambda: window_id() == 10106)
