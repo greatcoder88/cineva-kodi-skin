@@ -317,7 +317,7 @@
         <bottom>290</bottom>
         <width>542</width>
         <height>336</height>
-        <visible>[$PARAM[available]] + [Control.HasFocus($PARAM[button]) | Control.HasFocus($PARAM[id])]</visible>
+        <visible>[$PARAM[available]] + [Control.HasFocus($PARAM[button]) | Control.HasFocus($PARAM[id]) | String.IsEqual(Window(VideoOSD).Property(FrameTrackPicker),$PARAM[kind])]</visible>
         <animation effect="fade" start="0" end="100" time="95" reversible="false">Visible</animation>
         <control type="image">
           <width>542</width>
@@ -343,11 +343,15 @@
           <scrolltime>100</scrolltime>
           <onup>$PARAM[id]</onup>
           <ondown condition="Container($PARAM[id]).HasNext">$PARAM[id]</ondown>
-          <ondown condition="!Container($PARAM[id]).HasNext">$PARAM[button]</ondown>
-          <onback>$PARAM[button]</onback>
-          <onleft>$PARAM[button]</onleft>
-          <onright>$PARAM[button]</onright>
-          <onclick>RunPlugin(plugin://script.frame.nimbus/?kind=$PARAM[kind]&amp;select=$INFO[ListItem.Property(FrameTrackIndex)])</onclick>
+          <ondown condition="!Container($PARAM[id]).HasNext">SetFocus($PARAM[button])</ondown>
+          <ondown condition="!Container($PARAM[id]).HasNext">ClearProperty(FrameTrackPicker)</ondown>
+          <onback>SetFocus($PARAM[button])</onback>
+          <onback>ClearProperty(FrameTrackPicker)</onback>
+          <onleft>SetFocus($PARAM[button])</onleft>
+          <onleft>ClearProperty(FrameTrackPicker)</onleft>
+          <onright>SetFocus($PARAM[button])</onright>
+          <onright>ClearProperty(FrameTrackPicker)</onright>
+          <onclick>RunPlugin(plugin://script.frame.nimbus/?kind=$PARAM[kind]&amp;select=$INFO[Container($PARAM[id]).ListItem.Property(FrameTrackIndex)])</onclick>
           <itemlayout width="518" height="52">
             <include content="FramePlaybackTrackRow">
               <param name="id" value="$PARAM[id]" />

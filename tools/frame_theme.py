@@ -334,6 +334,7 @@ def apply_playback(xml):
     set_fields(default_osd, {"height": "280"})
     for event in ("onload", "onunload"):
         ET.SubElement(tree.getroot(), event).text = "ClearProperty(FrameTracksRevision)"
+        ET.SubElement(tree.getroot(), event).text = "ClearProperty(FrameTrackPicker)"
     for group in default_osd.findall("control[@type='grouplist']"):
         if group.findtext("top") == "120":
             set_fields(group, {"top": "131", "height": "120"})
@@ -357,8 +358,9 @@ def apply_playback(xml):
                 visible.text = f"[{visible.text}] | {availability}"
             for action in button.findall("onclick"):
                 action.set("condition", f"[{action.get('condition', 'true')}] + !{availability}")
-            ET.SubElement(button, "onclick", {"condition": availability}).text = f"SetFocus({list_id})"
-            ET.SubElement(button, "onup", {"condition": availability}).text = str(list_id)
+            for event in ("onclick", "onup"):
+                ET.SubElement(button, event, {"condition": availability}).text = f"SetProperty(FrameTrackPicker,{kind})"
+                ET.SubElement(button, event, {"condition": availability}).text = f"SetFocus({list_id})"
         picker = ET.SubElement(controls, "include", {"content": "FramePlaybackTracks"})
         for name, value in (("button", button_id), ("id", list_id), ("kind", kind),
                             ("available", availability), ("title", "$LOCALIZE[292]" if kind == "audio" else "$LOCALIZE[287]")):
