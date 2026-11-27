@@ -824,6 +824,8 @@ class NimbusWorkflowPathTests(unittest.TestCase):
         source = workflow.read_text(encoding="utf-8")
         self.assertIn('currentwindow",{}).get("id") in (1112, 11112)', source)
         self.assertIn("window_id == 12002 or (window_id == 10100 and control_label == \"ok\")", source)
+        self.assertIn('before_dialog_confirm_inits = log_text().count("Window Init (DialogConfirm.xml)")', source)
+        self.assertIn('dialog_confirm_inits > before_dialog_confirm_inits', source)
         self.assertIn("Acknowledging Nimbus first-run welcome", source)
         self.assertIn("tools/test-fixtures/plugin.video.pov", source)
         self.assertLess(source.index('cp -a "$POV_FIXTURE"/. "$POV_ADDON"/'), source.index("if ! boot_kodi_once 1; then"))

@@ -481,6 +481,7 @@ jobs:
                   raise SystemExit(f"Nimbus first-run welcome did not focus OK: {state}")
               print("Acknowledging Nimbus first-run welcome and generating default menu/widget includes.")
               before_welcome_home_inits = log_text().count("Window Init (Home.xml)")
+              before_dialog_confirm_inits = log_text().count("Window Init (DialogConfirm.xml)")
               subprocess.run(["xdotool","key","Return"],check=True)
               required_default_includes = [
                   "script-nimbus-main_menu_movies.xml",
@@ -499,12 +500,19 @@ jobs:
               deadline = time.time() + 45
               while time.time() < deadline:
                   state = gui()
+                  dialog_confirm_inits = log_text().count("Window Init (DialogConfirm.xml)")
+                  if dialog_confirm_inits > before_dialog_confirm_inits:
+                      print("Dismissing Nimbus's completed menu/widget setup confirmation.")
+                      subprocess.run(["xdotool","key","Return"],check=True)
+                      before_dialog_confirm_inits = dialog_confirm_inits
+                      time.sleep(0.5)
+                      continue
                   window_id = state.get("currentwindow",{}).get("id")
                   control_label = state.get("currentcontrol",{}).get("label","").strip().lower()
                   if window_id == 12002 or (window_id == 10100 and control_label == "ok"):
                       print("Dismissing Nimbus's completed menu/widget setup confirmation.")
                       subprocess.run(["xdotool","key","Return"],check=True)
-                      time.sleep(0.25)
+                      time.sleep(0.5)
                       continue
                   missing = [
                       name for name in required_default_includes
@@ -557,14 +565,9 @@ jobs:
           def rpc(method, params):
               request = {"jsonrpc": "2.0", "id": 1, "method": method, "params": params}
               with socket.create_connection(("127.0.0.1", 9090), timeout=5) as connection:
-                  connection.sendall((json.dumps(request) + "\n").encode("utf-8"))
-                  response = b""
-                  while b"\n" not in response:
-                      chunk = connection.recv(4096)
-                      if not chunk:
-                          break
-                      response += chunk
-              payload = json.loads(response.split(b"\n", 1)[0].decode("utf-8"))
+                  connection.sendall(json.dumps(request).encode("utf-8"))
+                  response = connection.recv(65536)
+              payload = json.loads(response.decode("utf-8"))
               if "error" in payload:
                   raise SystemExit("Kodi JSON-RPC failed: {}".format(payload["error"]))
               return payload.get("result", {})
