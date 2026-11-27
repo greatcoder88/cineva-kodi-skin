@@ -149,7 +149,10 @@ jobs:
             local attempt="$1"
             local previous_size=""
             local stable_samples=0
-            flatpak run --user tv.kodi.Kodi//beta --standalone > "/tmp/nimbus-firstboot-$attempt.log" 2>&1 &
+            # Force X11: Kodi 22 Flatpak may otherwise select Wayland, leaving
+            # the Xvfb profile with defaults and never initializing Home.
+            flatpak run --user tv.kodi.Kodi//beta --standalone --windowing=x11 \
+              > "/tmp/nimbus-firstboot-$attempt.log" 2>&1 &
             FIRST_PID=$!
             for i in $(seq 1 120); do
               if ! pgrep -x kodi.bin >/dev/null && ! kill -0 "$FIRST_PID" 2>/dev/null; then
@@ -256,7 +259,7 @@ jobs:
           print("Prelaunch Kodi skin setting:", root.find("./setting[@id='lookandfeel.skin']").text)
           PY
           cp "$HOME/.var/app/tv.kodi.Kodi/data/userdata/guisettings.xml" artifacts/guisettings-before-launch.xml
-          nohup setsid -f flatpak run --user tv.kodi.Kodi//beta --standalone </dev/null > /tmp/nimbus-kodi.log 2>&1
+          nohup setsid -f flatpak run --user tv.kodi.Kodi//beta --standalone --windowing=x11 </dev/null > /tmp/nimbus-kodi.log 2>&1
           python - <<'PY'
           import json, socket, time, subprocess, shutil
           from pathlib import Path
