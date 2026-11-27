@@ -164,6 +164,10 @@ jobs:
           tree = ET.parse(path)
           root = tree.getroot()
           values = {
+              # Use Kodi's own startup skin selection path. The existing GUI
+              # workflow proves that this enables a manually staged skin and
+              # lets Kodi resolve its declared dependency before Home loads.
+              "lookandfeel.skin": "skin.cineva",
               "services.webserver": "true",
               "services.webserverport": "8080",
               "services.webserverauthentication": "false",
@@ -188,7 +192,7 @@ jobs:
                   # Kodi's TCP JSON-RPC transport is newline-delimited. Sending
                   # the terminator also avoids leaving a request buffered while
                   # the GUI thread is rebuilding the active skin.
-                  sock.sendall(json.dumps(request).encode() + b"\n")
+                  sock.sendall(json.dumps(request).encode())
                   data = ""
                   deadline = time.time() + response_timeout
                   while time.time() < deadline:
@@ -238,35 +242,11 @@ jobs:
               path = Path.home()/".var/app/tv.kodi.Kodi/data/temp/kodi.log"
               return path.read_text(errors="replace") if path.exists() else ""
 
-          # Re-copy the exact staged files after Kodi's first profile boot.
-          # This forces the Add-on Manager to refresh the just-discovered
-          # local skin and bridge before the settings-based skin switch.
-          addon_root = Path.home()/".var/app/tv.kodi.Kodi/data/addons"
-          stage_root = Path.cwd()/"nimbus-stage"
-          for addon_id in ("script.cineva.nimbus", "skin.cineva"):
-              source = stage_root/addon_id
-              target = addon_root/addon_id
-              if target.exists():
-                  shutil.rmtree(target)
-              shutil.copytree(source, target)
-              print("Refreshed staged Kodi add-on:", addon_id)
-
-          details = rpc_retry("Addons.GetAddonDetails", {
-              "addonid":"skin.cineva", "properties":["enabled","version"]
-          })
-          print("CINÉVA add-on before selection:", details)
-          enabled = rpc_retry("Addons.SetAddonEnabled", {
-              "addonid":"skin.cineva", "enabled":True
-          })
-          print("CINÉVA Addons.SetAddonEnabled result:", enabled)
-
-          before_log = log_text()
-          before_loads = before_log.count("load skin from:")
-          result = rpc_retry("Settings.SetSettingValue", {
-              "setting":"lookandfeel.skin", "value":"skin.cineva"
-          })
-          print("Kodi skin switch result:", result)
-
+          # Kodi's startup selection in guisettings.xml is the proven way to
+          # activate a manually staged skin. Do not try to enable a skin add-on
+          # through Addons.SetAddonEnabled: Kodi returns OK while leaving its
+          # enabled flag false, and Settings.SetSettingValue alone only changes
+          # the selected id without completing the add-on activation.
           state = None
           last_gui_error = None
           deadline = time.time() + 120
@@ -276,30 +256,28 @@ jobs:
                   state = gui()
                   last_gui_error = None
                   logs = log_text()
-                  loaded_cineva = (
-                      logs.count("load skin from:") > before_loads
-                      and "skin.cineva" in logs
+                  loaded_cineva = any(
+                      "load skin from:" in line and "/skin.cineva/" in line
+                      for line in logs.splitlines()
                   )
-                  if loaded_cineva and (
-                      state.get("currentwindow",{}).get("id") == 10100
-                      or skin_id(state) == "skin.cineva"
-                  ):
+                  if loaded_cineva and skin_id(state) == "skin.cineva":
                       break
               except Exception as exc:
-                  # Kodi may close JSON-RPC while the new skin is being parsed.
-                  # Retry the connection instead of failing on the first reload gap.
                   last_gui_error = exc
               if time.time() >= next_status:
                   print(
-                      "Waiting for Nimbus-derived CINÉVA to finish loading:",
+                      "Waiting for Kodi to activate the startup-selected Nimbus skin:",
                       "GUI=", state,
                       "RPC error=", last_gui_error,
-                      "skin load seen=", "skin.cineva" in log_text(),
+                      "actual skin load logged=", any(
+                          "load skin from:" in line and "/skin.cineva/" in line
+                          for line in log_text().splitlines()
+                      ),
                   )
                   next_status = time.time() + 10
               if subprocess.run(["pgrep","-x","kodi.bin"],capture_output=True).returncode != 0:
                   raise SystemExit(
-                      "Kodi exited while loading skin.cineva. "
+                      "Kodi exited before loading the startup-selected skin.cineva. "
                       f"Last GUI={state}; RPC error={last_gui_error}; "
                       f"Kodi log tail:\n{log_text()[-10000:]}"
                   )
@@ -314,10 +292,22 @@ jobs:
               if settings_path.is_file():
                   shutil.copy2(settings_path, "artifacts/guisettings-load-timeout.xml")
               raise SystemExit(
-                  "Kodi accepted the skin setting but did not finish loading skin.cineva within 120 seconds. "
+                  "Kodi did not load skin.cineva from its startup selection within 120 seconds. "
                   f"GUI={state}; last RPC error={last_gui_error}; "
                   f"Kodi log tail:\n{log_text()[-10000:]}"
               )
+
+          skin_details = rpc_retry("Addons.GetAddonDetails", {
+              "addonid":"skin.cineva", "properties":["enabled","version"]
+          })
+          bridge_details = rpc_retry("Addons.GetAddonDetails", {
+              "addonid":"script.cineva.nimbus", "properties":["enabled","version"]
+          })
+          print("Activated Nimbus-derived CINÉVA add-on:", skin_details)
+          print("Resolved CINÉVA Nimbus Bridge dependency:", bridge_details)
+          skin_record = skin_details.get("addon", skin_details)
+          if skin_record.get("enabled") is not True:
+              raise SystemExit(f"Skin loaded but Kodi did not mark skin.cineva enabled: {skin_details}")
 
           # Confirm the Keep Skin dialog when Kodi presents it.
           if state.get("currentwindow",{}).get("id") == 10100:
