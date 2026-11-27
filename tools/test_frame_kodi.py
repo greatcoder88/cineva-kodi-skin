@@ -16,6 +16,8 @@ from zipfile import ZipFile
 ROOT = Path(__file__).resolve().parents[1]
 PROFILE = Path.home() / ".var/app/tv.kodi.Kodi/data"
 ARTIFACTS = ROOT / "artifacts/frame-gui"
+MOVIES = "plugin://plugin.video.pov/?action=movies"
+SHOWS = "plugin://plugin.video.pov/?action=tvshows"
 DEPENDENCIES = {
     "certifi": "2023.5.7",
     "chardet": "5.1.0",
@@ -59,6 +61,8 @@ def stage_profile():
             color = colors[(index + len(kind)) % len(colors)]
             subprocess.run(["convert", "-size", geometry, f"gradient:{color}-#151619",
                             str(posters / f"{kind}-{index}.jpg")], check=True)
+    subprocess.run(["convert", "-size", "320x80", "xc:none", "-fill", "white", "-draw",
+                    "roundrectangle 12,12 308,68 12,12", str(posters / "clearlogo-tv-1.png")], check=True)
 
     # Exercise the real Nimbus helper's first-run XML generation. Populate only
     # fixture paths in its persisted schema, as if selected through Skin Settings.
@@ -67,12 +71,10 @@ def stage_profile():
     with sqlite3.connect(profile / "cpath_cache.db") as db:
         db.execute("""CREATE TABLE custom_paths (cpath_setting text unique,
                    cpath_path text, cpath_header text, cpath_type text, cpath_label text)""")
-        movies = "plugin://plugin.video.pov/?action=movies"
-        shows = "plugin://plugin.video.pov/?action=tvshows"
         db.executemany("INSERT INTO custom_paths VALUES (?, ?, ?, ?, ?)", (
-            ("movie.main_menu", movies, "Movies", "", "Movies"),
-            ("movie.widget.1", movies, "Fixture movies", "WidgetListLandscape", "Fixture movies"),
-            ("movie.widget.2", shows, "Fixture shows", "WidgetListLandscape", "Fixture shows"),
+            ("movie.main_menu", MOVIES, "Movies", "", "Movies"),
+            ("movie.widget.1", MOVIES, "Fixture movies", "WidgetListLandscape", "Fixture movies"),
+            ("movie.widget.2", SHOWS, "Fixture shows", "WidgetListLandscape", "Fixture shows"),
         ))
 
 
@@ -158,6 +160,10 @@ def verify_home():
         rpc("Addons.SetAddonEnabled", addonid=f"script.module.{name}", enabled=True)
     for addon_id in ("plugin.video.pov", "script.frame.nimbus", "skin.frame"):
         rpc("Addons.SetAddonEnabled", addonid=addon_id, enabled=True)
+    for directory in (MOVIES, SHOWS):
+        files = rpc("Files.GetDirectory", directory=directory, media="files")["files"]
+        if len(files) != 8:
+            raise RuntimeError(f"Expected eight fixture items in {directory}, received {len(files)}")
     rpc("Settings.SetSettingValue", setting="lookandfeel.skin", value="skin.frame")
 
     def keep_skin_confirmation():
