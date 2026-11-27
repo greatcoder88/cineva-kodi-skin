@@ -215,6 +215,15 @@ class NimbusWorkflowPathTests(unittest.TestCase):
         self.assertIn('for name in ("kodi.bin", "kodi-x11", "kodi")', source)
         self.assertNotIn('subprocess.run(["pgrep","-x","kodi.bin"],capture_output=True).returncode != 0', source)
 
+    def test_skin_is_enabled_and_selected_after_kodi_starts(self):
+        workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
+        source = workflow.read_text(encoding="utf-8")
+        self.assertNotIn('"lookandfeel.skin": "skin.cineva"', source)
+        self.assertIn('"addonid":"script.cineva.nimbus", "enabled":True', source)
+        self.assertIn('"addonid":"skin.cineva", "enabled":True', source)
+        self.assertIn('"setting":"lookandfeel.skin", "value":"skin.cineva"', source)
+        self.assertIn("before_skin_loads", source)
+
 
 if __name__ == "__main__":
     unittest.main()
