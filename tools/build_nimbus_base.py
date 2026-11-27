@@ -426,6 +426,9 @@ def build(output_dir: Path = OUT_DIR, fetcher=fetch_archive) -> dict[str, Path]:
             encoding="utf-8",
         )
         write_bridge(helper_source, bridge_root)
+        upstream_license = skin_root / "LICENSE.txt"
+        if upstream_license.is_file():
+            shutil.copy2(upstream_license, bridge_root / "LICENSE-NIMBUS.txt")
 
         skin_zip = output_dir / f"skin.cineva-{SKIN_VERSION}-nimbus.zip"
         bridge_zip = output_dir / f"script.cineva.nimbus-{BRIDGE_VERSION}.zip"
