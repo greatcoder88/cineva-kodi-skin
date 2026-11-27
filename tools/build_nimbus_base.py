@@ -514,6 +514,10 @@ def apply_cineva_home_layout(skin_root: Path) -> None:
             raise RuntimeError(f"Home.xml: expected Nimbus menu fragment not found: {old[:80]!r}")
         home = home.replace(old, new, 1)
 
+    if home.count("<top>510</top>") != 1:
+        raise RuntimeError("Home.xml: expected one Nimbus widget-shelf anchor at y=510")
+    home = home.replace("<top>510</top>", "<top>575</top>", 1)
+
     quick = """<control type="group">
 						<left>65</left>
 						<top>70</top>
