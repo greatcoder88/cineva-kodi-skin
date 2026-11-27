@@ -202,8 +202,13 @@ def add_list_id_to_include_calls(
         start = match.start()
         line_start = text.rfind("\n", 0, start) + 1
         indent = text[line_start:start]
-        param_indent = indent + "\t"
         changed += 1
+        if indent.strip():
+            return (
+                f'<include content="{include_name}">'
+                f'<param name="list_id" value="{list_id}" /></include>'
+            )
+        param_indent = indent + "\t"
         return (
             f'<include content="{include_name}">\n'
             f'{param_indent}<param name="list_id" value="{list_id}" />\n'
