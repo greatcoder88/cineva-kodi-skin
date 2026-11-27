@@ -23,7 +23,7 @@ NIMBUS_REPO = "ivarbrandt/skin.nimbus"
 NIMBUS_SHA = "8b5071b8cd0db3a8e813eb00e9a821d3efad2454"
 HELPER_REPO = "ivarbrandt/script.nimbus.helper"
 HELPER_SHA = "e42d2ffffbccaa58386ef2e4a054049e5fcb7664"
-SKIN_VERSION = "0.6.8"
+SKIN_VERSION = "0.6.9"
 BRIDGE_VERSION = "0.1.0"
 OUT_DIR = ROOT / "dist" / "nimbus-foundation"
 NOTICE = """CINÉVA Nimbus foundation
@@ -378,6 +378,97 @@ def patch_nimbus_include_list_id_defaults(skin_root: Path) -> None:
         if replacements:
             path.write_text(text, encoding="utf-8", newline="")
             ET.parse(path)
+
+
+def apply_cineva_visuals(skin_root: Path) -> None:
+    """Apply CINÉVA's Netflix-inspired presentation without replacing Nimbus UI logic."""
+    colors_path = skin_root / "colors" / "defaults.xml"
+    if not colors_path.is_file():
+        raise RuntimeError("Nimbus source is missing colors/defaults.xml")
+    palette = {
+        "primary_background": "FF080808",
+        "dialog_tint": "FF050505",
+        "dialog_bg": "E6080808",
+        "dialog_bg2": "F2080808",
+        "dialog_bg3": "F7080808",
+        "button_focus": "FFE50914",
+        "button_focus2": "FF080808",
+        "focused_text": "FF080808",
+        "unfocused_text": "FFF5F5F1",
+        "artwork_dim": "FFFFFFFF",
+        "accent_color": "FFE50914",
+        "selected": "FFE50914",
+        "keyboard_selected": "FFE50914",
+        "primary_content_panel_bg": "FF111111",
+        "background": "FF000000",
+        "bg_overlay": "99000000",
+        "red": "FFE50914",
+    }
+    parser = ET.XMLParser(target=ET.TreeBuilder(insert_comments=True))
+    color_tree = ET.parse(colors_path, parser=parser)
+    color_root = color_tree.getroot()
+    for name, value in palette.items():
+        matches = [node for node in color_root.findall("color") if node.get("name") == name]
+        if len(matches) != 1:
+            raise RuntimeError(
+                f"colors/defaults.xml: expected one active {name} color, found {len(matches)}"
+            )
+        matches[0].text = value
+    ET.indent(color_root, space="  ")
+    color_tree.write(colors_path, encoding="UTF-8", xml_declaration=True)
+    ET.parse(colors_path)
+
+    home_path = skin_root / "xml" / "Home.xml"
+    if not home_path.is_file():
+        raise RuntimeError("Nimbus source is missing xml/Home.xml")
+    home = home_path.read_text(encoding="utf-8")
+    default_focus = "<defaultcontrol>9000</defaultcontrol>"
+    content_focus = "<defaultcontrol>20000</defaultcontrol>"
+    if home.count(default_focus) == 1 and home.count(content_focus) == 0:
+        # Start on the first content widget, using Nimbus's own hidden focus bridge.
+        # The left navigation remains fully available from the existing D-pad route.
+        home = home.replace(default_focus, content_focus, 1)
+    elif home.count(content_focus) != 1 or home.count(default_focus) != 0:
+        raise RuntimeError("Nimbus Home must have exactly one supported default focus control")
+    if 'id="19990"' in home:
+        raise RuntimeError("CINÉVA wordmark control ID 19990 already exists upstream")
+    brand = """
+        <control type="group" id="19990">
+            <left>68</left>
+            <top>42</top>
+            <width>430</width>
+            <height>78</height>
+            <visible>!Player.HasMedia</visible>
+            <animation effect="fade" start="0" end="100" time="350">WindowOpen</animation>
+            <control type="label">
+                <left>0</left>
+                <top>0</top>
+                <width>430</width>
+                <height>58</height>
+                <font>font36_title</font>
+                <textcolor>accent_color</textcolor>
+                <shadowcolor>text_shadow</shadowcolor>
+                <align>left</align>
+                <aligny>center</aligny>
+                <label>[B]CINÉVA[/B]</label>
+            </control>
+            <control type="image">
+                <left>2</left>
+                <top>63</top>
+                <width>76</width>
+                <height>4</height>
+                <texture colordiffuse="accent_color">colors/white.png</texture>
+            </control>
+        </control>
+"""
+    marker = "</controls>"
+    if home.count(marker) != 1:
+        raise RuntimeError("Home.xml must contain exactly one controls closing tag")
+    home = home.replace(marker, brand + "    " + marker, 1)
+    ET.fromstring(home)
+    home_path.write_text(home, encoding="utf-8", newline="")
+
+
 
 
 def write_default_skin_includes(skin_root: Path) -> None:
