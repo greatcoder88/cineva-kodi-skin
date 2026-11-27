@@ -212,6 +212,9 @@ def verify_home():
     wait_for("Right moves to a second movie card", lambda: focused_card(19011, "The Dark Knight"))
     press("info")
     wait_for("Kodi opens the selected movie's title details", lambda: window_id() == 12003)
+    title = "Control.IsVisible(8982)"
+    wait_for("the title details screen renders the movie title",
+             lambda: rpc("XBMC.GetInfoBooleans", booleans=[title])[title])
     screenshot("title-details")
     press("back")
     wait_for("closing title details restores the selected movie card",

@@ -168,6 +168,7 @@ def apply_search(xml):
     root = tree.getroot()
     controls = root.find("controls")
     add_section_header(controls, "$LOCALIZE[137]")
+    set_fields(find_control(root, 2000), {"top": "430"})
 
     history = find_control(root, 9000)
     set_fields(history, {"top": "254", "width": "590", "scrolltime": "200"})
@@ -177,11 +178,20 @@ def apply_search(xml):
             set_fields(heading, {"top": "182", "height": "65", "font": "FrameTVLabel"})
         elif label.text and label.text.startswith("Search results for:"):
             heading = next(control for control in root.iter("control") if label in control)
-            set_fields(heading, {"font": "FrameTVLabel", "textcolor": "grey"})
+            set_fields(heading, {"top": "485", "font": "FrameTVLabel", "textcolor": "grey"})
         elif label.text == "$INFO[Window(home).Property(nimbus.search.history.empty)]":
             message = next(control for control in root.iter("control") if label in control)
             set_fields(message, {"left": "570", "top": "205", "width": "960", "height": "95",
                                  "font": "FrameTVLabel", "textcolor": "grey"})
+    write_xml(tree, path)
+
+    path = xml / "Includes_Search.xml"
+    tree = read_xml(path)
+    results = tree.getroot().find("include[@name='SearchWidgets']")
+    for widget in results.findall("include"):
+        list_id = widget.find("param[@name='list_id']")
+        if list_id is not None and list_id.get("value") in {"19011", "19012"}:
+            widget.set("content", "WidgetListLandscape")
     write_xml(tree, path)
 
 
@@ -197,7 +207,12 @@ def apply_title_details(xml):
     for control in root.iter("control"):
         label = control.findtext("label")
         if label == "[B]$VAR[DialogInfoTitle][/B]":
+            control.set("id", "8982")
             set_fields(control, {"font": "FrameHeroTitle", "align": "left"})
+            # Stock Nimbus omits the closing group delimiter in this expression.
+            visible = control.find("visible")
+            if visible.text.endswith("$EXP[isEpisode]"):
+                visible.text += "]"
         elif label == "$INFO[ListItem.Plot]":
             set_fields(control, {"align": "left", "font": "FrameTVLabel", "textcolor": "unfocused_text"})
         elif label in {"$INFO[ListItem.TagLine]", "[I]$INFO[ListItem.Genre][/I]"}:
@@ -214,7 +229,9 @@ def apply_settings_and_dialogs(xml):
     path = xml / "SkinSettings.xml"
     tree = read_xml(path)
     root = tree.getroot()
-    add_section_header(root.find("controls"), "$LOCALIZE[166]")
+    controls = root.find("controls")
+    controls.remove(controls.find("include[@content='TopBar']"))
+    add_section_header(controls, "$LOCALIZE[166]")
     categories = find_control(root, 9000)
     for layout in (categories.find("itemlayout"), categories.find("focusedlayout")):
         layout.set("height", "75")
