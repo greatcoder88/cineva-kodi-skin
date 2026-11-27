@@ -343,12 +343,12 @@
           <scrolltime>100</scrolltime>
           <onup>$PARAM[id]</onup>
           <ondown>$PARAM[id]</ondown>
-          <onback>SetFocus($PARAM[button])</onback>
           <onback>ClearProperty(FrameTrackPicker)</onback>
-          <onleft>SetFocus($PARAM[button])</onleft>
+          <onback>$PARAM[button]</onback>
           <onleft>ClearProperty(FrameTrackPicker)</onleft>
-          <onright>SetFocus($PARAM[button])</onright>
+          <onleft>$PARAM[button]</onleft>
           <onright>ClearProperty(FrameTrackPicker)</onright>
+          <onright>$PARAM[button]</onright>
           <onclick>RunPlugin(plugin://script.frame.nimbus/?kind=$PARAM[kind]&amp;select=$INFO[Container($PARAM[id]).ListItem.Property(FrameTrackIndex)])</onclick>
           <itemlayout width="518" height="52">
             <include content="FramePlaybackTrackRow">
