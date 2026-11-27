@@ -478,7 +478,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
 				</control>"""
             home = (
                 '<window><defaultcontrol>20000</defaultcontrol><controls>'
-                '<control type="group" id="2000"/>'
+                '<control type="group" id="2000"><top>510</top></control>'
                 + menu +
                 '<control type="rss"></control></controls></window>'
             )
@@ -503,6 +503,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
 
             root = ET.parse(skin / "xml/Home.xml").getroot()
             self.assertEqual(root.findtext("defaultcontrol"), "9000")
+            self.assertEqual(root.find("./controls/control[@id='2000']/top").text, "575")
             menu_list = root.find(".//control[@id='9000']")
             self.assertEqual(menu_list.findtext("orientation"), "horizontal")
             self.assertEqual(menu_list.findtext("left"), "270")
