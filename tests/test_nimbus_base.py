@@ -115,12 +115,17 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 self.assertIn("skin.cineva/xml/Includes_Home.xml", names)
                 self.assertIn("skin.cineva/xml/Includes_HomeLayouts.xml", names)
                 self.assertIn("skin.cineva/xml/View_54_Flix.xml", names)
+                for filename, include_name in builder.DEFAULT_SKIN_INCLUDE_NAMES.items():
+                    member = f"skin.cineva/xml/{filename}.xml"
+                    self.assertIn(member, names)
+                    include_xml = archive.read(member).decode("utf-8")
+                    self.assertIn(f'<include name="{include_name}">', include_xml)
                 self.assertIn("skin.cineva/fonts/Inter-Regular.ttf", names)
                 self.assertIn("skin.cineva/LICENSE.txt", names)
                 self.assertIn("skin.cineva/NOTICE.txt", names)
                 manifest = archive.read("skin.cineva/addon.xml").decode()
                 self.assertIn('id="skin.cineva"', manifest)
-                self.assertIn('version="0.6.0"', manifest)
+                self.assertIn('version="0.6.1"', manifest)
                 self.assertIn('addon="xbmc.gui" version="5.18.0"', manifest)
                 self.assertIn('addon="script.cineva.nimbus" version="0.1.0"', manifest)
                 self.assertNotIn("script.nimbus.helper", manifest)
