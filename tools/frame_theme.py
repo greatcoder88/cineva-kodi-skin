@@ -14,9 +14,11 @@ PALETTE = {
     "dialog_bg2": "FA17181B",
     "dialog_bg3": "FF17181B",
     "button_focus": "FFF5F5F5",
-    "button_focus2": "FF34373D",
+    "button_focus2": "FF343B48",
     "frame_card_focus": "FFE1E5EF",
-    "frame_osd_control": "E6262930",
+    "frame_osd_control": "EE262B34",
+    "frame_panel": "F5222630",
+    "frame_selection": "FF343B48",
     "focused_text": "FF141414",
     "unfocused_text": "FFF5F5F5",
     "artwork_dim": "FFFFFFFF",
@@ -60,10 +62,12 @@ def add_section_header(controls, title):
 def apply_palette(skin):
     path = skin / "colors/defaults.xml"
     tree = read_xml(path)
-    for color in tree.getroot().findall("color"):
-        name = color.get("name")
-        if name in PALETTE:
-            color.text = PALETTE[name]
+    root = tree.getroot()
+    for name, value in PALETTE.items():
+        color = root.find(f"color[@name='{name}']")
+        if color is None:
+            color = ET.SubElement(root, "color", {"name": name})
+        color.text = value
     write_xml(tree, path)
 
 
@@ -299,7 +303,9 @@ def apply_settings_and_dialogs(xml):
             if control.get("type") == "label":
                 set_fields(control, {"font": "FrameTVLabel", "aligny": "center", "textoffsety": "0"})
             elif control.get("type") == "image":
-                control.find("texture").set("border", "22")
+                control.find("texture").attrib.update({"border": "22", "colordiffuse": "frame_selection"})
+            elif control.get("type") == "button":
+                set_fields(control, {"font": "FrameTVLabel"})
     write_xml(tree, path)
 
     path = xml / "DialogContextMenu.xml"
@@ -325,10 +331,12 @@ def apply_playback(xml):
             controls.remove(control)
     default_osd = next(group for group in controls.findall("control[@type='group']")
                        if group.find("include[@content='Seekbar']") is not None)
-    set_fields(default_osd, {"height": "265"})
+    set_fields(default_osd, {"height": "280"})
+    for event in ("onload", "onunload"):
+        ET.SubElement(tree.getroot(), event).text = "ClearProperty(FrameTracksRevision)"
     for group in default_osd.findall("control[@type='grouplist']"):
         if group.findtext("top") == "120":
-            set_fields(group, {"top": "126", "height": "120"})
+            set_fields(group, {"top": "131", "height": "120"})
     transport = find_control(default_osd, 700)
     set_fields(transport, {"itemgap": "12"})
     play = find_control(transport, 703)
@@ -337,15 +345,35 @@ def apply_playback(xml):
     for group in utilities.findall("control[@type='grouplist']"):
         set_fields(group, {"itemgap": "1"})
         for label in group.findall("control[@type='label']"):
-            set_fields(label, {"width": "68", "height": "30", "textcolor": "grey"})
+            set_fields(label, {"width": "68", "height": "30", "textcolor": "grey", "font": "FrameTab"})
+    for button_id, list_id, kind, availability in (
+        (708, 8708, "audio", "Integer.IsGreater(VideoPlayer.AudioStreamCount,0)"),
+        (709, 8709, "subtitle", "VideoPlayer.HasSubtitles"),
+    ):
+        for button in controls.findall(f".//control[@id='{button_id}']"):
+            parent = next(group for group in controls.iter("control") if button in group)
+            visible = parent.find("visible")
+            if visible is not None:
+                visible.text = f"[{visible.text}] | {availability}"
+            for action in button.findall("onclick"):
+                action.set("condition", f"[{action.get('condition', 'true')}] + !{availability}")
+            ET.SubElement(button, "onclick", {"condition": availability}).text = f"SetFocus({list_id})"
+            ET.SubElement(button, "onup", {"condition": availability}).text = str(list_id)
+        picker = ET.SubElement(controls, "include", {"content": "FramePlaybackTracks"})
+        for name, value in (("button", button_id), ("id", list_id), ("kind", kind),
+                            ("available", availability), ("title", "$LOCALIZE[292]" if kind == "audio" else "$LOCALIZE[287]")):
+            ET.SubElement(picker, "param", {"name": name, "value": str(value)})
     write_xml(tree, path)
 
     path = xml / "Includes_Seekbar.xml"
     tree = read_xml(path)
+    seekbar = tree.getroot().find("include[@name='Seekbar']")
+    for animation in seekbar.findall(".//animation[@time='500']"):
+        animation.set("time", "125")
     for control in tree.getroot().iter("control"):
         label = control.findtext("label", "")
         if control.get("type") == "label" and any(
-            token in label for token in ("$INFO[VideoPlayer.Title]", "$INFO[Player.Title]", "$VAR[PlayerTitle")
+            token in label for token in ("$INFO[VideoPlayer.Title]", "$INFO[Player.Title]", "$VAR[PlayerTitle", "$VAR[NowPlayingLabelVar]")
         ):
             set_fields(control, {"font": "FrameTVLabel", "textcolor": "osd_light"})
         for midtexture in control.findall("midtexture[@colordiffuse='accent_color']"):
@@ -421,7 +449,7 @@ def apply_video_cards(xml):
             set_fields(group, {"left": "64", "top": "12"})
             group.find(f"include[@content='{original}']").set("content", f"Frame{kind}Card")
     category = root.find("include[@name='CategoryLabel']/definition/control")
-    set_fields(category, {"left": "64", "top": "54"})
+    set_fields(category, {"left": "64", "top": "52"})
     for control in category.findall("control[@type='label']"):
         set_fields(control, {"top": "0", "height": "40", "aligny": "center",
                              "font": "FrameTVLabel", "textcolor": "unfocused_text",

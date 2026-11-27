@@ -18,7 +18,7 @@ PROFILE = Path.home() / ".var/app/tv.kodi.Kodi/data"
 ARTIFACTS = ROOT / "artifacts/frame-gui"
 MOVIES = "plugin://plugin.video.pov/?action=movies"
 SHOWS = "plugin://plugin.video.pov/?action=tvshows"
-PLAYBACK_FIXTURE = PROFILE / "userdata/frame-playback.mp4"
+PLAYBACK_FIXTURE = PROFILE / "userdata/frame-playback.mkv"
 DEPENDENCIES = {
     "certifi": "2023.5.7",
     "chardet": "5.1.0",
@@ -77,10 +77,17 @@ def stage_profile():
             ("movie.widget.1", MOVIES + "_in_progress", "In Progress", "WidgetListPoster", "In Progress"),
             ("movie.widget.2", SHOWS, "Fixture shows", "WidgetListLandscape", "Fixture shows"),
         ))
+    captions = PLAYBACK_FIXTURE.with_suffix(".srt")
+    captions.write_text("1\n00:00:02,000 --> 00:00:06,000\nFrame embedded subtitle\n")
     subprocess.run([
-        "ffmpeg", "-v", "error", "-f", "lavfi", "-i", "smptebars=size=640x360:rate=24", "-t", "20",
-        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-metadata", "title=Frame CI Playback", str(PLAYBACK_FIXTURE),
+        "ffmpeg", "-v", "error", "-f", "lavfi", "-i", "smptebars=size=640x360:rate=24",
+        "-f", "lavfi", "-i", "sine=frequency=440", "-f", "lavfi", "-i", "sine=frequency=660",
+        "-i", str(captions), "-map", "0:v", "-map", "1:a", "-map", "2:a", "-map", "3:s", "-t", "75",
+        "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-c:a", "aac", "-c:s", "srt",
+        "-metadata:s:a:0", "language=eng", "-metadata:s:a:1", "language=hin",
+        "-metadata:s:s:0", "language=eng", str(PLAYBACK_FIXTURE),
     ], check=True)
+    captions.unlink()
 
 
 def rpc(method, **params):
@@ -296,6 +303,43 @@ def verify_playback_osd():
     wait_for("Play/Pause resumes the video", lambda: rpc("Player.GetProperties", playerid=player, properties=["speed"])["speed"] == 1)
     press("right")
     wait_for("OSD focus moves to Stop", lambda: has_focus(704))
+    # Traverse the native control groups to the audio utility.
+    for _ in range(7):
+        if has_focus(708):
+            break
+        press("right")
+    wait_for("Audio button can receive remote focus", lambda: has_focus(708))
+    audio_count = "Container(8708).NumItems"
+    wait_for("Hovering Audio lists both embedded tracks",
+             lambda: rpc("XBMC.GetInfoLabels", labels=[audio_count])[audio_count] == "2")
+    screenshot("playback-audio-tracks")
+    press("up")
+    wait_for("Up enters the audio selector", lambda: has_focus(8708))
+    press("down")
+    press("select")
+    wait_for("Selecting the second track switches audio",
+             lambda: rpc("Player.GetProperties", playerid=player,
+                         properties=["currentaudiostream"])["currentaudiostream"]["index"] == 1)
+    press("back")
+    wait_for("Back returns to the audio button", lambda: has_focus(708))
+    press("right")
+    wait_for("Subtitle button can receive remote focus", lambda: has_focus(709))
+    sub_count = "Container(8709).NumItems"
+    wait_for("Subtitles preview lists Off and the embedded track",
+             lambda: rpc("XBMC.GetInfoLabels", labels=[sub_count])[sub_count] == "2")
+    screenshot("playback-subtitle-tracks")
+    press("up")
+    wait_for("Up enters the subtitle selector", lambda: has_focus(8709))
+    press("down")
+    press("select")
+    wait_for("Selecting the embedded subtitle enables it",
+             lambda: rpc("Player.GetProperties", playerid=player,
+                         properties=["subtitleenabled"])["subtitleenabled"])
+    press("up")
+    press("select")
+    wait_for("Off disables subtitles",
+             lambda: not rpc("Player.GetProperties", playerid=player,
+                             properties=["subtitleenabled"])["subtitleenabled"])
 
 
 def main():
