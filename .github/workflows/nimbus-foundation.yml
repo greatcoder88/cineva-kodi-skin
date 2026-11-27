@@ -157,9 +157,12 @@ jobs:
                 return 1
               fi
               # File existence is not readiness: Kodi creates guisettings.xml
-              # before it has finished writing it. Wait until Home is loaded,
-              # the XML parses, and its byte size is stable for four polls.
-              if grep -q "Loading skin file: Home.xml" "$KODI_LOG" 2>/dev/null; then
+              # before it has finished writing it. At normal log level Kodi 22
+              # records the active skin as "load skin from:"; it does not emit
+              # the verbose "Loading skin file: Home.xml" message used by the
+              # previous probe. Wait for that real skin-load event, valid XML,
+              # and a byte size stable for four polls.
+              if grep -qi "load skin from:" "$KODI_LOG" 2>/dev/null; then
                 if python - "$SETTINGS" <<'PY'
           import sys
           import xml.etree.ElementTree as ET
