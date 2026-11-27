@@ -502,7 +502,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
             builder.apply_cineva_home_layout(skin)
 
             root = ET.parse(skin / "xml/Home.xml").getroot()
-            self.assertEqual(root.findtext("defaultcontrol"), "9000")
+            self.assertEqual(root.findtext("defaultcontrol"), "20000")
             self.assertEqual(root.find("./controls/control[@id='2000']/top").text, "575")
             menu_list = root.find(".//control[@id='9000']")
             self.assertEqual(menu_list.findtext("orientation"), "horizontal")
