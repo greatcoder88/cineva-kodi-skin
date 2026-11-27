@@ -5,6 +5,8 @@ on:
     branches: [redesign/nimbus-foundation]
     paths:
       - "tools/build_nimbus_base.py"
+      - "tools/download_test_posters.py"
+      - "tools/test-fixtures/plugin.video.pov/**"
       - "tests/test_nimbus_base.py"
       - ".github/workflows/nimbus-foundation.yml"
   workflow_dispatch:
@@ -152,10 +154,6 @@ jobs:
           echo $! > /tmp/xvfb.pid
           sleep 2
           KODI_DATA="$HOME/.var/app/tv.kodi.Kodi/data"
-          POV_FIXTURE="$GITHUB_WORKSPACE/tools/test-fixtures/plugin.video.pov"
-          POV_ADDON="$KODI_DATA/addons/plugin.video.pov"
-          mkdir -p "$POV_ADDON"
-          cp -a "$POV_FIXTURE"/. "$POV_ADDON"/
           USERDATA="$KODI_DATA/userdata"
           SETTINGS="$USERDATA/guisettings.xml"
           # Kodi writes kodi.log beside userdata, not inside userdata/temp.
@@ -215,9 +213,29 @@ jobs:
             return 1
           }
           if ! boot_kodi_once 1; then
+            mkdir -p artifacts
+            import -display :99 -window root artifacts/nimbus-firstboot-failure.png 2>/dev/null || true
+            ps -eo pid,ppid,stat,comm,args > artifacts/nimbus-firstboot-processes.txt || true
+            flatpak ps --user > artifacts/nimbus-firstboot-flatpak-ps.txt 2>&1 || true
+            find "$HOME/.var/app/tv.kodi.Kodi" -type f \\( -name kodi.log -o -name guisettings.xml \\) -print > artifacts/nimbus-firstboot-state-files.txt 2>&1 || true
+            while IFS= read -r path; do
+              [ -f "$path" ] && { echo "===== $path ====="; tail -n 120 "$path"; }
+            done < artifacts/nimbus-firstboot-state-files.txt > artifacts/nimbus-firstboot-log-tail.txt
             cat /tmp/nimbus-firstboot-1.log || true
             exit 1
           fi
+          # Stage the POV-compatible test provider only after Kodi's clean
+          # first boot. The plugin must not participate in initial add-on
+          # discovery; install its deterministic art before enabling CINÉVA.
+          POV_FIXTURE="$GITHUB_WORKSPACE/tools/test-fixtures/plugin.video.pov"
+          POV_ADDON="$KODI_DATA/addons/plugin.video.pov"
+          mkdir -p "$POV_ADDON/resources/posters"
+          cp -a "$POV_FIXTURE"/. "$POV_ADDON"/
+          python tools/download_test_posters.py "$POV_ADDON/resources/posters"
+          test -s "$POV_ADDON/resources/posters/movie-1.jpg"
+          test -s "$POV_ADDON/resources/posters/tv-1.jpg"
+          test -s "$POV_ADDON/resources/posters/backdrop-1.jpg"
+          test -s "$POV_ADDON/resources/posters/tv-backdrop-1.jpg"
           # Keep the first Kodi session alive after Home is ready. The first
           # startup has already scanned the staged add-ons and initialized Kodi's
           # JSON-RPC server. Restarting Flatpak here previously left orphaned
