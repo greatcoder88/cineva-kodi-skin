@@ -106,7 +106,16 @@ jobs:
         run: python tools/build_nimbus_base.py
       - name: Install GUI runtime
         run: |
-          sudo apt-get update
+          # The hosted Ubuntu image carries a Microsoft apt source that can
+          # intermittently return 403 and abort apt-get update. This job only
+          # needs Ubuntu packages, so remove that unrelated source first.
+          for source in /etc/apt/sources.list.d/*; do
+            if [ -f "$source" ] && grep -q "packages.microsoft.com" "$source"; then
+              echo "Skipping blocked third-party apt source: $source"
+              sudo rm -f "$source"
+            fi
+          done
+          sudo apt-get update -o Acquire::Retries=3
           sudo apt-get install -y flatpak xvfb xdotool imagemagick jq psmisc
       - name: Install Kodi Piers beta
         run: |

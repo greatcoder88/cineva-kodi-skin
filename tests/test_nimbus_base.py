@@ -247,6 +247,21 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
 
 
 class NimbusWorkflowPathTests(unittest.TestCase):
+
+    def test_gui_runtime_skips_unrelated_blocked_microsoft_apt_source(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        for relative in (
+            ".github/workflows/nimbus-foundation.yml",
+            ".github/workflows/kodi-gui-test.yml",
+        ):
+            source = (repo_root / relative).read_text(encoding="utf-8")
+            self.assertIn('grep -q "packages.microsoft.com"', source)
+            self.assertIn('sudo rm -f "$source"', source)
+            self.assertLess(
+                source.index('sudo rm -f "$source"'),
+                source.index("sudo apt-get update"),
+            )
+
     def test_workflow_uses_the_builder_skin_version(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
         source = workflow.read_text(encoding="utf-8")
