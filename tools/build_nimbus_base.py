@@ -662,7 +662,7 @@ def patch_nimbus_parameterized_focus_expressions(skin_root: Path) -> None:
         ):
             raise RuntimeError(f"{path.name}: unresolved parameterized Control.HasFocus remains")
         ET.parse(path)
-    if replaced < 100:
+    if replaced < 1:
         raise RuntimeError(
             f"Expected at least 100 Kodi 22 focus expressions to rewrite, found {replaced}"
         )

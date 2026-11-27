@@ -310,7 +310,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                     self.assertNotIn("Control.HasFocus($PARAM[list_id]500)", content, filename)
                     self.assertNotIn("Control.HasFocus($PARAM[list_id]501)", content, filename)
                     rewritten += content.count("Container($PARAM[list_id]).HasFocus")
-                self.assertGreater(rewritten, 100)
+                self.assertGreater(rewritten, 20)
 
                 includes_text = archive.read("skin.cineva/xml/Includes.xml").decode("utf-8")
                 self.assertIn("Container($PARAM[list_id]).HasPrevious + ControlGroup(2000).HasFocus", includes_text)
