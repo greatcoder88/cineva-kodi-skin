@@ -65,8 +65,15 @@ jobs:
                       ET.fromstring(skin.read(path))
               bridge_manifest = ET.fromstring(bridge.read("script.cineva.nimbus/addon.xml"))
               assert bridge_manifest.get("id") == "script.cineva.nimbus"
-              assert bridge_manifest.find("./extension[@point='xbmc.service']") is None
-              assert not any("/apis/" in p or "/monitors/" in p or p.endswith("/service.py") for p in bridge_names)
+              service_extension = bridge_manifest.find("./extension[@point='xbmc.service']")
+              assert service_extension is not None
+              assert service_extension.get("library") == "resources/lib/service.py"
+              assert "script.cineva.nimbus/resources/lib/service.py" in bridge_names
+              assert not any("/apis/" in p or "/monitors/" in p for p in bridge_names)
+              service = bridge.read("script.cineva.nimbus/resources/lib/service.py").decode()
+              assert "CINEVA_NIMBUS_BRIDGE_SERVICE_STARTED" in service
+              assert "requests" not in service.lower() and "urlopen" not in service.lower()
+              assert "http://" not in service.lower() and "https://" not in service.lower()
               assert not any(b"requests.get(" in bridge.read(p) for p in bridge_names if p.endswith(".py"))
           for path in (skin_zip, bridge_zip):
               print(path.name, path.stat().st_size, hashlib.sha256(path.read_bytes()).hexdigest())

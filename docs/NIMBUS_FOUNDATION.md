@@ -43,7 +43,7 @@ MDBList or Real-Debrid.
 This branch is the first architecture stage, not a finished CINÉVA redesign.
 
 1. Build a Nimbus-derived skin.cineva package from pinned upstream source.
-2. Rename the Nimbus helper to script.cineva.nimbus and remove its API service.
+2. Rename the Nimbus helper to script.cineva.nimbus, replacing its API service with a minimal local-only Kodi service entry.
 3. Validate Kodi 22 package loading and capture the real Nimbus-derived Home.
 4. Next: map CINÉVA's four configurable Home, Movies and TV Shows slots onto
    Nimbus's widget/menu system; then apply the CINÉVA hero, rating and artwork
