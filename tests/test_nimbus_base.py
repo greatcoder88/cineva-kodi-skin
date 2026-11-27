@@ -305,6 +305,49 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 self.assertIn("script.cineva.nimbus", cpath)
                 self.assertNotIn("script.nimbus.helper", cpath)
 
+    def test_cineva_visual_layer_adds_netflix_palette_and_brand_without_replacing_nimbus_controls(self):
+        palette_names = (
+            "primary_background", "dialog_tint", "dialog_bg", "dialog_bg2",
+            "dialog_bg3", "button_focus", "button_focus2", "focused_text",
+            "unfocused_text", "artwork_dim", "accent_color", "selected",
+            "keyboard_selected", "primary_content_panel_bg", "background",
+            "bg_overlay", "red",
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            skin = Path(temp)
+            (skin / "colors").mkdir()
+            (skin / "xml").mkdir()
+            color_xml = "<colors>" + "".join(
+                f'<color name="{name}">FFFFFFFF</color>' for name in palette_names
+            ) + "</colors>"
+            (skin / "colors/defaults.xml").write_text(color_xml, encoding="utf-8")
+            home_xml = (
+                '<?xml version="1.0" encoding="UTF-8"?>'
+                '<window><controls><include>DefaultBackground</include>'
+                '<control type="fixedlist" id="9000"/></controls></window>'
+            )
+            (skin / "xml/Home.xml").write_text(home_xml, encoding="utf-8")
+
+            builder.apply_cineva_visuals(skin)
+
+            colors = ET.parse(skin / "colors/defaults.xml").getroot()
+            values = {node.get("name"): node.text for node in colors.findall("color")}
+            self.assertEqual(values["accent_color"], "FFE50914")
+            self.assertEqual(values["button_focus"], "FFE50914")
+            self.assertEqual(values["selected"], "FFE50914")
+            self.assertEqual(values["background"], "FF000000")
+            self.assertEqual(values["unfocused_text"], "FFF5F5F1")
+
+            home = ET.parse(skin / "xml/Home.xml").getroot()
+            controls = home.find("controls")
+            self.assertIsNotNone(controls.find("./include"))
+            self.assertIsNotNone(controls.find("./control[@id='9000']"))
+            brand = controls.find("./control[@id='19990']")
+            self.assertIsNotNone(brand)
+            self.assertEqual(brand.findtext("./control[@type='label']/label"), "[B]CINÉVA[/B]")
+            self.assertEqual(brand.findtext("./control[@type='label']/font"), "font36_title")
+            self.assertEqual(brand.findtext("./control[@type='image']/texture"), "colors/white.png")
+
     def test_archives_are_byte_for_byte_deterministic(self):
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp) / "dist"
