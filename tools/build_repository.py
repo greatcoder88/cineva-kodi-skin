@@ -51,7 +51,7 @@ def write_http_directory_index(directory: Path, title: str, entries: list[tuple[
 
 def main() -> None:
     build_dir = ROOT / "dist" / "nimbus-foundation"
-    skin_zip = build_dir / "skin.cineva-0.8.0-nimbus.zip"
+    skin_zip = build_dir / "skin.cineva-0.8.1-nimbus.zip"
     bridge_zip = build_dir / "script.cineva.nimbus-0.1.1.zip"
     if not skin_zip.is_file() or not bridge_zip.is_file():
         raise SystemExit("Build the pinned Nimbus foundation packages before assembling the repository.")
@@ -69,7 +69,7 @@ def main() -> None:
     bridge_version = bridge_root.attrib["version"]
     skin_root = ET.fromstring(skin_xml)
     skin_version = skin_root.attrib["version"]
-    expected_skin_version = "0.8.0"  # Pinned Nimbus base with CINÉVA presentation
+    expected_skin_version = "0.8.1"  # Pinned Nimbus base with CINÉVA presentation
     if skin_version != expected_skin_version:
         raise SystemExit(
             f"Skin archive manifest version is {skin_version!r}; "
