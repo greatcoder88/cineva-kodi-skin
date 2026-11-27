@@ -142,9 +142,11 @@ jobs:
           Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset > /tmp/xvfb.log 2>&1 &
           echo $! > /tmp/xvfb.pid
           sleep 2
-          USERDATA="$HOME/.var/app/tv.kodi.Kodi/data/userdata"
+          KODI_DATA="$HOME/.var/app/tv.kodi.Kodi/data"
+          USERDATA="$KODI_DATA/userdata"
           SETTINGS="$USERDATA/guisettings.xml"
-          KODI_LOG="$USERDATA/temp/kodi.log"
+          # Kodi writes kodi.log beside userdata, not inside userdata/temp.
+          KODI_LOG="$KODI_DATA/temp/kodi.log"
           boot_kodi_once() {
             local attempt="$1"
             local previous_size=""
