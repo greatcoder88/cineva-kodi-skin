@@ -194,6 +194,13 @@ def apply_search(xml):
             widget.set("content", "WidgetListLandscape")
     write_xml(tree, path)
 
+    path = xml / "Variables_Search.xml"
+    tree = read_xml(path)
+    collections = tree.getroot().find("variable[@name='SearchProviderCollectionsVar']")
+    fen = collections.find("value[@conditiom]")
+    fen.set("condition", f"!String.IsEmpty(Window(home).Property(nimbus.search.input.encoded)) + {fen.attrib.pop('conditiom')}")
+    write_xml(tree, path)
+
 
 def apply_title_details(xml):
     path = xml / "DialogVideoInfo.xml"
@@ -313,4 +320,6 @@ def apply_theme(skin, theme_source):
     widgets = read_xml(path)
     list_common = widgets.getroot().find("include[@name='WidgetListCommon']")
     set_fields(list_common, {"scrolltime": "220"})
+    landscape = widgets.getroot().find("include[@name='WidgetListLandscape']/definition/control[@type='fixedlist']/visible")
+    landscape.text += " | [Window.IsVisible(11121) + String.IsEqual(Window(Home).Property(nimbus.search.refreshing),true)]"
     write_xml(widgets, path)
