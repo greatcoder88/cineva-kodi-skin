@@ -124,8 +124,8 @@ def apply_home(xml):
     animation = ET.SubElement(widgets, "animation", {
         "type": "Conditional", "condition": "ControlGroup(2000).HasFocus", "reversible": "true",
     })
-    ET.SubElement(animation, "effect", {"type": "slide", "start": "0,0", "end": "0,-108",
-                                         "time": "160", "tween": "cubic", "easing": "out"})
+    ET.SubElement(animation, "effect", {"type": "slide", "start": "0,0", "end": "0,-92",
+                                         "time": "125", "tween": "cubic", "easing": "out"})
 
     content = next(group for group in root.iter("control") if widgets in group)
     top_bar = content.find("include[@content='TopBar']")
@@ -419,9 +419,10 @@ def apply_video_cards(xml):
             set_fields(group, {"left": "64", "top": "12"})
             group.find(f"include[@content='{original}']").set("content", f"Frame{kind}Card")
     category = root.find("include[@name='CategoryLabel']/definition/control")
-    set_fields(category, {"left": "64", "top": "67"})
+    set_fields(category, {"left": "64", "top": "54"})
     for control in category.findall("control[@type='label']"):
-        set_fields(control, {"top": "15", "font": "FrameTVLabel", "textcolor": "unfocused_text",
+        set_fields(control, {"top": "0", "height": "40", "aligny": "center",
+                             "font": "FrameTVLabel", "textcolor": "unfocused_text",
                              "label": "$PARAM[label]", "scroll": "false"})
         if control.find("left") is not None:
             set_fields(control, {"left": "0"})
