@@ -358,12 +358,14 @@ class HomeHeroActionTests(unittest.TestCase):
             focused = includes.find("./include[@name='CinevaFocusedPosterItem9001']")
             focused_image = next(
                 node for node in focused.findall("./control[@type='image']")
-                if node.findtext("visible") == "Control.HasFocus(9001)"
+                if node.findtext("visible", "").startswith("Control.HasFocus(9001) +")
             )
             focused_title = next(
                 node for node in focused.findall("./control[@type='textbox']")
-                if node.findtext("visible") == "Control.HasFocus(9001)"
+                if node.findtext("visible", "").startswith("Control.HasFocus(9001) +")
             )
+            self.assertIn("!Control.HasFocus(9002)", focused_image.findtext("visible", ""))
+            self.assertIn("!Control.HasFocus(9002)", focused_title.findtext("visible", ""))
             focus_accent = next(
                 node for node in focused.findall("./control[@type='image']")
                 if node.findtext("texture") == "focus-bar.png"
@@ -512,7 +514,7 @@ class HomeHeroActionTests(unittest.TestCase):
                      outline.findtext("label"), outline.findtext("visible")),
                     ("0", "172", "760", "56", "font13", "white",
                      f"$INFO[Container({container_id}).ListItem.PlotOutline]",
-                     f"!String.IsEmpty(Container({container_id}).ListItem.PlotOutline)"),
+                     f"String.IsEmpty(Container({container_id}).ListItem.Tagline) + !String.IsEmpty(Container({container_id}).ListItem.PlotOutline)"),
                 )
                 self.assertEqual(
                     (plot.findtext("left"), plot.findtext("top"), plot.findtext("width"),
@@ -520,6 +522,7 @@ class HomeHeroActionTests(unittest.TestCase):
                      plot.findtext("label"), plot.findtext("visible")),
                     ("0", "172", "760", "56", "font13", "white",
                      f"$INFO[Container({container_id}).ListItem.Plot]",
+                     f"String.IsEmpty(Container({container_id}).ListItem.Tagline) + "
                      f"String.IsEmpty(Container({container_id}).ListItem.PlotOutline) + "
                      f"!String.IsEmpty(Container({container_id}).ListItem.Plot)"),
                 )
