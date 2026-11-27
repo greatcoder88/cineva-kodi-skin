@@ -491,11 +491,11 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
             )
 
             (skin / "xml/Includes_Home.xml").write_text(
-                '<includes>\\n\\t<include name="WidgetGroupListCommon">\\n'
-                '\\t\\t<orientation>vertical</orientation>\\n'
-                '\\t\\t<height>33000</height>\\n\\t\\t<itemgap>-100</itemgap>\\n'
-                '\\t\\t<onup>20000</onup>\\n\\t\\t<ondown>20001</ondown>\\n'
-                '\\t\\t<usecontrolcoords>true</usecontrolcoords>\\n\\t</include>\\n</includes>',
+                '<includes>\n\t<include name="WidgetGroupListCommon">\n'
+                '\t\t<orientation>vertical</orientation>\n'
+                '\t\t<height>33000</height>\n\t\t<itemgap>-100</itemgap>\n'
+                '\t\t<onup>20000</onup>\n\t\t<ondown>20001</ondown>\n'
+                '\t\t<usecontrolcoords>true</usecontrolcoords>\n\t</include>\n</includes>',
                 encoding="utf-8",
             )
 
