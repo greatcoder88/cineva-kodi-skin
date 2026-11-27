@@ -23,7 +23,7 @@ NIMBUS_REPO = "ivarbrandt/skin.nimbus"
 NIMBUS_SHA = "8b5071b8cd0db3a8e813eb00e9a821d3efad2454"
 HELPER_REPO = "ivarbrandt/script.nimbus.helper"
 HELPER_SHA = "e42d2ffffbccaa58386ef2e4a054049e5fcb7664"
-SKIN_VERSION = "0.6.3"
+SKIN_VERSION = "0.6.4"
 BRIDGE_VERSION = "0.1.0"
 OUT_DIR = ROOT / "dist" / "nimbus-foundation"
 NOTICE = """CINÉVA Nimbus foundation
@@ -353,6 +353,43 @@ def patch_nimbus_include_list_id_defaults(skin_root: Path) -> None:
 
 
 
+
+def patch_nimbus_animation_param_conditions(skin_root: Path) -> None:
+    """Remove Kodi 22 parser-invalid PARAM references from animation attributes."""
+    xml_root = skin_root / "xml"
+    patches = (
+        ("Includes_PVR.xml",
+         '<animation effect="fade" start="100" end="60" time="0" condition="!Control.HasFocus($PARAM[list_id])">conditional</animation>',
+         "", 1),
+        ("Includes.xml",
+         '<animation effect="fade" start="100" end="50" time="40" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation>',
+         "", 1),
+        ("Includes.xml",
+         '<animation effect="fade" start="100" end="0" time="40" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation>',
+         "", 1),
+        ("View_50_List.xml",
+         '<animation effect="fade" start="100" end="0" time="300" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation>',
+         "", 7),
+        ("Includes_Animations.xml",
+         '<animation condition="!Control.HasFocus($PARAM[list_id]) + ControlGroup(2000).HasFocus" reversible="true">',
+         '<animation condition="ControlGroup(2000).HasFocus" reversible="true">',
+         1),
+    )
+    for filename, old, new, expected in patches:
+        path = xml_root / filename
+        if not path.is_file():
+            raise RuntimeError(f"Nimbus source is missing animation file: {filename}")
+        text = path.read_text(encoding="utf-8")
+        count = text.count(old)
+        if count != expected:
+            raise RuntimeError(
+                f"{filename}: expected {expected} PARAM focus animation patterns, found {count}"
+            )
+        path.write_text(text.replace(old, new), encoding="utf-8", newline="")
+        ET.parse(path)
+
+
+
 def write_default_skin_includes(skin_root: Path) -> None:
     """Ship empty Nimbus menu/widget includes before Kodi parses Includes.xml."""
     xml_root = skin_root / "xml"
@@ -638,6 +675,7 @@ def build(output_dir: Path = OUT_DIR, fetcher=fetch_archive) -> dict[str, Path]:
         )
         patch_nimbus_focus_include_ids(skin_root)
         patch_nimbus_include_list_id_defaults(skin_root)
+        patch_nimbus_animation_param_conditions(skin_root)
         patch_skin_manifest(skin_root)
         remove_api_controls(skin_root)
         remove_unsupported_startup_checks(skin_root)
