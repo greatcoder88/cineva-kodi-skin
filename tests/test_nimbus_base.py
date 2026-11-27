@@ -290,7 +290,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 self.assertIn("skin.cineva/NOTICE.txt", names)
                 manifest = archive.read("skin.cineva/addon.xml").decode()
                 self.assertIn('id="skin.cineva"', manifest)
-                self.assertIn('version="0.8.1"', manifest)
+                self.assertIn('version="0.8.2"', manifest)
                 self.assertIn('addon="xbmc.gui" version="5.18.0"', manifest)
                 self.assertIn('addon="script.cineva.nimbus" version="0.1.1"', manifest)
                 self.assertNotIn("script.nimbus.helper", manifest)
@@ -677,9 +677,9 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
             self.assertIsNone(widget_list.find("./include[@content='WidgetScrollbar']"))
             placeholder = ET.parse(skin / "xml/script-nimbus-widget_home.xml").getroot()
             self.assertIsNotNone(placeholder.find("./include[@name='HomeWidgets']"))
-            manage_home = home_group.find(".//control[@id='18005']")
-            self.assertEqual(manage_home.findtext("left"), "1425")
-            self.assertEqual(manage_home.findtext("width"), "420")
+            self.assertIsNone(home_group.find(".//control[@id='18005']"))
+            self.assertIsNone(root.find(".//control[@id='19005']"))
+            self.assertIsNone(root.find(".//control[@id='22005']"))
             clock_group = root.find(".//control[@type='group'][top='90'][left='90']")
             self.assertIsNotNone(clock_group)
             self.assertIn(
@@ -741,8 +741,8 @@ class NimbusWorkflowPathTests(unittest.TestCase):
     def test_workflow_uses_the_builder_skin_version(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
         source = workflow.read_text(encoding="utf-8")
-        self.assertIn("skin.cineva-0.8.1-nimbus.zip", source)
-        self.assertIn('manifest.get("version") == "0.8.1"', source)
+        self.assertIn("skin.cineva-0.8.2-nimbus.zip", source)
+        self.assertIn('manifest.get("version") == "0.8.2"', source)
 
     def test_first_boot_reads_kodis_actual_flatpak_log_location(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"

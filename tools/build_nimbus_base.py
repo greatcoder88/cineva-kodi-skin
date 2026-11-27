@@ -23,7 +23,7 @@ NIMBUS_REPO = "ivarbrandt/skin.nimbus"
 NIMBUS_SHA = "8b5071b8cd0db3a8e813eb00e9a821d3efad2454"
 HELPER_REPO = "ivarbrandt/script.nimbus.helper"
 HELPER_SHA = "e42d2ffffbccaa58386ef2e4a054049e5fcb7664"
-SKIN_VERSION = "0.8.1"
+SKIN_VERSION = "0.8.2"
 BRIDGE_VERSION = "0.1.1"
 OUT_DIR = ROOT / "dist" / "nimbus-foundation"
 NOTICE = """CINÉVA Nimbus foundation
@@ -679,28 +679,9 @@ def apply_cineva_widget_dashboard(skin_root: Path) -> None:
     )
     ET.SubElement(scrollbar, "param", {"name": "scrollbar_id", "value": "18099"})
 
-    def add_manage_button(parent, control_id: str, label: str, setting: str) -> None:
-        for existing in list(parent):
-            if existing.tag == "control" and existing.get("id") == control_id:
-                parent.remove(existing)
-        button = ET.SubElement(parent, "control", {"type": "button", "id": control_id})
-        for tag, value in (
-            ("left", "1425"), ("top", "0"), ("width", "420"), ("height", "42"),
-            ("label", label), ("font", "font14"), ("textcolor", "FFFFFFFF"),
-            ("focusedcolor", "accent_color"),
-            ("onclick", f"RunScript(script.cineva.nimbus,mode=manage_widgets&cpath_setting={setting})"),
-            ("onback", "SetFocus(9000)"),
-        ):
-            ET.SubElement(button, tag).text = value
-
-    add_manage_button(home_group, "18005", "MANAGE HOME WIDGETS", "home.widget")
-    for group_id, button_id, label, setting in (
-        ("19000", "19005", "MANAGE MOVIE WIDGETS", "movie.widget"),
-        ("22000", "22005", "MANAGE TV WIDGETS", "tvshow.widget"),
-    ):
-        group = root.find(f".//control[@id='{group_id}']")
-        if group is not None:
-            add_manage_button(group, button_id, label, setting)
+    # Widget configuration belongs in Kodi Skin Settings only. Do not add
+    # floating Manage buttons to Home, Movies or TV Shows: they compete with
+    # the cinematic hero and duplicate the dedicated Settings entry points.
     for candidate in root.findall(".//control[@type='group']"):
         labels = [
             label.text or ""
