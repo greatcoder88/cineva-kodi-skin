@@ -22,7 +22,7 @@ NIMBUS_REPO = "ivarbrandt/skin.nimbus"
 NIMBUS_SHA = "8b5071b8cd0db3a8e813eb00e9a821d3efad2454"
 HELPER_REPO = "ivarbrandt/script.nimbus.helper"
 HELPER_SHA = "e42d2ffffbccaa58386ef2e4a054049e5fcb7664"
-SKIN_VERSION = "0.6.0"
+SKIN_VERSION = "0.6.1"
 BRIDGE_VERSION = "0.1.0"
 OUT_DIR = ROOT / "dist" / "nimbus-foundation"
 NOTICE = """CINÉVA Nimbus foundation
@@ -58,6 +58,22 @@ SAFE_CUSTOM_ACTIONS = {
     "set_autoendplaybackdelay",
     "capture_user_key",
     "modify_keymap",
+}
+
+# Nimbus Includes.xml loads these files before the first-run welcome dialog can
+# invoke remake_all_cpaths(). Ship empty defaults so the first skin parse is
+# clean; the local bridge replaces them with configured paths later.
+DEFAULT_SKIN_INCLUDE_NAMES = {
+    "script-nimbus-widget_movies": "MovieWidgets",
+    "script-nimbus-widget_tvshows": "TVShowWidgets",
+    "script-nimbus-widget_custom1": "Custom1Widgets",
+    "script-nimbus-widget_custom2": "Custom2Widgets",
+    "script-nimbus-widget_custom3": "Custom3Widgets",
+    "script-nimbus-main_menu_movies": "MoviesMainMenu",
+    "script-nimbus-main_menu_tvshows": "TVShowsMainMenu",
+    "script-nimbus-main_menu_custom1": "Custom1MainMenu",
+    "script-nimbus-main_menu_custom2": "Custom2MainMenu",
+    "script-nimbus-main_menu_custom3": "Custom3MainMenu",
 }
 
 
@@ -162,6 +178,26 @@ def patch_skin_manifest(skin_root: Path) -> None:
         )
     ET.indent(root, space="  ")
     ET.ElementTree(root).write(manifest_path, encoding="UTF-8", xml_declaration=True)
+
+
+def write_default_skin_includes(skin_root: Path) -> None:
+    """Ship empty Nimbus menu/widget includes before Kodi parses Includes.xml."""
+    xml_root = skin_root / "xml"
+    template = (
+        '<?xml version="1.0" encoding="UTF-8"?>\\n'
+        '<includes>\\n'
+        '  <include name="{include_name}">\\n'
+        '  </include>\\n'
+        '</includes>\\n'
+    )
+    for filename, include_name in DEFAULT_SKIN_INCLUDE_NAMES.items():
+        path = xml_root / f"{filename}.xml"
+        if not path.exists():
+            path.write_text(
+                template.format(include_name=include_name),
+                encoding="utf-8",
+                newline="",
+            )
 
 
 def remove_api_controls(skin_root: Path) -> None:
@@ -431,6 +467,7 @@ def build(output_dir: Path = OUT_DIR, fetcher=fetch_archive) -> dict[str, Path]:
         patch_skin_manifest(skin_root)
         remove_api_controls(skin_root)
         remove_unsupported_startup_checks(skin_root)
+        write_default_skin_includes(skin_root)
         (skin_root / "NOTICE.txt").write_text(NOTICE, encoding="utf-8")
         manifest = {
             "skin": "skin.cineva",
