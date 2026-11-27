@@ -1,0 +1,46 @@
+name: Frame Kodi Build
+
+on:
+  push:
+    branches: [frame-nimbus]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/frame-nimbus'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build and verify Frame ZIPs
+        run: python tools/build_frame.py
+      - name: Record package checksums
+        working-directory: dist/frame
+        run: sha256sum -- *.zip > SHA256SUMS
+      - name: Upload test packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: frame-kodi-${{ github.sha }}
+          path: dist/frame/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Report build result
+        if: always()
+        env:
+          FRAME_JOB_STATUS: ${{ job.status }}
+        run: |
+          {
+            echo '## Frame Kodi Build'
+            echo "Build result: $FRAME_JOB_STATUS"
+            echo "Source commit: $GITHUB_SHA"
+            if [ "$FRAME_JOB_STATUS" = success ]; then
+              echo 'ZIP integrity, add-on manifests, XML and Python syntax validated.'
+              echo 'Kodi runtime and Fire TV remote behavior are outside this build check.'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
