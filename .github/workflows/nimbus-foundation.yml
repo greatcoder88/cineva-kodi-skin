@@ -58,7 +58,7 @@ jobs:
               assert manifest.get("id") == "skin.cineva"
               assert manifest.get("version") == "0.8.0"
               assert manifest.find("./requires/import[@addon='xbmc.gui']").get("version") == "5.18.0"
-              assert manifest.find("./requires/import[@addon='script.cineva.nimbus']").get("version") == "0.1.0"
+              assert manifest.find("./requires/import[@addon='script.cineva.nimbus']").get("version") == "0.1.1"
               assert "script.nimbus.helper" not in skin.read("skin.cineva/addon.xml").decode()
               for path in skin_names:
                   if path.endswith(".xml"):
