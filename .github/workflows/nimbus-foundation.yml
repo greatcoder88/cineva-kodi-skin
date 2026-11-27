@@ -475,7 +475,7 @@ jobs:
               raise SystemExit(f"CINÉVA was not retained after Keep Skin: setting={selected}; GUI={state}")
 
           state = gui()
-          if state.get("currentwindow",{}).get("id") in (1112, 11112, 12002):
+          if state.get("currentwindow",{}).get("id") in (1112, 11112):
               welcome_label = state.get("currentcontrol",{}).get("label","").strip()
               if welcome_label.lower() != "ok":
                   raise SystemExit(f"Nimbus first-run welcome did not focus OK: {state}")
@@ -499,17 +499,12 @@ jobs:
               deadline = time.time() + 45
               while time.time() < deadline:
                   state = gui()
-                  dialog_id = state.get("currentwindow", {}).get("id")
-                  dialog_label = state.get("currentcontrol", {}).get("label", "").strip().lower()
-                  # Kodi 22 DialogOK reports an empty currentcontrol.label in
-                  # JSON-RPC even though the visible OK button is focused.
-                  # The success confirmation is a modal window with a stable
-                  # ID; dismiss it by input action rather than trusting the
-                  # optional label field, then wait for Home to become active.
-                  if dialog_id == 12002 or (dialog_id == 10100 and dialog_label == "ok"):
+                  window_id = state.get("currentwindow",{}).get("id")
+                  control_label = state.get("currentcontrol",{}).get("label","").strip().lower()
+                  if window_id == 12002 or (window_id == 10100 and control_label == "ok"):
                       print("Dismissing Nimbus's completed menu/widget setup confirmation.")
                       subprocess.run(["xdotool","key","Return"],check=True)
-                      time.sleep(0.35)
+                      time.sleep(0.25)
                       continue
                   missing = [
                       name for name in required_default_includes
