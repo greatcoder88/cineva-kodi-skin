@@ -78,7 +78,7 @@ def apply_typography(xml):
             ("FrameHeroTitle", "Inter-Bold.ttf" if inter else title, "61"),
             ("FrameTVLabel", "Inter-SemiBold.ttf" if inter else label, "27"),
             ("FrameBody", label, "29"),
-            ("FrameTab", "Inter-SemiBold.ttf" if inter else label, "25"),
+            ("FrameTab", "Inter-SemiBold.ttf" if inter else label, "23"),
         )
         for name, face, size in fonts:
             set_fields(ET.SubElement(fontset, "font"), {"name": name, "filename": face, "size": size})
@@ -342,6 +342,23 @@ def write_feature_scrim(skin):
                      + chunk(b"IDAT", zlib.compress(rows, 9)) + chunk(b"IEND", b""))
 
 
+def apply_landscape_cards(xml):
+    path = xml / "Includes_HomeLayouts.xml"
+    tree = read_xml(path)
+    layout = tree.getroot().find("include[@name='FlixScapeWidgetMovieLayout']/definition")
+    missing = next(group for group in layout.findall("control")
+                   if group.findtext("visible") == "String.IsEmpty(ListItem.Art(fanart)) + String.IsEmpty(ListItem.Art(landscape))")
+    for control in missing.findall("control"):
+        missing.remove(control)
+    fallback = ET.SubElement(missing, "include", {"content": "FrameMissingLandscapeCard"})
+    for param in ("focused", "list_id"):
+        ET.SubElement(fallback, "param", {"name": param, "value": f"$PARAM[{param}]"})
+    for pulse in layout.findall(".//include[@content='GlowPulse']"):
+        parent = next(control for control in layout.iter("control") if pulse in control)
+        parent.remove(pulse)
+    write_xml(tree, path)
+
+
 def apply_theme(skin, theme_source):
     xml = skin / "xml"
     apply_palette(skin)
@@ -351,6 +368,7 @@ def apply_theme(skin, theme_source):
     apply_title_details(xml)
     apply_settings_and_dialogs(xml)
     apply_playback(xml)
+    apply_landscape_cards(xml)
     write_feature_scrim(skin)
     target = xml / theme_source.name
     theme = read_xml(theme_source)

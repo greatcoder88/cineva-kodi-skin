@@ -1,5 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <includes>
+  <include name="FrameMissingLandscapeCard">
+    <definition>
+      <control type="group">
+        <left>20</left>
+        <top>11</top>
+        <width>430</width>
+        <height>242</height>
+        <control type="image">
+          <texture diffuse="masks/flixscape-widget.png" colordiffuse="primary_content_panel_bg">colors/white.png</texture>
+        </control>
+        <control type="image">
+          <texture diffuse="masks/flixscape-widget.png" background="true">$INFO[ListItem.Art(poster)]</texture>
+          <aspectratio align="center" aligny="center" scalediffuse="false">scale</aspectratio>
+          <visible>!String.IsEmpty(ListItem.Art(poster))</visible>
+        </control>
+        <control type="image">
+          <texture>frame/feature-scrim.png</texture>
+          <visible>!String.IsEmpty(ListItem.Art(poster))</visible>
+        </control>
+        <control type="textbox">
+          <left>26</left>
+          <top>137</top>
+          <width>378</width>
+          <height>85</height>
+          <font>FrameTVLabel</font>
+          <textcolor>unfocused_text</textcolor>
+          <label>$INFO[ListItem.Label]</label>
+          <aligny>bottom</aligny>
+        </control>
+        <control type="image">
+          <texture border="15" infill="false" colordiffuse="unfocused_text">masks/flixscape-border-widget.png</texture>
+          <visible>$PARAM[focused] + Control.HasFocus($PARAM[list_id])</visible>
+        </control>
+      </control>
+    </definition>
+  </include>
   <include name="FrameSectionHeader">
     <definition>
       <control type="group">
