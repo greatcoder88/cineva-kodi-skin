@@ -15,8 +15,8 @@ PALETTE = {
     "dialog_bg3": "FF17181B",
     "button_focus": "FFF5F5F5",
     "button_focus2": "FF34373D",
-    "frame_card_focus": "FFC1C6D0",
-    "frame_osd_control": "E62C3039",
+    "frame_card_focus": "FFE1E5EF",
+    "frame_osd_control": "E6262930",
     "focused_text": "FF141414",
     "unfocused_text": "FFF5F5F5",
     "artwork_dim": "FFFFFFFF",
@@ -377,26 +377,26 @@ def apply_playback(xml):
 
 def write_feature_scrim(skin):
     # One small stretchable texture keeps the title legible over bright artwork.
-    # Grayscale + alpha PNG, using a left-weighted falloff and transparent corners.
-    width, height, radius = 224, 82, 3
+    # Fade the edge of the artwork into the matching solid skin background.
+    width, height = 224, 82
+    color = bytes.fromhex(PALETTE["background"][2:])
     rows = bytearray()
     for y in range(height):
         rows.append(0)
         for x in range(width):
-            dx = max(radius - x, x - (width - 1 - radius), 0)
-            dy = max(radius - y, y - (height - 1 - radius), 0)
-            horizontal = 1 - min(1, max(0, (x / (width - 1) - 0.16) / 0.60))
+            horizontal = 1 - min(1, x / (width - 1) / 0.40)
             horizontal = horizontal ** 2 * (3 - 2 * horizontal)
-            bottom = max(0, (y / (height - 1) - 0.60) / 0.40) ** 2
-            alpha = round(255 * (1 - (1 - 0.86 * horizontal) * (1 - 0.68 * bottom)))
-            rows.extend((0, alpha if dx * dx + dy * dy <= radius * radius else 0))
+            vertical = max(0, (y / (height - 1) - 0.65) / 0.35) ** 2
+            alpha = round(255 * (1 - (1 - horizontal) * (1 - vertical)))
+            rows.extend(color)
+            rows.append(alpha)
 
     def chunk(kind, data):
         return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
 
     path = skin / "media/frame/feature-scrim.png"
     path.parent.mkdir(parents=True, exist_ok=True)
-    header = struct.pack(">IIBBBBB", width, height, 8, 4, 0, 0, 0)
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
     path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header)
                      + chunk(b"IDAT", zlib.compress(rows, 9)) + chunk(b"IEND", b""))
 
@@ -423,6 +423,10 @@ def apply_video_cards(xml):
     for control in category.findall("control[@type='label']"):
         set_fields(control, {"top": "15", "font": "FrameTVLabel", "textcolor": "unfocused_text",
                              "label": "$PARAM[label]", "scroll": "false"})
+        if control.find("left") is not None:
+            set_fields(control, {"left": "0"})
+        for animation in control.findall("animation"):
+            control.remove(animation)
     write_xml(tree, path)
 
 
@@ -435,7 +439,7 @@ def apply_motion(xml):
         is_opening = animation.get("type") == "WindowOpen"
         for effect in animation.findall("effect"):
             effect.attrib.pop("delay", None)
-            effect.set("time", "145" if is_opening else "110")
+            effect.set("time", "135" if is_opening else "95")
             if effect.get("type") == "zoom":
                 effect.attrib.update({"tween": "cubic", "easing": "out",
                                       "start": "98" if is_opening else "100",
@@ -470,7 +474,7 @@ def apply_theme(skin, theme_source):
     path = xml / "Includes_Home.xml"
     widgets = read_xml(path)
     list_common = widgets.getroot().find("include[@name='WidgetListCommon']")
-    set_fields(list_common, {"scrolltime": "220"})
+    set_fields(list_common, {"scrolltime": "150"})
     landscape = widgets.getroot().find("include[@name='WidgetListLandscape']/definition/control[@type='fixedlist']/visible")
     landscape.text += " | [Window.IsVisible(11121) + String.IsEqual(Window(Home).Property(nimbus.search.refreshing),true)]"
     write_xml(widgets, path)
