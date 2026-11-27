@@ -195,7 +195,8 @@ def apply_search(xml):
             set_fields(heading, {"top": "182", "height": "65", "font": "FrameTVLabel"})
         elif label.text and label.text.startswith("Search results for:"):
             heading = next(control for control in root.iter("control") if label in control)
-            set_fields(heading, {"top": "485", "font": "FrameTVLabel", "textcolor": "grey"})
+            label.text = "Results for ‘$INFO[Window(home).Property(nimbus.search.input)]’"
+            set_fields(heading, {"top": "472", "font": "FrameTVLabel", "textcolor": "unfocused_text"})
         elif label.text == "$INFO[Window(home).Property(nimbus.search.history.empty)]":
             message = next(control for control in root.iter("control") if label in control)
             set_fields(message, {"left": "570", "top": "205", "width": "960", "height": "95",
@@ -228,6 +229,12 @@ def apply_title_details(xml):
     set_fields(backdrop, {"width": "100%", "height": "100%", "depth": "DepthBackground"})
     ET.SubElement(backdrop, "texture", {"colordiffuse": "background"}).text = "colors/white.png"
     controls.insert(0, backdrop)
+    actions = find_control(root, 20000)
+    stock_items = actions.find("include[@content='List']")
+    actions.remove(stock_items)
+    items = ET.Element("include")
+    items.text = "FrameDetailsActionItems"
+    actions.insert(list(actions).index(actions.find("content")), items)
     for control in root.iter("control"):
         label = control.findtext("label")
         if label == "[B]$VAR[DialogInfoTitle][/B]":
@@ -241,9 +248,11 @@ def apply_title_details(xml):
             set_fields(control, {"align": "left", "font": "FrameBody", "textcolor": "unfocused_text"})
         elif label in {"$INFO[ListItem.TagLine]", "[I]$INFO[ListItem.Genre][/I]"}:
             set_fields(control, {"align": "left", "font": "FrameTVLabel", "textcolor": "grey"})
+            if label == "[I]$INFO[ListItem.Genre][/I]":
+                control.find("label").text = "$INFO[ListItem.Year]$INFO[ListItem.Genre,  •  ]"
         texture = control.find("texture")
         if texture is not None and texture.text == "$INFO[ListItem.Art(fanart)]":
-            texture.set("colordiffuse", "FF4A4A4A")
+            texture.set("colordiffuse", "FF575757")
             texture.set("diffuse", "overlays/netflixfanartdiffuse.png")
             set_fields(control, {"aspectratio": "scale", "fadetime": "165"})
     write_xml(tree, path)
