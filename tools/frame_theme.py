@@ -121,7 +121,7 @@ def apply_home(xml):
 
     # Keep all generated widget paths and list IDs. Present them below the
     # feature artwork and bring them up as soon as a shelf takes focus.
-    set_fields(widgets, {"top": "735"})
+    set_fields(widgets, {"top": "785"})
     widgets.remove(widgets.find("include[.='MainMenuAnimations']"))
     animation = ET.SubElement(widgets, "animation", {
         "type": "Conditional", "condition": "ControlGroup(2000).HasFocus", "reversible": "true",
@@ -241,6 +241,16 @@ def apply_title_details(xml):
     items = ET.Element("include")
     items.text = "FrameDetailsActionItems"
     actions.insert(list(actions).index(actions.find("content")), items)
+    action_group = next(group for group in root.iter("control") if actions in group)
+    poster = next(control for control in action_group.findall("control[@type='image']")
+                  if control.findtext("texture") == "$VAR[FlixPosterVar]")
+    set_fields(poster, {"width": "790", "height": "565", "right": "66", "top": "211"})
+    poster.remove(poster.find("bottom"))
+    artwork = poster.find("texture")
+    artwork.text = "$INFO[ListItem.Art(fanart)]"
+    artwork.attrib.update({"diffuse": "masks/giant-landscape.png", "fallback": "$VAR[FlixPosterVar]",
+                           "background": "true"})
+    poster.remove(poster.find("bordertexture"))
     for control in root.iter("control"):
         label = control.findtext("label")
         if label == "[B]$VAR[DialogInfoTitle][/B]":
@@ -278,6 +288,8 @@ def apply_settings_and_dialogs(xml):
             set_fields(control, {"height": "75"})
             if control.get("type") == "label":
                 set_fields(control, {"font": "FrameTVLabel", "aligny": "center", "textoffsety": "0"})
+            elif control.get("type") == "image":
+                control.find("texture").set("border", "22")
     write_xml(tree, path)
 
     path = xml / "DialogContextMenu.xml"
@@ -321,7 +333,9 @@ def apply_playback(xml):
     player = buttons.find("include[@name='PlayerButton']")
     set_fields(player, {"textcolor": "osd_light", "focusedcolor": "focused_text"})
     for tag in ("texturefocus", "alttexturefocus"):
-        player.find(tag).set("colordiffuse", "button_focus")
+        texture = player.find(tag)
+        texture.text = "masks/focus.png"
+        texture.attrib.update({"colordiffuse": "button_focus", "border": "22"})
     for name in ("DefaultDialogButton", "DefaultSettingButton", "DefaultAddonSettingsButton"):
         definition = buttons.find(f"include[@name='{name}']/definition")
         for font in definition.iter("font"):
@@ -358,19 +372,20 @@ def write_feature_scrim(skin):
 
 
 def apply_landscape_cards(xml):
-    path = xml / "Includes_HomeLayouts.xml"
+    path = xml / "Includes_Home.xml"
     tree = read_xml(path)
-    layout = tree.getroot().find("include[@name='FlixScapeWidgetMovieLayout']/definition")
-    missing = next(group for group in layout.findall("control")
-                   if group.findtext("visible") == "String.IsEmpty(ListItem.Art(fanart)) + String.IsEmpty(ListItem.Art(landscape))")
-    for control in missing.findall("control"):
-        missing.remove(control)
-    fallback = ET.SubElement(missing, "include", {"content": "FrameMissingLandscapeCard"})
-    for param in ("focused", "list_id"):
-        ET.SubElement(fallback, "param", {"name": param, "value": f"$PARAM[{param}]"})
-    for pulse in layout.findall(".//include[@content='GlowPulse']"):
-        parent = next(control for control in layout.iter("control") if pulse in control)
-        parent.remove(pulse)
+    layout = tree.getroot().find("include[@name='WidgetListLandscape']/definition")
+    layout.find("include[@content='CategoryLabel']").set("content", "FrameShelfHeading")
+    fixedlist = layout.find("control[@type='fixedlist']")
+    set_fields(fixedlist, {"height": "265", "movement": "5"})
+    for tag in ("itemlayout", "focusedlayout"):
+        item = fixedlist.find(tag)
+        item.attrib.update({"width": "326", "height": "265"})
+        group = item.find("control")
+        group.find("left").text = "58"
+        group.find("top").text = "12"
+        card = group.find("include[@content='FlixScapeWidgetMovieLayout']")
+        card.set("content", "FrameLandscapeCard")
     write_xml(tree, path)
 
 
