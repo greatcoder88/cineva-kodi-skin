@@ -94,7 +94,7 @@ jobs:
               bridge_manifest=ET.fromstring(z.read("script.cineva.nimbus/addon.xml"))
               assert bridge_manifest.get("id") == "script.cineva.nimbus"
               assert bridge_manifest.get("version") == "0.1.1"
-              assert "script.cineva.nimbus/resources/lib/service.py" in z.namelist()
+              assert "script.cineva.nimbus/resources/lib/modules/cpath_maker.py" in z.namelist()
           print("CINÉVA feed, Nimbus-derived skin package, bridge dependency and directory indexes validated.")
           PY
       - name: Publish browsable repository to GitHub Pages branch
