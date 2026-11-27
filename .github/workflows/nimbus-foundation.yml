@@ -29,7 +29,7 @@ jobs:
       - name: Build the pinned Nimbus-derived skin and API-free bridge
         run: python tools/build_nimbus_base.py
       - name: Test builder transformations with isolated upstream fixtures
-        run: python -m unittest tests.test_nimbus_base -v
+        run: python -m unittest discover -s tests -p 'test_nimbus_base.py' -v
       - name: Verify real upstream XML, licenses, dependencies and package contents
         run: |
           python - <<'PY'
