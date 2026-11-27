@@ -188,7 +188,7 @@ jobs:
                   # Kodi's TCP JSON-RPC transport is newline-delimited. Sending
                   # the terminator also avoids leaving a request buffered while
                   # the GUI thread is rebuilding the active skin.
-                  sock.sendall(json.dumps(request).encode() + b"\\n")
+                  sock.sendall(json.dumps(request).encode() + b"\n")
                   data = ""
                   deadline = time.time() + response_timeout
                   while time.time() < deadline:
@@ -301,7 +301,7 @@ jobs:
                   raise SystemExit(
                       "Kodi exited while loading skin.cineva. "
                       f"Last GUI={state}; RPC error={last_gui_error}; "
-                      f"Kodi log tail:\\n{log_text()[-10000:]}"
+                      f"Kodi log tail:\n{log_text()[-10000:]}"
                   )
               time.sleep(1)
           else:
@@ -316,7 +316,7 @@ jobs:
               raise SystemExit(
                   "Kodi accepted the skin setting but did not finish loading skin.cineva within 120 seconds. "
                   f"GUI={state}; last RPC error={last_gui_error}; "
-                  f"Kodi log tail:\\n{log_text()[-10000:]}"
+                  f"Kodi log tail:\n{log_text()[-10000:]}"
               )
 
           # Confirm the Keep Skin dialog when Kodi presents it.
