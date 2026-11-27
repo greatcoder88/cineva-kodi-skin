@@ -15,6 +15,8 @@ PALETTE = {
     "dialog_bg3": "FF17181B",
     "button_focus": "FFF5F5F5",
     "button_focus2": "FF34373D",
+    "frame_card_focus": "FFC1C6D0",
+    "frame_osd_control": "E62C3039",
     "focused_text": "FF141414",
     "unfocused_text": "FFF5F5F5",
     "artwork_dim": "FFFFFFFF",
@@ -325,6 +327,15 @@ def apply_playback(xml):
     for group in default_osd.findall("control[@type='grouplist']"):
         if group.findtext("top") == "120":
             set_fields(group, {"top": "126", "height": "120"})
+    transport = find_control(default_osd, 700)
+    set_fields(transport, {"itemgap": "12"})
+    play = find_control(transport, 703)
+    set_fields(play, {"width": "96"})
+    utilities = find_control(default_osd, 707)
+    for group in utilities.findall("control[@type='grouplist']"):
+        set_fields(group, {"itemgap": "1"})
+        for label in group.findall("control[@type='label']"):
+            set_fields(label, {"width": "68", "height": "30", "textcolor": "grey"})
     write_xml(tree, path)
 
     path = xml / "Includes_Seekbar.xml"
@@ -343,12 +354,15 @@ def apply_playback(xml):
     tree = read_xml(path)
     buttons = tree.getroot()
     player = buttons.find("include[@name='PlayerButton']")
-    set_fields(player, {"width": "68", "height": "68", "textoffsetx": "8", "textoffsety": "9",
+    set_fields(player, {"width": "68", "height": "68", "align": "center", "aligny": "center",
+                        "textoffsetx": "0", "textoffsety": "0",
                         "textcolor": "osd_light", "focusedcolor": "focused_text"})
     for tag in ("texturefocus", "alttexturefocus"):
         texture = player.find(tag)
         texture.text = "masks/focus.png"
         texture.attrib.update({"colordiffuse": "button_focus", "border": "22"})
+    for tag in ("texturenofocus", "alttexturenofocus"):
+        ET.SubElement(player, tag, {"colordiffuse": "frame_osd_control", "border": "22"}).text = "masks/focus.png"
     for name in ("DefaultDialogButton", "DefaultSettingButton", "DefaultAddonSettingsButton"):
         definition = buttons.find(f"include[@name='{name}']/definition")
         for font in definition.iter("font"):
@@ -371,7 +385,10 @@ def write_feature_scrim(skin):
         for x in range(width):
             dx = max(radius - x, x - (width - 1 - radius), 0)
             dy = max(radius - y, y - (height - 1 - radius), 0)
-            alpha = round(28 + 184 * (1 - x / (width - 1)) ** 2)
+            horizontal = 1 - min(1, max(0, (x / (width - 1) - 0.16) / 0.60))
+            horizontal = horizontal ** 2 * (3 - 2 * horizontal)
+            bottom = max(0, (y / (height - 1) - 0.60) / 0.40) ** 2
+            alpha = round(255 * (1 - (1 - 0.86 * horizontal) * (1 - 0.68 * bottom)))
             rows.extend((0, alpha if dx * dx + dy * dy <= radius * radius else 0))
 
     def chunk(kind, data):
