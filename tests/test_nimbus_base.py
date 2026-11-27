@@ -62,6 +62,9 @@ NIMBUS_FILES = {
         <control type="button" id="$PARAM[list_id]500"><visible allowhiddenfocus="true">Container($PARAM[list_id]).HasPrevious + [Control.HasFocus($PARAM[list_id]) | Control.HasFocus($PARAM[list_id]500)]</visible></control>
         <control type="button" id="$PARAM[list_id]501"><visible allowhiddenfocus="true">Container($PARAM[list_id]).HasNext + [Control.HasFocus($PARAM[list_id]) | Control.HasFocus($PARAM[list_id]501)]</visible></control>
       </include>
+      <include name="WallTimer"><control type="button"><onfocus>Skin.TimerStart(wall_scroll_timer)</onfocus></control></include>
+      <include name="PosterFlowScrollTimer"><control type="button"><onfocus>Skin.TimerStart(posterflow_scroll_timer)</onfocus></control></include>
+      <include name="HomeTrailerControl"><control type="button"><onfocus>Skin.TimerStart(autoplay_trailer_timer)</onfocus></control></include>
     </includes>""",
     "xml/Includes_Home.xml": """<includes>
       <onload>RunScript(script.nimbus.helper,mode=check_for_update&amp;skin_id=skin.nimbus)</onload>
@@ -134,6 +137,13 @@ NIMBUS_FILES = {
     "xml/Includes_Animations.xml": """<includes>
       <include name="WidgetVisibilityAnimations"><animation condition="!Control.HasFocus($PARAM[list_id]) + ControlGroup(2000).HasFocus" reversible="true"><effect type="faded" start="100" end="80" time="300" /></animation></include>
     </includes>""",
+    "xml/Includes_MediaMenu.xml": """<includes><include name="AutoLockView"><control type="button"><onclick>Skin.TimerStart(autolock_view_timer)</onclick></control></include></includes>""",
+    "xml/Timers.xml": """<timers>
+      <timer><name>wall_scroll_timer</name><start reset="true">Control.HasFocus($PARAM[list_id])</start><stop>true</stop><onstop>Container.SetViewMode(54)</onstop><onstop>Container.SetViewMode(55)</onstop></timer>
+      <timer><name>posterflow_scroll_timer</name><start reset="true">Control.HasFocus($PARAM[list_id])</start><stop>true</stop></timer>
+      <timer><name>autolock_view_timer</name><start reset="true">Control.HasFocus($PARAM[list_id])</start><stop>true</stop><onstop>Skin.SetString(ViewLocked,true)</onstop><onstop>Skin.SetString(ViewLocked,true)</onstop><onstop>Skin.SetString(ViewLocked,true)</onstop></timer>
+      <timer><name>autoplay_trailer_timer</name><start reset="true">Control.HasFocus($PARAM[list_id])</start><stop>true</stop><onstop>Skin.SetString(TrailerPlaying,true)</onstop><onstop>Skin.SetString(TrailerPlaying,true)</onstop></timer>
+    </timers>""",
     "fonts/Inter-Regular.ttf": b"test-font",
     "resources/icon.png": b"test-icon",
 }
@@ -213,7 +223,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 self.assertIn("skin.cineva/NOTICE.txt", names)
                 manifest = archive.read("skin.cineva/addon.xml").decode()
                 self.assertIn('id="skin.cineva"', manifest)
-                self.assertIn('version="0.7.0"', manifest)
+                self.assertIn('version="0.7.1"', manifest)
                 self.assertIn('addon="xbmc.gui" version="5.18.0"', manifest)
                 self.assertIn('addon="script.cineva.nimbus" version="0.1.0"', manifest)
                 self.assertNotIn("script.nimbus.helper", manifest)
@@ -297,24 +307,44 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                         )
 
 
-    def test_parameterized_focus_conditions_use_kodi22_container_focus(self):
+    def test_parameterized_focus_conditions_are_preserved_in_valid_include_definitions(self):
         with tempfile.TemporaryDirectory() as temp:
             paths = self.build_fixture(Path(temp) / "dist")
             with zipfile.ZipFile(paths["skin"]) as archive:
-                rewritten = 0
+                preserved = 0
                 for filename in archive.namelist():
                     if not filename.endswith(".xml"):
                         continue
-                    content = archive.read(filename).decode("utf-8")
-                    self.assertNotIn("Control.HasFocus($PARAM[list_id])", content, filename)
-                    self.assertNotIn("Control.HasFocus($PARAM[list_id]500)", content, filename)
-                    self.assertNotIn("Control.HasFocus($PARAM[list_id]501)", content, filename)
-                    rewritten += content.count("Container($PARAM[list_id]).HasFocus")
-                self.assertGreater(rewritten, 20)
-
-                includes_text = archive.read("skin.cineva/xml/Includes.xml").decode("utf-8")
-                self.assertIn("Container($PARAM[list_id]).HasPrevious + ControlGroup(2000).HasFocus", includes_text)
-                self.assertIn("Container($PARAM[list_id]).HasNext + ControlGroup(2000).HasFocus", includes_text)
+                    root = ET.fromstring(archive.read(filename))
+                    for include in root.findall(".//include[@name]"):
+                        block = ET.tostring(include, encoding="unicode")
+                        count = block.count("Control.HasFocus($PARAM[list_id])")
+                        if not count:
+                            continue
+                        list_params = [
+                            param for param in include.findall("param")
+                            if param.get("name") == "list_id"
+                        ]
+                        self.assertEqual(
+                            len(list_params), 1, f"{filename}:{include.get('name')}"
+                        )
+                        self.assertTrue(
+                            list_params[0].get("default"),
+                            f"{filename}:{include.get('name')} missing list_id default",
+                        )
+                        self.assertIsNotNone(
+                            include.find("definition"),
+                            f"{filename}:{include.get('name')} body is not wrapped",
+                        )
+                        self.assertFalse(
+                            [
+                                child for child in include
+                                if child.tag not in ("param", "definition")
+                            ],
+                            f"{filename}:{include.get('name')} has content outside definition",
+                        )
+                        preserved += count
+                self.assertGreater(preserved, 0)
 
                 animations = ET.fromstring(
                     archive.read("skin.cineva/xml/Includes_Animations.xml")
@@ -324,7 +354,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 )
                 self.assertEqual(
                     widget_visibility.get("condition"),
-                    "!Container($PARAM[list_id]).HasFocus + ControlGroup(2000).HasFocus",
+                    "!Control.HasFocus($PARAM[list_id]) + ControlGroup(2000).HasFocus",
                 )
                 expected_home_focus = {
                     "Includes_HomeLayouts.xml": 4,
@@ -338,10 +368,46 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                     )
                     dynamic = [
                         animation for animation in root.findall(".//animation")
-                        if "Container($PARAM[list_id]).HasFocus"
+                        if "Control.HasFocus($PARAM[list_id])"
                         in animation.get("condition", "")
                     ]
                     self.assertEqual(len(dynamic), expected, filename)
+
+
+    def test_global_timers_remove_unbound_include_parameters_and_keep_manual_starts(self):
+        with tempfile.TemporaryDirectory() as temp:
+            paths = self.build_fixture(Path(temp) / "dist")
+            with zipfile.ZipFile(paths["skin"]) as archive:
+                timers_text = archive.read("skin.cineva/xml/Timers.xml").decode("utf-8")
+                timers = ET.fromstring(timers_text)
+                expected_onstop_counts = {
+                    "wall_scroll_timer": 2,
+                    "posterflow_scroll_timer": 0,
+                    "autolock_view_timer": 3,
+                    "autoplay_trailer_timer": 2,
+                }
+                timer_nodes = {
+                    node.findtext("name"): node for node in timers.findall("timer")
+                }
+                self.assertEqual(set(timer_nodes), set(expected_onstop_counts))
+                self.assertNotIn("$PARAM[list_id]", timers_text)
+                for name, onstop_count in expected_onstop_counts.items():
+                    node = timer_nodes[name]
+                    self.assertIsNone(node.find("start"), name)
+                    self.assertIsNotNone(node.find("stop"), name)
+                    self.assertEqual(len(node.findall("onstop")), onstop_count, name)
+
+                includes = archive.read("skin.cineva/xml/Includes.xml").decode("utf-8")
+                for name in (
+                    "wall_scroll_timer",
+                    "posterflow_scroll_timer",
+                    "autoplay_trailer_timer",
+                ):
+                    self.assertIn(f"Skin.TimerStart({name})", includes)
+                media_menu = archive.read(
+                    "skin.cineva/xml/Includes_MediaMenu.xml"
+                ).decode("utf-8")
+                self.assertIn("Skin.TimerStart(autolock_view_timer)", media_menu)
 
 
     def test_bridge_keeps_local_widget_logic_and_api_free_service_entry(self):
@@ -541,8 +607,8 @@ class NimbusWorkflowPathTests(unittest.TestCase):
     def test_workflow_uses_the_builder_skin_version(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
         source = workflow.read_text(encoding="utf-8")
-        self.assertIn("skin.cineva-0.7.0-nimbus.zip", source)
-        self.assertIn('manifest.get("version") == "0.7.0"', source)
+        self.assertIn("skin.cineva-0.7.1-nimbus.zip", source)
+        self.assertIn('manifest.get("version") == "0.7.1"', source)
 
     def test_first_boot_reads_kodis_actual_flatpak_log_location(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
