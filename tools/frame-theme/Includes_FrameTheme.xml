@@ -46,20 +46,6 @@
     <value condition="!String.IsEmpty(ListItem.Art(fanart))">$INFO[ListItem.Art(fanart)]</value>
     <value>$INFO[ListItem.Art(poster)]</value>
   </variable>
-  <include name="FrameShelfHeading">
-    <definition>
-      <control type="label">
-        <left>58</left>
-        <top>76</top>
-        <width>1600</width>
-        <height>37</height>
-        <font>FrameTVLabel</font>
-        <textcolor>unfocused_text</textcolor>
-        <label>$PARAM[label]</label>
-        <visible>Integer.IsGreater(Container($PARAM[list_id]).NumItems,0) | Container($PARAM[list_id]).IsUpdating</visible>
-      </control>
-    </definition>
-  </include>
   <include name="FrameLandscapeCard">
     <param name="focused">false</param>
     <definition>

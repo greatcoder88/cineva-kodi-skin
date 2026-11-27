@@ -121,7 +121,7 @@ def apply_home(xml):
 
     # Keep all generated widget paths and list IDs. Present them below the
     # feature artwork and bring them up as soon as a shelf takes focus.
-    set_fields(widgets, {"top": "785"})
+    set_fields(widgets, {"top": "735"})
     widgets.remove(widgets.find("include[.='MainMenuAnimations']"))
     animation = ET.SubElement(widgets, "animation", {
         "type": "Conditional", "condition": "ControlGroup(2000).HasFocus", "reversible": "true",
@@ -375,12 +375,11 @@ def apply_landscape_cards(xml):
     path = xml / "Includes_Home.xml"
     tree = read_xml(path)
     layout = tree.getroot().find("include[@name='WidgetListLandscape']/definition")
-    layout.find("include[@content='CategoryLabel']").set("content", "FrameShelfHeading")
     fixedlist = layout.find("control[@type='fixedlist']")
-    set_fields(fixedlist, {"height": "265", "movement": "5"})
+    set_fields(fixedlist, {"movement": "5"})
     for tag in ("itemlayout", "focusedlayout"):
         item = fixedlist.find(tag)
-        item.attrib.update({"width": "326", "height": "265"})
+        item.set("width", "326")
         group = item.find("control")
         group.find("left").text = "58"
         group.find("top").text = "12"
