@@ -342,7 +342,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
             (skin / "colors/defaults.xml").write_text(color_xml, encoding="utf-8")
             home_xml = (
                 '<?xml version="1.0" encoding="UTF-8"?>'
-                '<window><controls><include>DefaultBackground</include>'
+                '<window><defaultcontrol>9000</defaultcontrol><controls><include>DefaultBackground</include>'
                 '<control type="fixedlist" id="9000"/></controls></window>'
             )
             (skin / "xml/Home.xml").write_text(home_xml, encoding="utf-8")
