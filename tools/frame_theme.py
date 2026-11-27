@@ -1,6 +1,8 @@
 """Apply the Frame TV theme to stock Nimbus before packaging the skin."""
 
+import struct
 import xml.etree.ElementTree as ET
+import zlib
 
 
 PALETTE = {
@@ -71,7 +73,14 @@ def apply_typography(xml):
         # so the new TV labels accept the same character sets as stock Nimbus.
         title = fontset.find("font[name='font52_title']/filename").text
         label = fontset.find("font[name='font27_title']/filename").text
-        for name, face, size in (("FrameHeroTitle", title, "64"), ("FrameTVLabel", label, "27")):
+        inter = title == "Inter-Regular.ttf"
+        fonts = (
+            ("FrameHeroTitle", "Inter-Bold.ttf" if inter else title, "61"),
+            ("FrameTVLabel", "Inter-SemiBold.ttf" if inter else label, "27"),
+            ("FrameBody", label, "29"),
+            ("FrameTab", "Inter-SemiBold.ttf" if inter else label, "25"),
+        )
+        for name, face, size in fonts:
             set_fields(ET.SubElement(fontset, "font"), {"name": name, "filename": face, "size": size})
     write_xml(tree, path)
 
@@ -95,13 +104,13 @@ def apply_home(xml):
     menu_group.insert(0, ET.Element("include"))
     menu_group[0].text = "FrameTopBar"
     set_fields(menu, {
-        "left": "230", "top": "22", "width": "1256", "height": "70", "orientation": "horizontal",
+        "left": "404", "top": "22", "width": "1184", "height": "70", "orientation": "horizontal",
         "movement": "7", "onleft": "9000", "onright": "9000", "onup": "700",
         "ondown": "SetFocus($INFO[Container(9000).ListItem.Property(menu_id)])", "scrolltime": "180",
     })
     menu.remove(menu.find("include[@content='List']"))
     ET.SubElement(menu, "include").text = "FrameTopMenuItems"
-    set_fields(shortcut_group, {"left": "1528", "top": "5"})
+    set_fields(shortcut_group, {"left": "46", "top": "5"})
     set_fields(shortcuts, {"onup": "9000", "ondown": "9000", "onright": "9000", "height": "95"})
 
     # Keep all generated widget paths and list IDs. Present them below the
@@ -139,9 +148,17 @@ def feature_metadata(theme):
     source_visible = " | ".join([focused_card, *section_labels])
     visibility = ET.SubElement(theme, "expression", {"name": "FrameFeatureVisible"})
     visibility.text = f"!Player.HasMedia + !String.IsEqual(Skin.String(HomeArtworkChoice),2) + [{source_visible}]"
+    logo_sources = [f"[{focused_card} + !String.IsEmpty(ListItem.Art(clearlogo))]"]
+    logo_sources.extend(
+        f"[!ControlGroup(2000).HasFocus + String.IsEqual(Container(9000).ListItem.Property(id),{section}) + "
+        f"!String.IsEmpty(Container({container}).ListItem.Art(clearlogo))]"
+        for section, container in sections
+    )
+    logo_visible = ET.SubElement(theme, "expression", {"name": "FrameFeatureHasLogo"})
+    logo_visible.text = f"Skin.HasSetting(Enable.Clearlogo) + [{' | '.join(logo_sources)}]"
     fields = {
         "Title": ("Label", ""), "Art": ("Art(fanart)", ""), "Year": ("Year", ""),
-        "Genre": ("Genre", ",  •  "), "Plot": ("Plot", ""),
+        "Genre": ("Genre", ",  •  "), "Plot": ("Plot", ""), "Logo": ("Art(clearlogo)", ""),
     }
     for name, (field, prefix) in fields.items():
         variable = ET.SubElement(theme, "variable", {"name": f"FrameFeature{name}"})
@@ -152,6 +169,9 @@ def feature_metadata(theme):
             f"$INFO[ListItem.{field}{prefix}]"
         )
         if name == "Art":
+            ET.SubElement(variable, "value", {
+                "condition": "ControlGroup(2000).HasFocus + !String.IsEmpty(ListItem.Art(landscape))",
+            }).text = "$INFO[ListItem.Art(landscape)]"
             ET.SubElement(variable, "value", {
                 "condition": "ControlGroup(2000).HasFocus + !String.IsEmpty(ListItem.Art(poster))",
             }).text = "$INFO[ListItem.Art(poster)]"
@@ -221,7 +241,7 @@ def apply_title_details(xml):
             if visible.text.endswith("$EXP[isEpisode]"):
                 visible.text += "]"
         elif label == "$INFO[ListItem.Plot]":
-            set_fields(control, {"align": "left", "font": "FrameTVLabel", "textcolor": "unfocused_text"})
+            set_fields(control, {"align": "left", "font": "FrameBody", "textcolor": "unfocused_text"})
         elif label in {"$INFO[ListItem.TagLine]", "[I]$INFO[ListItem.Genre][/I]"}:
             set_fields(control, {"align": "left", "font": "FrameTVLabel", "textcolor": "grey"})
         texture = control.find("texture")
@@ -295,7 +315,34 @@ def apply_playback(xml):
         for font in definition.iter("font"):
             if font.text == "font32":
                 font.text = "FrameTVLabel"
+    icon_button = buttons.find("include[@name='IconButton']/definition/control")
+    unfocused = icon_button.find("texturenofocus")
+    unfocused.attrib.clear()
+    unfocused.text = None
     write_xml(tree, path)
+
+
+def write_feature_scrim(skin):
+    # One small stretchable texture keeps the title legible over bright artwork.
+    # Grayscale + alpha PNG, using a left-weighted falloff and transparent corners.
+    width, height, radius = 224, 82, 3
+    rows = bytearray()
+    for y in range(height):
+        rows.append(0)
+        for x in range(width):
+            dx = max(radius - x, x - (width - 1 - radius), 0)
+            dy = max(radius - y, y - (height - 1 - radius), 0)
+            alpha = round(28 + 184 * (1 - x / (width - 1)) ** 2)
+            rows.extend((0, alpha if dx * dx + dy * dy <= radius * radius else 0))
+
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
+
+    path = skin / "media/frame/feature-scrim.png"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    header = struct.pack(">IIBBBBB", width, height, 8, 4, 0, 0, 0)
+    path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header)
+                     + chunk(b"IDAT", zlib.compress(rows, 9)) + chunk(b"IEND", b""))
 
 
 def apply_theme(skin, theme_source):
@@ -307,6 +354,7 @@ def apply_theme(skin, theme_source):
     apply_title_details(xml)
     apply_settings_and_dialogs(xml)
     apply_playback(xml)
+    write_feature_scrim(skin)
     target = xml / theme_source.name
     theme = read_xml(theme_source)
     feature_metadata(theme.getroot())
