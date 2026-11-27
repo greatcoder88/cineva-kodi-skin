@@ -582,7 +582,7 @@ def apply_cineva_home_layout(skin_root: Path) -> None:
             <left>12</left><top>0</top><width>186</width><height>62</height>
             <font>font23_title</font><textcolor>FFFFFFFF</textcolor>
             <align>center</align><aligny>center</aligny>
-            <label>$VAR[MenuCaseVar]</label><shadowcolor>text_shadow</shadowcolor>
+            <label>$INFO[ListItem.Label]</label><shadowcolor>text_shadow</shadowcolor>
           </control>
           <control type="image">
             <left>86</left><bottom>2</bottom><width>38</width><height>4</height>
@@ -595,7 +595,7 @@ def apply_cineva_home_layout(skin_root: Path) -> None:
           <left>12</left><top>0</top><width>186</width><height>62</height>
           <font>font23</font><textcolor>FFE0E0E0</textcolor>
           <align>center</align><aligny>center</aligny>
-          <label>$VAR[MenuCaseVar]</label><shadowcolor>text_shadow</shadowcolor>
+          <label>$INFO[ListItem.Label]</label><shadowcolor>text_shadow</shadowcolor>
         </control>
       </itemlayout>
     </definition>
