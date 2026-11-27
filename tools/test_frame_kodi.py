@@ -192,6 +192,9 @@ def verify_home():
                 and rpc("XBMC.GetInfoLabels", labels=[field])[field] == "movies")
 
     wait_for("stock helper creates the configured widget rows and Home opens", populated_home, timeout=70)
+    feature = "Control.IsVisible(8980)"
+    wait_for("Home renders the featured title panel",
+             lambda: rpc("XBMC.GetInfoBooleans", booleans=[feature])[feature])
     screenshot("home-feature")
     press("down")
     wait_for("Down from the top menu focuses the first movie card",

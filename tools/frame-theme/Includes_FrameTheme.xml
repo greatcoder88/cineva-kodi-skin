@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <includes>
-  <expression name="FrameFeatureVisible">!Player.HasMedia + !String.IsEqual(Skin.String(HomeArtworkChoice),2) + !String.IsEmpty($VAR[FrameFeatureTitle])</expression>
   <include name="FrameTopBar">
     <control type="image">
       <width>1920</width>
@@ -53,7 +52,7 @@
     </focusedlayout>
   </include>
   <include name="FrameHomeFeature">
-    <control type="group">
+    <control type="group" id="8980">
       <left>64</left>
       <top>110</top>
       <width>1792</width>

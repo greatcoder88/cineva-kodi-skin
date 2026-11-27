@@ -66,7 +66,7 @@ def apply_typography(xml):
         # so the new TV labels accept the same character sets as stock Nimbus.
         title = fontset.find("font[name='font52_title']/filename").text
         label = fontset.find("font[name='font27_title']/filename").text
-        for name, face, size in (("FrameHeroTitle", title, "64"), ("FrameTVLabel", label, "30")):
+        for name, face, size in (("FrameHeroTitle", title, "64"), ("FrameTVLabel", label, "27")):
             set_fields(ET.SubElement(fontset, "font"), {"name": name, "filename": face, "size": size})
     write_xml(tree, path)
 
@@ -90,7 +90,7 @@ def apply_home(xml):
     menu_group.insert(0, ET.Element("include"))
     menu_group[0].text = "FrameTopBar"
     set_fields(menu, {
-        "left": "230", "top": "22", "width": "1288", "height": "70", "orientation": "horizontal",
+        "left": "230", "top": "22", "width": "1256", "height": "70", "orientation": "horizontal",
         "movement": "7", "onleft": "9000", "onright": "9000", "onup": "700",
         "ondown": "SetFocus($INFO[Container(9000).ListItem.Property(menu_id)])", "scrolltime": "180",
     })
@@ -125,15 +125,31 @@ def apply_home(xml):
 def feature_metadata(theme):
     sections = (("movies", 19011), ("tvshows", 22011), ("custom1", 23011),
                 ("custom2", 24011), ("custom3", 25011))
+    section_labels = [
+        f"[String.IsEqual(Container(9000).ListItem.Property(id),{section}) + "
+        f"!String.IsEmpty(Container({container}).ListItem.Label)]"
+        for section, container in sections
+    ]
+    focused_card = "[ControlGroup(2000).HasFocus + !String.IsEmpty(ListItem.Label)]"
+    source_visible = " | ".join([focused_card, *section_labels])
+    visibility = ET.SubElement(theme, "expression", {"name": "FrameFeatureVisible"})
+    visibility.text = f"!Player.HasMedia + !String.IsEqual(Skin.String(HomeArtworkChoice),2) + [{source_visible}]"
     fields = {
         "Title": ("Label", ""), "Art": ("Art(fanart)", ""), "Year": ("Year", ""),
         "Genre": ("Genre", ",  •  "), "Plot": ("Plot", ""),
     }
     for name, (field, prefix) in fields.items():
         variable = ET.SubElement(theme, "variable", {"name": f"FrameFeature{name}"})
-        ET.SubElement(variable, "value", {"condition": "ControlGroup(2000).HasFocus"}).text = (
+        condition = "ControlGroup(2000).HasFocus"
+        if name == "Art":
+            condition += " + !String.IsEmpty(ListItem.Art(fanart))"
+        ET.SubElement(variable, "value", {"condition": condition}).text = (
             f"$INFO[ListItem.{field}{prefix}]"
         )
+        if name == "Art":
+            ET.SubElement(variable, "value", {
+                "condition": "ControlGroup(2000).HasFocus + !String.IsEmpty(ListItem.Art(poster))",
+            }).text = "$INFO[ListItem.Art(poster)]"
         for section, container in sections:
             condition = f"String.IsEqual(Container(9000).ListItem.Property(id),{section})"
             ET.SubElement(variable, "value", {"condition": condition}).text = (
