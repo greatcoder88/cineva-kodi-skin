@@ -20,8 +20,8 @@
   <include name="FrameTopMenuItems">
     <itemlayout width="157" height="66">
       <control type="label">
-        <left>5</left>
-        <width>147</width>
+        <left>2</left>
+        <width>153</width>
         <height>60</height>
         <font>FrameTVLabel</font>
         <align>center</align>
@@ -40,8 +40,8 @@
         <visible>Control.HasFocus(9000)</visible>
       </control>
       <control type="label">
-        <left>5</left>
-        <width>147</width>
+        <left>2</left>
+        <width>153</width>
         <height>60</height>
         <font>FrameTVLabel</font>
         <align>center</align>
@@ -74,8 +74,8 @@
         <left>42</left>
         <top>234</top>
         <control type="textbox">
-          <width>800</width>
-          <height>150</height>
+          <width>1040</width>
+          <height>160</height>
           <font>FrameHeroTitle</font>
           <aligny>bottom</aligny>
           <textcolor>unfocused_text</textcolor>
@@ -83,7 +83,7 @@
           <label>$VAR[FrameFeatureTitle]</label>
         </control>
         <control type="label">
-          <top>163</top>
+          <top>173</top>
           <width>720</width>
           <height>39</height>
           <font>FrameTVLabel</font>
@@ -92,9 +92,9 @@
           <label>$VAR[FrameFeatureYear]$VAR[FrameFeatureGenre]</label>
         </control>
         <control type="textbox">
-          <top>211</top>
-          <width>745</width>
-          <height>104</height>
+          <top>221</top>
+          <width>925</width>
+          <height>140</height>
           <font>font14</font>
           <textcolor>unfocused_text</textcolor>
           <shadowcolor>C8000000</shadowcolor>
