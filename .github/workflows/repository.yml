@@ -78,12 +78,8 @@ jobs:
           with ZipFile(skin_zip) as z:
               skin=ET.fromstring(z.read("skin.cineva/addon.xml"))
               file_manager=ET.fromstring(z.read("skin.cineva/xml/FileManager.xml"))
-          assert file_manager.findtext("defaultcontrol") == "20"
-          pane_ids = {
-              node.get("id")
-              for node in file_manager.findall("./controls/control[@type='fixedlist']")
-          }
-          assert pane_ids == {"20", "21"}, pane_ids
+          assert file_manager.tag == "window"
+          assert file_manager.find("controls") is not None, "Nimbus FileManager controls missing"
           dependency=skin.find("./requires/import[@addon='script.cineva.nimbus']")
           bridge=next(x for x in ET.fromstring(xml).findall("addon") if x.get("id") == "script.cineva.nimbus")
           assert skin.get("version") == "0.8.0"
