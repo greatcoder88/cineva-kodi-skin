@@ -152,10 +152,10 @@ jobs:
           echo $! > /tmp/xvfb.pid
           sleep 2
           KODI_DATA="$HOME/.var/app/tv.kodi.Kodi/data"
-POV_FIXTURE="$GITHUB_WORKSPACE/tools/test-fixtures/plugin.video.pov"
-POV_ADDON="$KODI_DATA/addons/plugin.video.pov"
-mkdir -p "$POV_ADDON"
-cp -a "$POV_FIXTURE"/. "$POV_ADDON"/
+          POV_FIXTURE="$GITHUB_WORKSPACE/tools/test-fixtures/plugin.video.pov"
+          POV_ADDON="$KODI_DATA/addons/plugin.video.pov"
+          mkdir -p "$POV_ADDON"
+          cp -a "$POV_FIXTURE"/. "$POV_ADDON"/
           USERDATA="$KODI_DATA/userdata"
           SETTINGS="$USERDATA/guisettings.xml"
           # Kodi writes kodi.log beside userdata, not inside userdata/temp.
