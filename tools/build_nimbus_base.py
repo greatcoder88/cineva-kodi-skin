@@ -447,7 +447,7 @@ def apply_cineva_visuals(skin_root: Path) -> None:
     }
     for name, value in palette.items():
         pattern = re.compile(
-            r'(<color\\s+name="' + re.escape(name) + r'"\\s*>).*?(</color>)',
+            r'(<color\s+name="' + re.escape(name) + r'"\s*>).*?(</color>)',
             re.S,
         )
         colors, count = pattern.subn(lambda match: match.group(1) + value + match.group(2), colors)
