@@ -78,15 +78,15 @@ def main() -> None:
     if skin_zip.name != f"{skin_id}-{skin_version}.zip":
         raise SystemExit(f"Skin archive filename/version mismatch: {skin_zip.name}")
     packages = [
-        (skin_id, skin_version, skin_zip, skin_xml),
-        (bridge_id, bridge_version, bridge_zip, bridge_xml),
+        (skin_id, skin_version, skin_zip, skin_xml, f"{skin_id}-{skin_version}.zip"),
+        (bridge_id, bridge_version, bridge_zip, bridge_xml, f"{bridge_id}-{bridge_version}.zip"),
     ]
-    for addon_id, version, package, _raw in packages:
+    for addon_id, version, package, _raw, published_name in packages:
         package_dir = zips / addon_id
         package_dir.mkdir(parents=True)
-        shutil.copy2(package, package_dir / package.name)
+        shutil.copy2(package, package_dir / published_name)
     addons = ET.Element("addons")
-    for addon_id, version, package, raw in packages:
+    for addon_id, version, package, raw, _published_name in packages:
         addons.append(ET.fromstring(raw))
     ET.indent(addons, space="  ")
     addons_bytes = ET.tostring(addons, encoding="utf-8", xml_declaration=True)
