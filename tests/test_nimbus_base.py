@@ -210,49 +210,28 @@ class NimbusWorkflowPathTests(unittest.TestCase):
         self.assertIn('KODI_LOG="$KODI_DATA/temp/kodi.log"', source)
         self.assertNotIn('KODI_LOG="$USERDATA/temp/kodi.log"', source)
 
-    def test_first_boot_uses_the_proven_kodi_process_cleanup(self):
+    def test_first_boot_session_stays_live_for_jsonrpc_activation(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
         source = workflow.read_text(encoding="utf-8")
-        self.assertIn('pkill -TERM -x kodi.bin', source)
-        self.assertIn('pkill -KILL -x kodi.bin', source)
-        self.assertIn('kodi_processes()', source)
-        self.assertIn('$2 !~ /^Z/', source)
-        self.assertIn("Port 9090 remains occupied after first-boot cleanup", source)
-
-    def test_second_boot_keeps_kodi_attached_and_waits_for_jsonrpc(self):
-        workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
-        source = workflow.read_text(encoding="utf-8")
-        self.assertIn("for launch_attempt in 1 2; do", source)
-        self.assertIn("kodi_processes | grep -q . && ss -ltn | grep -q ':9090'", source)
-        self.assertIn("flatpak run --user tv.kodi.Kodi//beta --standalone --windowing=x11", source)
-        self.assertIn("> /tmp/nimbus-kodi.log 2>&1 &", source)
-        self.assertNotIn("nohup setsid -f flatpak run", source)
-        self.assertIn("Kodi did not expose JSON-RPC after two managed Nimbus launch attempts.", source)
-        self.assertIn('for name in ("kodi.bin", "kodi-x11", "kodi")', source)
-        self.assertNotIn('subprocess.run(["pgrep","-x","kodi.bin"],capture_output=True).returncode != 0', source)
-
-    def test_jsonrpc_is_explicitly_enabled_before_nimbus_launch(self):
-        workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
-        source = workflow.read_text(encoding="utf-8")
-        self.assertIn('"services.esenabled": "true"', source)
-        self.assertIn('"services.webserver": "true"', source)
-
-    def test_failed_nimbus_launch_is_fully_stopped_before_retry(self):
-        workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
-        source = workflow.read_text(encoding="utf-8")
-        self.assertIn("stop_kodi_attempt()", source)
-        self.assertIn("for attempt in $(seq 1 12)", source)
-        self.assertIn("pkill -KILL -x kodi.bin", source)
-        self.assertIn("refusing to start an overlapping instance", source)
+        boot = source.index("if ! boot_kodi_once 1; then")
+        activation = source.index('initial_skin = rpc_retry("Settings.GetSettingValue"')
+        activation_preamble = source[boot:activation]
+        self.assertIn("ss -ltn | grep -q ':9090'", activation_preamble)
+        self.assertIn("First-boot Kodi JSON-RPC listener is ready", activation_preamble)
+        self.assertNotIn("flatpak kill --user tv.kodi.Kodi", activation_preamble)
+        self.assertNotIn("pkill -TERM -x kodi.bin", activation_preamble)
+        self.assertNotIn("for launch_attempt in 1 2", source)
+        self.assertNotIn("launch_kodi()", source)
+        self.assertNotIn("stop_kodi_attempt()", source)
 
     def test_skin_is_enabled_and_selected_after_kodi_starts(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
         source = workflow.read_text(encoding="utf-8")
-        self.assertNotIn('"lookandfeel.skin": "skin.cineva"', source)
         self.assertIn('"addonid":"script.cineva.nimbus", "enabled":True', source)
         self.assertIn('"addonid":"skin.cineva", "enabled":True', source)
         self.assertIn('"setting":"lookandfeel.skin", "value":"skin.cineva"', source)
         self.assertIn("before_skin_loads", source)
+        self.assertLess(source.index("if ! boot_kodi_once 1; then"), source.index('initial_skin = rpc_retry('))
 
     def test_skin_first_run_welcome_generates_includes_before_home_capture(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
