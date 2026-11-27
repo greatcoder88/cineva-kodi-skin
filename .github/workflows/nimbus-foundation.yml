@@ -2,7 +2,7 @@ name: CINÉVA Nimbus foundation
 
 on:
   push:
-    branches: [main, redesign/nimbus-foundation]
+    branches: [main, redesign/nimbus-foundation, redesign/cineva-ratings]
     paths:
       - "tools/build_nimbus_base.py"
       - "tools/download_test_posters.py"

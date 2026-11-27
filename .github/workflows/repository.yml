@@ -1,7 +1,7 @@
 name: CINÉVA Kodi repository
 on:
   push:
-    branches: [main, redesign/nimbus-foundation]
+    branches: [main, redesign/nimbus-foundation, redesign/cineva-ratings]
     paths:
       - "tools/build_repository.py"
       - "tools/build_skin_archive.py"
