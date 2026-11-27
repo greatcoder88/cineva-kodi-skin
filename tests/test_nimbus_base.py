@@ -838,6 +838,14 @@ class NimbusWorkflowPathTests(unittest.TestCase):
         self.assertIn("nimbus-first-run-failure.png", source)
 
 
+    def test_nimbus_workflow_captures_addon_rating_badges(self):
+        workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
+        source = workflow.read_text(encoding="utf-8")
+        self.assertIn("cineva-nimbus-home-ratings.png", source)
+        self.assertIn("Container(18011).ListItem.Rating", source)
+        self.assertIn("Rating.tomatoes.Percent", source)
+        self.assertIn("CINEVA_NIMBUS_ADDON_RATINGS_READY=IMDb 8.4; RT 92%", source)
+
     def test_legacy_gui_scroll_probe_handles_empty_current_item_labels(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/kodi-gui-test.yml"
         source = workflow.read_text(encoding="utf-8")
