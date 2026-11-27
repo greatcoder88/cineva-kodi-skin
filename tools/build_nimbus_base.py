@@ -550,24 +550,30 @@ def apply_cineva_home_layout(skin_root: Path) -> None:
 
     home_includes_path = xml_root / "Includes_Home.xml"
     home_includes = home_includes_path.read_text(encoding="utf-8").replace("\r\n", "\n")
-    common_group = """<include name="WidgetGroupListCommon">
-		<orientation>vertical</orientation>
-		<height>33000</height>
-		<itemgap>-100</itemgap>
-		<onup>20000</onup>
-		<ondown>20001</ondown>
-		<usecontrolcoords>true</usecontrolcoords>
-	</include>"""
-    if common_group not in home_includes:
-        raise RuntimeError("Includes_Home.xml: Nimbus widget navigation include changed")
-    home_includes = home_includes.replace(
-        common_group,
-        common_group.replace(
-            "<usecontrolcoords>true</usecontrolcoords>",
-            "<onback>SetFocus(9000)</onback>\n\t\t<usecontrolcoords>true</usecontrolcoords>",
-        ),
-        1,
+    common_pattern = re.compile(
+        r'(<include\\s+name="WidgetGroupListCommon"\\s*>)(.*?)(</include>)',
+        re.S,
     )
+    matches = list(common_pattern.finditer(home_includes))
+    if len(matches) != 1:
+        raise RuntimeError("Includes_Home.xml: expected one Nimbus widget navigation include")
+    match = matches[0]
+    body = match.group(2)
+    back_target = "<onback>SetFocus(9000)</onback>"
+    if back_target not in body:
+        marker = "<usecontrolcoords>true</usecontrolcoords>"
+        if body.count(marker) != 1:
+            raise RuntimeError("Includes_Home.xml: widget navigation include anchor changed")
+        body = body.replace(
+            marker,
+            back_target + "\\n\\t\\t" + marker,
+            1,
+        )
+        home_includes = (
+            home_includes[:match.start()]
+            + match.group(1) + body + match.group(3)
+            + home_includes[match.end():]
+        )
     ET.fromstring(home_includes)
     home_includes_path.write_text(home_includes, encoding="utf-8", newline="")
 
