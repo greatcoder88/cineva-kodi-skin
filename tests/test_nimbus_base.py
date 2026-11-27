@@ -37,6 +37,8 @@ NIMBUS_FILES = {
       <include file="Includes_Home.xml"/>
       <include content="FlixSquareLayout"><param name="fallback_image" value="DefaultAddon.png" /></include>
       <include content="FlixSquareLayout"><param name="fallback_image" value="DefaultAddon.png" /><param name="focused" value="true" /></include>
+      <include name="PVRWidgetLayout"><animation effect="fade" start="100" end="50" time="40" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation></include>
+      <include name="FileManagerPanel"><animation effect="fade" start="100" end="0" time="40" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation></include>
     </includes>""",
     "xml/Includes_Home.xml": """<includes>
       <onload>RunScript(script.nimbus.helper,mode=check_for_update&amp;skin_id=skin.nimbus)</onload>
@@ -73,7 +75,24 @@ NIMBUS_FILES = {
       <include>PosterFlowLayout</include>
       <include content="PosterFlowLayout"><param name="focused" value="true" /></include>
     </includes>""",
-    "xml/View_50_List.xml": "<includes><include>ListLandscapeSlideAnimations</include></includes>",
+    "xml/Includes_PVR.xml": """<includes>
+      <include name="ChannelManagerList"><animation effect="fade" start="100" end="60" time="0" condition="!Control.HasFocus($PARAM[list_id])">conditional</animation></include>
+    </includes>""",
+    "xml/Includes_Animations.xml": """<includes>
+      <include name="WidgetVisibilityAnimations"><animation condition="!Control.HasFocus($PARAM[list_id]) + ControlGroup(2000).HasFocus" reversible="true"><effect type="faded" start="100" end="80" time="300" /></animation></include>
+    </includes>""",
+    "xml/View_50_List.xml": """<includes>
+      <include>ListLandscapeSlideAnimations</include>
+      <include name="ListFocusAnimations">
+        <animation effect="fade" start="100" end="0" time="300" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation>
+        <animation effect="fade" start="100" end="0" time="300" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation>
+        <animation effect="fade" start="100" end="0" time="300" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation>
+        <animation effect="fade" start="100" end="0" time="300" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation>
+        <animation effect="fade" start="100" end="0" time="300" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation>
+        <animation effect="fade" start="100" end="0" time="300" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation>
+        <animation effect="fade" start="100" end="0" time="300" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation>
+      </include>
+    </includes>""",
     "fonts/Inter-Regular.ttf": b"test-font",
     "resources/icon.png": b"test-icon",
 }
@@ -153,7 +172,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 self.assertIn("skin.cineva/NOTICE.txt", names)
                 manifest = archive.read("skin.cineva/addon.xml").decode()
                 self.assertIn('id="skin.cineva"', manifest)
-                self.assertIn('version="0.6.3"', manifest)
+                self.assertIn('version="0.6.4"', manifest)
                 self.assertIn('addon="xbmc.gui" version="5.18.0"', manifest)
                 self.assertIn('addon="script.cineva.nimbus" version="0.1.0"', manifest)
                 self.assertNotIn("script.nimbus.helper", manifest)
@@ -211,6 +230,22 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                             continue
                         direct_params = {param.get("name") for param in include.findall("param")}
                         self.assertIn("list_id", direct_params, f"{filename}:{include.get('name')}")
+
+
+    def test_animation_conditions_do_not_embed_unresolved_list_id_parameters(self):
+        with tempfile.TemporaryDirectory() as temp:
+            paths = self.build_fixture(Path(temp) / "dist")
+            with zipfile.ZipFile(paths["skin"]) as archive:
+                for filename in archive.namelist():
+                    if not filename.endswith(".xml"):
+                        continue
+                    root = ET.fromstring(archive.read(filename))
+                    for animation in root.findall(".//animation"):
+                        condition = animation.get("condition", "")
+                        self.assertNotIn("Control.HasFocus($PARAM[list_id])", condition, filename)
+                animations = ET.fromstring(archive.read("skin.cineva/xml/Includes_Animations.xml"))
+                widget_visibility = animations.find('.//include[@name="WidgetVisibilityAnimations"]/animation')
+                self.assertEqual(widget_visibility.get("condition"), "ControlGroup(2000).HasFocus")
 
     def test_bridge_keeps_local_widget_logic_and_api_free_service_entry(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -283,8 +318,8 @@ class NimbusWorkflowPathTests(unittest.TestCase):
     def test_workflow_uses_the_builder_skin_version(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
         source = workflow.read_text(encoding="utf-8")
-        self.assertIn("skin.cineva-0.6.3-nimbus.zip", source)
-        self.assertIn('manifest.get("version") == "0.6.3"', source)
+        self.assertIn("skin.cineva-0.6.4-nimbus.zip", source)
+        self.assertIn('manifest.get("version") == "0.6.4"', source)
 
     def test_first_boot_reads_kodis_actual_flatpak_log_location(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
