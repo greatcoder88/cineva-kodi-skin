@@ -41,8 +41,20 @@ def read_links(path):
 class RepositoryFileSourceTests(unittest.TestCase):
     def test_root_source_exposes_repository_installer_and_browsable_packages(self):
         with tempfile.TemporaryDirectory() as temp:
-            output = Path(temp) / "repository-site"
-            with patch.object(build_repository, "OUT", output):
+            temp_root = Path(temp)
+            output = temp_root / "repository-site"
+            build_dir = temp_root / "dist" / "nimbus-foundation"
+            build_dir.mkdir(parents=True)
+            skin = build_dir / "skin.cineva-0.8.0-nimbus.zip"
+            bridge = build_dir / "script.cineva.nimbus-0.1.1.zip"
+            for archive_path, addon_id, version in (
+                (skin, "skin.cineva", "0.8.0"),
+                (bridge, "script.cineva.nimbus", "0.1.1"),
+            ):
+                with ZipFile(archive_path, "w") as archive:
+                    manifest = f'<addon id="{addon_id}" version="{version}" name="{addon_id}"/>'
+                    archive.writestr(f"{addon_id}/addon.xml", manifest)
+            with patch.object(build_repository, "OUT", output), patch.object(build_repository, "ROOT", temp_root):
                 build_repository.main()
 
             installer_name = f"repository.cineva-{build_repository.REPO_VERSION}.zip"
@@ -55,7 +67,7 @@ class RepositoryFileSourceTests(unittest.TestCase):
             package_ids = (
                 "repository.cineva",
                 "skin.cineva",
-                "script.cineva.widgets",
+                "script.cineva.nimbus",
             )
             expected_folders = {(f"{name}/", f"{name}/") for name in package_ids}
             self.assertTrue(expected_folders.issubset(read_links(output / "zips/index.html")))
