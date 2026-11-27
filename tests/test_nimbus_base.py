@@ -97,6 +97,12 @@ NIMBUS_FILES = {
         <animation effect="fade" start="100" end="0" time="300" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation>
       </include>
     </includes>""",
+    "xml/Includes_PVR.xml": """<includes>
+      <include name="ChannelManagerList"><animation effect="fade" start="100" end="60" time="0" condition="!Control.HasFocus($PARAM[list_id])">conditional</animation></include>
+    </includes>""",
+    "xml/Includes_Animations.xml": """<includes>
+      <include name="WidgetVisibilityAnimations"><animation condition="!Control.HasFocus($PARAM[list_id]) + ControlGroup(2000).HasFocus" reversible="true"><effect type="faded" start="100" end="80" time="300" /></animation></include>
+    </includes>""",
     "fonts/Inter-Regular.ttf": b"test-font",
     "resources/icon.png": b"test-icon",
 }
