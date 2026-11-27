@@ -45,10 +45,10 @@ class RepositoryFileSourceTests(unittest.TestCase):
             output = temp_root / "repository-site"
             build_dir = temp_root / "dist" / "nimbus-foundation"
             build_dir.mkdir(parents=True)
-            skin = build_dir / "skin.cineva-0.8.2-nimbus.zip"
+            skin = build_dir / "skin.cineva-0.8.3-nimbus.zip"
             bridge = build_dir / "script.cineva.nimbus-0.1.1.zip"
             for archive_path, addon_id, version in (
-                (skin, "skin.cineva", "0.8.2"),
+                (skin, "skin.cineva", "0.8.3"),
                 (bridge, "script.cineva.nimbus", "0.1.1"),
             ):
                 with ZipFile(archive_path, "w") as archive:

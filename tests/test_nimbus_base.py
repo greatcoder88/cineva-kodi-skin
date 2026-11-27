@@ -54,6 +54,19 @@ NIMBUS_FILES = {
       <color name="bg_overlay">4DFFFFFF</color>
       <color name="red">FFCE4421</color>
     </colors>""",
+    "xml/Includes_FlixPanel.xml": """<includes>
+      <include name="FlixPanel">
+        <definition>
+          <control type="grouplist">
+            <include content="FlixInfoIcon">
+              <param name="flixlabel" value="$INFO[Container($PARAM[id]).ListItem.Rating]★"/>
+              <param name="visible" value="!String.IsEmpty(Container($PARAM[id]).ListItem.Rating) + !ListItem.IsCollection + [$EXP[isEpisode] | String.StartsWith(Container.PluginName,plugin.video.otaku)]"/>
+            </include>
+            <include content="HorizontalRatings" condition="!String.IsEmpty(Skin.String(valid_api_key))"/>
+          </control>
+        </definition>
+      </include>
+    </includes>""",
     "xml/Includes.xml": """<includes>
       <include file="Includes_Home.xml"/>
       <include content="FlixSquareLayout"><param name="fallback_image" value="DefaultAddon.png" /></include>
@@ -278,6 +291,11 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 self.assertIn("skin.cineva/xml/Includes_HomeLayouts.xml", names)
                 self.assertIn("skin.cineva/xml/script-nimbus-widget_home.xml", names)
                 self.assertIn('<include name="HomeWidgets">', archive.read("skin.cineva/xml/script-nimbus-widget_home.xml").decode("utf-8"))
+                flixpanel = archive.read("skin.cineva/xml/Includes_FlixPanel.xml").decode("utf-8")
+                self.assertIn("IMDb ,", flixpanel)
+                self.assertIn("Rating.tomatoes.Percent", flixpanel)
+                self.assertIn("RT ,%", flixpanel)
+                self.assertNotIn("plugin.video.otaku", flixpanel)
                 self.assertIn("skin.cineva/xml/View_54_Flix.xml", names)
                 for filename, include_name in builder.DEFAULT_SKIN_INCLUDE_NAMES.items():
                     member = f"skin.cineva/xml/{filename}.xml"
@@ -290,7 +308,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 self.assertIn("skin.cineva/NOTICE.txt", names)
                 manifest = archive.read("skin.cineva/addon.xml").decode()
                 self.assertIn('id="skin.cineva"', manifest)
-                self.assertIn('version="0.8.2"', manifest)
+                self.assertIn('version="0.8.3"', manifest)
                 self.assertIn('addon="xbmc.gui" version="5.18.0"', manifest)
                 self.assertIn('addon="script.cineva.nimbus" version="0.1.1"', manifest)
                 self.assertNotIn("script.nimbus.helper", manifest)
@@ -322,6 +340,33 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 ):
                     self.assertIn(title, cpaths)
 
+
+    def test_addon_ratings_are_rendered_without_a_skin_api_key(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skin = Path(temp) / "skin.cineva"
+            xml = skin / "xml"
+            xml.mkdir(parents=True)
+            (xml / "Includes_FlixPanel.xml").write_text(
+                """<includes><include name="FlixPanel"><definition><control type="grouplist">
+                <include content="FlixInfoIcon">
+                  <param name="flixlabel" value="$INFO[Container($PARAM[id]).ListItem.Rating]★"/>
+                  <param name="visible" value="!String.IsEmpty(Container($PARAM[id]).ListItem.Rating) + !ListItem.IsCollection + [$EXP[isEpisode] | String.StartsWith(Container.PluginName,plugin.video.otaku)]"/>
+                </include>
+                </control></definition></include></includes>""",
+                encoding="utf-8",
+            )
+            builder.apply_cineva_addon_ratings(skin)
+            root = ET.parse(xml / "Includes_FlixPanel.xml").getroot()
+            labels = [
+                {param.get("name"): param.get("value") for param in node.findall("param")}
+                for node in root.findall(".//include[@content='FlixInfoIcon']")
+            ]
+            imdb = next(item for item in labels if "IMDb ," in item.get("flixlabel", ""))
+            tomatoes = next(item for item in labels if "RT ,%" in item.get("flixlabel", ""))
+            self.assertIn("ListItem.Rating", imdb["visible"])
+            self.assertNotIn("valid_api_key", imdb["visible"])
+            self.assertIn("Rating.tomatoes.Percent", tomatoes["flixlabel"])
+            self.assertNotIn("valid_api_key", tomatoes["visible"])
 
     def test_flix_focus_layouts_receive_their_real_container_ids(self):
         with tempfile.TemporaryDirectory() as temp:
