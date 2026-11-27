@@ -75,7 +75,7 @@ def main() -> None:
             f"Skin archive manifest version is {skin_version!r}; "
             f"expected {expected_skin_version!r}. Rebuild the release archive first."
         )
-    if skin_zip.name != f"{skin_id}-{skin_version}.zip":
+    if skin_zip.name != f"{skin_id}-{skin_version}-nimbus.zip":
         raise SystemExit(f"Skin archive filename/version mismatch: {skin_zip.name}")
     packages = [
         (skin_id, skin_version, skin_zip, skin_xml, f"{skin_id}-{skin_version}.zip"),
