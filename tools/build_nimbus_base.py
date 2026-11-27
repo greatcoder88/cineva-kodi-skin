@@ -667,10 +667,6 @@ def patch_nimbus_timer_start_conditions(skin_root: Path) -> None:
             )
 
 
-def write_default_skin_includes(
-
-
-
 def write_default_skin_includes(skin_root: Path) -> None:
     """Ship empty Nimbus menu/widget includes before Kodi parses Includes.xml."""
     xml_root = skin_root / "xml"
