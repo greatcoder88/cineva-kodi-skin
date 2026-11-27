@@ -120,7 +120,10 @@ jobs:
           test -f "$ADDONS/skin.cineva/xml/Includes_Home.xml"
           test -f "$ADDONS/script.cineva.nimbus/resources/lib/modules/cpath_maker.py"
           USERDATA="$HOME/.var/app/tv.kodi.Kodi/data/userdata"
-          mkdir -p "$USERDATA"
+          mkdir -p "$USERDATA/addon_data/skin.cineva"
+          cat > "$USERDATA/addon_data/skin.cineva/settings.xml" <<'XML'
+          <settings version="2"><setting id="firsttimerun" value="true" /></settings>
+          XML
           cat > "$USERDATA/advancedsettings.xml" <<'XML'
           <advancedsettings><loglevel hide="false">2</loglevel></advancedsettings>
           XML
@@ -160,7 +163,6 @@ jobs:
           tree = ET.parse(path)
           root = tree.getroot()
           values = {
-              "lookandfeel.skin": "skin.cineva",
               "services.webserver": "true",
               "services.webserverport": "8080",
               "services.webserverauthentication": "false",
@@ -174,7 +176,7 @@ jobs:
           PY
           nohup setsid -f flatpak run --user tv.kodi.Kodi//beta --standalone --windowing=x11 </dev/null > /tmp/nimbus-kodi.log 2>&1
           python - <<'PY'
-          import json, socket, time
+          import json, socket, time, subprocess
           def rpc(method, params=None):
               request = {"jsonrpc":"2.0","method":method,"params":params or {},"id":1}
               decoder = json.JSONDecoder()
@@ -196,34 +198,101 @@ jobs:
                           while pos < len(data) and data[pos].isspace():
                               pos += 1
                           try:
-                              obj, end = decoder.raw_decode(data, pos)
+                              obj, endpos = decoder.raw_decode(data, pos)
                           except json.JSONDecodeError:
                               break
-                          pos = end
+                          pos = endpos
                           if isinstance(obj, dict) and obj.get("id") == 1:
                               if "error" in obj:
                                   raise RuntimeError(obj["error"])
                               return obj.get("result")
               raise RuntimeError(f"No JSON-RPC result for {method}: {data[:300]}")
+
+          def gui():
+              return rpc("GUI.GetProperties", {"properties":["currentwindow","currentcontrol","skin"]})
+
+          def skin_id(state):
+              value = state.get("skin", {})
+              return value.get("id") if isinstance(value, dict) else str(value)
+
           last = None
-          for attempt in range(60):
+          for attempt in range(30):
               try:
-                  state = rpc("GUI.GetProperties", {"properties":["currentwindow","currentcontrol","skin"]})
-                  skin = state.get("skin", {})
-                  print("Kodi GUI state:", json.dumps(state, ensure_ascii=False))
-                  skin_id = skin.get("id") if isinstance(skin, dict) else str(skin)
-                  if skin_id and skin_id != "skin.cineva":
-                      raise RuntimeError(f"Expected skin.cineva, got {skin_id}")
-                  window_id = state.get("currentwindow", {}).get("id")
-                  if window_id == 10000:
-                      break
-                  rpc("GUI.ActivateWindow", {"window":"home"})
+                  rpc("Settings.GetSettingValue", {"setting":"lookandfeel.skin"})
+                  break
               except Exception as exc:
                   last = exc
-              time.sleep(2)
+                  time.sleep(2)
           else:
-              raise SystemExit(f"Kodi did not reach the CINÉVA Home window: {last}")
-          print("Nimbus-derived CINÉVA Home is active.")
+              raise SystemExit(f"Kodi JSON-RPC did not become ready: {last}")
+
+          # Kodi discovers manually installed add-ons but does not activate a
+          # skin merely because its id was written to guisettings.xml. Enable
+          # the local bridge and skin explicitly, then switch through Kodi's
+          # supported Settings API so the Keep Skin confirmation is handled.
+          for addon_id in ("script.cineva.nimbus", "skin.cineva"):
+              details = rpc("Addons.GetAddonDetails", {
+                  "addonid":addon_id, "properties":["enabled","version"]
+              })
+              print("Add-on before enable:", addon_id, details)
+              rpc("Addons.SetAddonEnabled", {"addonid":addon_id,"enabled":True})
+              time.sleep(1)
+              print("Add-on after enable:", addon_id, rpc("Addons.GetAddonDetails", {
+                  "addonid":addon_id, "properties":["enabled","version"]
+              }))
+
+          result = rpc("Settings.SetSettingValue", {
+              "setting":"lookandfeel.skin", "value":"skin.cineva"
+          })
+          print("Kodi skin switch result:", result)
+
+          state = None
+          deadline = time.time() + 35
+          while time.time() < deadline:
+              state = gui()
+              if skin_id(state) == "skin.cineva" and state.get("currentwindow",{}).get("id") in (10100,10000):
+                  break
+              time.sleep(0.5)
+          else:
+              raise SystemExit(f"Kodi did not load the CINÉVA skin after enabling it: {state}")
+
+          # Confirm the Keep Skin dialog on the new skin. Nimbus puts Yes first,
+          # but follow the actual focused label rather than assuming a control id.
+          if state.get("currentwindow",{}).get("id") == 10100:
+              for _ in range(4):
+                  label = state.get("currentcontrol",{}).get("label","").strip().lower()
+                  if label == "yes":
+                      break
+                  subprocess.run(["xdotool","key","Left"],check=True)
+                  time.sleep(0.25)
+                  state = gui()
+              if state.get("currentcontrol",{}).get("label","").strip().lower() != "yes":
+                  raise SystemExit(f"Keep Skin did not focus Yes: {state}")
+              subprocess.run(["xdotool","key","Return"],check=True)
+              deadline = time.time() + 15
+              while time.time() < deadline:
+                  state = gui()
+                  if state.get("currentwindow",{}).get("id") != 10100:
+                      break
+                  time.sleep(0.25)
+              else:
+                  raise SystemExit(f"Keep Skin confirmation did not close: {state}")
+
+          # Close any first-run help overlay and explicitly return to Home.
+          subprocess.run(["xdotool","key","Escape"],check=False)
+          time.sleep(1)
+          state = gui()
+          if state.get("currentwindow",{}).get("id") != 10000:
+              rpc("GUI.ActivateWindow", {"window":"home"})
+          deadline = time.time() + 15
+          while time.time() < deadline:
+              state = gui()
+              if skin_id(state) == "skin.cineva" and state.get("currentwindow",{}).get("id") == 10000:
+                  break
+              time.sleep(0.25)
+          if skin_id(state) != "skin.cineva" or state.get("currentwindow",{}).get("id") != 10000:
+              raise SystemExit(f"Nimbus-derived CINÉVA did not reach Home: {state}")
+          print("Nimbus-derived CINÉVA Home is active:", json.dumps(state, ensure_ascii=False))
           PY
           xdotool key Escape || true
           sleep 3
