@@ -786,8 +786,8 @@ class NimbusWorkflowPathTests(unittest.TestCase):
     def test_workflow_uses_the_builder_skin_version(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
         source = workflow.read_text(encoding="utf-8")
-        self.assertIn("skin.cineva-0.8.2-nimbus.zip", source)
-        self.assertIn('manifest.get("version") == "0.8.2"', source)
+        self.assertIn("skin.cineva-0.8.3-nimbus.zip", source)
+        self.assertIn('manifest.get("version") == "0.8.3"', source)
 
     def test_first_boot_reads_kodis_actual_flatpak_log_location(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
