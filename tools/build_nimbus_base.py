@@ -494,7 +494,6 @@ def apply_cineva_home_layout(skin_root: Path) -> None:
 					<left>0</left>""", 1)
 
     patches = (
-        ("<defaultcontrol>20000</defaultcontrol>", "<defaultcontrol>9000</defaultcontrol>"),
         ("<left>25</left>\n\t\t\t\t\t\t<top>215</top>\n            <width>825</width>\n\t\t\t\t\t\t<height>605</height>",
          "<left>270</left>\n\t\t\t\t\t\t<top>26</top>\n\t\t\t\t\t\t<width>1260</width>\n\t\t\t\t\t\t<height>82</height>\n\t\t\t\t\t\t<orientation>horizontal</orientation>"),
         ("<movement>7</movement>", "<movement>1</movement>"),
