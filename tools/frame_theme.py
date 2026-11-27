@@ -301,7 +301,8 @@ def apply_settings_and_dialogs(xml):
         for control in layout.findall("control"):
             set_fields(control, {"height": "75"})
             if control.get("type") == "label":
-                set_fields(control, {"font": "FrameTVLabel", "aligny": "center", "textoffsety": "0"})
+                set_fields(control, {"font": "FrameTVLabel", "aligny": "center",
+                                     "textoffsety": "0", "textcolor": "unfocused_text"})
             elif control.get("type") == "image":
                 control.find("texture").attrib.update({"border": "22", "colordiffuse": "frame_selection"})
             elif control.get("type") == "button":
