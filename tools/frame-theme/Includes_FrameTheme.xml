@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<includes>
+  <include name="FrameDetailsActionItems">
+    <itemlayout width="370" height="75">
+      <control type="label">
+        <left>22</left>
+        <width>310</width>
+        <height>66</height>
+        <aligny>center</aligny>
+        <font>FrameTVLabel</font>
+        <textcolor>grey</textcolor>
+        <label>$INFO[ListItem.Label]</label>
+      </control>
+    </itemlayout>
+    <focusedlayout width="370" height="75">
+      <control type="image">
+        <width>328</width>
+        <height>64</height>
+        <texture border="24" colordiffuse="button_focus">masks/focus-long.png</texture>
+        <visible>Control.HasFocus(20000)</visible>
+      </control>
+      <control type="label">
+        <left>22</left>
+        <width>302</width>
+        <height>64</height>
+        <aligny>center</aligny>
+        <font>FrameTVLabel</font>
+        <textcolor>focused_text</textcolor>
+        <label>$INFO[ListItem.Label]</label>
+        <visible>Control.HasFocus(20000)</visible>
+      </control>
+      <control type="label">
+        <left>22</left>
+        <width>302</width>
+        <height>64</height>
+        <aligny>center</aligny>
+        <font>FrameTVLabel</font>
+        <textcolor>unfocused_text</textcolor>
+        <label>$INFO[ListItem.Label]</label>
+        <visible>!Control.HasFocus(20000)</visible>
+      </control>
+    </focusedlayout>
+  </include>
+  <include name="FrameMissingLandscapeCard">
+    <definition>
+      <control type="group">
+        <left>20</left>
+        <top>11</top>
+        <width>430</width>
+        <height>242</height>
+        <control type="image">
+          <texture diffuse="masks/flixscape-widget.png" colordiffuse="primary_content_panel_bg">colors/white.png</texture>
+        </control>
+        <control type="image">
+          <texture diffuse="masks/flixscape-widget.png" background="true">$INFO[ListItem.Art(poster)]</texture>
+          <aspectratio align="center" aligny="center" scalediffuse="false">scale</aspectratio>
+          <visible>!String.IsEmpty(ListItem.Art(poster))</visible>
+        </control>
+        <control type="image">
+          <texture>frame/feature-scrim.png</texture>
+          <visible>!String.IsEmpty(ListItem.Art(poster))</visible>
+        </control>
+        <control type="textbox">
+          <left>26</left>
+          <top>137</top>
+          <width>378</width>
+          <height>85</height>
+          <font>FrameTVLabel</font>
+          <textcolor>unfocused_text</textcolor>
+          <label>$INFO[ListItem.Label]</label>
+          <aligny>bottom</aligny>
+        </control>
+        <control type="image">
+          <texture border="15" infill="false" colordiffuse="unfocused_text">masks/flixscape-border-widget.png</texture>
+          <visible>$PARAM[focused] + Control.HasFocus($PARAM[list_id])</visible>
+        </control>
+      </control>
+    </definition>
+  </include>
+  <include name="FrameSectionHeader">
+    <definition>
+      <control type="group">
+        <depth>DepthBars</depth>
+        <control type="image">
+          <width>100%</width>
+          <height>68</height>
+          <texture colordiffuse="background">colors/white.png</texture>
+        </control>
+        <control type="label">
+          <left>58</left>
+          <top>5</top>
+          <width>850</width>
+          <height>62</height>
+          <aligny>center</aligny>
+          <font>font36_title</font>
+          <textcolor>unfocused_text</textcolor>
+          <label>$PARAM[title]</label>
+        </control>
+      </control>
+    </definition>
+  </include>
+  <include name="FrameTopBar">
+    <control type="image">
+      <width>1920</width>
+      <height>104</height>
+      <texture colordiffuse="background">colors/white.png</texture>
+    </control>
+    <control type="label">
+      <right>62</right>
+      <top>25</top>
+      <width>154</width>
+      <height>50</height>
+      <font>font36_title</font>
+      <align>right</align>
+      <aligny>center</aligny>
+      <textcolor>red</textcolor>
+      <label>FRAME</label>
+    </control>
+  </include>
+  <include name="FrameTopMenuItems">
+    <itemlayout width="148" height="66">
+      <control type="label">
+        <left>2</left>
+        <width>144</width>
+        <height>60</height>
+        <font>FrameTab</font>
+        <align>center</align>
+        <aligny>center</aligny>
+        <textcolor>grey</textcolor>
+        <label>$INFO[ListItem.Label]</label>
+      </control>
+    </itemlayout>
+    <focusedlayout width="148" height="66">
+      <control type="image">
+        <left>6</left>
+        <top>6</top>
+        <width>136</width>
+        <height>50</height>
+        <texture border="25" colordiffuse="button_focus2">masks/focus.png</texture>
+        <visible>Control.HasFocus(9000)</visible>
+      </control>
+      <control type="label">
+        <left>2</left>
+        <width>144</width>
+        <height>60</height>
+        <font>FrameTab</font>
+        <align>center</align>
+        <aligny>center</aligny>
+        <textcolor>unfocused_text</textcolor>
+        <label>$INFO[ListItem.Label]</label>
+      </control>
+    </focusedlayout>
+  </include>
+  <include name="FrameHomeFeature">
+    <control type="group" id="8980">
+      <left>64</left>
+      <top>110</top>
+      <width>1792</width>
+      <height>656</height>
+      <visible>$EXP[FrameFeatureVisible]</visible>
+      <control type="image">
+        <left>-64</left>
+        <top>-110</top>
+        <width>1920</width>
+        <height>1080</height>
+        <texture colordiffuse="background">colors/white.png</texture>
+      </control>
+      <control type="image">
+        <visible>!$EXP[FrameFeatureHasFanart]</visible>
+        <width>1792</width>
+        <height>656</height>
+        <texture diffuse="masks/giant-landscape.png" colordiffuse="primary_content_panel_bg">colors/white.png</texture>
+      </control>
+      <control type="image" id="8983">
+        <width>1792</width>
+        <height>656</height>
+        <texture diffuse="masks/giant-landscape.png" background="true">$VAR[FrameFeatureArt]</texture>
+        <aspectratio align="right" aligny="center" scalediffuse="false">scale</aspectratio>
+        <visible>$EXP[FrameFeatureHasFanart]</visible>
+        <fadetime>120</fadetime>
+      </control>
+      <control type="image">
+        <width>1792</width>
+        <height>656</height>
+        <texture>frame/feature-scrim.png</texture>
+        <visible>$EXP[FrameFeatureHasFanart]</visible>
+      </control>
+      <control type="group">
+        <left>42</left>
+        <top>213</top>
+        <control type="image">
+          <top>16</top>
+          <width>630</width>
+          <height>142</height>
+          <aspectratio align="left" aligny="bottom">keep</aspectratio>
+          <texture background="true">$VAR[FrameFeatureLogo]</texture>
+          <visible>$EXP[FrameFeatureHasLogo]</visible>
+        </control>
+        <control type="textbox">
+          <width>1040</width>
+          <height>166</height>
+          <font>FrameHeroTitle</font>
+          <aligny>bottom</aligny>
+          <textcolor>unfocused_text</textcolor>
+          <shadowcolor>C8000000</shadowcolor>
+          <label>$VAR[FrameFeatureTitle]</label>
+          <visible>!$EXP[FrameFeatureHasLogo]</visible>
+        </control>
+        <control type="label">
+          <top>177</top>
+          <width>720</width>
+          <height>39</height>
+          <font>FrameTVLabel</font>
+          <textcolor>unfocused_text</textcolor>
+          <shadowcolor>C8000000</shadowcolor>
+          <label>$VAR[FrameFeatureYear]$VAR[FrameFeatureGenre]</label>
+        </control>
+        <control type="textbox">
+          <top>225</top>
+          <width>925</width>
+          <height>140</height>
+          <font>FrameBody</font>
+          <textcolor>unfocused_text</textcolor>
+          <shadowcolor>C8000000</shadowcolor>
+          <label>$VAR[FrameFeaturePlot]</label>
+        </control>
+      </control>
+    </control>
+  </include>
+</includes>

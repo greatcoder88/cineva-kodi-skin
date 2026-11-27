@@ -6,6 +6,9 @@ on:
       - "tools/build_repository.py"
       - "tools/build_skin_archive.py"
       - "tools/build_nimbus_base.py"
+      - "tools/build_frame.py"
+      - "tools/frame_theme.py"
+      - "tools/frame-theme/**"
       - "tools/script.cineva.widgets/**"
       - ".github/workflows/repository.yml"
       - "skin.cineva/**"
@@ -23,10 +26,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Build pinned Nimbus foundation and repository site
+      - name: Build CINÉVA, Frame and the Kodi repository site
         run: |
           python tools/build_nimbus_base.py
-          python tools/build_repository.py
+          python tools/build_frame.py --output dist/frame-release
+          python tools/build_repository.py --frame-build-dir dist/frame-release
       - name: Validate repository feed and Kodi directory indexes
         run: |
           python - <<'PY'
@@ -38,8 +42,22 @@ jobs:
           root = Path("repository-site")
           xml = (root / "addons.xml").read_bytes()
           assert hashlib.md5(xml).hexdigest() == (root / "addons.xml.md5").read_text().strip()
-          ids = {x.get("id") for x in ET.fromstring(xml).findall("addon")}
-          assert ids == {"skin.cineva", "script.cineva.nimbus"}, ids
+          addons = {x.get("id"): x for x in ET.fromstring(xml).findall("addon")}
+          ids = set(addons)
+          assert ids == {"skin.cineva", "script.cineva.nimbus", "skin.frame", "script.frame.nimbus"}, ids
+          frame = addons["skin.frame"]
+          frame_helper = addons["script.frame.nimbus"]
+          requirement = frame.find("./requires/import[@addon='script.frame.nimbus']")
+          assert requirement is not None
+          version_key = lambda version: tuple(map(int, version.split(".")))
+          assert version_key(frame_helper.get("version")) >= version_key(requirement.get("version"))
+          for addon in (frame, frame_helper):
+              addon_id, version = addon.get("id"), addon.get("version")
+              path = root / "zips" / addon_id / f"{addon_id}-{version}.zip"
+              with ZipFile(path) as package:
+                  assert package.testzip() is None
+                  manifest = ET.fromstring(package.read(f"{addon_id}/addon.xml"))
+                  assert (manifest.get("id"), manifest.get("version")) == (addon_id, version)
           repo_zip = root / "repository.cineva-0.1.4.zip"
           assert repo_zip.is_file(), "root-level repository installer missing"
           with ZipFile(repo_zip) as z:
@@ -68,7 +86,7 @@ jobs:
               p=Links(); p.feed(path.read_text()); return set(p.links)
           assert ("repository.cineva-0.1.4.zip","repository.cineva-0.1.4.zip") in links(root/"index.html")
           assert ("zips/","zips/") in links(root/"index.html")
-          for addon_id in ("repository.cineva","skin.cineva","script.cineva.nimbus"):
+          for addon_id in ("repository.cineva", *sorted(ids)):
               folder=root/"zips"/addon_id
               files=list(folder.glob("*.zip"))
               assert files, f"missing ZIP in {folder}"

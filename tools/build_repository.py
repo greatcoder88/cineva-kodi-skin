@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Assemble a Kodi add-on repository from the tested CINÉVA packages."""
 from __future__ import annotations
+import argparse
 import hashlib
 import html
 import shutil
@@ -49,7 +50,7 @@ def write_http_directory_index(directory: Path, title: str, entries: list[tuple[
     (directory / "index.html").write_text(page, encoding="utf-8")
 
 
-def main() -> None:
+def main(frame_build_dir: Path | None = None) -> None:
     build_dir = ROOT / "dist" / "nimbus-foundation"
     skin_zip = build_dir / "skin.cineva-0.8.2-nimbus.zip"
     bridge_zip = build_dir / "script.cineva.nimbus-0.1.1.zip"
@@ -81,6 +82,21 @@ def main() -> None:
         (skin_id, skin_version, skin_zip, skin_xml, f"{skin_id}-{skin_version}.zip"),
         (bridge_id, bridge_version, bridge_zip, bridge_xml, f"{bridge_id}-{bridge_version}.zip"),
     ]
+    if frame_build_dir is not None:
+        from build_frame import HELPER_ID, SKIN_ID, SKIN_VERSION
+
+        for addon_id in (SKIN_ID, HELPER_ID):
+            matches = list(frame_build_dir.glob(f"{addon_id}-*.zip"))
+            if len(matches) != 1:
+                raise SystemExit(f"Expected one {addon_id} package in {frame_build_dir}")
+            package = matches[0]
+            actual_id, raw = addon_xml_from_zip(package)
+            version = ET.fromstring(raw).attrib["version"]
+            if actual_id != addon_id or package.name != f"{addon_id}-{version}.zip":
+                raise SystemExit(f"Frame package identity mismatch: {package}")
+            if addon_id == SKIN_ID and version != SKIN_VERSION:
+                raise SystemExit(f"Expected Frame {SKIN_VERSION}, found {version}")
+            packages.append((addon_id, version, package, raw, package.name))
     for addon_id, version, package, _raw, published_name in packages:
         package_dir = zips / addon_id
         package_dir.mkdir(parents=True)
@@ -124,7 +140,7 @@ def main() -> None:
         "CINÉVA Kodi Repository",
         [(repo_zip.name, repo_zip.name), ("zips/", "zips/")],
     )
-    package_ids = (REPO_ID, skin_id, bridge_id)
+    package_ids = (REPO_ID, *(package[0] for package in packages))
     write_http_directory_index(
         zips,
         "CINÉVA add-on packages",
@@ -143,4 +159,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--frame-build-dir", type=Path)
+    main(parser.parse_args().frame_build_dir)
