@@ -551,7 +551,7 @@ def apply_cineva_home_layout(skin_root: Path) -> None:
     home_includes_path = xml_root / "Includes_Home.xml"
     home_includes = home_includes_path.read_text(encoding="utf-8").replace("\r\n", "\n")
     common_pattern = re.compile(
-        r'(<include\\s+name="WidgetGroupListCommon"\\s*>)(.*?)(</include>)',
+        r'(<include\s+name="WidgetGroupListCommon"\s*>)(.*?)(</include>)',
         re.S,
     )
     matches = list(common_pattern.finditer(home_includes))
@@ -566,7 +566,7 @@ def apply_cineva_home_layout(skin_root: Path) -> None:
             raise RuntimeError("Includes_Home.xml: widget navigation include anchor changed")
         body = body.replace(
             marker,
-            back_target + "\\n\\t\\t" + marker,
+            back_target + "\n\t\t" + marker,
             1,
         )
         home_includes = (
