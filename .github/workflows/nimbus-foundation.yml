@@ -146,7 +146,7 @@ jobs:
           SETTINGS="$USERDATA/guisettings.xml"
           boot_kodi_once() {
             local attempt="$1"
-            flatpak run --user tv.kodi.Kodi//beta --standalone --windowing=x11 > "/tmp/nimbus-firstboot-$attempt.log" 2>&1 &
+            flatpak run --user tv.kodi.Kodi//beta --standalone > "/tmp/nimbus-firstboot-$attempt.log" 2>&1 &
             FIRST_PID=$!
             for i in $(seq 1 60); do
               test -s "$SETTINGS" && return 0
@@ -163,7 +163,27 @@ jobs:
           flatpak kill --user tv.kodi.Kodi 2>/dev/null || true
           pkill -x kodi.bin 2>/dev/null || true
           pkill -x kodi-x11 2>/dev/null || true
+          # A Flatpak wrapper can exit before Kodi's JSON-RPC listener and
+          # settings writer have stopped. Do not edit guisettings.xml while
+          # that first instance can still overwrite it.
+          if ss -ltnp | grep -q ':9090'; then
+            echo "Releasing stale Kodi JSON-RPC listener before Nimbus launch:"
+            ss -ltnp | grep ':9090' || true
+            sudo fuser -k 9090/tcp || true
+          fi
+          for i in $(seq 1 30); do
+            if ! pgrep -x kodi.bin >/dev/null && ! pgrep -x kodi-x11 >/dev/null && ! ss -ltn | grep -q ':9090'; then
+              break
+            fi
+            sleep 1
+          done
+          if ss -ltnp | grep -q ':9090'; then
+            echo "Kodi still owns port 9090 after first-boot shutdown:"
+            ss -ltnp | grep ':9090' || true
+            exit 1
+          fi
           sleep 2
+          mkdir -p artifacts
           python - <<'PY'
           import xml.etree.ElementTree as ET
           from pathlib import Path
@@ -185,8 +205,10 @@ jobs:
                   node = ET.SubElement(root, "setting", {"id": key})
               node.text = value
           tree.write(path, encoding="UTF-8", xml_declaration=True)
+          print("Prelaunch Kodi skin setting:", root.find("./setting[@id='lookandfeel.skin']").text)
           PY
-          nohup setsid -f flatpak run --user tv.kodi.Kodi//beta --standalone --windowing=x11 </dev/null > /tmp/nimbus-kodi.log 2>&1
+          cp "$HOME/.var/app/tv.kodi.Kodi/data/userdata/guisettings.xml" artifacts/guisettings-before-launch.xml
+          nohup setsid -f flatpak run --user tv.kodi.Kodi//beta --standalone </dev/null > /tmp/nimbus-kodi.log 2>&1
           python - <<'PY'
           import json, socket, time, subprocess, shutil
           from pathlib import Path
