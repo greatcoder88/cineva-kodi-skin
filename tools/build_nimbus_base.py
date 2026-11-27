@@ -420,6 +420,87 @@ def patch_nimbus_animation_param_conditions(skin_root: Path) -> None:
 
 
 
+def apply_cineva_visuals(skin_root: Path) -> None:
+    """Apply CINÉVA's Netflix-inspired presentation without replacing Nimbus UI logic."""
+    colors_path = skin_root / "colors" / "defaults.xml"
+    if not colors_path.is_file():
+        raise RuntimeError("Nimbus source is missing colors/defaults.xml")
+    colors = colors_path.read_text(encoding="utf-8")
+    palette = {
+        "primary_background": "FF080808",
+        "dialog_tint": "FF050505",
+        "dialog_bg": "E6080808",
+        "dialog_bg2": "F2080808",
+        "dialog_bg3": "F7080808",
+        "button_focus": "FFE50914",
+        "button_focus2": "FF080808",
+        "focused_text": "FF080808",
+        "unfocused_text": "FFF5F5F1",
+        "artwork_dim": "FFFFFFFF",
+        "accent_color": "FFE50914",
+        "selected": "FFE50914",
+        "keyboard_selected": "FFE50914",
+        "primary_content_panel_bg": "FF111111",
+        "background": "FF000000",
+        "bg_overlay": "99000000",
+        "red": "FFE50914",
+    }
+    for name, value in palette.items():
+        pattern = re.compile(
+            r'(<color\\s+name="' + re.escape(name) + r'"\\s*>).*?(</color>)',
+            re.S,
+        )
+        colors, count = pattern.subn(lambda match: match.group(1) + value + match.group(2), colors)
+        if count != 1:
+            raise RuntimeError(
+                f"colors/defaults.xml: expected one {name} color, found {count}"
+            )
+    colors_path.write_text(colors, encoding="utf-8", newline="")
+    ET.parse(colors_path)
+
+    home_path = skin_root / "xml" / "Home.xml"
+    if not home_path.is_file():
+        raise RuntimeError("Nimbus source is missing xml/Home.xml")
+    home = home_path.read_text(encoding="utf-8")
+    if 'id="19990"' in home:
+        raise RuntimeError("CINÉVA wordmark control ID 19990 already exists upstream")
+    brand = """
+        <control type="group" id="19990">
+            <left>68</left>
+            <top>42</top>
+            <width>430</width>
+            <height>78</height>
+            <visible>!Player.HasMedia</visible>
+            <animation effect="fade" start="0" end="100" time="350">WindowOpen</animation>
+            <control type="label">
+                <left>0</left>
+                <top>0</top>
+                <width>430</width>
+                <height>58</height>
+                <font>font36_title</font>
+                <textcolor>accent_color</textcolor>
+                <shadowcolor>text_shadow</shadowcolor>
+                <align>left</align>
+                <aligny>center</aligny>
+                <label>[B]CINÉVA[/B]</label>
+            </control>
+            <control type="image">
+                <left>2</left>
+                <top>63</top>
+                <width>76</width>
+                <height>4</height>
+                <texture colordiffuse="accent_color">colors/white.png</texture>
+            </control>
+        </control>
+"""
+    marker = "</controls>"
+    if home.count(marker) != 1:
+        raise RuntimeError("Home.xml must contain exactly one controls closing tag")
+    home = home.replace(marker, brand + "    " + marker, 1)
+    ET.fromstring(home)
+    home_path.write_text(home, encoding="utf-8", newline="")
+
+
 def write_default_skin_includes(skin_root: Path) -> None:
     """Ship empty Nimbus menu/widget includes before Kodi parses Includes.xml."""
     xml_root = skin_root / "xml"
@@ -709,6 +790,7 @@ def build(output_dir: Path = OUT_DIR, fetcher=fetch_archive) -> dict[str, Path]:
         patch_skin_manifest(skin_root)
         remove_api_controls(skin_root)
         remove_unsupported_startup_checks(skin_root)
+        apply_cineva_visuals(skin_root)
         write_default_skin_includes(skin_root)
         (skin_root / "NOTICE.txt").write_text(NOTICE, encoding="utf-8")
         manifest = {
