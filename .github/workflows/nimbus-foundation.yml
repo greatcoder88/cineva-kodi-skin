@@ -1,12 +1,6 @@
 name: CINÉVA Nimbus foundation
 
 on:
-  push:
-    branches: [redesign/nimbus-foundation]
-    paths:
-      - "tools/build_nimbus_base.py"
-      - "tests/test_nimbus_base.py"
-      - ".github/workflows/nimbus-foundation.yml"
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -15,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: cineva-nimbus-${{ github.workflow }}-${{ github.ref }}
+  group: cineva-nimbus-${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -113,9 +107,12 @@ jobs:
       - name: Install Nimbus-derived CINÉVA and its local bridge
         run: |
           ADDONS="$HOME/.var/app/tv.kodi.Kodi/data/addons"
-          mkdir -p "$ADDONS"
-          unzip -q dist/nimbus-foundation/skin.cineva-0.6.0-nimbus.zip -d "$ADDONS"
-          unzip -q dist/nimbus-foundation/script.cineva.nimbus-0.1.0.zip -d "$ADDONS"
+          STAGE="$GITHUB_WORKSPACE/nimbus-stage"
+          mkdir -p "$ADDONS" "$STAGE"
+          unzip -q dist/nimbus-foundation/skin.cineva-0.6.0-nimbus.zip -d "$STAGE"
+          unzip -q dist/nimbus-foundation/script.cineva.nimbus-0.1.0.zip -d "$STAGE"
+          cp -a "$STAGE/skin.cineva" "$ADDONS/"
+          cp -a "$STAGE/script.cineva.nimbus" "$ADDONS/"
           test -f "$ADDONS/skin.cineva/xml/Home.xml"
           test -f "$ADDONS/skin.cineva/xml/Includes_Home.xml"
           test -f "$ADDONS/script.cineva.nimbus/resources/lib/modules/cpath_maker.py"
@@ -176,7 +173,9 @@ jobs:
           PY
           nohup setsid -f flatpak run --user tv.kodi.Kodi//beta --standalone --windowing=x11 </dev/null > /tmp/nimbus-kodi.log 2>&1
           python - <<'PY'
-          import json, socket, time, subprocess
+          import json, socket, time, subprocess, shutil
+          from pathlib import Path
+
           def rpc(method, params=None):
               request = {"jsonrpc":"2.0","method":method,"params":params or {},"id":1}
               decoder = json.JSONDecoder()
@@ -226,8 +225,23 @@ jobs:
               value = state.get("skin", {})
               return value.get("id") if isinstance(value, dict) else str(value)
 
-          # The bridge is a skin dependency. Enable the skin once and let
-          # Kodi's add-on manager enable that dependency in the same operation.
+          def log_text():
+              path = Path.home()/".var/app/tv.kodi.Kodi/data/temp/kodi.log"
+              return path.read_text(errors="replace") if path.exists() else ""
+
+          # Re-copy the exact staged files after Kodi's first profile boot.
+          # This forces the Add-on Manager to refresh the just-discovered
+          # local skin and bridge before the settings-based skin switch.
+          addon_root = Path.home()/".var/app/tv.kodi.Kodi/data/addons"
+          stage_root = Path.cwd()/"nimbus-stage"
+          for addon_id in ("script.cineva.nimbus", "skin.cineva"):
+              source = stage_root/addon_id
+              target = addon_root/addon_id
+              if target.exists():
+                  shutil.rmtree(target)
+              shutil.copytree(source, target)
+              print("Refreshed staged Kodi add-on:", addon_id)
+
           details = rpc_retry("Addons.GetAddonDetails", {
               "addonid":"skin.cineva", "properties":["enabled","version"]
           })
@@ -236,29 +250,36 @@ jobs:
               "addonid":"skin.cineva", "enabled":True
           })
           print("CINÉVA Addons.SetAddonEnabled result:", enabled)
-          # Kodi can report a skin add-on as disabled until it is selected
-          # through lookandfeel.skin. Do not treat that pre-selection flag as
-          # failure; Kodi resolves and enables its declared bridge dependency
-          # as part of the actual skin switch.
-          time.sleep(3)
 
+          before_log = log_text()
+          before_loads = before_log.count("load skin from:")
           result = rpc_retry("Settings.SetSettingValue", {
               "setting":"lookandfeel.skin", "value":"skin.cineva"
           })
           print("Kodi skin switch result:", result)
 
           state = None
-          deadline = time.time() + 45
+          deadline = time.time() + 60
           while time.time() < deadline:
               state = gui()
-              if skin_id(state) == "skin.cineva" and state.get("currentwindow",{}).get("id") in (10100,10000):
+              logs = log_text()
+              loaded_cineva = (
+                  logs.count("load skin from:") > before_loads
+                  and "skin.cineva" in logs
+              )
+              if loaded_cineva and (
+                  state.get("currentwindow",{}).get("id") == 10100
+                  or skin_id(state) == "skin.cineva"
+              ):
                   break
               time.sleep(0.5)
           else:
-              raise SystemExit(f"Kodi did not load the CINÉVA skin after enabling it: {state}")
+              raise SystemExit(
+                  "Kodi accepted the skin setting but did not load skin.cineva. "
+                  f"GUI={state}; Kodi log tail:\n{log_text()[-8000:]}"
+              )
 
-          # Confirm the Keep Skin dialog on the new skin. Nimbus puts Yes first,
-          # but follow the actual focused label rather than assuming a control id.
+          # Confirm the Keep Skin dialog when Kodi presents it.
           if state.get("currentwindow",{}).get("id") == 10100:
               for _ in range(4):
                   label = state.get("currentcontrol",{}).get("label","").strip().lower()
@@ -270,7 +291,7 @@ jobs:
               if state.get("currentcontrol",{}).get("label","").strip().lower() != "yes":
                   raise SystemExit(f"Keep Skin did not focus Yes: {state}")
               subprocess.run(["xdotool","key","Return"],check=True)
-              deadline = time.time() + 15
+              deadline = time.time() + 20
               while time.time() < deadline:
                   state = gui()
                   if state.get("currentwindow",{}).get("id") != 10100:
@@ -278,6 +299,12 @@ jobs:
                   time.sleep(0.25)
               else:
                   raise SystemExit(f"Keep Skin confirmation did not close: {state}")
+
+          selected = rpc_retry("Settings.GetSettingValue", {"setting":"lookandfeel.skin"})
+          selected_value = selected.get("value") if isinstance(selected, dict) else selected
+          state = gui()
+          if selected_value != "skin.cineva" or skin_id(state) != "skin.cineva":
+              raise SystemExit(f"CINÉVA was not retained after Keep Skin: setting={selected}; GUI={state}")
 
           subprocess.run(["xdotool","key","Escape"],check=False)
           time.sleep(1)
