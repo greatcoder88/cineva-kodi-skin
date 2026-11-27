@@ -636,9 +636,9 @@ def patch_nimbus_parameterized_container_conditions(skin_root: Path) -> None:
     )
     for old, new in replacements:
         count = text.count(old)
-        if count != 2:
+        if count not in (1, 2):
             raise RuntimeError(
-                f"Includes.xml: expected two {old} expressions, found {count}"
+                f"Includes.xml: expected one or two {old} expressions, found {count}"
             )
         text = text.replace(old, new)
     if "Container($PARAM[list_id])" in text:
