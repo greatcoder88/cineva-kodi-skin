@@ -744,7 +744,7 @@ class NimbusWorkflowPathTests(unittest.TestCase):
     def test_skin_first_run_welcome_generates_includes_before_home_capture(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
         source = workflow.read_text(encoding="utf-8")
-        self.assertIn('currentwindow",{}).get("id") in (11112, 12002)', source)
+        self.assertIn('currentwindow",{}).get("id") in (1112, 11112, 12002)', source)
         self.assertIn("Acknowledging Nimbus first-run welcome", source)
         self.assertIn("required_default_includes", source)
         self.assertIn("script-nimbus-widget_home.xml", source)

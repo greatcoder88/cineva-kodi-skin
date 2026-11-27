@@ -452,7 +452,7 @@ jobs:
               raise SystemExit(f"CINÉVA was not retained after Keep Skin: setting={selected}; GUI={state}")
 
           state = gui()
-          if state.get("currentwindow",{}).get("id") in (11112, 12002):
+          if state.get("currentwindow",{}).get("id") in (1112, 11112, 12002):
               welcome_label = state.get("currentcontrol",{}).get("label","").strip()
               if welcome_label.lower() != "ok":
                   raise SystemExit(f"Nimbus first-run welcome did not focus OK: {state}")
