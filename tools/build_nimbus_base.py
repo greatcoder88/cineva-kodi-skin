@@ -462,6 +462,12 @@ def apply_cineva_visuals(skin_root: Path) -> None:
     if not home_path.is_file():
         raise RuntimeError("Nimbus source is missing xml/Home.xml")
     home = home_path.read_text(encoding="utf-8")
+    default_focus = "<defaultcontrol>9000</defaultcontrol>"
+    if home.count(default_focus) != 1:
+        raise RuntimeError("Nimbus Home must have its original main-menu default focus exactly once")
+    # Start on the first content widget, using Nimbus's own hidden focus bridge.
+    # The left navigation remains fully available from the existing D-pad route.
+    home = home.replace(default_focus, "<defaultcontrol>20000</defaultcontrol>", 1)
     if 'id="19990"' in home:
         raise RuntimeError("CINÉVA wordmark control ID 19990 already exists upstream")
     brand = """
