@@ -1,3 +1,4 @@
+import ast
 import struct
 import unittest
 import xml.etree.ElementTree as ET
@@ -6,9 +7,38 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ARCHIVE = ROOT / "skin.cineva-0.5.64.zip"
+FIXTURE = ROOT / "tools/test-fixtures/plugin.video.pov/default.py"
 
 
 class HomeHeroRatingTests(unittest.TestCase):
+    def test_selected_inception_fixture_supplies_explicit_tomatoes_percent(self):
+        fixture = ast.parse(FIXTURE.read_text(encoding="utf-8"))
+        percent_map = next(
+            ast.literal_eval(node.value)
+            for node in fixture.body
+            if isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == "TOMATO_PERCENT"
+                    for target in node.targets)
+        )
+        self.assertEqual(percent_map.get("Inception"), "92")
+
+        uses_title_mapping = any(
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "setProperty"
+            and len(node.args) == 2
+            and isinstance(node.args[0], ast.Constant)
+            and node.args[0].value == "Rating.tomatoes.Percent"
+            and isinstance(node.args[1], ast.Subscript)
+            and isinstance(node.args[1].value, ast.Name)
+            and node.args[1].value.id == "TOMATO_PERCENT"
+            for node in ast.walk(fixture)
+        )
+        self.assertTrue(
+            uses_title_mapping,
+            "the POV fixture must attach the explicit percent to the selected title",
+        )
+
     def test_all_home_heroes_render_rotten_tomatoes_percent_and_native_fallback(self):
         with ZipFile(ARCHIVE) as archive:
             home = ET.fromstring(archive.read("skin.cineva/xml/Home.xml"))
