@@ -746,6 +746,8 @@ class NimbusWorkflowPathTests(unittest.TestCase):
         source = workflow.read_text(encoding="utf-8")
         self.assertIn('currentwindow",{}).get("id") in (1112, 11112, 12002)', source)
         self.assertIn("Acknowledging Nimbus first-run welcome", source)
+        self.assertIn("tools/test-fixtures/plugin.video.pov", source)
+        self.assertLess(source.index('cp -a "$POV_FIXTURE"/. "$POV_ADDON"/'), source.index("if ! boot_kodi_once 1; then"))
         self.assertIn("required_default_includes", source)
         self.assertIn("script-nimbus-widget_home.xml", source)
         self.assertIn("CINEVA_NIMBUS_HOME_WIDGETS_READY=4", source)

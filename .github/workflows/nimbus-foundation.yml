@@ -212,21 +212,8 @@ jobs:
             tail -n 100 "$KODI_LOG" 2>/dev/null || true
             return 1
           }
-          if ! boot_kodi_once 1; then
-            mkdir -p artifacts
-            import -display :99 -window root artifacts/nimbus-firstboot-failure.png 2>/dev/null || true
-            ps -eo pid,ppid,stat,comm,args > artifacts/nimbus-firstboot-processes.txt || true
-            flatpak ps --user > artifacts/nimbus-firstboot-flatpak-ps.txt 2>&1 || true
-            find "$HOME/.var/app/tv.kodi.Kodi" -type f \( -name kodi.log -o -name guisettings.xml \) -print > artifacts/nimbus-firstboot-state-files.txt 2>&1 || true
-            while IFS= read -r path; do
-              [ -f "$path" ] && { echo "===== $path ====="; tail -n 120 "$path"; }
-            done < artifacts/nimbus-firstboot-state-files.txt > artifacts/nimbus-firstboot-log-tail.txt
-            cat /tmp/nimbus-firstboot-1.log || true
-            exit 1
-          fi
-          # Stage the POV-compatible test provider only after Kodi's clean
-          # first boot. The plugin must not participate in initial add-on
-          # discovery; install its deterministic art before enabling CINÉVA.
+          # Stage the POV-compatible test provider and deterministic poster art
+          # before Kodi's first add-on scan so the Home shelves have a real source.
           POV_FIXTURE="$GITHUB_WORKSPACE/tools/test-fixtures/plugin.video.pov"
           POV_ADDON="$KODI_DATA/addons/plugin.video.pov"
           mkdir -p "$POV_ADDON/resources/posters"
@@ -242,6 +229,18 @@ jobs:
           test -s "$POV_ADDON/resources/posters/tv-1.jpg"
           test -s "$POV_ADDON/resources/posters/backdrop-1.jpg"
           test -s "$POV_ADDON/resources/posters/tv-backdrop-1.jpg"
+          if ! boot_kodi_once 1; then
+            mkdir -p artifacts
+            import -display :99 -window root artifacts/nimbus-firstboot-failure.png 2>/dev/null || true
+            ps -eo pid,ppid,stat,comm,args > artifacts/nimbus-firstboot-processes.txt || true
+            flatpak ps --user > artifacts/nimbus-firstboot-flatpak-ps.txt 2>&1 || true
+            find "$HOME/.var/app/tv.kodi.Kodi" -type f \( -name kodi.log -o -name guisettings.xml \) -print > artifacts/nimbus-firstboot-state-files.txt 2>&1 || true
+            while IFS= read -r path; do
+              [ -f "$path" ] && { echo "===== $path ====="; tail -n 120 "$path"; }
+            done < artifacts/nimbus-firstboot-state-files.txt > artifacts/nimbus-firstboot-log-tail.txt
+            cat /tmp/nimbus-firstboot-1.log || true
+            exit 1
+          fi
           # Keep the first Kodi session alive after Home is ready. The first
           # startup has already scanned the staged add-ons and initialized Kodi's
           # JSON-RPC server. Restarting Flatpak here previously left orphaned
