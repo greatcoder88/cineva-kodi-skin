@@ -217,7 +217,7 @@ jobs:
             import -display :99 -window root artifacts/nimbus-firstboot-failure.png 2>/dev/null || true
             ps -eo pid,ppid,stat,comm,args > artifacts/nimbus-firstboot-processes.txt || true
             flatpak ps --user > artifacts/nimbus-firstboot-flatpak-ps.txt 2>&1 || true
-            find "$HOME/.var/app/tv.kodi.Kodi" -type f \\( -name kodi.log -o -name guisettings.xml \\) -print > artifacts/nimbus-firstboot-state-files.txt 2>&1 || true
+            find "$HOME/.var/app/tv.kodi.Kodi" -type f \( -name kodi.log -o -name guisettings.xml \) -print > artifacts/nimbus-firstboot-state-files.txt 2>&1 || true
             while IFS= read -r path; do
               [ -f "$path" ] && { echo "===== $path ====="; tail -n 120 "$path"; }
             done < artifacts/nimbus-firstboot-state-files.txt > artifacts/nimbus-firstboot-log-tail.txt
