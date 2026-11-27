@@ -1,4 +1,5 @@
 import hashlib
+import os
 import io
 import sys
 import tempfile
@@ -9,6 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 import build_nimbus_base as builder
+import download_test_posters as poster_artwork
 
 
 def make_archive(root_name, files):
@@ -757,6 +759,40 @@ class NimbusWorkflowPathTests(unittest.TestCase):
         self.assertIn("Nimbus first-run defaults generated and skin reloaded", source)
         self.assertIn("in (10100, 12002)", source)
         self.assertIn("nimbus-first-run-failure.png", source)
+
+
+class PosterArtworkFontTests(unittest.TestCase):
+
+    def test_legacy_poppins_remains_preferred_when_available(self):
+        with tempfile.TemporaryDirectory() as temp:
+            previous = Path.cwd()
+            try:
+                os.chdir(temp)
+                fonts = Path("skin.cineva/fonts")
+                fonts.mkdir(parents=True)
+                (fonts / "Poppins-SemiBold.ttf").write_bytes(b"poppins")
+                (fonts / "Inter-SemiBold.ttf").write_bytes(b"inter")
+                self.assertEqual(
+                    poster_artwork.resolve_clearlogo_font(),
+                    Path("skin.cineva/fonts/Poppins-SemiBold.ttf"),
+                )
+            finally:
+                os.chdir(previous)
+
+    def test_nimbus_inter_semibold_is_used_when_poppins_is_absent(self):
+        with tempfile.TemporaryDirectory() as temp:
+            previous = Path.cwd()
+            try:
+                os.chdir(temp)
+                fonts = Path("skin.cineva/fonts")
+                fonts.mkdir(parents=True)
+                (fonts / "Inter-SemiBold.ttf").write_bytes(b"inter")
+                self.assertEqual(
+                    poster_artwork.resolve_clearlogo_font(),
+                    Path("skin.cineva/fonts/Inter-SemiBold.ttf"),
+                )
+            finally:
+                os.chdir(previous)
 
 
 if __name__ == "__main__":
