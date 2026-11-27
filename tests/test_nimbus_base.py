@@ -490,6 +490,14 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
+            (skin / "xml/Includes_Home.xml").write_text(
+                '<includes><include name="WidgetGroupListCommon">'
+                '<orientation>vertical</orientation><height>33000</height><itemgap>-100</itemgap>'
+                '<onup>20000</onup><ondown>20001</ondown><usecontrolcoords>true</usecontrolcoords>'
+                '</include></includes>',
+                encoding="utf-8",
+            )
+
             builder.apply_cineva_home_layout(skin)
 
             root = ET.parse(skin / "xml/Home.xml").getroot()
@@ -505,6 +513,9 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
             self.assertEqual(flix.findtext(".//include[@name='FlixPanel']//left"), "72")
             self.assertEqual(flix.findtext(".//include[@name='FlixPanel']//top"), "150")
             ET.parse(skin / "xml/Includes_Cineva.xml")
+            home_includes = ET.parse(skin / "xml/Includes_Home.xml").getroot()
+            common = home_includes.find(".//include[@name='WidgetGroupListCommon']")
+            self.assertEqual(common.findtext("onback"), "SetFocus(9000)")
 
     def test_archives_are_byte_for_byte_deterministic(self):
         with tempfile.TemporaryDirectory() as temp:
