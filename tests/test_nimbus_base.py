@@ -297,7 +297,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                         condition = animation.get("condition", "")
                         self.assertNotIn("Control.HasFocus($PARAM[list_id])", condition, filename)
                 animations = ET.fromstring(archive.read("skin.cineva/xml/Includes_Animations.xml"))
-                widget_visibility = animations.find('.//include[@name="WidgetVisibilityAnimations"]/animation')
+                widget_visibility = animations.find('.//include[@name="WidgetVisibilityAnimations"]/definition/animation')
                 self.assertEqual(widget_visibility.get("condition"), "ControlGroup(2000).HasFocus")
                 expected_home_focus = {
                     "Includes_HomeLayouts.xml": 4,
