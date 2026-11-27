@@ -1,8 +1,12 @@
 name: CINÉVA Nimbus foundation
 
 on:
-  pull_request:
-    branches: [main]
+  push:
+    branches: [redesign/nimbus-foundation]
+    paths:
+      - "tools/build_nimbus_base.py"
+      - "tests/test_nimbus_base.py"
+      - ".github/workflows/nimbus-foundation.yml"
   workflow_dispatch:
 
 permissions:
