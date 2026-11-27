@@ -406,10 +406,12 @@ class HomeHeroActionTests(unittest.TestCase):
             )
             focus_progresses = focused.findall("./control[@type='progress']")
             self.assertEqual(len(focus_progresses), 2)
-            self.assertEqual(
-                {node.findtext("visible") for node in focus_progresses},
-                {"!Control.HasFocus(9001) + ListItem.IsResumable", "Control.HasFocus(9001) + ListItem.IsResumable"},
-            )
+            progress_visibility = [node.findtext("visible", "") for node in focus_progresses]
+            self.assertEqual(sum(value.startswith("Control.HasFocus(9001) +") for value in progress_visibility), 1)
+            self.assertEqual(sum(value.startswith("!Control.HasFocus(9001) +") for value in progress_visibility), 1)
+            for value in progress_visibility:
+                self.assertIn("ListItem.IsResumable", value)
+                self.assertIn("!Control.HasFocus(9002)", value)
             self.assertEqual(
                 [(node.findtext("left"), node.findtext("top"), node.findtext("width"), node.findtext("height"))
                  for node in focus_progresses],
