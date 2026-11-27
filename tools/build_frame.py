@@ -38,6 +38,7 @@ def package_addon(archive, root, output, addon_id, name):
             # Kodi registers the custom welcome window relative to Home (10000).
             contents = contents.replace(b"ActivateWindow(1112)", b"ActivateWindow(11112)")
         if path.suffix == ".xml" and addon_id == SKIN_ID:
+            contents = contents.replace(b"ActivateWindow(1107)", b"ActivateWindow(11107)")
             contents = contents.replace(b"Window.IsActive(1121)", b"Window.IsActive(11121)")
             contents = contents.replace(b"Window.IsVisible(1121)", b"Window.IsVisible(11121)")
         if addon_id == HELPER_ID and path.name == "search_utils.py":

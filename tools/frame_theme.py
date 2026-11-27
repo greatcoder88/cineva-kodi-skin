@@ -178,6 +178,10 @@ def apply_search(xml):
         elif label.text and label.text.startswith("Search results for:"):
             heading = next(control for control in root.iter("control") if label in control)
             set_fields(heading, {"font": "FrameTVLabel", "textcolor": "grey"})
+        elif label.text == "$INFO[Window(home).Property(nimbus.search.history.empty)]":
+            message = next(control for control in root.iter("control") if label in control)
+            set_fields(message, {"left": "570", "top": "205", "width": "960", "height": "95",
+                                 "font": "FrameTVLabel", "textcolor": "grey"})
     write_xml(tree, path)
 
 
@@ -185,6 +189,11 @@ def apply_title_details(xml):
     path = xml / "DialogVideoInfo.xml"
     tree = read_xml(path)
     root = tree.getroot()
+    controls = root.find("controls")
+    backdrop = ET.Element("control", {"type": "image"})
+    set_fields(backdrop, {"width": "100%", "height": "100%", "depth": "DepthBackground"})
+    ET.SubElement(backdrop, "texture", {"colordiffuse": "background"}).text = "colors/white.png"
+    controls.insert(0, backdrop)
     for control in root.iter("control"):
         label = control.findtext("label")
         if label == "[B]$VAR[DialogInfoTitle][/B]":

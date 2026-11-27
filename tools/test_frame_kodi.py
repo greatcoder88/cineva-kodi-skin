@@ -139,6 +139,8 @@ def press(action):
 
 
 def screenshot(name):
+    # Kodi exposes the new window and focus before its fade completes.
+    time.sleep(0.65)
     subprocess.run(["import", "-window", "root", str(ARTIFACTS / f"{name}.png")], check=True)
 
 
@@ -240,11 +242,25 @@ def verify_search_and_settings():
     wait_for("Search opens from Home", lambda: window_id() == 11121)
     wait_for("new-search button is focused", lambda: has_focus(802))
     screenshot("search")
+    press("left")
+    wait_for("search provider selector is focused", lambda: has_focus(801))
+    field = "Skin.String(current_search_provider)"
+    for expected in ("1", "3"):
+        press("select")
+        wait_for(f"provider cycles to {expected}", lambda: rpc("XBMC.GetInfoLabels", labels=[field])[field] == expected)
+    press("right")
+    wait_for("search button regains focus", lambda: has_focus(802))
     press("select")
     wait_for("Search opens Kodi's keyboard", lambda: window_id() == 10103)
     screenshot("search-keyboard")
-    press("back")
-    wait_for("closing the keyboard reveals Search", lambda: window_id() == 11121)
+    rpc("Input.SendText", text="Dark", done=True)
+    movie, show = (f"Container({control}).ListItem.Label" for control in (19011, 19012))
+    wait_for("POV fixture search renders matching movies and TV shows", lambda: (
+        window_id() == 11121 and rpc("XBMC.GetInfoLabels", labels=[movie, show]) == {
+            movie: "The Dark Knight", show: "Dark",
+        }
+    ))
+    screenshot("search-results")
 
     rpc("GUI.ActivateWindow", window="skinsettings")
     wait_for("Skin Settings opens and the category list is focused", lambda: window_id() == 10035 and has_focus(9000))
@@ -258,6 +274,11 @@ def verify_playback_osd():
     wait_for("playback controls appear and Play/Pause receives focus",
              lambda: window_id() == 12901 and has_focus(703))
     screenshot("playback-osd")
+    player = next(item["playerid"] for item in rpc("Player.GetActivePlayers") if item["type"] == "video")
+    press("select")
+    wait_for("Play/Pause pauses the video", lambda: rpc("Player.GetProperties", playerid=player, properties=["speed"])["speed"] == 0)
+    press("select")
+    wait_for("Play/Pause resumes the video", lambda: rpc("Player.GetProperties", playerid=player, properties=["speed"])["speed"] == 1)
     press("right")
     wait_for("OSD focus moves to Stop", lambda: has_focus(704))
 
