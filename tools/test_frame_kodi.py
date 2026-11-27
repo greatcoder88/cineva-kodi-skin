@@ -192,8 +192,10 @@ def verify_home():
                 and rpc("XBMC.GetInfoLabels", labels=[field])[field] == "movies")
 
     wait_for("stock helper creates the configured widget rows and Home opens", populated_home, timeout=70)
-    press("right")
-    wait_for("Right focuses the first movie card", lambda: focused_card(19011, "The Shawshank Redemption"))
+    screenshot("home-feature")
+    press("down")
+    wait_for("Down from the top menu focuses the first movie card",
+             lambda: focused_card(19011, "The Shawshank Redemption"))
     screenshot("home-first-widget")
     press("right")
     wait_for("Right moves to a second movie card", lambda: focused_card(19011, "The Dark Knight"))

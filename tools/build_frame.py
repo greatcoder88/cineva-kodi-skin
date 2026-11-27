@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Package the stock Nimbus baseline under Frame's separate Kodi add-on IDs."""
+"""Package the Nimbus-based Frame skin and helper under separate Kodi add-on IDs."""
 
 import argparse
 import tempfile
@@ -8,10 +8,13 @@ from pathlib import Path
 from zipfile import ZipFile
 
 from build_nimbus_base import extract_archive, fetch_archive, write_deterministic_zip
+from frame_theme import apply_theme
 
 
 ROOT = Path(__file__).resolve().parents[1]
+THEME_SOURCE = ROOT / "tools/frame-theme/Includes_FrameTheme.xml"
 SKIN_ID = "skin.frame"
+SKIN_VERSION = "0.1.44"
 HELPER_ID = "script.frame.nimbus"
 ADDONS = (
     ("ivarbrandt/skin.nimbus", "8b5071b8cd0db3a8e813eb00e9a821d3efad2454", SKIN_ID, "Frame"),
@@ -47,6 +50,10 @@ def package_addon(archive, root, output, addon_id, name):
         raise RuntimeError(f"Unexpected manifest identity for {addon_id}")
     if addon_id == SKIN_ID and manifest.find(f"./requires/import[@addon='{HELPER_ID}']") is None:
         raise RuntimeError(f"{SKIN_ID} must depend on {HELPER_ID}")
+    if addon_id == SKIN_ID:
+        manifest.attrib["version"] = SKIN_VERSION
+        ET.ElementTree(manifest).write(manifest_path, encoding="utf-8", xml_declaration=True)
+        apply_theme(root, THEME_SOURCE)
 
     destination = output / f"{addon_id}-{manifest.attrib['version']}.zip"
     write_deterministic_zip(root, destination)
