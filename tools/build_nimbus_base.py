@@ -1325,7 +1325,7 @@ def build(output_dir: Path = OUT_DIR, fetcher=fetch_archive) -> dict[str, Path]:
         apply_cineva_visuals(skin_root)
         apply_cineva_home_layout(skin_root)
         apply_cineva_widget_dashboard(skin_root)
-    apply_cineva_addon_ratings(skin_root)
+        apply_cineva_addon_ratings(skin_root)
         write_default_skin_includes(skin_root)
         (skin_root / "NOTICE.txt").write_text(NOTICE, encoding="utf-8")
         manifest = {
