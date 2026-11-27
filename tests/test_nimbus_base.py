@@ -443,6 +443,69 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
             self.assertEqual(brand.findtext("./control[@type='label']/font"), "font36_title")
             self.assertEqual(brand.findtext("./control[@type='image']/texture"), "colors/white.png")
 
+    def test_cineva_home_layout_uses_horizontal_netflix_navigation_and_hero(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skin = Path(temp)
+            (skin / "xml").mkdir()
+            menu = """<control type="group">
+					<left>-540</left>
+					<animation type="Conditional" condition="!ControlGroup(2000).HasFocus + !Control.IsVisible(20000) + !Control.IsVisible(20001)" reversible="true">
+						<effect type="slide" start="0" end="540" time="500" tween="cubic" easing="inout" />
+					</animation>
+					<include>OpenClose_Left</include>
+					<include content="MenuContentPanel">
+						<param name="width" value="549"/>
+					</include>
+					<control type="fixedlist" id="9000">
+						<left>25</left>
+						<top>215</top>
+            <width>825</width>
+						<height>605</height>
+						<movement>7</movement>
+						<onright>SetFocus($INFO[Container(9000).ListItem.Property(menu_id)])</onright>
+						<onback>700</onback>
+						<onup>700</onup>
+						<ondown>9000</ondown>
+						<include content="List">
+              <param name="id" value="9000" />
+            </include>
+					</control>
+					<control type="group">
+						<left>65</left>
+						<top>70</top>
+						<width>343</width>
+					</control>
+				</control>"""
+            home = (
+                '<window><defaultcontrol>20000</defaultcontrol><controls>'
+                '<control type="group" id="2000"/>'
+                + menu +
+                '<control type="rss"></control></controls></window>'
+            )
+            (skin / "xml/Home.xml").write_text(home.replace("\n", "\r\n"), encoding="utf-8")
+            (skin / "xml/Includes_FlixPanel.xml").write_text(
+                '<includes><include name="FlixPanel"><definition><control type="group">'
+                '<left>50</left>\n\t\t\t\t<width>815</width>\n\t\t\t\t<top>45</top>'
+                '</control></definition></include></includes>',
+                encoding="utf-8",
+            )
+
+            builder.apply_cineva_home_layout(skin)
+
+            root = ET.parse(skin / "xml/Home.xml").getroot()
+            self.assertEqual(root.findtext("defaultcontrol"), "9000")
+            menu_list = root.find(".//control[@id='9000']")
+            self.assertEqual(menu_list.findtext("orientation"), "horizontal")
+            self.assertEqual(menu_list.findtext("left"), "270")
+            self.assertEqual(menu_list.findtext("top"), "26")
+            self.assertEqual(menu_list.findtext("width"), "1260")
+            self.assertIsNotNone(menu_list.find("./include[@content='CinevaMainMenuList']"))
+            self.assertIsNone(root.find(".//include[@content='MenuContentPanel']"))
+            flix = ET.parse(skin / "xml/Includes_FlixPanel.xml").getroot()
+            self.assertEqual(flix.findtext(".//include[@name='FlixPanel']//left"), "72")
+            self.assertEqual(flix.findtext(".//include[@name='FlixPanel']//top"), "150")
+            ET.parse(skin / "xml/Includes_Cineva.xml")
+
     def test_archives_are_byte_for_byte_deterministic(self):
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp) / "dist"
