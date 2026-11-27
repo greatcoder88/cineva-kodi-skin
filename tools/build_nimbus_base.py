@@ -617,6 +617,36 @@ def apply_cineva_home_layout(skin_root: Path) -> None:
     ET.fromstring(includes_source)
     includes_path.write_text(includes_source, encoding="utf-8", newline="")
 
+
+def patch_nimbus_parameterized_container_conditions(skin_root: Path) -> None:
+    """Avoid Kodi 22 parser failures for Container($PARAM[list_id]) expressions.
+
+    Kodi's boolean parser does not accept an include parameter inside the
+    Container(id) predicate. The arrows already belong to the corresponding
+    list include, so visibility is safely scoped by Control.IsVisible(list_id)
+    and the focus guards; the click actions still use Control.Move(list_id, ±1).
+    """
+    path = skin_root / "xml" / "Includes.xml"
+    if not path.is_file():
+        raise RuntimeError("Nimbus source is missing xml/Includes.xml")
+    text = path.read_text(encoding="utf-8")
+    replacements = (
+        ("Container($PARAM[list_id]).HasPrevious", "Control.IsVisible($PARAM[list_id])"),
+        ("Container($PARAM[list_id]).HasNext", "Control.IsVisible($PARAM[list_id])"),
+    )
+    for old, new in replacements:
+        count = text.count(old)
+        if count != 2:
+            raise RuntimeError(
+                f"Includes.xml: expected two {old} expressions, found {count}"
+            )
+        text = text.replace(old, new)
+    if "Container($PARAM[list_id])" in text:
+        raise RuntimeError("Includes.xml retains an unsupported parameterized Container() expression")
+    ET.fromstring(text)
+    path.write_text(text, encoding="utf-8", newline="")
+
+
 def patch_nimbus_timer_start_conditions(skin_root: Path) -> None:
     """Remove include-only parameters from Kodi's global timer conditions.
 
@@ -952,6 +982,7 @@ def build(output_dir: Path = OUT_DIR, fetcher=fetch_archive) -> dict[str, Path]:
         )
         patch_nimbus_focus_include_ids(skin_root)
         patch_nimbus_include_list_id_defaults(skin_root)
+        patch_nimbus_parameterized_container_conditions(skin_root)
         patch_nimbus_timer_start_conditions(skin_root)
         patch_skin_manifest(skin_root)
         remove_api_controls(skin_root)
