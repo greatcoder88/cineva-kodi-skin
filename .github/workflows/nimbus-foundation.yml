@@ -436,7 +436,7 @@ jobs:
               if welcome_label.lower() != "ok":
                   raise SystemExit(f"Nimbus first-run welcome did not focus OK: {state}")
               print("Acknowledging Nimbus first-run welcome and generating default menu/widget includes.")
-              before_welcome_skin_loads = log_text().count("load skin from:")
+              before_welcome_home_inits = log_text().count("Window Init (Home.xml)")
               subprocess.run(["xdotool","key","Return"],check=True)
               required_default_includes = [
                   "script-nimbus-main_menu_movies.xml",
@@ -466,19 +466,19 @@ jobs:
                       name for name in required_default_includes
                       if not (skin_xml_dir/name).is_file() or (skin_xml_dir/name).stat().st_size == 0
                   ]
-                  reloaded = log_text().count("load skin from:") > before_welcome_skin_loads
+                  home_reloaded = log_text().count("Window Init (Home.xml)") > before_welcome_home_inits
                   if (
                       skin_id(state) == "skin.cineva"
                       and state.get("currentwindow",{}).get("id") == 10000
                       and not missing
-                      and reloaded
+                      and home_reloaded
                   ):
                       break
                   time.sleep(0.25)
               else:
                   subprocess.run(["import", "-window", "root", "artifacts/nimbus-first-run-failure.png"], check=False)
                   raise SystemExit(
-                      f"Nimbus first-run setup did not return to Home with all default includes: "
+                      f"Nimbus first-run setup did not return to Home after Home.xml reloaded with all default includes: "
                       f"missing={missing}; GUI={state}; log tail:\\n{log_text()[-6000:]}"
                   )
               print("Nimbus first-run defaults generated and skin reloaded:", required_default_includes)
