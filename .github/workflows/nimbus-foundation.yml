@@ -231,7 +231,13 @@ jobs:
           POV_ADDON="$KODI_DATA/addons/plugin.video.pov"
           mkdir -p "$POV_ADDON/resources/posters"
           cp -a "$POV_FIXTURE"/. "$POV_ADDON"/
-          python tools/download_test_posters.py "$POV_ADDON/resources/posters"
+          ARTWORK_STAGE="$GITHUB_WORKSPACE/nimbus-artwork-stage"
+          mkdir -p "$ARTWORK_STAGE"
+          unzip -q dist/nimbus-foundation/skin.cineva-0.8.0-nimbus.zip -d "$ARTWORK_STAGE"
+          (
+            cd "$ARTWORK_STAGE"
+            python "$GITHUB_WORKSPACE/tools/download_test_posters.py" "$POV_ADDON/resources/posters"
+          )
           test -s "$POV_ADDON/resources/posters/movie-1.jpg"
           test -s "$POV_ADDON/resources/posters/tv-1.jpg"
           test -s "$POV_ADDON/resources/posters/backdrop-1.jpg"
