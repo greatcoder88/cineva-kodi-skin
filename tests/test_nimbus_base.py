@@ -788,7 +788,9 @@ class NimbusWorkflowPathTests(unittest.TestCase):
         self.assertIn("Window Init (Home.xml)", source)
         self.assertNotIn("before_welcome_skin_loads", source)
         self.assertIn("Nimbus first-run defaults generated and skin reloaded", source)
-        self.assertIn("in (10100, 12002)", source)
+        self.assertIn("dialog_id == 12002", source)
+        self.assertIn('dialog_id == 10100 and dialog_label == "ok"', source)
+        self.assertIn("time.sleep(0.35)", source)
         self.assertIn("nimbus-first-run-failure.png", source)
 
 
