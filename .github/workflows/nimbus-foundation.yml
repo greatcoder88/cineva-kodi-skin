@@ -475,7 +475,7 @@ jobs:
               raise SystemExit(f"CINÉVA was not retained after Keep Skin: setting={selected}; GUI={state}")
 
           state = gui()
-          if state.get("currentwindow",{}).get("id") in (1112, 11112, 12002):
+          if state.get("currentwindow",{}).get("id") in (1112, 11112):
               welcome_label = state.get("currentcontrol",{}).get("label","").strip()
               if welcome_label.lower() != "ok":
                   raise SystemExit(f"Nimbus first-run welcome did not focus OK: {state}")
@@ -499,10 +499,9 @@ jobs:
               deadline = time.time() + 45
               while time.time() < deadline:
                   state = gui()
-                  if (
-                      state.get("currentwindow",{}).get("id") in (10100, 12002)
-                      and state.get("currentcontrol",{}).get("label","").strip().lower() == "ok"
-                  ):
+                  window_id = state.get("currentwindow",{}).get("id")
+                  control_label = state.get("currentcontrol",{}).get("label","").strip().lower()
+                  if window_id == 12002 or (window_id == 10100 and control_label == "ok"):
                       print("Dismissing Nimbus's completed menu/widget setup confirmation.")
                       subprocess.run(["xdotool","key","Return"],check=True)
                       time.sleep(0.25)

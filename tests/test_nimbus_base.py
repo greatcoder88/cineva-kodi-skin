@@ -777,7 +777,8 @@ class NimbusWorkflowPathTests(unittest.TestCase):
     def test_skin_first_run_welcome_generates_includes_before_home_capture(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
         source = workflow.read_text(encoding="utf-8")
-        self.assertIn('currentwindow",{}).get("id") in (1112, 11112, 12002)', source)
+        self.assertIn('currentwindow",{}).get("id") in (1112, 11112)', source)
+        self.assertIn("window_id == 12002 or (window_id == 10100 and control_label == \"ok\")", source)
         self.assertIn("Acknowledging Nimbus first-run welcome", source)
         self.assertIn("tools/test-fixtures/plugin.video.pov", source)
         self.assertLess(source.index('cp -a "$POV_FIXTURE"/. "$POV_ADDON"/'), source.index("if ! boot_kodi_once 1; then"))
@@ -788,7 +789,7 @@ class NimbusWorkflowPathTests(unittest.TestCase):
         self.assertIn("Window Init (Home.xml)", source)
         self.assertNotIn("before_welcome_skin_loads", source)
         self.assertIn("Nimbus first-run defaults generated and skin reloaded", source)
-        self.assertIn("in (10100, 12002)", source)
+        self.assertIn("window_id == 12002", source)
         self.assertIn("nimbus-first-run-failure.png", source)
 
 
