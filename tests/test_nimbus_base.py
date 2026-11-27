@@ -70,10 +70,12 @@ NIMBUS_FILES = {
     </includes>""",
     "xml/Includes_HomeLayouts.xml": """<includes>
       <include name="WidgetGroupListCommon"/>
-      <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(54)">Conditional</animation>
-      <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(55)">Conditional</animation>
-      <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(500)">Conditional</animation>
-      <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(501)">Conditional</animation>
+      <include name="HomeLayoutFocus">
+        <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(54)">Conditional</animation>
+        <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(55)">Conditional</animation>
+        <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(500)">Conditional</animation>
+        <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(501)">Conditional</animation>
+      </include>
     </includes>""",
     "xml/Startup.xml": "<window><onload>RunScript(script.nimbus.helper,mode=refresh_search_history)</onload></window>",
     "xml/SkinSettings.xml": """<window><controls>
@@ -87,7 +89,9 @@ NIMBUS_FILES = {
       <include name="FlixMovieLayout"><visible>Control.HasFocus($PARAM[list_id])</visible></include>
       <include>FlixMovieLayout</include>
       <include content="FlixMovieLayout"><param name="focused" value="true" /></include>
-      <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(54)">Conditional</animation>
+      <include name="FlixViewFocus">
+        <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(54)">Conditional</animation>
+      </include>
     </includes>""",
     "xml/View_500_Wall.xml": """<includes>
       <include>FlixMovieLayout</include>
@@ -96,8 +100,10 @@ NIMBUS_FILES = {
     "xml/View_55_FlixScape.xml": """<includes>
       <include>FlixScapeMovieLayout</include>
       <include content="FlixScapeMovieLayout"><param name="focused" value="true" /></include>
-      <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(55)">Conditional</animation>
-      <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(501)">Conditional</animation>
+      <include name="FlixScapeFocus">
+        <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(55)">Conditional</animation>
+        <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(501)">Conditional</animation>
+      </include>
     </includes>""",
     "xml/View_501_WallScape.xml": """<includes>
       <include>FlixScapeMovieLayout</include>
@@ -106,7 +112,9 @@ NIMBUS_FILES = {
     "xml/View_51_PosterFlow.xml": """<includes>
       <include>PosterFlowLayout</include>
       <include content="PosterFlowLayout"><param name="focused" value="true" /></include>
-      <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(51)">Conditional</animation>
+      <include name="PosterFlowFocus">
+        <animation condition="[$PARAM[focused] + Control.HasFocus($PARAM[list_id])] + Control.IsVisible(51)">Conditional</animation>
+      </include>
     </includes>""",
     "xml/View_50_List.xml": """<includes>
       <include>ListLandscapeSlideAnimations</include>
@@ -205,7 +213,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 self.assertIn("skin.cineva/NOTICE.txt", names)
                 manifest = archive.read("skin.cineva/addon.xml").decode()
                 self.assertIn('id="skin.cineva"', manifest)
-                self.assertIn('version="0.6.7"', manifest)
+                self.assertIn('version="0.6.8"', manifest)
                 self.assertIn('addon="xbmc.gui" version="5.18.0"', manifest)
                 self.assertIn('addon="script.cineva.nimbus" version="0.1.0"', manifest)
                 self.assertNotIn("script.nimbus.helper", manifest)
@@ -289,20 +297,55 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                         )
 
 
-    def test_animation_conditions_do_not_embed_unresolved_list_id_parameters(self):
+    def test_parameterized_focus_conditions_are_preserved_in_valid_include_definitions(self):
         with tempfile.TemporaryDirectory() as temp:
             paths = self.build_fixture(Path(temp) / "dist")
             with zipfile.ZipFile(paths["skin"]) as archive:
+                preserved = 0
                 for filename in archive.namelist():
                     if not filename.endswith(".xml"):
                         continue
                     root = ET.fromstring(archive.read(filename))
-                    for animation in root.findall(".//animation"):
-                        condition = animation.get("condition", "")
-                        self.assertNotIn("Control.HasFocus($PARAM[list_id])", condition, filename)
-                animations = ET.fromstring(archive.read("skin.cineva/xml/Includes_Animations.xml"))
-                widget_visibility = animations.find('.//include[@name="WidgetVisibilityAnimations"]/definition/animation')
-                self.assertEqual(widget_visibility.get("condition"), "ControlGroup(2000).HasFocus")
+                    for include in root.findall(".//include[@name]"):
+                        block = ET.tostring(include, encoding="unicode")
+                        count = block.count("Control.HasFocus($PARAM[list_id])")
+                        if not count:
+                            continue
+                        list_params = [
+                            param for param in include.findall("param")
+                            if param.get("name") == "list_id"
+                        ]
+                        self.assertEqual(
+                            len(list_params), 1, f"{filename}:{include.get('name')}"
+                        )
+                        self.assertTrue(
+                            list_params[0].get("default"),
+                            f"{filename}:{include.get('name')} missing list_id default",
+                        )
+                        self.assertIsNotNone(
+                            include.find("definition"),
+                            f"{filename}:{include.get('name')} body is not wrapped",
+                        )
+                        self.assertFalse(
+                            [
+                                child for child in include
+                                if child.tag not in ("param", "definition")
+                            ],
+                            f"{filename}:{include.get('name')} has content outside definition",
+                        )
+                        preserved += count
+                self.assertGreater(preserved, 0)
+
+                animations = ET.fromstring(
+                    archive.read("skin.cineva/xml/Includes_Animations.xml")
+                )
+                widget_visibility = animations.find(
+                    './/include[@name="WidgetVisibilityAnimations"]/definition/animation'
+                )
+                self.assertEqual(
+                    widget_visibility.get("condition"),
+                    "!Control.HasFocus($PARAM[list_id]) + ControlGroup(2000).HasFocus",
+                )
                 expected_home_focus = {
                     "Includes_HomeLayouts.xml": 4,
                     "View_51_PosterFlow.xml": 1,
@@ -310,30 +353,16 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                     "View_55_FlixScape.xml": 2,
                 }
                 for filename, expected in expected_home_focus.items():
-                    root = ET.fromstring(archive.read("skin.cineva/xml/" + filename))
-                    substituted = [
+                    root = ET.fromstring(
+                        archive.read("skin.cineva/xml/" + filename)
+                    )
+                    dynamic = [
                         animation for animation in root.findall(".//animation")
-                        if "ControlGroup(2000).HasFocus" in animation.get("condition", "")
+                        if "Control.HasFocus($PARAM[list_id])"
+                        in animation.get("condition", "")
                     ]
-                    self.assertEqual(len(substituted), expected, filename)
+                    self.assertEqual(len(dynamic), expected, filename)
 
-
-    def test_no_parameterized_control_has_focus_expressions_remain(self):
-        with tempfile.TemporaryDirectory() as temp:
-            paths = self.build_fixture(Path(temp) / "dist")
-            with zipfile.ZipFile(paths["skin"]) as archive:
-                for filename in archive.namelist():
-                    if not filename.endswith(".xml"):
-                        continue
-                    content = archive.read(filename).decode("utf-8")
-                    self.assertNotIn("Control.HasFocus($PARAM[list_id])", content, filename)
-                    self.assertNotIn("Control.HasFocus($PARAM[list_id]500)", content, filename)
-                    self.assertNotIn("Control.HasFocus($PARAM[list_id]501)", content, filename)
-                includes = ET.fromstring(archive.read("skin.cineva/xml/Includes.xml"))
-                left = includes.find('.//include[@name="WidgetNavigationArrows"]/control[@id="$PARAM[list_id]500"]/visible')
-                right = includes.find('.//include[@name="WidgetNavigationArrows"]/control[@id="$PARAM[list_id]501"]/visible')
-                self.assertEqual(left.text, "Container($PARAM[list_id]).HasPrevious + ControlGroup(2000).HasFocus")
-                self.assertEqual(right.text, "Container($PARAM[list_id]).HasNext + ControlGroup(2000).HasFocus")
 
     def test_bridge_keeps_local_widget_logic_and_api_free_service_entry(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -450,8 +479,8 @@ class NimbusWorkflowPathTests(unittest.TestCase):
     def test_workflow_uses_the_builder_skin_version(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
         source = workflow.read_text(encoding="utf-8")
-        self.assertIn("skin.cineva-0.6.7-nimbus.zip", source)
-        self.assertIn('manifest.get("version") == "0.6.7"', source)
+        self.assertIn("skin.cineva-0.6.8-nimbus.zip", source)
+        self.assertIn('manifest.get("version") == "0.6.8"', source)
 
     def test_first_boot_reads_kodis_actual_flatpak_log_location(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
