@@ -304,11 +304,13 @@ def verify_playback_osd():
     press("right")
     wait_for("OSD focus moves to Stop", lambda: has_focus(704))
     # Traverse the native control groups to the audio utility.
-    for _ in range(7):
+    def move_to_audio():
         if has_focus(708):
-            break
+            return True
         press("right")
-    wait_for("Audio button can receive remote focus", lambda: has_focus(708))
+        return False
+
+    wait_for("Audio button can receive remote focus", move_to_audio, timeout=8)
     audio_count = "Container(8708).NumItems"
     wait_for("Hovering Audio lists both embedded tracks",
              lambda: rpc("XBMC.GetInfoLabels", labels=[audio_count])[audio_count] == "2")
@@ -320,6 +322,7 @@ def verify_playback_osd():
     wait_for("Selecting the second track switches audio",
              lambda: rpc("Player.GetProperties", playerid=player,
                          properties=["currentaudiostream"])["currentaudiostream"]["index"] == 1)
+    wait_for("Audio selector stays focused after selection", lambda: has_focus(8708))
     press("back")
     wait_for("Back returns to the audio button", lambda: has_focus(708))
     press("right")
