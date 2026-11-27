@@ -206,6 +206,15 @@ class NimbusWorkflowPathTests(unittest.TestCase):
         self.assertIn('$2 !~ /^Z/', source)
         self.assertIn("Port 9090 remains occupied after first-boot cleanup", source)
 
+    def test_second_boot_waits_for_jsonrpc_before_declaring_kodi_exit(self):
+        workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
+        source = workflow.read_text(encoding="utf-8")
+        self.assertIn("for launch_attempt in 1 2; do", source)
+        self.assertIn("kodi_processes | grep -q . && ss -ltn | grep -q ':9090'", source)
+        self.assertIn("Kodi did not expose JSON-RPC after two detached Nimbus launch attempts.", source)
+        self.assertIn('for name in ("kodi.bin", "kodi-x11", "kodi")', source)
+        self.assertNotIn('subprocess.run(["pgrep","-x","kodi.bin"],capture_output=True).returncode != 0', source)
+
 
 if __name__ == "__main__":
     unittest.main()
