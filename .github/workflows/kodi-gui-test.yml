@@ -1480,27 +1480,44 @@ jobs:
             # own container state, then capture the scrolled state before returning
             # to the originally focused poster for the hero-action tests.
             initial_labels = rpc("XBMC.GetInfoLabels", {"labels":[
-              "Container(9001).CurrentItem", "Container(9001).NumItems"
+              "Container(9001).CurrentItem", "Container(9001).NumItems", "Container(9001).ListItem.Label"
             ]})
             initial_flags = rpc("XBMC.GetInfoBooleans", {"booleans":[
               "Container(9001).HasNext", "Container(9001).HasPrevious"
             ]})
             def info_true(value):
               return value is True or str(value).strip().lower() in {"true", "1"}
-            initial_position = int(initial_labels.get("Container(9001).CurrentItem", "0"))
-            total_items = int(initial_labels.get("Container(9001).NumItems", "0"))
+            def info_int(values, key):
+              raw = str(values.get(key, "")).strip()
+              try:
+                return int(raw) if raw else None
+              except (TypeError, ValueError):
+                return None
+            initial_position = info_int(initial_labels, "Container(9001).CurrentItem")
+            total_items = info_int(initial_labels, "Container(9001).NumItems")
+            initial_item_label = initial_labels.get("Container(9001).ListItem.Label", "")
+            if initial_position is None or total_items is None:
+              raise SystemExit(f"Home shelf 9001 did not expose numeric position metadata: labels={initial_labels}")
             if total_items != 8 or not info_true(initial_flags.get("Container(9001).HasNext")):
               raise SystemExit(f"Home shelf 9001 did not expose its next-page cue: labels={initial_labels}; flags={initial_flags}")
             for _ in range(6):
               subprocess.run(["xdotool","key","Right"],check=True)
               time.sleep(0.12)
             scrolled_labels = rpc("XBMC.GetInfoLabels", {"labels":[
-              "Container(9001).CurrentItem", "Container(9001).NumItems"
+              "Container(9001).CurrentItem", "Container(9001).NumItems", "Container(9001).ListItem.Label"
             ]})
             scrolled_flags = rpc("XBMC.GetInfoBooleans", {"booleans":[
               "Container(9001).HasNext", "Container(9001).HasPrevious"
             ]})
-            scrolled_position = int(scrolled_labels.get("Container(9001).CurrentItem", "0"))
+            scrolled_position = info_int(scrolled_labels, "Container(9001).CurrentItem")
+            scrolled_item_label = scrolled_labels.get("Container(9001).ListItem.Label", "")
+            if scrolled_position is None:
+              if (scrolled_item_label == "Barbie" and total_items == 8
+                  and info_true(scrolled_flags.get("Container(9001).HasPrevious"))
+                  and not info_true(scrolled_flags.get("Container(9001).HasNext"))):
+                scrolled_position = total_items
+              else:
+                raise SystemExit(f"Home shelf 9001 returned an empty current index without final-item evidence: labels={scrolled_labels}; flags={scrolled_flags}")
             if scrolled_position <= initial_position or not info_true(scrolled_flags.get("Container(9001).HasPrevious")):
               raise SystemExit(f"Home shelf 9001 did not expose its previous-page cue after scrolling: labels={scrolled_labels}; flags={scrolled_flags}")
             subprocess.run(["import","-display",":99","-window","root",
@@ -1568,8 +1585,12 @@ jobs:
             for _ in range(steps_back):
               subprocess.run(["xdotool","key","Left"],check=True)
               time.sleep(0.12)
-            restored_labels = rpc("XBMC.GetInfoLabels", {"labels":["Container(9001).CurrentItem"]})
-            if int(restored_labels.get("Container(9001).CurrentItem", "0")) != initial_position:
+            restored_labels = rpc("XBMC.GetInfoLabels", {"labels":["Container(9001).CurrentItem", "Container(9001).ListItem.Label"]})
+            restored_position = info_int(restored_labels, "Container(9001).CurrentItem")
+            if restored_position is None:
+              if restored_labels.get("Container(9001).ListItem.Label") != initial_item_label:
+                raise SystemExit(f"Home shelf did not restore the original selected poster: initial={initial_item_label!r}; restored={restored_labels}")
+            elif restored_position != initial_position:
               raise SystemExit(f"Home shelf did not return to its original item after scroll-cue verification: {restored_labels}")
             print(f"Verified Home shelf position counter {initial_position}/{total_items}, next cue, and previous cue after moving to {scrolled_position}.")
             # The poster row is directly below VIEW ALL; the next Up reaches the pinned hero action.

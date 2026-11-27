@@ -772,6 +772,14 @@ class NimbusWorkflowPathTests(unittest.TestCase):
         self.assertIn("nimbus-first-run-failure.png", source)
 
 
+    def test_legacy_gui_scroll_probe_handles_empty_current_item_labels(self):
+        workflow = Path(__file__).resolve().parents[1] / ".github/workflows/kodi-gui-test.yml"
+        source = workflow.read_text(encoding="utf-8")
+        self.assertIn("def info_int(values, key):", source)
+        self.assertIn('scrolled_position = info_int(scrolled_labels, "Container(9001).CurrentItem")', source)
+        self.assertIn('scrolled_item_label == "Barbie"', source)
+        self.assertIn('restored_position = info_int(restored_labels, "Container(9001).CurrentItem")', source)
+
 class PosterArtworkFontTests(unittest.TestCase):
 
     def test_legacy_poppins_remains_preferred_when_available(self):
