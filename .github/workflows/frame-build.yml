@@ -44,3 +44,41 @@ jobs:
               echo 'Kodi runtime and Fire TV remote behavior are outside this build check.'
             fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+  kodi-gui:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: frame-kodi-${{ github.sha }}
+          path: dist/frame
+      - name: Install Kodi GUI test runtime
+        run: |
+          for source in /etc/apt/sources.list.d/*; do
+            if [ -f "$source" ] && grep -q 'packages.microsoft.com' "$source"; then
+              sudo rm -f "$source"
+            fi
+          done
+          sudo apt-get update -o Acquire::Retries=3
+          sudo apt-get install -y flatpak xvfb xdotool imagemagick
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak remote-add --user --if-not-exists flathub-beta https://dl.flathub.org/beta-repo/flathub-beta.flatpakrepo
+          flatpak install --user --noninteractive -y flathub org.freedesktop.Platform//26.08
+          flatpak install --user --noninteractive -y flathub-beta tv.kodi.Kodi//beta
+      - name: Test Home navigation in Kodi
+        run: |
+          (cd dist/frame && sha256sum --check SHA256SUMS)
+          mkdir -p artifacts/frame-gui
+          flatpak info --user tv.kodi.Kodi//beta > artifacts/frame-gui/kodi-version.txt
+          xvfb-run -a -s '-screen 0 1920x1080x24' python3 tools/test_frame_kodi.py
+      - name: Upload Kodi screenshots and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frame-gui-${{ github.sha }}
+          path: artifacts/frame-gui/
+          if-no-files-found: warn
+          retention-days: 14
