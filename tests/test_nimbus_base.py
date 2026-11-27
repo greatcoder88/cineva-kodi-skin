@@ -58,6 +58,10 @@ NIMBUS_FILES = {
       <include content="FlixSquareLayout"><param name="fallback_image" value="DefaultAddon.png" /><param name="focused" value="true" /></include>
       <include name="PVRWidgetLayout"><animation effect="fade" start="100" end="50" time="40" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation></include>
       <include name="FileManagerPanel"><animation effect="fade" start="100" end="0" time="40" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation></include>
+      <include name="WidgetNavigationArrows">
+        <control type="button" id="$PARAM[list_id]500"><visible allowhiddenfocus="true">Container($PARAM[list_id]).HasPrevious + [Control.HasFocus($PARAM[list_id]) | Control.HasFocus($PARAM[list_id]500)]</visible></control>
+        <control type="button" id="$PARAM[list_id]501"><visible allowhiddenfocus="true">Container($PARAM[list_id]).HasNext + [Control.HasFocus($PARAM[list_id]) | Control.HasFocus($PARAM[list_id]501)]</visible></control>
+      </include>
     </includes>""",
     "xml/Includes_Home.xml": """<includes>
       <onload>RunScript(script.nimbus.helper,mode=check_for_update&amp;skin_id=skin.nimbus)</onload>
@@ -201,7 +205,7 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                 self.assertIn("skin.cineva/NOTICE.txt", names)
                 manifest = archive.read("skin.cineva/addon.xml").decode()
                 self.assertIn('id="skin.cineva"', manifest)
-                self.assertIn('version="0.6.6"', manifest)
+                self.assertIn('version="0.6.7"', manifest)
                 self.assertIn('addon="xbmc.gui" version="5.18.0"', manifest)
                 self.assertIn('addon="script.cineva.nimbus" version="0.1.0"', manifest)
                 self.assertNotIn("script.nimbus.helper", manifest)
@@ -312,6 +316,24 @@ class NimbusFoundationBuilderTests(unittest.TestCase):
                         if "ControlGroup(2000).HasFocus" in animation.get("condition", "")
                     ]
                     self.assertEqual(len(substituted), expected, filename)
+
+
+    def test_no_parameterized_control_has_focus_expressions_remain(self):
+        with tempfile.TemporaryDirectory() as temp:
+            paths = self.build_fixture(Path(temp) / "dist")
+            with zipfile.ZipFile(paths["skin"]) as archive:
+                for filename in archive.namelist():
+                    if not filename.endswith(".xml"):
+                        continue
+                    content = archive.read(filename).decode("utf-8")
+                    self.assertNotIn("Control.HasFocus($PARAM[list_id])", content, filename)
+                    self.assertNotIn("Control.HasFocus($PARAM[list_id]500)", content, filename)
+                    self.assertNotIn("Control.HasFocus($PARAM[list_id]501)", content, filename)
+                includes = ET.fromstring(archive.read("skin.cineva/xml/Includes.xml"))
+                left = includes.find('.//include[@name="WidgetNavigationArrows"]/control[@id="$PARAM[list_id]500"]/visible')
+                right = includes.find('.//include[@name="WidgetNavigationArrows"]/control[@id="$PARAM[list_id]501"]/visible')
+                self.assertEqual(left.text, "Container($PARAM[list_id]).HasPrevious + ControlGroup(2000).HasFocus")
+                self.assertEqual(right.text, "Container($PARAM[list_id]).HasNext + ControlGroup(2000).HasFocus")
 
     def test_bridge_keeps_local_widget_logic_and_api_free_service_entry(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -428,8 +450,8 @@ class NimbusWorkflowPathTests(unittest.TestCase):
     def test_workflow_uses_the_builder_skin_version(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"
         source = workflow.read_text(encoding="utf-8")
-        self.assertIn("skin.cineva-0.6.6-nimbus.zip", source)
-        self.assertIn('manifest.get("version") == "0.6.6"', source)
+        self.assertIn("skin.cineva-0.6.7-nimbus.zip", source)
+        self.assertIn('manifest.get("version") == "0.6.7"', source)
 
     def test_first_boot_reads_kodis_actual_flatpak_log_location(self):
         workflow = Path(__file__).resolve().parents[1] / ".github/workflows/nimbus-foundation.yml"

@@ -23,7 +23,7 @@ NIMBUS_REPO = "ivarbrandt/skin.nimbus"
 NIMBUS_SHA = "8b5071b8cd0db3a8e813eb00e9a821d3efad2454"
 HELPER_REPO = "ivarbrandt/script.nimbus.helper"
 HELPER_SHA = "e42d2ffffbccaa58386ef2e4a054049e5fcb7664"
-SKIN_VERSION = "0.6.6"
+SKIN_VERSION = "0.6.7"
 BRIDGE_VERSION = "0.1.0"
 OUT_DIR = ROOT / "dist" / "nimbus-foundation"
 NOTICE = """CINÉVA Nimbus foundation
@@ -489,11 +489,13 @@ def apply_cineva_visuals(skin_root: Path) -> None:
         raise RuntimeError("Nimbus source is missing xml/Home.xml")
     home = home_path.read_text(encoding="utf-8")
     default_focus = "<defaultcontrol>9000</defaultcontrol>"
-    if home.count(default_focus) != 1:
-        raise RuntimeError("Nimbus Home must have its original main-menu default focus exactly once")
-    # Start on the first content widget, using Nimbus's own hidden focus bridge.
-    # The left navigation remains fully available from the existing D-pad route.
-    home = home.replace(default_focus, "<defaultcontrol>20000</defaultcontrol>", 1)
+    content_focus = "<defaultcontrol>20000</defaultcontrol>"
+    if home.count(default_focus) == 1 and home.count(content_focus) == 0:
+        # Start on the first content widget, using Nimbus's own hidden focus bridge.
+        # The left navigation remains fully available from the existing D-pad route.
+        home = home.replace(default_focus, content_focus, 1)
+    elif home.count(content_focus) != 1 or home.count(default_focus) != 0:
+        raise RuntimeError("Nimbus Home must have exactly one supported default focus control")
     if 'id="19990"' in home:
         raise RuntimeError("CINÉVA wordmark control ID 19990 already exists upstream")
     brand = """
@@ -531,6 +533,55 @@ def apply_cineva_visuals(skin_root: Path) -> None:
     home = home.replace(marker, brand + "    " + marker, 1)
     ET.fromstring(home)
     home_path.write_text(home, encoding="utf-8", newline="")
+
+
+
+def patch_nimbus_control_has_focus_parameters(skin_root: Path) -> None:
+    """Use Kodi 22 compatible container focus expressions for parameterized IDs."""
+    xml_root = skin_root / "xml"
+    arrows = xml_root / "Includes.xml"
+    text = arrows.read_text(encoding="utf-8")
+    arrow_patches = (
+        (
+            '<visible allowhiddenfocus="true">Container($PARAM[list_id]).HasPrevious + [Control.HasFocus($PARAM[list_id]) | Control.HasFocus($PARAM[list_id]500)]</visible>',
+            '<visible allowhiddenfocus="true">Container($PARAM[list_id]).HasPrevious + ControlGroup(2000).HasFocus</visible>',
+        ),
+        (
+            '<visible allowhiddenfocus="true">Container($PARAM[list_id]).HasNext + [Control.HasFocus($PARAM[list_id]) | Control.HasFocus($PARAM[list_id]501)]</visible>',
+            '<visible allowhiddenfocus="true">Container($PARAM[list_id]).HasNext + ControlGroup(2000).HasFocus</visible>',
+        ),
+    )
+    for old, new in arrow_patches:
+        count = text.count(old)
+        if count != 1:
+            raise RuntimeError(
+                f"Includes.xml: expected one dynamic widget-arrow focus expression, found {count}"
+            )
+        text = text.replace(old, new)
+    arrows.write_text(text, encoding="utf-8", newline="")
+    ET.parse(arrows)
+
+    replaced = 0
+    for path in xml_root.glob("*.xml"):
+        text = path.read_text(encoding="utf-8")
+        count = text.count("Control.HasFocus($PARAM[list_id])")
+        if count:
+            text = text.replace(
+                "Control.HasFocus($PARAM[list_id])",
+                "Container($PARAM[list_id]).HasFocus",
+            )
+            replaced += count
+            path.write_text(text, encoding="utf-8", newline="")
+        if (
+            "Control.HasFocus($PARAM[list_id])" in text
+            or "Control.HasFocus($PARAM[list_id]500)" in text
+            or "Control.HasFocus($PARAM[list_id]501)" in text
+        ):
+            raise RuntimeError(f"{path.name}: unresolved parameterized Control.HasFocus remains")
+        ET.parse(path)
+    if replaced < 1:
+        raise RuntimeError("No parameterized Control.HasFocus expressions were rewritten")
+
 
 
 def write_default_skin_includes(skin_root: Path) -> None:
@@ -819,6 +870,7 @@ def build(output_dir: Path = OUT_DIR, fetcher=fetch_archive) -> dict[str, Path]:
         patch_nimbus_focus_include_ids(skin_root)
         patch_nimbus_include_list_id_defaults(skin_root)
         patch_nimbus_animation_param_conditions(skin_root)
+        patch_nimbus_control_has_focus_parameters(skin_root)
         patch_skin_manifest(skin_root)
         remove_api_controls(skin_root)
         remove_unsupported_startup_checks(skin_root)
