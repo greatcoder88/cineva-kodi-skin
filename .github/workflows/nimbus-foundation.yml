@@ -189,9 +189,8 @@ jobs:
               decoder = json.JSONDecoder()
               with socket.create_connection(("127.0.0.1", 9090), timeout=5) as sock:
                   sock.settimeout(min(2, response_timeout))
-                  # Kodi's TCP JSON-RPC transport is newline-delimited. Sending
-                  # the terminator also avoids leaving a request buffered while
-                  # the GUI thread is rebuilding the active skin.
+                  # Kodi's raw TCP JSON-RPC transport has no newline delimiter;
+                  # the complete JSON object is the request boundary.
                   sock.sendall(json.dumps(request).encode())
                   data = ""
                   deadline = time.time() + response_timeout
@@ -306,8 +305,15 @@ jobs:
           print("Activated Nimbus-derived CINÉVA add-on:", skin_details)
           print("Resolved CINÉVA Nimbus Bridge dependency:", bridge_details)
           skin_record = skin_details.get("addon", skin_details)
+          bridge_record = bridge_details.get("addon", bridge_details)
           if skin_record.get("enabled") is not True:
               raise SystemExit(f"Skin loaded but Kodi did not mark skin.cineva enabled: {skin_details}")
+          if bridge_record.get("enabled") is not True:
+              raise SystemExit(f"Skin loaded but Kodi did not enable its required Nimbus bridge: {bridge_details}")
+          activation_log = log_text()
+          for addon_id in ("skin.cineva", "script.cineva.nimbus"):
+              if f"CAddonMgr: enabled {addon_id}" not in activation_log:
+                  raise SystemExit(f"Kodi did not log successful activation of {addon_id}")
 
           # Confirm the Keep Skin dialog when Kodi presents it.
           if state.get("currentwindow",{}).get("id") == 10100:
