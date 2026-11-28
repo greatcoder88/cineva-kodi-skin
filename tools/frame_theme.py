@@ -20,7 +20,7 @@ PALETTE = {
     "frame_panel": "FF161B23",
     "frame_selection": "FF343B48",
     "frame_track_accent": "FFA1EBDD",
-    "frame_track_ring": "668F9CAB",
+    "frame_track_ring": "FF74808C",
     "focused_text": "FF141414",
     "unfocused_text": "FFF5F5F5",
     "artwork_dim": "FFFFFFFF",
@@ -344,8 +344,15 @@ def apply_playback(xml):
         if group.findtext("top") == "120":
             set_fields(group, {"top": "169", "height": "122"})
     transport = find_control(default_osd, 700)
-    set_fields(transport, {"left": "120", "width": "705", "align": "left", "itemgap": "14"})
+    set_fields(transport, {"left": "90", "width": "705", "align": "left", "itemgap": "24"})
+    for button in transport.findall("control[@type='button']"):
+        ET.SubElement(button, "texturenofocus").text = "frame/transparent.png"
+        button.insert(0, button.find("texturenofocus"))
     play = find_control(transport, 703)
+    stop = find_control(transport, 704)
+    forward = find_control(transport, 705)
+    transport.remove(stop)
+    transport.insert(list(transport).index(forward) + 1, stop)
     play_include = play.find("include")
     play.remove(play_include)
     set_fields(play, {"width": "68", "textcolor": "focused_text"})
@@ -355,9 +362,16 @@ def apply_playback(xml):
         }).text = "frame/play-disc.png"
     play.append(play_include)
     utilities = find_control(default_osd, 707)
-    set_fields(utilities, {"left": "1010", "width": "790", "align": "right", "itemgap": "14"})
+    set_fields(utilities, {"left": "1000", "width": "830", "align": "right", "itemgap": "20"})
     for group in utilities.findall("control[@type='grouplist']"):
         set_fields(group, {"width": "68", "height": "106", "itemgap": "3"})
+        for button in group.findall("control[@type='button']"):
+            include = button.find("include")
+            button.remove(include)
+            for tag, texture in (("texturefocus", "utility-active.png"), ("texturenofocus", "utility-idle.png")):
+                ET.SubElement(button, tag, {"border": "22"}).text = "frame/" + texture
+            set_fields(button, {"focusedcolor": "unfocused_text"})
+            button.append(include)
         for label in group.findall("control[@type='label']"):
             set_fields(label, {"width": "68", "height": "32", "textcolor": "grey", "font": "FrameTab", "aligny": "center"})
     for button_id, list_id, kind, availability in (
@@ -366,7 +380,12 @@ def apply_playback(xml):
     ):
         for button in controls.findall(f".//control[@id='{button_id}']"):
             parent = next(group for group in controls.iter("control") if button in group)
-            if parent not in list(utilities):
+            if parent in list(utilities):
+                language = parent.find("control[@type='label']")
+                set_fields(language, {"label": "$LOCALIZE[292]" if kind == "audio" else "$LOCALIZE[287]",
+                                      "width": "92", "font": "FrameProgress",
+                                      "visible": f"Control.HasFocus({button_id}) | Control.HasFocus({list_id})"})
+            else:
                 set_fields(parent, {"width": "72", "height": "104", "itemgap": "3"})
             visible = parent.find("visible")
             if visible is not None:
@@ -378,7 +397,7 @@ def apply_playback(xml):
             ET.SubElement(parent, "onup").text = str(list_id)
         picker = ET.SubElement(controls, "include", {"content": "FramePlaybackTracks"})
         for name, value in (("button", button_id), ("id", list_id), ("kind", kind),
-                            ("available", availability), ("right", 187 if kind == "audio" else 120), ("title", "$LOCALIZE[292]" if kind == "audio" else "$LOCALIZE[287]")):
+                            ("available", availability), ("right", 288 if kind == "audio" else 200), ("title", "$LOCALIZE[292]" if kind == "audio" else "$LOCALIZE[287]")):
             ET.SubElement(picker, "param", {"name": name, "value": str(value)})
     write_xml(tree, path)
 
@@ -473,6 +492,7 @@ def write_rgba_png(path, width, height, rows):
 
 def write_playback_textures(skin):
     media = skin / "media/frame"
+    write_rgba_png(media / "transparent.png", 1, 1, bytes(5))
     rows = b"".join(bytes((0, 4, 7, 12, round(253 * (1 - (1 - y / 127) ** 2.4)))) for y in range(128))
     write_rgba_png(media / "playback-scrim.png", 1, 128, rows)
 
@@ -484,6 +504,31 @@ def write_playback_textures(skin):
             alpha = round(255 * max(0, min(1, 34 - distance)))
             disc.extend((255, 255, 255, alpha))
     write_rgba_png(media / "play-disc.png", 68, 68, disc)
+
+    for name, outline in (("utility-active", (242, 248, 252)), ("utility-idle", (100, 115, 130))):
+        pixels = bytearray()
+        for y in range(68):
+            pixels.append(0)
+            for x in range(68):
+                dx = max(18 - x, x - 49, 0)
+                dy = max(18 - y, y - 49, 0)
+                distance = (dx * dx + dy * dy) ** 0.5
+                if distance > 18:
+                    pixels.extend((0, 0, 0, 0))
+                elif distance > 15.5:
+                    pixels.extend((*outline, 255))
+                else:
+                    pixels.extend((18, 24, 30, 205))
+        write_rgba_png(media / (name + ".png"), 68, 68, pixels)
+
+    pointer = bytearray()
+    for y in range(14):
+        pointer.append(0)
+        for x in range(25):
+            edge = 12 - abs(x - 12) - y
+            pointer.extend((116, 128, 140, 255) if edge == 0 else
+                           (22, 27, 35, 255) if edge > 0 else (0, 0, 0, 0))
+    write_rgba_png(media / "track-pointer.png", 25, 14, pointer)
 
 
 def apply_video_cards(xml):
@@ -555,6 +600,13 @@ def apply_theme(skin, theme_source):
     write_xml(theme, target)
     include_path = xml / "Includes.xml"
     includes = read_xml(include_path)
+    arrows = includes.getroot().find("include[@name='WidgetUpDownArrows']/definition")
+    for control in arrows.findall("control"):
+        texture = control.find("texturefocus")
+        upward = texture.get("flipy") == "true"
+        set_fields(control, {"left": "19", "top": "112" if upward else "145", "width": "20", "height": "20"})
+        for tag in ("texturefocus", "texturenofocus"):
+            control.find(tag).set("colordiffuse", "988F9CAB")
     ET.SubElement(includes.getroot(), "include", {"file": target.name})
     write_xml(includes, include_path)
 
