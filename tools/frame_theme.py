@@ -17,8 +17,9 @@ PALETTE = {
     "button_focus2": "FF343B48",
     "frame_card_focus": "FFE1E5EF",
     "frame_osd_control": "EE262B34",
-    "frame_panel": "F5222630",
+    "frame_panel": "FC161B23",
     "frame_selection": "FF343B48",
+    "frame_track_accent": "FF9DE2D4",
     "focused_text": "FF141414",
     "unfocused_text": "FFF5F5F5",
     "artwork_dim": "FFFFFFFF",
@@ -332,28 +333,31 @@ def apply_playback(xml):
             controls.remove(control)
     default_osd = next(group for group in controls.findall("control[@type='group']")
                        if group.find("include[@content='Seekbar']") is not None)
-    set_fields(default_osd, {"height": "280"})
+    set_fields(default_osd, {"height": "295"})
     for event in ("onload", "onunload"):
         ET.SubElement(tree.getroot(), event).text = "ClearProperty(FrameTracksRevision)"
         ET.SubElement(tree.getroot(), event).text = "ClearProperty(FrameTrackPicker)"
     for group in default_osd.findall("control[@type='grouplist']"):
         if group.findtext("top") == "120":
-            set_fields(group, {"top": "131", "height": "120"})
+            set_fields(group, {"top": "169", "height": "122"})
     transport = find_control(default_osd, 700)
-    set_fields(transport, {"itemgap": "12"})
+    set_fields(transport, {"left": "120", "width": "705", "align": "left", "itemgap": "14"})
     play = find_control(transport, 703)
     set_fields(play, {"width": "96"})
     utilities = find_control(default_osd, 707)
+    set_fields(utilities, {"left": "1010", "width": "790", "align": "right", "itemgap": "14"})
     for group in utilities.findall("control[@type='grouplist']"):
-        set_fields(group, {"itemgap": "1"})
+        set_fields(group, {"width": "68", "height": "106", "itemgap": "3"})
         for label in group.findall("control[@type='label']"):
-            set_fields(label, {"width": "68", "height": "30", "textcolor": "grey", "font": "FrameTab"})
+            set_fields(label, {"width": "68", "height": "32", "textcolor": "grey", "font": "FrameTab", "aligny": "center"})
     for button_id, list_id, kind, availability in (
         (708, 8708, "audio", "Integer.IsGreater(VideoPlayer.AudioStreamCount,0)"),
         (709, 8709, "subtitle", "VideoPlayer.HasSubtitles"),
     ):
         for button in controls.findall(f".//control[@id='{button_id}']"):
             parent = next(group for group in controls.iter("control") if button in group)
+            if parent not in list(utilities):
+                set_fields(parent, {"width": "72", "height": "104", "itemgap": "3"})
             visible = parent.find("visible")
             if visible is not None:
                 visible.text = f"[{visible.text}] | {availability}"
@@ -386,6 +390,12 @@ def apply_playback(xml):
     path = xml / "Includes_Buttons.xml"
     tree = read_xml(path)
     buttons = tree.getroot()
+    alternate = buttons.find("include[@name='OSDButton']")
+    alternate.remove(alternate.find("animation"))
+    for tag, color in (("texturefocus", "button_focus"), ("texturenofocus", "frame_osd_control")):
+        texture = alternate.find(tag)
+        texture.attrib.update({"border": "22", "colordiffuse": color})
+        texture.text = "masks/focus.png"
     player = buttons.find("include[@name='PlayerButton']")
     set_fields(player, {"width": "68", "height": "68", "align": "center", "aligny": "center",
                         "textoffsetx": "0", "textoffsety": "0",
