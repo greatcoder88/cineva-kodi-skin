@@ -261,10 +261,10 @@
             <font>FrameTab</font>
             <textcolor>unfocused_text</textcolor>
             <label>$VAR[FrameFeatureRating]$VAR[FrameFeatureTomatometer]</label>
-            <visible>String.IsEmpty(Skin.String(valid_api_key)) | !ControlGroup(2000).HasFocus</visible>
+            <visible>String.IsEmpty(Skin.String(valid_api_key)) | !ControlGroup(2000).HasFocus | !$EXP[FrameRatingCurrent]</visible>
           </control>
           <control type="group">
-            <visible>ControlGroup(2000).HasFocus</visible>
+            <visible>ControlGroup(2000).HasFocus + $EXP[FrameRatingCurrent]</visible>
             <include condition="!String.IsEmpty(Skin.String(valid_api_key))" content="HorizontalRatings" />
           </control>
         </control>

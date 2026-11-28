@@ -79,6 +79,15 @@ def main():
     handle = int(sys.argv[1])
     query = parse_qs(sys.argv[2].lstrip("?")) if len(sys.argv) > 2 else {}
     action = query.get("action", [""])[-1]
+    if action == "hold_ratings":
+        window = xbmcgui.Window(10000)
+        for prop, infolabel in (("Path", "FilenameAndPath"), ("Label", "Label"), ("Year", "Year")):
+            window.setProperty(f"nimbus.frameRating{prop}", xbmc.getInfoLabel(f"ListItem.{infolabel}"))
+        window.setProperty("nimbus.imdbRating", "7.1")
+        xbmc.executebuiltin("Skin.SetString(RatingSlot1,imdb)")
+        xbmc.executebuiltin("Skin.SetString(valid_api_key,true)")
+        xbmcplugin.endOfDirectory(handle, cacheToDisc=False)
+        return
     if action == "source_picker":
         rows = [f"Source {index:02d} · 1080p" for index in range(1, 25)]
         chosen = xbmcgui.Dialog().select("Frame source list fixture", rows)
@@ -122,7 +131,7 @@ def main():
             video_info["season"] = 2
             video_info["episode"] = 5
         item.setInfo("video", video_info)
-        item.getVideoInfoTag().setRating(8.4, 1200, "imdb", True)
+        item.getVideoInfoTag().setRating(9.0 if title == "The Dark Knight" else 8.4, 1200, "imdb", True)
         # Exercise both supported Rotten Tomatoes paths with deterministic fixture data.
         item.getVideoInfoTag().setRating(9.2, 1800, "tomatometerallcritics", False)
         if title in TOMATO_PERCENT:

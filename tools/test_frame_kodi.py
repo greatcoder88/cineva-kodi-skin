@@ -265,7 +265,7 @@ def focused_card(container, prefix):
     return rpc("XBMC.GetInfoLabels", labels=[field])[field].startswith(prefix)
 
 
-def verify_home():
+def verify_home(has_track_picker):
     wait_for("Kodi JSON-RPC is ready", lambda: rpc("JSONRPC.Ping") == "pong", timeout=100)
     for name in DEPENDENCIES:
         rpc("Addons.SetAddonEnabled", addonid=f"script.module.{name}", enabled=True)
@@ -329,6 +329,18 @@ def verify_home():
     measure_focus("home_poster", "Container(19011).ListItem.Label", "right", "left")
     press("right")
     wait_for("Right moves to a second movie card", lambda: focused_card(19011, "The Dark Knight"))
+    if has_track_picker:
+        rpc("Files.GetDirectory", directory="plugin://plugin.video.pov/?action=hold_ratings", media="files")
+        fallback = "Control.IsVisible(8984)"
+        wait_for("Enriched ratings are shown only for their matching title",
+                 lambda: not rpc("XBMC.GetInfoBooleans", booleans=[fallback])[fallback])
+        press("left")
+        wait_for("Previous title uses its own rating even while the old response remains",
+                 lambda: focused_card(19011, "The Shawshank Redemption")
+                 and rpc("XBMC.GetInfoBooleans", booleans=[fallback])[fallback]
+                 and "8.4" in rpc("XBMC.GetInfoLabels", labels=[rating])[rating])
+        press("right")
+        wait_for("Return to the second title", lambda: focused_card(19011, "The Dark Knight"))
     press("info")
     wait_for("Kodi opens the selected movie's title details", lambda: window_id() == 12003)
     title = "Control.IsVisible(8982)"
@@ -495,7 +507,7 @@ def run_gui(packages, has_track_picker=True):
                                  "tv.kodi.Kodi//beta", "--standalone", "--windowing=x11"],
                                 stdout=console, stderr=subprocess.STDOUT)
         try:
-            verify_home()
+            verify_home(has_track_picker)
             verify_search_and_settings()
             measure_addon_browser()
             verify_source_picker()

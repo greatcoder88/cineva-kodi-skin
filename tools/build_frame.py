@@ -16,13 +16,73 @@ from frame_theme import apply_theme
 ROOT = Path(__file__).resolve().parents[1]
 THEME_SOURCE = ROOT / "tools/frame-theme/Includes_FrameTheme.xml"
 SKIN_ID = "skin.frame"
-SKIN_VERSION = "0.1.67"
-HELPER_VERSION = "0.0.55"
+SKIN_VERSION = "0.1.68"
+HELPER_VERSION = "0.0.56"
 HELPER_ID = "script.frame.nimbus"
 ADDONS = (
     ("ivarbrandt/skin.nimbus", "8b5071b8cd0db3a8e813eb00e9a821d3efad2454", SKIN_ID, "Frame"),
     ("ivarbrandt/script.nimbus.helper", "e42d2ffffbccaa58386ef2e4a054049e5fcb7664", HELPER_ID, "Frame Nimbus Helper"),
 )
+
+
+def patch_ratings_monitor(path):
+    """Bind Nimbus' asynchronously fetched scores to the selected item."""
+    source = path.read_text(encoding="utf-8")
+    replacements = (
+        ('        self._rating_lock = Lock()', '        self._rating_lock = Lock()\n'
+         '        self._frame_display_lock = Lock()\n        self._frame_displayed = None'),
+        ('        meta = self._get_current_item_meta()\n        if not meta:',
+         '        selection = self._selected_rating_item()\n'
+         '        meta = self._get_current_item_meta()\n'
+         '        if not meta or selection != self._selected_rating_item():'),
+        ('            self._process_ratings(media_id, meta)',
+         '            meta["frame_selection"] = selection\n'
+         '            self._process_ratings(media_id, meta)'),
+        ('self._set_ratings_from_cache(media_id, cached_ratings)',
+         'self._set_ratings_from_cache(media_id, cached_ratings, meta["frame_selection"])'),
+        ('self._update_window_properties(cached_data)',
+         'self._update_window_properties(cached_data, meta["frame_selection"])'),
+        ('self._update_window_properties(result)\n                self.last_set_id',
+         'self._update_window_properties(result, meta["frame_selection"])\n                self.last_set_id'),
+        ('    def _update_window_properties(self, result: Dict[str, Any]) -> None:\n'
+         '        """Update window properties with new ratings data."""\n'
+         '        for key, value in result.items():\n'
+         '            if isinstance(value, (str, int, float)):\n'
+         '                self.home_window.setProperty(f"nimbus.{key}", str(value))',
+         '    def _selected_rating_item(self):\n'
+         '        return tuple(self.get_infolabel(label) for label in (\n'
+         '            "ListItem.FilenameAndPath", "ListItem.Label", "ListItem.Year",\n'
+         '        ))\n\n'
+         '    def _update_window_properties(self, result, selection):\n'
+         '        with self._frame_display_lock:\n'
+         '            if selection != self._selected_rating_item() or not selection[0]:\n'
+         '                return\n'
+         '            if self._frame_displayed == (selection, result):\n'
+         '                return\n'
+         '            self.clear_property("nimbus.frameRatingPath")\n'
+         '            for key, value in {**EMPTY_RATINGS, **result}.items():\n'
+         '                if isinstance(value, (str, int, float)):\n'
+         '                    self.set_property(f"nimbus.{key}", str(value))\n'
+         '            path, label, year = selection\n'
+         '            self.set_property("nimbus.frameRatingLabel", label)\n'
+         '            self.set_property("nimbus.frameRatingYear", year)\n'
+         '            self.set_property("nimbus.frameRatingPath", path)\n'
+         '            self._frame_displayed = (selection, result)'),
+        ('        self.last_set_id = None\n        self.pending_id = None\n\n    def _get_current_item_meta',
+         '        self.clear_property("nimbus.frameRatingPath")\n'
+         '        self._frame_displayed = None\n'
+         '        self.last_set_id = None\n        self.pending_id = None\n\n    def _get_current_item_meta'),
+        ('def _set_ratings_from_cache(self, media_id: str, cached_ratings: str)',
+         'def _set_ratings_from_cache(self, media_id: str, cached_ratings: str, selection)'),
+        ('            self._update_window_properties(result)\n            self.last_set_id',
+         '            self._update_window_properties(result, selection)\n            self.last_set_id'),
+    )
+    for upstream, replacement in replacements:
+        if source.count(upstream) != 1:
+            raise RuntimeError("Unexpected Nimbus ratings monitor source")
+        source = source.replace(upstream, replacement, 1)
+    compile(source, str(path), "exec")
+    path.write_text(source, encoding="utf-8")
 
 
 def package_addon(archive, root, output, addon_id, name):
@@ -67,6 +127,7 @@ def package_addon(archive, root, output, addon_id, name):
         apply_theme(root, THEME_SOURCE)
     else:
         manifest.set("version", HELPER_VERSION)
+        patch_ratings_monitor(root / "resources/lib/modules/monitors/ratings.py")
         extension = ET.SubElement(manifest, "extension", {
             "point": "xbmc.python.pluginsource", "library": "resources/lib/playback_tracks.py",
         })
