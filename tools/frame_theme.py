@@ -383,6 +383,7 @@ def apply_playback(xml):
     set_fields(default_osd, {"height": "295"})
     for event in ("onload", "onunload"):
         ET.SubElement(tree.getroot(), event).text = "ClearProperty(FrameTracksRevision)"
+        ET.SubElement(tree.getroot(), event).text = "ClearProperty(FrameTrackPicker)"
     for group in default_osd.findall("control[@type='grouplist']"):
         if group.findtext("top") == "120":
             set_fields(group, {"top": "169", "height": "122"})
@@ -445,12 +446,16 @@ def apply_playback(xml):
                 group.remove(visible)
             for action in button.findall("onclick"):
                 action.set("condition", f"[{action.get('condition', 'true')}] + !{availability}")
+            ET.SubElement(button, "onclick", {"condition": availability}).text = f"SetProperty(FrameTrackPicker,{kind})"
             ET.SubElement(button, "onclick", {"condition": availability}).text = f"SetFocus({list_id})"
-            set_fields(button, {"onup": str(list_id)})
+            ET.SubElement(group, "onup").text = str(list_id)
             picker = ET.SubElement(controls, "include", {"content": "FramePlaybackTracks"})
             for name, value in (("button", button_id), ("id", list_id), ("kind", "audio" if button_id == 708 else "subtitle"),
                                 ("available", availability), ("right", 253 if button_id == 708 else 103), ("title", title)):
                 ET.SubElement(picker, "param", {"name": name, "value": str(value)})
+            # The helper uses singular "subtitle" as its picker state.
+            if button_id == 709:
+                button.findall("onclick")[-2].text = "SetProperty(FrameTrackPicker,subtitle)"
     alternate_utilities = controls.findall(".//control[@id='707']")[1]
     alternate_osd = next(group for group in controls.iter("control") if alternate_utilities in group)
     alternate_osd.remove(alternate_utilities)

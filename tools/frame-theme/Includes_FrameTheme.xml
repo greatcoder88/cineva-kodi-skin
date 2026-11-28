@@ -347,7 +347,7 @@
         <bottom>279</bottom>
         <width>377</width>
         <height>307</height>
-        <visible>[$PARAM[available]] + [Control.HasFocus($PARAM[button]) | Control.HasFocus($PARAM[id])]</visible>
+        <visible>[$PARAM[available]] + [Control.HasFocus($PARAM[button]) | Control.HasFocus($PARAM[id]) | String.IsEqual(Window(VideoOSD).Property(FrameTrackPicker),$PARAM[kind])]</visible>
         <animation effect="fade" start="0" end="100" time="95" reversible="false">Visible</animation>
         <animation effect="slide" end="0,56" time="0" condition="Integer.IsEqual(Container($PARAM[id]).NumItems,3)">Conditional</animation>
         <animation effect="slide" end="0,112" time="0" condition="Integer.IsEqual(Container($PARAM[id]).NumItems,2)">Conditional</animation>
@@ -466,8 +466,11 @@
           <scrolltime>100</scrolltime>
           <onup>$PARAM[id]</onup>
           <ondown>$PARAM[id]</ondown>
+          <onback>ClearProperty(FrameTrackPicker)</onback>
           <onback>$PARAM[button]</onback>
+          <onleft>ClearProperty(FrameTrackPicker)</onleft>
           <onleft>$PARAM[button]</onleft>
+          <onright>ClearProperty(FrameTrackPicker)</onright>
           <onright>$PARAM[button]</onright>
           <onclick>RunPlugin(plugin://script.frame.nimbus/?kind=$PARAM[kind]&amp;select=$INFO[Container($PARAM[id]).ListItem.Property(FrameTrackIndex)])</onclick>
           <itemlayout width="353" height="56">
