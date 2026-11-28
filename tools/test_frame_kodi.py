@@ -409,7 +409,7 @@ def verify_source_picker():
              lambda: rpc("XBMC.GetInfoLabels", labels=[prop])[prop] == "3")
 
 
-def verify_playback_osd():
+def verify_playback_osd(has_track_picker):
     rpc("Player.Open", item={"file": str(PLAYBACK_FIXTURE)})
     wait_for("Kodi starts the local video fixture", lambda: window_id() == 12005 and rpc("Player.GetActivePlayers"))
     rpc("Input.ShowOSD")
@@ -421,11 +421,66 @@ def verify_playback_osd():
     wait_for("Play/Pause pauses the video", lambda: rpc("Player.GetProperties", playerid=player, properties=["speed"])["speed"] == 0)
     press("select")
     wait_for("Play/Pause resumes the video", lambda: rpc("Player.GetProperties", playerid=player, properties=["speed"])["speed"] == 1)
+    if not has_track_picker:
+        press("right")
+        wait_for("OSD focus moves to Stop", lambda: has_focus(704))
+        return
+    press("right")
+    wait_for("OSD focus moves to Forward", lambda: has_focus(705))
     press("right")
     wait_for("OSD focus moves to Stop", lambda: has_focus(704))
+    # Traverse the native control groups to the audio utility.
+    def move_to_audio():
+        if has_focus(708):
+            return True
+        press("right")
+        return False
+
+    wait_for("Audio button can receive remote focus", move_to_audio, timeout=8)
+    audio_count = "Container(8708).NumItems"
+    wait_for("Hovering Audio lists both embedded tracks",
+             lambda: rpc("XBMC.GetInfoLabels", labels=[audio_count])[audio_count] == "2")
+    screenshot("playback-audio-tracks")
+    press("up")
+    wait_for("Up enters the audio selector", lambda: has_focus(8708))
+    press("down")
+    press("select")
+    wait_for("Selecting the second track switches audio",
+             lambda: rpc("Player.GetProperties", playerid=player,
+                         properties=["currentaudiostream"])["currentaudiostream"]["index"] == 1)
+    wait_for("Audio selector stays focused after selection", lambda: has_focus(8708))
+    press("back")
+    wait_for("Back returns to the audio button", lambda: has_focus(708))
+    press("right")
+    wait_for("Subtitle button can receive remote focus", lambda: has_focus(709))
+    sub_count = "Container(8709).NumItems"
+    wait_for("Subtitles preview lists Off and the embedded track",
+             lambda: rpc("XBMC.GetInfoLabels", labels=[sub_count])[sub_count] == "2")
+    screenshot("playback-subtitle-tracks")
+    press("up")
+    wait_for("Up enters the subtitle selector", lambda: has_focus(8709))
+    press("down")
+    press("select")
+    wait_for("Selecting the embedded subtitle enables it",
+             lambda: rpc("Player.GetProperties", playerid=player,
+                         properties=["subtitleenabled"])["subtitleenabled"])
+    wait_for("Subtitle selector stays focused after selection", lambda: has_focus(8709))
+    selected = "Container(8709).ListItem.Property(FrameTrackIndex)"
+    if rpc("XBMC.GetInfoLabels", labels=[selected])[selected] != "off":
+        press("up")
+    press("select")
+    wait_for("Off disables subtitles",
+             lambda: not rpc("Player.GetProperties", playerid=player,
+                             properties=["subtitleenabled"])["subtitleenabled"])
+    press("back")
+    wait_for("Back exits the subtitle picker", lambda: has_focus(709))
+    press("right")
+    wait_for("Settings follows CC in the three-button row", lambda: has_focus(716))
+    screenshot("playback-settings-focus")
 
 
-def run_gui(packages):
+
+def run_gui(packages, has_track_picker=True):
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
     stage_profile(packages)
     trace_library = ARTIFACTS / "frame-swap-trace.so"
@@ -442,7 +497,7 @@ def run_gui(packages):
             verify_search_and_settings()
             measure_addon_browser()
             verify_source_picker()
-            verify_playback_osd()
+            verify_playback_osd(has_track_picker)
             (ARTIFACTS / "performance.json").write_text(json.dumps(METRICS, indent=2) + "\n")
         except Exception:
             try:
@@ -482,7 +537,7 @@ def main():
         shutil.move(PROFILE, baseline / "candidate-profile")
         ARTIFACTS = ARTIFACTS / "baseline-0.1.52"
         METRICS.clear()
-        run_gui(packages)
+        run_gui(packages, has_track_picker=False)
 
 
 if __name__ == "__main__":
