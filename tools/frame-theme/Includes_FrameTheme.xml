@@ -211,6 +211,34 @@
       </control>
     </definition>
   </include>
+  <include name="FrameSidebarShortcut">
+    <param name="visible">true</param>
+    <definition>
+      <control type="radiobutton" id="$PARAM[control_id]">
+        <width>81</width>
+        <height>96</height>
+        <align>center</align>
+        <aligny>top</aligny>
+        <textoffsety>62</textoffsety>
+        <font>FrameShortcut</font>
+        <textcolor>grey</textcolor>
+        <focusedcolor>unfocused_text</focusedcolor>
+        <label>$PARAM[label]</label>
+        <visible>$PARAM[visible]</visible>
+        <onclick>$PARAM[onclick]</onclick>
+        <texturefocus border="18" colordiffuse="button_focus2">masks/focus-long.png</texturefocus>
+        <texturenofocus />
+        <radioposx>22</radioposx>
+        <radioposy>12</radioposy>
+        <radiowidth>37</radiowidth>
+        <radioheight>37</radioheight>
+        <textureradioonfocus colordiffuse="$VAR[FrameAccent]">$PARAM[icon]</textureradioonfocus>
+        <textureradioofffocus colordiffuse="$VAR[FrameAccent]">$PARAM[icon]</textureradioofffocus>
+        <textureradioonnofocus colordiffuse="grey">$PARAM[icon]</textureradioonnofocus>
+        <textureradiooffnofocus colordiffuse="grey">$PARAM[icon]</textureradiooffnofocus>
+      </control>
+    </definition>
+  </include>
   <include name="FrameSideMenuItems">
     <itemlayout width="411" height="72">
       <include content="FrameNavigationRow" />
@@ -221,6 +249,11 @@
       </include>
     </focusedlayout>
   </include>
+  <variable name="FrameDigitalReleaseStatus">
+    <value condition="String.IsEqual(Window(Home).Property(nimbus.digital_release_flag),recently)">$LOCALIZE[31990]</value>
+    <value condition="String.IsEqual(Window(Home).Property(nimbus.digital_release_flag),false)">$LOCALIZE[31991]</value>
+    <value>$LOCALIZE[31992]</value>
+  </variable>
   <include name="FrameHomeFeature">
     <control type="group" id="8980">
       <left>0</left>
@@ -238,6 +271,7 @@
         <left>490</left>
       </control>
       <control type="group">
+        <visible>![Control.HasFocus(9000) | ControlGroup(700).HasFocus]</visible>
         <left>76</left>
         <top>47</top>
         <control type="image">
@@ -291,25 +325,28 @@
           </control>
           <control type="group">
             <visible>ControlGroup(2000).HasFocus</visible>
-            <include>FrameHomeRatings</include>
+            <include content="FrameRatings" />
           </control>
         </control>
         <control type="group" id="8998">
           <top>401</top>
-          <width>275</width>
+          <width>575</width>
           <height>36</height>
           <visible>Skin.HasSetting(Enable.SmartStatus) + ControlGroup(2000).HasFocus + $EXP[isMovie] + $EXP[FrameRatingCurrent] + !String.IsEmpty(Window(Home).Property(nimbus.digital_release_date)) + [String.IsEqual(Window(Home).Property(nimbus.digital_release_flag),true) | String.IsEqual(Window(Home).Property(nimbus.digital_release_flag),recently) | String.IsEqual(Window(Home).Property(nimbus.digital_release_flag),false)]</visible>
           <control type="image">
-            <texture border="13" colordiffuse="$VAR[DigitalReleaseColor]">masks/flixicon-filled.png</texture>
+            <top>13</top>
+            <width>8</width>
+            <height>8</height>
+            <texture colordiffuse="$VAR[DigitalReleaseTextColor]">masks/focus-long.png</texture>
           </control>
           <control type="label" id="8999">
-            <left>14</left>
-            <right>12</right>
+            <left>20</left>
+            <right>0</right>
             <height>36</height>
             <aligny>center</aligny>
             <font>FrameProgress</font>
-            <textcolor>$VAR[DigitalReleaseTextColor]</textcolor>
-            <label>$VAR[DigitalReleaseValue]</label>
+            <textcolor>unfocused_text</textcolor>
+            <label>$VAR[FrameDigitalReleaseStatus]  ·  $VAR[DigitalReleaseValue]</label>
           </control>
         </control>
         <width>820</width>
@@ -559,7 +596,7 @@
       <left>1266</left>
       <top>115</top>
       <width>581</width>
-      <height>715</height>
+      <height>850</height>
       <visible>!String.IsEmpty(Window(Home).Property(nimbus.search.input)) + [[ControlGroup(2000).HasFocus + !String.IsEmpty(ListItem.Label)] | !String.IsEmpty(Container(19011).ListItem.Label) | !String.IsEmpty(Container(19012).ListItem.Label)]</visible>
       <control type="image">
         <texture border="25" colordiffuse="primary_content_panel_bg">masks/focus-long.png</texture>
@@ -568,32 +605,47 @@
         <left>38</left>
         <top>42</top>
         <width>505</width>
-        <height>84</height>
-        <font>FramePanelTitle</font>
+        <height>102</height>
+        <font>FramePlaybackTitle</font>
         <textcolor>unfocused_text</textcolor>
         <label>$VAR[FrameSearchTitle]</label>
       </control>
       <control type="label" id="8892">
         <left>38</left>
-        <top>138</top>
+        <top>150</top>
         <width>505</width>
         <height>45</height>
         <font>FrameTVLabel</font>
         <textcolor>grey</textcolor>
         <label>$VAR[FrameSearchYear]$VAR[FrameSearchGenre]</label>
       </control>
+      <control type="group">
+        <left>38</left>
+        <top>202</top>
+        <width>505</width>
+        <height>44</height>
+        <visible>ControlGroup(2000).HasFocus</visible>
+        <include content="FrameRatings">
+          <param name="width" value="505" />
+          <param name="slot" value="79" />
+          <param name="gap" value="5" />
+          <param name="badge" value="33" />
+          <param name="offset" value="38" />
+          <param name="font" value="FrameProgress" />
+        </include>
+      </control>
       <control type="image">
         <left>38</left>
-        <top>194</top>
+        <top>263</top>
         <width>505</width>
         <height>2</height>
         <texture colordiffuse="frame_selection">colors/white.png</texture>
       </control>
       <control type="textbox" id="8893">
         <left>38</left>
-        <top>225</top>
+        <top>294</top>
         <width>505</width>
-        <height>365</height>
+        <height>490</height>
         <font>FrameBody</font>
         <textcolor>unfocused_text</textcolor>
         <label>$VAR[FrameSearchPlot]</label>

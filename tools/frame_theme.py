@@ -102,6 +102,7 @@ def apply_typography(xml):
             ("FrameBody", label, "29"),
             ("FrameTab", "Inter-SemiBold.ttf" if inter else label, "26"),
             ("FrameProgress", label, "21"),
+            ("FrameShortcut", label, "15"),
             ("FramePanelTitle", "Inter-SemiBold.ttf" if inter else label, "33"),
             ("FramePlaybackTitle", "Inter-Bold.ttf" if inter else title, "44"),
         )
@@ -136,15 +137,20 @@ def apply_home(xml):
                       "movement": "8", "scrolltime": "160", "ondown": "700"})
     shortcuts = find_control(menu_group, 700)
     shortcut_group = next(group for group in menu_group.findall("control") if shortcuts in group)
-    set_fields(shortcut_group, {"left": "46", "top": "904", "width": "416", "height": "112"})
-    set_fields(shortcuts, {"width": "416", "itemgap": "-17"})
-    # Keep Nimbus' native actions, direction shortcuts, and conditional buttons.
-    set_fields(shortcut_group.find("control[@type='label']"),
-               {"left": "5", "top": "84", "width": "406", "font": "FrameProgress", "align": "center"})
-    menu.remove(menu.find("include[@content='List']"))
-    items = ET.Element("include")
-    items.text = "FrameSideMenuItems"
-    menu.insert(list(menu).index(menu.find("content")), items)
+    set_fields(shortcut_group, {"left": "46", "top": "894", "width": "425", "height": "125"})
+    set_fields(shortcuts, {"width": "425", "itemgap": "5", "height": "110"})
+    shortcut_group.remove(shortcut_group.find("control[@type='label']"))
+    for item in shortcuts.findall("include[@content='IconButton']"):
+        item.set("content", "FrameSidebarShortcut")
+        control_id = int(item.find("param[@name='control_id']").get("value"))
+        label, glyph = {
+            801: ("$LOCALIZE[13012]", "power"), 802: ("$LOCALIZE[5]", "settings"),
+            803: ("$LOCALIZE[137]", "search"), 804: ("$LOCALIZE[31993]", "updates"),
+            805: ("$LOCALIZE[31994]", "fullscreen"),
+        }[control_id]
+        if control_id in (801, 802, 803):
+            item.find("param[@name='icon']").set("value", f"frame/sidebar-{glyph}.png")
+        ET.SubElement(item, "param", {"name": "label", "value": label})
 
     # Use a stable shelf viewport. Kodi brings the focused row into view.
     set_fields(widgets, {"top": "490"})
@@ -277,10 +283,13 @@ def apply_home_rating_slots(xml):
         ("rtc", "Property(Rating.tomatoes.Percent)", "!String.IsEmpty(ListItem.Property(Rating.tomatoes.Percent))", "%"),
     )
     has_key = "!String.IsEmpty(Skin.String(valid_api_key))"
-    slots = ET.SubElement(root, "include", {"name": "FrameHomeRatings"})
-    rail = ET.SubElement(slots, "control", {"type": "grouplist"})
-    set_fields(rail, {"orientation": "horizontal", "width": "1100", "height": "44",
-                      "itemgap": "12", "align": "left"})
+    slots = ET.SubElement(root, "include", {"name": "FrameRatings"})
+    for name, value in {"width": "1100", "slot": "138", "gap": "12", "badge": "55",
+                        "offset": "64", "font": "FrameTab"}.items():
+        ET.SubElement(slots, "param", {"name": name}).text = value
+    rail = ET.SubElement(ET.SubElement(slots, "definition"), "control", {"type": "grouplist"})
+    set_fields(rail, {"orientation": "horizontal", "width": "$PARAM[width]", "height": "44",
+                      "itemgap": "$PARAM[gap]", "align": "left"})
     for slot in range(1, 7):
         label = ET.SubElement(root, "variable", {"name": f"FrameRating{slot}Value"})
         icon = ET.SubElement(root, "variable", {"name": f"FrameRating{slot}Image"})
@@ -310,13 +319,13 @@ def apply_home_rating_slots(xml):
         enabled = f"{has_key} + !String.IsEmpty(Skin.String(RatingSlot{slot})) + !String.IsEqual(Skin.String(RatingSlot{slot}),none)"
         if default:
             enabled = f"[{enabled}] | ![{has_key}]"
-        set_fields(cell, {"width": "138", "height": "42", "visible": f"[{enabled}] + [{' | '.join(resolved)}]"})
+        set_fields(cell, {"width": "$PARAM[slot]", "height": "42", "visible": f"[{enabled}] + [{' | '.join(resolved)}]"})
         badge = ET.SubElement(cell, "control", {"type": "image", "id": str(8970 + slot)})
-        set_fields(badge, {"left": "0", "top": "4", "width": "55", "height": "32", "aspectratio": "keep",
+        set_fields(badge, {"left": "0", "top": "4", "width": "$PARAM[badge]", "height": "32", "aspectratio": "keep",
                            "texture": f"$VAR[FrameRating{slot}Image]"})
         number = ET.SubElement(cell, "control", {"type": "label", "id": str(8990 + slot)})
-        set_fields(number, {"left": "64", "width": "74", "height": "42", "aligny": "center",
-                            "font": "FrameTab", "label": f"$VAR[FrameRating{slot}Value]", "textcolor": "unfocused_text"})
+        set_fields(number, {"left": "$PARAM[offset]", "right": "0", "height": "42", "aligny": "center",
+                            "font": "$PARAM[font]", "label": f"$VAR[FrameRating{slot}Value]", "textcolor": "unfocused_text"})
     write_xml(tree, path)
 
 
@@ -729,6 +738,28 @@ def write_focus_glow(skin, name, width, height):
     write_rgba_png(skin / f"media/frame/focus-{name}.png", render_width, render_height, rows)
 
 
+def write_sidebar_icons(media):
+    for name in ("search", "settings", "power"):
+        rows = bytearray()
+        for y in range(48):
+            rows.append(0)
+            for x in range(48):
+                X, Y = x - 23.5, y - 23.5
+                if name == "search":
+                    rim = abs(math.hypot(X + 4, Y + 4) - 11)
+                    handle = abs(X - Y) / math.sqrt(2) if 4 < X + Y < 30 else 9
+                    distance = min(rim, handle)
+                elif name == "settings":
+                    distance = min(abs(math.hypot(X, Y) - 6),
+                                   abs(math.hypot(X, Y) - 15 - 2.5 * max(0, math.cos(8 * math.atan2(Y, X)))))
+                else:
+                    rim = abs(math.hypot(X, Y - 2) - 13) if Y > -5 or abs(X) > 7 else 9
+                    distance = min(rim, abs(X) if -17 < Y < 0 else 9)
+                alpha = round(255 * max(0, min(1, 2.2 - distance)))
+                rows.extend((255, 255, 255, alpha))
+        write_rgba_png(media / f"sidebar-{name}.png", 48, 48, rows)
+
+
 def write_playback_textures(skin):
     media = skin / "media/frame"
     rows = b"".join(bytes((0, 4, 7, 12, round(253 * (1 - (1 - y / 127) ** 2.4)))) for y in range(128))
@@ -976,6 +1007,11 @@ def apply_accent(xml):
 def apply_theme(skin, theme_source):
     xml = skin / "xml"
     apply_palette(skin)
+    strings = skin / "language/resource.language.en_gb/strings.po"
+    with strings.open("a", encoding="utf-8") as translations:
+        for key, label in ((31990, "Recently released digitally"), (31991, "Digital release scheduled"),
+                           (31992, "Available digitally"), (31993, "Updates"), (31994, "Fullscreen")):
+            translations.write(f'\nmsgctxt "#{key}"\nmsgid "{label}"\nmsgstr ""\n')
     apply_typography(xml)
     apply_home(xml)
     apply_home_rating_slots(xml)
@@ -993,6 +1029,7 @@ def apply_theme(skin, theme_source):
     sidebar = bytes((0,)) + b"".join(bytes((15, 22, 32, 253 - round(253 * max(0, (x - 474) / 46))))
                                         for x in range(521))
     write_rgba_png(skin / "media/frame/sidebar-panel.png", 478, 1, sidebar)
+    write_sidebar_icons(skin / "media/frame")
     write_playback_textures(skin)
     target = xml / theme_source.name
     theme = read_xml(theme_source)
