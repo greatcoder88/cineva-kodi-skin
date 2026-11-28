@@ -491,15 +491,18 @@
   </include>
   <include name="FrameSearchHeading">
     <definition>
-      <control type="label">
-        <left>72</left>
-        <width>1120</width>
+      <control type="group" id="$PARAM[list_id]665">
         <height>43</height>
-        <aligny>center</aligny>
-        <font>FrameTVLabel</font>
-        <textcolor>unfocused_text</textcolor>
-        <label>$PARAM[label]</label>
         <visible>Integer.IsGreater(Container($PARAM[list_id]).NumItems,0) | Container($PARAM[list_id]).IsUpdating</visible>
+        <control type="label">
+          <left>72</left>
+          <width>1120</width>
+          <height>43</height>
+          <aligny>center</aligny>
+          <font>FrameTVLabel</font>
+          <textcolor>unfocused_text</textcolor>
+          <label>$PARAM[label]</label>
+        </control>
       </control>
     </definition>
   </include>

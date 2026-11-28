@@ -879,12 +879,6 @@ def apply_video_cards(xml):
     fixedlist = search.find("definition/control[@type='fixedlist']")
     fixedlist.remove(fixedlist.find("include[@content='WidgetVisibilityAnimations']"))
     fixedlist.remove(fixedlist.find("animation"))
-    # The two primary shelves are always inside the same viewport. Link them
-    # directly when both have results, retaining normal navigation for others.
-    for direction, source, target in (("ondown", 19011, 19012), ("onup", 19012, 19011)):
-        ET.SubElement(fixedlist, direction, {
-            "condition": f"Integer.IsEqual($PARAM[list_id],{source}) + Control.IsVisible({target}) + Integer.IsGreater(Container({target}).NumItems,0)",
-        }).text = f"SetFocus({target})"
     set_fields(fixedlist, {"right": "685", "height": "362", "top": "6", "movement": "3"})
     for layout in (fixedlist.find("itemlayout"), fixedlist.find("focusedlayout")):
         layout.attrib.update(width="235", height="362")
