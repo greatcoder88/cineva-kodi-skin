@@ -302,7 +302,7 @@ def apply_home_rating_slots(xml):
         pending = f"{has_key} + !$EXP[FrameRatingCurrent] + [$EXP[isMovie] | $EXP[isTVShow]]"
         ET.SubElement(label, "value", {"condition": pending}).text = "…"
         resolved.append(f"[{pending}]")
-        cell = ET.SubElement(rail, "control", {"type": "group"})
+        cell = ET.SubElement(rail, "control", {"type": "group", "id": str(8960 + slot)})
         enabled = f"{has_key} + !String.IsEmpty(Skin.String(RatingSlot{slot})) + !String.IsEqual(Skin.String(RatingSlot{slot}),none)"
         if default:
             enabled = f"[{enabled}] | ![{has_key}]"
