@@ -16,13 +16,35 @@ from frame_theme import apply_theme
 ROOT = Path(__file__).resolve().parents[1]
 THEME_SOURCE = ROOT / "tools/frame-theme/Includes_FrameTheme.xml"
 SKIN_ID = "skin.frame"
-SKIN_VERSION = "0.1.71"
-HELPER_VERSION = "0.0.59"
+SKIN_VERSION = "0.1.72"
+HELPER_VERSION = "0.0.60"
 HELPER_ID = "script.frame.nimbus"
 ADDONS = (
     ("ivarbrandt/skin.nimbus", "8b5071b8cd0db3a8e813eb00e9a821d3efad2454", SKIN_ID, "Frame"),
     ("ivarbrandt/script.nimbus.helper", "e42d2ffffbccaa58386ef2e4a054049e5fcb7664", HELPER_ID, "Frame Nimbus Helper"),
 )
+
+
+def patch_menu_recovery(path):
+    """Rebuild generated Nimbus menus from profile data after add-on replacement."""
+    source = path.read_text(encoding="utf-8")
+    start = source.index("    if not property_version:")
+    end = source.index("\n\ndef set_installed_version", start)
+    source = source[:start] + '''    from modules.cpath_maker import default_xmls, remake_all_cpaths
+    from xbmcvfs import exists
+
+    missing = any(
+        not exists(f"special://skin/xml/{name}.xml")
+        for name, _, _ in default_xmls.values()
+    )
+    if missing or (property_version and property_version != installed_version):
+        set_installed_version(skin_id, installed_version)
+        remake_all_cpaths(silent=True)
+    elif not property_version:
+        set_installed_version(skin_id, installed_version)
+''' + source[end:]
+    compile(source, str(path), "exec")
+    path.write_text(source, encoding="utf-8")
 
 
 def patch_ratings_monitor(path):
@@ -154,6 +176,7 @@ def package_addon(archive, root, output, addon_id, name):
         apply_theme(root, THEME_SOURCE)
     else:
         manifest.set("version", HELPER_VERSION)
+        patch_menu_recovery(root / "resources/lib/modules/version_monitor.py")
         patch_ratings_monitor(root / "resources/lib/modules/monitors/ratings.py")
         extension = ET.SubElement(manifest, "extension", {
             "point": "xbmc.python.pluginsource", "library": "resources/lib/playback_tracks.py",

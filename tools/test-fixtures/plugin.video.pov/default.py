@@ -79,6 +79,11 @@ def main():
     handle = int(sys.argv[1])
     query = parse_qs(sys.argv[2].lstrip("?")) if len(sys.argv) > 2 else {}
     action = query.get("action", [""])[-1]
+    if action == "reload_frame_without_version":
+        xbmcgui.Window(10000).clearProperty("skin.frame.installed_version")
+        xbmc.executebuiltin("AlarmClock(FrameTestReload,ReloadSkin(),00:00:01,silent)")
+        xbmcplugin.endOfDirectory(handle, cacheToDisc=False)
+        return
     if action in ("begin_ratings", "hold_ratings"):
         window = xbmcgui.Window(10000)
         window.clearProperty("nimbus.frameRatingPath")

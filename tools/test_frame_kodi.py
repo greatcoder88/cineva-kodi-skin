@@ -81,6 +81,7 @@ def stage_profile(packages):
                    cpath_path text, cpath_header text, cpath_type text, cpath_label text)""")
         db.executemany("INSERT INTO custom_paths VALUES (?, ?, ?, ?, ?)", (
             ("movie.main_menu", MOVIES, "Movies", "", "Movies"),
+            ("tvshow.main_menu", SHOWS, "TV Shows", "", "TV Shows"),
             ("movie.widget.1", MOVIES + "_in_progress", "In Progress", "WidgetListPoster", "In Progress"),
             ("movie.widget.2", SHOWS, "Fixture shows", "WidgetListLandscape", "Fixture shows"),
         ))
@@ -309,6 +310,17 @@ def verify_home(has_track_picker, redesigned, polished):
                 and rpc("XBMC.GetInfoLabels", labels=[field])[field] == "movies")
 
     wait_for("stock helper creates the configured widget rows and Home opens", populated_home, timeout=70)
+    if polished:
+        menu = settings.with_name("script-nimbus-main_menu_movies.xml")
+        for generated in settings.parent.glob("script-nimbus-*.xml"):
+            generated.unlink()
+        rpc("Files.GetDirectory", directory="plugin://plugin.video.pov/?action=reload_frame_without_version", media="files")
+        wait_for("Cold-start recovery restores generated XML from stored profile widgets",
+                 lambda: menu.is_file() and settings.is_file() and "Fixture shows" in settings.read_text(),
+                 timeout=30)
+        wait_for("After recovery, the configured Movies menu returns",
+                 lambda: rpc("XBMC.GetInfoLabels", labels=["Container(9000).ListItem.Property(id)"]) ==
+                 {"Container(9000).ListItem.Property(id)": "movies"})
     feature = "Control.IsVisible(8980)"
     wait_for("Home renders the featured title panel",
              lambda: rpc("XBMC.GetInfoBooleans", booleans=[feature])[feature])
@@ -433,6 +445,10 @@ def verify_search_and_settings(redesigned, polished):
         if not has_focus(19011):
             press("down")
             wait_for("Down from search controls focuses the movie results", lambda: has_focus(19011))
+        if polished:
+            rating = "Control.GetLabel(8991)"
+            wait_for("Search details show the focused movie's IMDb rating",
+                     lambda: rpc("XBMC.GetInfoLabels", labels=[rating])[rating] in {"9", "9.0"})
         press("down")
         wait_for("Moving to TV results shows that title's release year",
                  lambda: has_focus(19012) and "2017" in rpc("XBMC.GetInfoLabels", labels=[year])[year])
