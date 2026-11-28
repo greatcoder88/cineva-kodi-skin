@@ -76,16 +76,13 @@
           <label>$INFO[ListItem.Label]</label>
           <scroll>$PARAM[focused] + Control.HasFocus($PARAM[list_id])</scroll>
         </control>
-        <control type="progress">
-          <left>12</left>
-          <top>161</top>
-          <width>282</width>
-          <height>5</height>
-          <texturebg colordiffuse="osd_grey">osd/ProgressBack.png</texturebg>
-          <midtexture colordiffuse="red">osd/Progress.png</midtexture>
-          <info>ListItem.PercentPlayed</info>
-          <visible>ListItem.IsResumable</visible>
-        </control>
+        <include content="FrameResumeProgress">
+          <param name="left" value="12" />
+          <param name="top" value="141" />
+          <param name="width" value="282" />
+          <param name="bar" value="206" />
+          <param name="badge" value="214" />
+        </include>
         <control type="image">
           <width>306</width>
           <height>172</height>
@@ -119,16 +116,13 @@
           <label>$INFO[ListItem.Label]</label>
           <visible>String.IsEmpty(ListItem.Art(poster))</visible>
         </control>
-        <control type="progress">
-          <left>10</left>
-          <top>271</top>
-          <width>168</width>
-          <height>4</height>
-          <texturebg colordiffuse="osd_grey">osd/ProgressBack.png</texturebg>
-          <midtexture colordiffuse="red">osd/Progress.png</midtexture>
-          <info>ListItem.PercentPlayed</info>
-          <visible>ListItem.IsResumable</visible>
-        </control>
+        <include content="FrameResumeProgress">
+          <param name="left" value="10" />
+          <param name="top" value="251" />
+          <param name="width" value="168" />
+          <param name="bar" value="98" />
+          <param name="badge" value="106" />
+        </include>
         <control type="image">
           <width>188</width>
           <height>280</height>
@@ -288,19 +282,54 @@
       </control>
     </control>
   </include>
+  <include name="FrameResumeProgress">
+    <definition>
+      <control type="group">
+        <left>$PARAM[left]</left>
+        <top>$PARAM[top]</top>
+        <width>$PARAM[width]</width>
+        <height>24</height>
+        <visible>ListItem.IsResumable + !String.IsEmpty(ListItem.PercentPlayed)</visible>
+        <control type="image">
+          <width>$PARAM[width]</width>
+          <height>24</height>
+          <texture border="8" colordiffuse="EC161B23">masks/focus-long.png</texture>
+        </control>
+        <control type="progress">
+          <left>7</left>
+          <top>10</top>
+          <width>$PARAM[bar]</width>
+          <height>4</height>
+          <texturebg colordiffuse="osd_grey">osd/ProgressBack.png</texturebg>
+          <midtexture colordiffuse="frame_track_accent">osd/Progress.png</midtexture>
+          <info>ListItem.PercentPlayed</info>
+        </control>
+        <control type="label">
+          <left>$PARAM[badge]</left>
+          <right>7</right>
+          <height>24</height>
+          <align>right</align>
+          <aligny>center</aligny>
+          <font>FrameProgress</font>
+          <textcolor>unfocused_text</textcolor>
+          <label>$INFO[ListItem.PercentPlayed,,%]</label>
+        </control>
+      </control>
+    </definition>
+  </include>
   <include name="FramePlaybackTrackRow">
     <param name="focused">false</param>
     <definition>
       <control type="image">
         <left>8</left>
-        <width>502</width>
+        <width>337</width>
         <height>56</height>
         <texture border="22" colordiffuse="frame_selection">masks/focus-long.png</texture>
-        <visible>$PARAM[focused] + Control.HasFocus($PARAM[id])</visible>
+        <visible>[$PARAM[focused] + Control.HasFocus($PARAM[id])] | String.IsEqual(ListItem.Property(FrameTrackActive),true)</visible>
       </control>
       <control type="label">
         <left>30</left>
-        <width>398</width>
+        <width>244</width>
         <height>56</height>
         <aligny>center</aligny>
         <font>FrameTVLabel</font>
@@ -309,7 +338,7 @@
         <scroll>false</scroll>
       </control>
       <control type="label">
-        <left>450</left>
+        <left>293</left>
         <width>34</width>
         <height>56</height>
         <aligny>center</aligny>
@@ -323,21 +352,75 @@
   <include name="FramePlaybackTracks">
     <definition>
       <control type="group">
-        <right>120</right>
+        <right>$PARAM[right]</right>
         <bottom>290</bottom>
-        <width>542</width>
+        <width>377</width>
         <height>307</height>
         <visible>[$PARAM[available]] + [Control.HasFocus($PARAM[button]) | Control.HasFocus($PARAM[id]) | String.IsEqual(Window(VideoOSD).Property(FrameTrackPicker),$PARAM[kind])]</visible>
         <animation effect="fade" start="0" end="100" time="95" reversible="false">Visible</animation>
+        <animation effect="slide" end="0,56" time="0" condition="Integer.IsEqual(Container($PARAM[id]).NumItems,3)">Conditional</animation>
+        <animation effect="slide" end="0,112" time="0" condition="Integer.IsEqual(Container($PARAM[id]).NumItems,2)">Conditional</animation>
+        <animation effect="slide" end="0,168" time="0" condition="Integer.IsEqual(Container($PARAM[id]).NumItems,1)">Conditional</animation>
         <control type="image">
-          <width>542</width>
+          <width>377</width>
+          <height>139</height>
+          <texture border="24" colordiffuse="frame_card_focus">masks/focus-long.png</texture>
+          <visible>Integer.IsEqual(Container($PARAM[id]).NumItems,1)</visible>
+        </control>
+        <control type="image">
+          <left>1</left>
+          <top>1</top>
+          <width>375</width>
+          <height>137</height>
+          <texture border="23" colordiffuse="frame_panel">masks/focus-long.png</texture>
+          <visible>Integer.IsEqual(Container($PARAM[id]).NumItems,1)</visible>
+        </control>
+        <control type="image">
+          <width>377</width>
+          <height>195</height>
+          <texture border="24" colordiffuse="frame_card_focus">masks/focus-long.png</texture>
+          <visible>Integer.IsEqual(Container($PARAM[id]).NumItems,2)</visible>
+        </control>
+        <control type="image">
+          <left>1</left>
+          <top>1</top>
+          <width>375</width>
+          <height>193</height>
+          <texture border="23" colordiffuse="frame_panel">masks/focus-long.png</texture>
+          <visible>Integer.IsEqual(Container($PARAM[id]).NumItems,2)</visible>
+        </control>
+        <control type="image">
+          <width>377</width>
+          <height>251</height>
+          <texture border="24" colordiffuse="frame_card_focus">masks/focus-long.png</texture>
+          <visible>Integer.IsEqual(Container($PARAM[id]).NumItems,3)</visible>
+        </control>
+        <control type="image">
+          <left>1</left>
+          <top>1</top>
+          <width>375</width>
+          <height>249</height>
+          <texture border="23" colordiffuse="frame_panel">masks/focus-long.png</texture>
+          <visible>Integer.IsEqual(Container($PARAM[id]).NumItems,3)</visible>
+        </control>
+        <control type="image">
+          <width>377</width>
           <height>307</height>
-          <texture border="24" colordiffuse="frame_panel">masks/focus-long.png</texture>
+          <texture border="24" colordiffuse="frame_card_focus">masks/focus-long.png</texture>
+          <visible>!Integer.IsLess(Container($PARAM[id]).NumItems,4)</visible>
+        </control>
+        <control type="image">
+          <left>1</left>
+          <top>1</top>
+          <width>375</width>
+          <height>305</height>
+          <texture border="23" colordiffuse="frame_panel">masks/focus-long.png</texture>
+          <visible>!Integer.IsLess(Container($PARAM[id]).NumItems,4)</visible>
         </control>
         <control type="label">
           <left>28</left>
           <top>16</top>
-          <width>486</width>
+          <width>321</width>
           <height>42</height>
           <aligny>center</aligny>
           <font>FrameTVLabel</font>
@@ -347,14 +430,14 @@
         <control type="image">
           <left>28</left>
           <top>65</top>
-          <width>486</width>
+          <width>321</width>
           <height>1</height>
           <texture colordiffuse="frame_selection">colors/white.png</texture>
         </control>
         <control type="list" id="$PARAM[id]">
           <left>12</left>
           <top>72</top>
-          <width>518</width>
+          <width>353</width>
           <height>224</height>
           <orientation>vertical</orientation>
           <scrolltime>100</scrolltime>
@@ -367,12 +450,12 @@
           <onright>ClearProperty(FrameTrackPicker)</onright>
           <onright>$PARAM[button]</onright>
           <onclick>RunPlugin(plugin://script.frame.nimbus/?kind=$PARAM[kind]&amp;select=$INFO[Container($PARAM[id]).ListItem.Property(FrameTrackIndex)])</onclick>
-          <itemlayout width="518" height="56">
+          <itemlayout width="353" height="56">
             <include content="FramePlaybackTrackRow">
               <param name="id" value="$PARAM[id]" />
             </include>
           </itemlayout>
-          <focusedlayout width="518" height="56">
+          <focusedlayout width="353" height="56">
             <include content="FramePlaybackTrackRow">
               <param name="id" value="$PARAM[id]" />
               <param name="focused" value="true" />
