@@ -483,14 +483,14 @@
         <left>38</left>
         <top>42</top>
         <width>558</width>
-        <height>130</height>
+        <height>84</height>
         <font>FramePanelTitle</font>
         <textcolor>unfocused_text</textcolor>
         <label>$VAR[FrameSearchTitle]</label>
       </control>
       <control type="label" id="8892">
         <left>38</left>
-        <top>184</top>
+        <top>138</top>
         <width>558</width>
         <height>45</height>
         <font>FrameTVLabel</font>
@@ -499,14 +499,14 @@
       </control>
       <control type="image">
         <left>38</left>
-        <top>248</top>
+        <top>194</top>
         <width>558</width>
         <height>2</height>
         <texture colordiffuse="frame_selection">colors/white.png</texture>
       </control>
       <control type="textbox" id="8893">
         <left>38</left>
-        <top>280</top>
+        <top>225</top>
         <width>558</width>
         <height>365</height>
         <font>FrameBody</font>

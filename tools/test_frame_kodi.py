@@ -416,6 +416,9 @@ def verify_search_and_settings(redesigned):
         wait_for("Search shows the movie's release year and description panel",
                  lambda: "2008" in rpc("XBMC.GetInfoLabels", labels=[year])[year]
                  and rpc("XBMC.GetInfoBooleans", booleans=[details])[details])
+        if not has_focus(19011):
+            press("down")
+            wait_for("Down from search controls focuses the movie results", lambda: has_focus(19011))
         press("down")
         wait_for("Moving to TV results shows that title's release year",
                  lambda: has_focus(19012) and "2017" in rpc("XBMC.GetInfoLabels", labels=[year])[year])

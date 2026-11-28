@@ -867,6 +867,29 @@ def apply_motion(xml):
     write_xml(tree, path)
 
 
+def apply_existing_focus_glows(xml):
+    """Use Frame's accent in Nimbus artwork views that have focus glow controls."""
+    masks = {"masks/poster-glow.png", "masks/poster-glow-widget.png",
+             "masks/landscape-glow.png", "masks/flixscape-glow.png"}
+    names = ("View_52_IconWall.xml", "View_54_Flix.xml", "View_55_FlixScape.xml",
+             "Includes_HomeLayouts.xml", "Includes.xml")
+    for name in names:
+        path = xml / name
+        tree = read_xml(path)
+        changed = False
+        for control in tree.getroot().iter("control"):
+            texture = control.find("texture")
+            if texture is None or texture.text not in masks:
+                continue
+            texture.set("colordiffuse", "$VAR[FrameAccent]")
+            for animation in control.findall("include"):
+                if animation.get("content") == "GlowPulse" or animation.text == "Animation_FocusTextureFade":
+                    control.remove(animation)
+            changed = True
+        if changed:
+            write_xml(tree, path)
+
+
 def apply_accent(xml):
     """Route Frame's accent aliases through the same saved color."""
     aliases = {name for name, color in PALETTE.items() if color == "FF72EBC5"}
@@ -921,4 +944,5 @@ def apply_theme(skin, theme_source):
     landscape = widgets.getroot().find("include[@name='WidgetListLandscape']/definition/control[@type='fixedlist']/visible")
     landscape.text += " | [Window.IsVisible(11121) + String.IsEqual(Window(Home).Property(nimbus.search.refreshing),true)]"
     write_xml(widgets, path)
+    apply_existing_focus_glows(xml)
     apply_accent(xml)
