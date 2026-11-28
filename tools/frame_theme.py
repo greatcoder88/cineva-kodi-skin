@@ -10,6 +10,10 @@ import zlib
 OSD_BUTTON_WIDTH = 112
 OSD_BUTTON_HEIGHT = 82
 OSD_BUTTON_GAP = 38
+TRACK_PANEL_WIDTH = 432
+TRACK_ROW_HEIGHT = 62
+TRACK_HEADER_HEIGHT = 92
+TRACK_PANEL_TAIL = 13
 
 PALETTE = {
     "primary_background": "FF091221",
@@ -26,7 +30,7 @@ PALETTE = {
     "frame_panel": "FF161E27",
     "frame_selection": "FF293844",
     "frame_track_accent": "FF72EBC5",
-    "frame_track_ring": "FF74808C",
+    "frame_track_focus": "FF2B4153",
     "focused_text": "FF141414",
     "unfocused_text": "FFF5F5F5",
     "artwork_dim": "FFFFFFFF",
@@ -463,7 +467,7 @@ def apply_playback(xml):
             ET.SubElement(group, "onup").text = str(list_id)
             picker = ET.SubElement(controls, "include", {"content": "FramePlaybackTracks"})
             for name, value in (("button", button_id), ("id", list_id), ("kind", "audio" if button_id == 708 else "subtitle"),
-                                ("available", availability), ("right", 253 if button_id == 708 else 103), ("title", title)):
+                                ("available", availability), ("right", 226 if button_id == 708 else 76), ("title", title)):
                 ET.SubElement(picker, "param", {"name": name, "value": str(value)})
             # The helper uses singular "subtitle" as its picker state.
             if button_id == 709:
@@ -593,14 +597,55 @@ def write_playback_textures(skin):
         for active in (False, True):
             write_utility_texture(media, kind, icon, active)
 
-    pointer = bytearray()
-    for y in range(14):
-        pointer.append(0)
-        for x in range(25):
-            edge = 12 - abs(x - 12) - y
-            pointer.extend((116, 128, 140, 255) if edge == 0 else
-                           (22, 27, 35, 255) if edge > 0 else (0, 0, 0, 0))
-    write_rgba_png(media / "track-pointer.png", 25, 14, pointer)
+    for track_count in range(1, 5):
+        write_track_panel(media, track_count)
+
+
+def write_track_panel(media, track_count):
+    width = TRACK_PANEL_WIDTH
+    body = TRACK_HEADER_HEIGHT + TRACK_ROW_HEIGHT * track_count
+    height = body + TRACK_PANEL_TAIL
+    radius = 26
+    center = (width - 1) / 2
+    rows = bytearray()
+    for y in range(height):
+        rows.append(0)
+        for x in range(width):
+            if y < body:
+                dx = max(radius - x, x - (width - radius - 1), 0)
+                dy = max(radius - y, y - (body - radius - 1), 0)
+                edge = min(radius - math.hypot(dx, dy), x, width - 1 - x, y, body - 1 - y)
+            else:
+                edge = TRACK_PANEL_TAIL - abs(x - center) - (y - body)
+            if edge < 0:
+                rows.extend((0, 0, 0, 0))
+            elif edge < 1.4 and not (abs(x - center) < TRACK_PANEL_TAIL - 1 and y == body - 1):
+                rows.extend((82, 101, 121, 255))
+            else:
+                lift = round(9 * (1 - min(y, body) / body))
+                rows.extend((15 + lift, 24 + lift, 36 + lift, 250))
+    write_rgba_png(media / f"track-panel-{track_count}.png", width, height, rows)
+
+
+def track_panel_geometry(theme):
+    panel = theme.find("include[@name='FramePlaybackTracks']/definition/control")
+    track_list = panel.find("control[@type='list']")
+    set_fields(panel, {"width": str(TRACK_PANEL_WIDTH),
+                       "height": str(TRACK_HEADER_HEIGHT + 4 * TRACK_ROW_HEIGHT)})
+    for count in range(1, 5):
+        found = f"Container($PARAM[id]).NumItems"
+        condition = f"Integer.IsEqual({found},{count})" if count < 4 else f"!Integer.IsLess({found},4)"
+        if count < 4:
+            ET.SubElement(panel, "animation", {"effect": "slide", "end": f"0,{(4 - count) * TRACK_ROW_HEIGHT}",
+                                                "time": "0", "condition": condition}).text = "Conditional"
+        image = ET.Element("control", {"type": "image"})
+        set_fields(image, {"width": str(TRACK_PANEL_WIDTH),
+                           "height": str(TRACK_HEADER_HEIGHT + count * TRACK_ROW_HEIGHT + TRACK_PANEL_TAIL),
+                           "texture": f"frame/track-panel-{count}.png", "visible": condition})
+        panel.insert(count - 1, image)
+    set_fields(track_list, {"height": str(TRACK_ROW_HEIGHT * 4)})
+    for tag in ("itemlayout", "focusedlayout"):
+        track_list.find(tag).set("height", str(TRACK_ROW_HEIGHT))
 
 
 def write_utility_texture(media, kind, icon, active):
@@ -730,6 +775,7 @@ def apply_theme(skin, theme_source):
     target = xml / theme_source.name
     theme = read_xml(theme_source)
     feature_metadata(theme.getroot())
+    track_panel_geometry(theme.getroot())
     write_xml(theme, target)
     include_path = xml / "Includes.xml"
     includes = read_xml(include_path)
