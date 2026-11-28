@@ -302,6 +302,8 @@ def verify_playback_osd():
     press("select")
     wait_for("Play/Pause resumes the video", lambda: rpc("Player.GetProperties", playerid=player, properties=["speed"])["speed"] == 1)
     press("right")
+    wait_for("OSD focus moves to Forward", lambda: has_focus(705))
+    press("right")
     wait_for("OSD focus moves to Stop", lambda: has_focus(704))
     # Traverse the native control groups to the audio utility.
     def move_to_audio():
