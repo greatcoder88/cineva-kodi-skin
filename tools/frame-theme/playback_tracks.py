@@ -1,12 +1,46 @@
 """Provide the Frame OSD with the current player's audio and subtitle tracks."""
 
 import json
+import re
 import sys
 from urllib.parse import parse_qs
 
 import xbmc
 import xbmcgui
 import xbmcplugin
+
+
+ACCENTS = (
+    ("Mint", "72EBC5"),
+    ("Glacier", "79C8FF"),
+    ("Rose", "FF91AA"),
+    ("Amber", "FFCA75"),
+    ("Lilac", "C3ACFF"),
+    ("Pearl", "EEEFF2"),
+)
+
+
+def choose_accent():
+    dialog = xbmcgui.Dialog()
+    labels = [label for label, _ in ACCENTS]
+    default = xbmc.getInfoLabel("Skin.String(Frame.AccentLabel)") or "Mint"
+    options = labels + ["Custom hex color"]
+    choice = dialog.select("Frame accent color", options, preselect=labels.index(default) if default in labels else len(labels))
+    if choice < 0:
+        return
+    if choice == len(labels):
+        old = xbmc.getInfoLabel("Skin.String(Frame.Accent)").removeprefix("FF")
+        color = dialog.input("Enter a hex color (RRGGBB)", defaultt=old).strip().lstrip("#").upper()
+        if not color:
+            return
+        if not re.fullmatch(r"[0-9A-F]{6}", color):
+            dialog.ok("Frame accent color", "Enter six hexadecimal digits, for example 79C8FF.")
+            return
+        label = f"#{color}"
+    else:
+        label, color = ACCENTS[choice]
+    xbmc.executebuiltin(f"Skin.SetString(Frame.Accent,FF{color})")
+    xbmc.executebuiltin(f"Skin.SetString(Frame.AccentLabel,{label})")
 
 
 def request(method, **params):
@@ -24,6 +58,9 @@ def main():
     handle = int(sys.argv[1])
     options = parse_qs(sys.argv[2].lstrip("?"))
     kind = options.get("kind", [""])[0]
+    if kind == "accent":
+        choose_accent()
+        return
     player = next((entry["playerid"] for entry in request("Player.GetActivePlayers") or []
                    if entry["type"] == "video"), None)
     if kind not in {"audio", "subtitle"} or player is None:

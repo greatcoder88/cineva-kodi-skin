@@ -44,52 +44,42 @@
   <variable name="FrameCardArt">
     <value condition="!String.IsEmpty(ListItem.Art(landscape))">$INFO[ListItem.Art(landscape)]</value>
     <value condition="!String.IsEmpty(ListItem.Art(fanart))">$INFO[ListItem.Art(fanart)]</value>
-    <value>$INFO[ListItem.Art(poster)]</value>
   </variable>
   <include name="FrameLandscapeCard">
     <param name="focused">false</param>
     <definition>
       <control type="group">
-        <width>306</width>
-        <height>172</height>
+        <width>420</width>
+        <height>268</height>
         <control type="image">
-          <texture diffuse="masks/flixscape-widget.png" colordiffuse="primary_content_panel_bg">colors/white.png</texture>
-        </control>
-        <control type="image">
-          <texture diffuse="masks/flixscape-widget.png" background="true">$VAR[FrameCardArt]</texture>
+          <width>420</width>
+          <height>236</height>
           <aspectratio scalediffuse="false">scale</aspectratio>
-        </control>
-        <control type="image">
-          <top>94</top>
-          <height>78</height>
-          <width>306</width>
-          <texture>overlays/overlayfade-fs-widget.png</texture>
+          <texture diffuse="masks/flixscape-widget.png" background="true" fallback="frame/landscape-empty.png">$VAR[FrameCardArt]</texture>
         </control>
         <control type="label">
-          <left>14</left>
-          <top>119</top>
-          <width>278</width>
-          <height>42</height>
-          <font>FrameTab</font>
+          <left>3</left>
+          <top>243</top>
+          <width>414</width>
+          <height>32</height>
+          <aligny>center</aligny>
+          <font>FrameTVLabel</font>
           <textcolor>unfocused_text</textcolor>
           <label>$INFO[ListItem.Label]</label>
-          <scroll>$PARAM[focused] + Control.HasFocus($PARAM[list_id])</scroll>
-        </control>
-        <control type="image">
-          <left>3</left>
-          <top>-9</top>
-          <width>300</width>
-          <height>4</height>
-          <visible>$PARAM[focused] + Control.HasFocus($PARAM[list_id])</visible>
-          <texture colordiffuse="frame_card_focus">colors/white.png</texture>
-          <animation effect="fade" start="40" end="100" time="75" reversible="false">Visible</animation>
         </control>
         <include content="FrameResumeProgress">
-          <param name="top" value="142" />
-          <param name="left" value="8" />
-          <param name="width" value="290" />
-          <param name="bar" value="226" />
-          <param name="badge" value="240" />
+          <param name="top" value="204" />
+          <param name="left" value="10" />
+          <param name="width" value="400" />
+          <param name="bar" value="332" />
+          <param name="badge" value="345" />
+        </include>
+        <include content="FrameCardFocusBorder">
+          <param name="width" value="420" />
+          <param name="height" value="236" />
+          <param name="mask" value="masks/flixscape-border-widget.png" />
+          <param name="focused" value="$PARAM[focused]" />
+          <param name="list_id" value="$PARAM[list_id]" />
         </include>
       </control>
     </definition>
@@ -117,21 +107,19 @@
           <label>$INFO[ListItem.Label]</label>
           <visible>String.IsEmpty(ListItem.Art(poster))</visible>
         </control>
-        <control type="image">
-          <left>3</left>
-          <top>-9</top>
-          <width>270</width>
-          <height>4</height>
-          <visible>$PARAM[focused] + Control.HasFocus($PARAM[list_id])</visible>
-          <texture colordiffuse="frame_card_focus">colors/white.png</texture>
-          <animation effect="fade" start="40" end="100" time="75" reversible="false">Visible</animation>
-        </control>
         <include content="FrameResumeProgress">
           <param name="top" value="379" />
           <param name="left" value="8" />
           <param name="width" value="260" />
           <param name="bar" value="197" />
           <param name="badge" value="209" />
+        </include>
+        <include content="FrameCardFocusBorder">
+          <param name="width" value="276" />
+          <param name="height" value="409" />
+          <param name="mask" value="masks/poster-big-border.png" />
+          <param name="focused" value="$PARAM[focused]" />
+          <param name="list_id" value="$PARAM[list_id]" />
         </include>
       </control>
     </definition>
@@ -313,16 +301,24 @@
     <definition>
       <control type="image">
         <left>0</left>
-        <width>408</width>
-        <height>54</height>
+        <width>492</width>
+        <height>62</height>
         <texture border="22" colordiffuse="frame_track_focus">masks/focus-long.png</texture>
-        <visible>$PARAM[focused] + Control.HasFocus($PARAM[id])</visible>
+        <visible>[$PARAM[focused] + Control.HasFocus($PARAM[id])] | String.IsEqual(Window(VideoOSD).Property(FrameActiveTrack.$PARAM[kind]),ListItem.Property(FrameTrackIndex))</visible>
         <top>4</top>
       </control>
+      <control type="image">
+        <left>4</left>
+        <top>18</top>
+        <width>3</width>
+        <height>34</height>
+        <visible>$PARAM[focused] + Control.HasFocus($PARAM[id])</visible>
+        <texture colordiffuse="$VAR[FrameAccent]">colors/white.png</texture>
+      </control>
       <control type="label">
-        <left>16</left>
-        <width>282</width>
-        <height>62</height>
+        <left>20</left>
+        <width>320</width>
+        <height>70</height>
         <aligny>center</aligny>
         <font>FrameTVLabel</font>
         <textcolor>unfocused_text</textcolor>
@@ -331,9 +327,9 @@
         <top>0</top>
       </control>
       <control type="label">
-        <left>363</left>
-        <width>31</width>
-        <height>62</height>
+        <left>447</left>
+        <width>36</width>
+        <height>70</height>
         <aligny>center</aligny>
         <font>FrameTVLabel</font>
         <textcolor>frame_track_accent</textcolor>
@@ -343,9 +339,9 @@
         <align>center</align>
       </control>
       <control type="label">
-        <left>298</left>
-        <width>58</width>
-        <height>62</height>
+        <left>348</left>
+        <width>81</width>
+        <height>70</height>
         <align>right</align>
         <aligny>center</aligny>
         <font>FrameProgress</font>
@@ -362,11 +358,10 @@
         <width>377</width>
         <height>307</height>
         <visible>[$PARAM[available]] + [Control.HasFocus($PARAM[button]) | Control.HasFocus($PARAM[id]) | String.IsEqual(Window(VideoOSD).Property(FrameTrackPicker),$PARAM[kind])]</visible>
-        <animation effect="fade" start="0" end="100" time="85" reversible="false">Visible</animation>
         <control type="label">
-          <left>28</left>
-          <top>20</top>
-          <width>376</width>
+          <left>32</left>
+          <top>24</top>
+          <width>476</width>
           <height>44</height>
           <aligny>center</aligny>
           <font>FramePanelTitle</font>
@@ -375,17 +370,17 @@
           <visible>Integer.IsGreater(Container($PARAM[id]).NumItems,0)</visible>
         </control>
         <control type="image">
-          <left>28</left>
-          <top>76</top>
-          <width>376</width>
+          <left>32</left>
+          <top>80</top>
+          <width>476</width>
           <height>1</height>
           <texture colordiffuse="frame_selection">colors/white.png</texture>
           <visible>Integer.IsGreater(Container($PARAM[id]).NumItems,0)</visible>
         </control>
         <control type="list" id="$PARAM[id]">
-          <left>12</left>
-          <top>84</top>
-          <width>408</width>
+          <left>24</left>
+          <top>88</top>
+          <width>492</width>
           <height>224</height>
           <orientation>vertical</orientation>
           <scrolltime>100</scrolltime>
@@ -398,13 +393,13 @@
           <onright>ClearProperty(FrameTrackPicker)</onright>
           <onright>$PARAM[button]</onright>
           <onclick>RunPlugin(plugin://script.frame.nimbus/?kind=$PARAM[kind]&amp;select=$INFO[Container($PARAM[id]).ListItem.Property(FrameTrackIndex)])</onclick>
-          <itemlayout width="408" height="56">
+          <itemlayout width="492" height="56">
             <include content="FramePlaybackTrackRow">
               <param name="id" value="$PARAM[id]" />
               <param name="kind" value="$PARAM[kind]" />
             </include>
           </itemlayout>
-          <focusedlayout width="408" height="56">
+          <focusedlayout width="492" height="56">
             <include content="FramePlaybackTrackRow">
               <param name="id" value="$PARAM[id]" />
               <param name="kind" value="$PARAM[kind]" />
@@ -413,6 +408,28 @@
           </focusedlayout>
           <content target="video">plugin://script.frame.nimbus/?kind=$PARAM[kind]</content>
         </control>
+      </control>
+    </definition>
+  </include>
+  <variable name="FrameAccent">
+    <value condition="!String.IsEmpty(Skin.String(Frame.Accent))">$INFO[Skin.String(Frame.Accent)]</value>
+    <value>FF72EBC5</value>
+  </variable>
+  <variable name="FrameAccentLabel">
+    <value condition="!String.IsEmpty(Skin.String(Frame.AccentLabel))">$INFO[Skin.String(Frame.AccentLabel)]</value>
+    <value>Mint</value>
+  </variable>
+  <variable name="FrameCardAccent">
+    <value condition="Skin.HasSetting(Frame.AdaptiveAccent) + !String.IsEmpty(Window(Home).Property(Frame.ArtAccent)) + String.IsEqual(Window(Home).Property(Frame.ArtAccentPoster),ListItem.Art(poster))">$INFO[Window(Home).Property(Frame.ArtAccent)]</value>
+    <value>$VAR[FrameAccent]</value>
+  </variable>
+  <include name="FrameCardFocusBorder">
+    <definition>
+      <control type="image">
+        <width>$PARAM[width]</width>
+        <height>$PARAM[height]</height>
+        <visible>$PARAM[focused] + Control.HasFocus($PARAM[list_id])</visible>
+        <texture colordiffuse="$VAR[FrameCardAccent]" border="16" infill="false">$PARAM[mask]</texture>
       </control>
     </definition>
   </include>

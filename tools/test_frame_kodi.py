@@ -23,7 +23,7 @@ ARTIFACTS = ROOT / "artifacts/frame-gui"
 MOVIES = "plugin://plugin.video.pov/?action=movies"
 SHOWS = "plugin://plugin.video.pov/?action=tvshows"
 PLAYBACK_FIXTURE = PROFILE / "userdata/frame-playback.mkv"
-BASELINE = "63ee6c64e36ede61a259dbad5324464fc75f17f3"
+BASELINE = "09e16ccc19d3baf4b4c02199c731525facadc13e"
 METRICS = {}
 DEPENDENCIES = {
     "certifi": "2023.5.7",
@@ -82,7 +82,7 @@ def stage_profile(packages):
         db.executemany("INSERT INTO custom_paths VALUES (?, ?, ?, ?, ?)", (
             ("movie.main_menu", MOVIES, "Movies", "", "Movies"),
             ("movie.widget.1", MOVIES + "_in_progress", "In Progress", "WidgetListPoster", "In Progress"),
-            ("movie.widget.2", SHOWS, "Fixture shows", "WidgetListPoster", "Fixture shows"),
+            ("movie.widget.2", SHOWS, "Fixture shows", "WidgetListLandscape", "Fixture shows"),
         ))
     captions = PLAYBACK_FIXTURE.with_suffix(".srt")
     captions.write_text("1\n00:00:02,000 --> 00:00:06,000\nFrame embedded subtitle\n")
@@ -356,6 +356,7 @@ def verify_home(has_track_picker):
         rpc("XBMC.GetInfoBooleans", booleans=[feature, fanart]) == {feature: True, fanart: False}
     ))
     screenshot("home-second-widget")
+    measure_focus("home_landscape", "Container(19012).ListItem.Label", "right", "left")
     press("contextmenu")
     wait_for("context action opens Kodi's context menu", lambda: window_id() == 10106)
     screenshot("home-context-menu")
@@ -549,9 +550,9 @@ def main():
         packages = baseline / "packages"
         subprocess.run(["python3", str(baseline / "tools/build_frame.py"), "--output", str(packages)], check=True)
         shutil.move(PROFILE, baseline / "candidate-profile")
-        ARTIFACTS = ARTIFACTS / "baseline-0.1.52"
+        ARTIFACTS = ARTIFACTS / "baseline-0.1.68"
         METRICS.clear()
-        run_gui(packages, has_track_picker=False)
+        run_gui(packages)
 
 
 if __name__ == "__main__":
