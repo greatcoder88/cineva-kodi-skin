@@ -219,6 +219,60 @@ def feature_metadata(theme):
             )
 
 
+def search_detail_variables(theme):
+    use_show = "Control.HasFocus(19012) | String.IsEmpty(Container(19011).ListItem.Label)"
+    for name, field in (("Title", "Label"), ("Year", "Year"), ("Genre", "Genre"), ("Plot", "Plot")):
+        var = ET.SubElement(theme, "variable", {"name": f"FrameSearch{name}"})
+        for container, condition in ((19012, use_show), (19011, "")):
+            attrs = {"condition": condition} if condition else {}
+            ET.SubElement(var, "value", attrs).text = f"$INFO[Container({container}).ListItem.{field}{',  •  ' if name == 'Genre' else ''}]"
+
+
+def apply_home_rating_slots(xml):
+    """Keep configured Nimbus slots and use media-item scores before remote scores."""
+    path = xml / "Variables_Ratings.xml"
+    tree = read_xml(path)
+    root = tree.getroot()
+    template = deepcopy(root.find("include[@name='HorizontalRatingSlotTemplate']"))
+    template.set("name", "FrameHomeRatingSlot")
+    layout = template.find("control")
+    layout.find("visible").text = "$PARAM[rating_visible]"
+    layout.find("control[@type='label']").set("id", "$PARAM[control_id]")
+    root.append(template)
+
+    local_scores = (
+        ("imdb", "Rating(imdb)", "Integer.IsGreater(ListItem.Votes(imdb),0)", "", "imdb.png"),
+        ("rtc", "Property(Rating.tomatoes.Percent)", "!String.IsEmpty(ListItem.Property(Rating.tomatoes.Percent))",
+         "%", "rtfresh.png"),
+    )
+    slots = ET.SubElement(root, "include", {"name": "FrameHomeRatings"})
+    group = ET.SubElement(slots, "control", {"type": "grouplist"})
+    set_fields(group, {"orientation": "horizontal", "width": "1100", "height": "42",
+                       "itemgap": "12", "align": "left"})
+    for slot in range(1, 7):
+        available_scores = []
+        label = ET.SubElement(root, "variable", {"name": f"FrameRating{slot}Value"})
+        icon = ET.SubElement(root, "variable", {"name": f"FrameRating{slot}Image"})
+        for source, field, present, suffix, image in local_scores:
+            available = f"String.IsEqual(Skin.String(RatingSlot{slot}),{source}) + {present}"
+            available_scores.append(available)
+            ET.SubElement(label, "value", {"condition": available}).text = f"$INFO[ListItem.{field},,{suffix}]"
+            ET.SubElement(icon, "value", {"condition": available}).text = f"special://skin/resources/rating_images/{image}"
+        stock = root.find(f"variable[@name='Rating{slot}ValueVar']")
+        for value in stock.findall("value"):
+            field = value.text.split("$INFO[", 1)[1].split("]", 1)[0]
+            test = f"$EXP[FrameRatingCurrent] + {value.get('condition')} + !String.IsEmpty({field})"
+            available_scores.append(test)
+            ET.SubElement(label, "value", {"condition": test}).text = value.text
+        ET.SubElement(icon, "value", {"condition": "$EXP[FrameRatingCurrent]"}).text = f"$VAR[Rating{slot}ImageVar]"
+        control = ET.SubElement(group, "include", {"content": "FrameHomeRatingSlot"})
+        for name, value in (("rating_slot", f"RatingSlot{slot}"), ("rating_image", f"$VAR[FrameRating{slot}Image]"),
+                            ("rating_value", f"$VAR[FrameRating{slot}Value]"), ("control_id", str(8990 + slot)),
+                            ("rating_visible", " | ".join(f"[{test}]" for test in available_scores))):
+            ET.SubElement(control, "param", {"name": name, "value": value})
+    write_xml(tree, path)
+
+
 def apply_search(xml):
     path = xml / "Custom_1121_SearchResults.xml"
     tree = read_xml(path)
@@ -234,14 +288,14 @@ def apply_search(xml):
     results_list.remove(results_list.find("include[@content='Animation_Widget_Poster_Slide']"))
     results_list.insert(0, ET.Element("itemgap"))
     results_list.insert(0, ET.Element("height"))
-    set_fields(results_list, {"height": "827", "itemgap": "4"})
+    set_fields(results_list, {"height": "827", "itemgap": "10"})
     content = next(group for group in controls.findall("control") if results_group in group)
     content.remove(content.find("include[@content='TopBar']"))
     preview = next(group for group in content.iter("control") if group.find("include[.='FlixPanel']") is not None)
     preview_parent = next(group for group in content.iter("control") if preview in group)
     preview_parent.remove(preview)
     chrome = ET.Element("control", {"type": "group"})
-    set_fields(chrome, {"left": "72", "top": "153", "width": "1280", "height": "76",
+    set_fields(chrome, {"left": "72", "top": "153", "width": "1090", "height": "76",
                         "visible": "!String.IsEmpty(Window(Home).Property(nimbus.search.input))"})
     ET.SubElement(chrome, "include").text = "SearchMenuAnimations"
     surface = ET.SubElement(chrome, "control", {"type": "image"})
@@ -253,6 +307,8 @@ def apply_search(xml):
                        "font": "FramePanelTitle", "textcolor": "unfocused_text",
                        "label": "$INFO[Window(Home).Property(nimbus.search.input)]"})
     content.insert(list(content).index(results_group), chrome)
+    details = ET.SubElement(content, "include")
+    details.text = "FrameSearchDetails"
 
     history = find_control(root, 9000)
     set_fields(history, {"top": "300", "width": "555", "scrolltime": "175"})
@@ -289,7 +345,7 @@ def apply_search(xml):
     for widget in results.findall("include"):
         list_id = widget.find("param[@name='list_id']")
         if list_id is not None and list_id.get("value") in {"19011", "19012"}:
-            widget.set("content", "WidgetListLandscape")
+            widget.set("content", "FrameSearchPosters")
     write_xml(tree, path)
 
     path = xml / "Variables_Search.xml"
@@ -367,12 +423,6 @@ def apply_settings_and_dialogs(xml):
     accent = find_control(root, 63703)
     set_fields(accent, {"label": "Frame accent color", "label2": "$VAR[FrameAccentLabel]",
                          "onclick": "RunPlugin(plugin://script.frame.nimbus/?kind=accent)"})
-    parent = next(node for node in root.iter("control") if accent in list(node))
-    adaptive = ET.Element("control", {"type": "radiobutton", "id": "63730"})
-    set_fields(adaptive, {"label": "Match card focus to poster colors", "include": "DefaultSettingButton",
-                           "selected": "Skin.HasSetting(Frame.AdaptiveAccent)",
-                           "onclick": "Skin.ToggleSetting(Frame.AdaptiveAccent)"})
-    parent.insert(list(parent).index(accent) + 1, adaptive)
     write_xml(tree, path)
 
     for name in ("Settings.xml", "SettingsCategory.xml", "Custom_1107_SearchDialog.xml"):
@@ -596,6 +646,28 @@ def write_rgba_png(path, width, height, rows):
                      + chunk(b"IDAT", zlib.compress(rows, 9)) + chunk(b"IEND", b""))
 
 
+def write_focus_glow(skin, name, width, height):
+    """Bake the accent ring and its falloff into a single focus-only texture."""
+    inset = 6
+    radius = 13
+    render_width, render_height = width + 2 * inset, height + 2 * inset
+    rows = bytearray()
+    for y in range(render_height):
+        rows.append(0)
+        for x in range(render_width):
+            dx = abs(x - (render_width - 1) / 2) - (width / 2 - radius)
+            dy = abs(y - (render_height - 1) / 2) - (height / 2 - radius)
+            distance = math.hypot(max(dx, 0), max(dy, 0)) + min(max(dx, dy), 0) - radius
+            if -2.5 <= distance <= 1.25:
+                alpha = 255
+            elif 1.25 < distance < 6:
+                alpha = round(148 * ((6 - distance) / 4.75) ** 1.4)
+            else:
+                alpha = round(max(0, 1 - abs(distance + 2.5)) * 220)
+            rows.extend((255, 255, 255, alpha))
+    write_rgba_png(skin / f"media/frame/focus-{name}.png", render_width, render_height, rows)
+
+
 def write_playback_textures(skin):
     media = skin / "media/frame"
     rows = b"".join(bytes((0, 4, 7, 12, round(253 * (1 - (1 - y / 127) ** 2.4)))) for y in range(128))
@@ -716,6 +788,19 @@ def apply_video_cards(xml):
             group = item.find("control")
             set_fields(group, {"left": "72", "top": "12"})
             group.find(f"include[@content='{original}']").set("content", f"Frame{kind}Card")
+    search = deepcopy(root.find("include[@name='WidgetListPoster']"))
+    search.set("name", "FrameSearchPosters")
+    fixedlist = search.find("definition/control[@type='fixedlist']")
+    set_fields(fixedlist, {"right": "772", "height": "287", "movement": "4"})
+    for layout in (fixedlist.find("itemlayout"), fixedlist.find("focusedlayout")):
+        layout.attrib.update(width="186", height="287")
+        group = layout.find("control")
+        group.find("include[@content='FramePosterCard']").set("content", "FrameSearchPosterCard")
+        for name in ("HomeTrailerControl", "ClearLandscapeProperties"):
+            include = group.find(f"include[.='{name}']")
+            if include is not None:
+                group.remove(include)
+    root.append(search)
     category = root.find("include[@name='CategoryLabel']/definition/control")
     set_fields(category, {"left": "72", "top": "37", "height": "56"})
     for control in category.findall("control[@type='label']"):
@@ -782,6 +867,7 @@ def apply_theme(skin, theme_source):
     apply_palette(skin)
     apply_typography(xml)
     apply_home(xml)
+    apply_home_rating_slots(xml)
     apply_search(xml)
     apply_title_details(xml)
     apply_settings_and_dialogs(xml)
@@ -789,12 +875,15 @@ def apply_theme(skin, theme_source):
     apply_video_cards(xml)
     apply_motion(xml)
     write_feature_mask(skin)
+    for name, width, height in (("poster", 276, 409), ("landscape", 420, 236), ("search", 168, 252)):
+        write_focus_glow(skin, name, width, height)
     write_rgba_png(skin / "media/frame/landscape-empty.png", 1, 1, bytes((0, 27, 35, 45, 255)))
     write_playback_textures(skin)
     target = xml / theme_source.name
     theme = read_xml(theme_source)
     feature_metadata(theme.getroot())
     track_panel_geometry(theme.getroot())
+    search_detail_variables(theme.getroot())
     write_xml(theme, target)
     include_path = xml / "Includes.xml"
     includes = read_xml(include_path)

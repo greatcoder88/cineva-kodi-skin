@@ -23,7 +23,7 @@ ARTIFACTS = ROOT / "artifacts/frame-gui"
 MOVIES = "plugin://plugin.video.pov/?action=movies"
 SHOWS = "plugin://plugin.video.pov/?action=tvshows"
 PLAYBACK_FIXTURE = PROFILE / "userdata/frame-playback.mkv"
-BASELINE = "09e16ccc19d3baf4b4c02199c731525facadc13e"
+BASELINE = "d5b65b5b816ae6266d20ebb367b14d3fa129003a"
 METRICS = {}
 DEPENDENCIES = {
     "certifi": "2023.5.7",
@@ -265,7 +265,7 @@ def focused_card(container, prefix):
     return rpc("XBMC.GetInfoLabels", labels=[field])[field].startswith(prefix)
 
 
-def verify_home(has_track_picker):
+def verify_home(has_track_picker, redesigned):
     wait_for("Kodi JSON-RPC is ready", lambda: rpc("JSONRPC.Ping") == "pong", timeout=100)
     for name in DEPENDENCIES:
         rpc("Addons.SetAddonEnabled", addonid=f"script.module.{name}", enabled=True)
@@ -331,14 +331,23 @@ def verify_home(has_track_picker):
     wait_for("Right moves to a second movie card", lambda: focused_card(19011, "The Dark Knight"))
     if has_track_picker:
         rpc("Files.GetDirectory", directory="plugin://plugin.video.pov/?action=hold_ratings", media="files")
-        fallback = "Control.IsVisible(8984)"
-        wait_for("Enriched ratings are shown only for their matching title",
-                 lambda: not rpc("XBMC.GetInfoBooleans", booleans=[fallback])[fallback])
-        press("left")
-        wait_for("Previous title uses its own rating even while the old response remains",
-                 lambda: focused_card(19011, "The Shawshank Redemption")
-                 and rpc("XBMC.GetInfoBooleans", booleans=[fallback])[fallback]
-                 and "8.4" in rpc("XBMC.GetInfoLabels", labels=[rating])[rating])
+        if redesigned:
+            slot = "Control.GetLabel(8991)"
+            wait_for("IMDb stays on the focused item's native score instead of switching to the delayed response",
+                     lambda: rpc("XBMC.GetInfoLabels", labels=[slot])[slot] in {"9", "9.0"})
+            press("left")
+            wait_for("The same rating slot updates to the previous title immediately",
+                     lambda: focused_card(19011, "The Shawshank Redemption")
+                     and "8.4" in rpc("XBMC.GetInfoLabels", labels=[slot])[slot])
+        else:
+            fallback = "Control.IsVisible(8984)"
+            wait_for("Enriched ratings are shown only for their matching title",
+                     lambda: not rpc("XBMC.GetInfoBooleans", booleans=[fallback])[fallback])
+            press("left")
+            wait_for("Previous title uses its own rating even while the old response remains",
+                     lambda: focused_card(19011, "The Shawshank Redemption")
+                     and rpc("XBMC.GetInfoBooleans", booleans=[fallback])[fallback]
+                     and "8.4" in rpc("XBMC.GetInfoLabels", labels=[rating])[rating])
         press("right")
         wait_for("Return to the second title", lambda: focused_card(19011, "The Dark Knight"))
     press("info")
@@ -365,7 +374,7 @@ def verify_home(has_track_picker):
              lambda: window_id() == 10000 and focused_card(19012, "Breaking Bad"))
 
 
-def verify_search_and_settings():
+def verify_search_and_settings(redesigned):
     press("back")
     wait_for("Home side menu regains focus", lambda: has_focus(9000))
     press("up")
@@ -398,6 +407,17 @@ def verify_search_and_settings():
             movie: "The Dark Knight", show: "Dark",
         }
     ))
+    if redesigned:
+        year, details = "Control.GetLabel(8892)", "Control.IsVisible(8893)"
+        wait_for("Search shows the movie's release year and description panel",
+                 lambda: "2008" in rpc("XBMC.GetInfoLabels", labels=[year])[year]
+                 and rpc("XBMC.GetInfoBooleans", booleans=[details])[details])
+        press("down")
+        wait_for("Moving to TV results shows that title's release year",
+                 lambda: has_focus(19012) and "2017" in rpc("XBMC.GetInfoLabels", labels=[year])[year])
+        screenshot("search-tv-result-details")
+        press("up")
+        wait_for("Returning to movies restores the movie details", lambda: has_focus(19011))
     screenshot("search-results")
 
     rpc("GUI.ActivateWindow", window="skinsettings")
@@ -495,7 +515,7 @@ def verify_playback_osd(has_track_picker):
 
 
 
-def run_gui(packages, has_track_picker=True):
+def run_gui(packages, has_track_picker=True, redesigned=True):
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
     stage_profile(packages)
     trace_library = ARTIFACTS / "frame-swap-trace.so"
@@ -508,8 +528,8 @@ def run_gui(packages, has_track_picker=True):
                                  "tv.kodi.Kodi//beta", "--standalone", "--windowing=x11"],
                                 stdout=console, stderr=subprocess.STDOUT)
         try:
-            verify_home(has_track_picker)
-            verify_search_and_settings()
+            verify_home(has_track_picker, redesigned)
+            verify_search_and_settings(redesigned)
             measure_addon_browser()
             verify_source_picker()
             verify_playback_osd(has_track_picker)
@@ -550,9 +570,9 @@ def main():
         packages = baseline / "packages"
         subprocess.run(["python3", str(baseline / "tools/build_frame.py"), "--output", str(packages)], check=True)
         shutil.move(PROFILE, baseline / "candidate-profile")
-        ARTIFACTS = ARTIFACTS / "baseline-0.1.68"
+        ARTIFACTS = ARTIFACTS / "baseline-0.1.69"
         METRICS.clear()
-        run_gui(packages)
+        run_gui(packages, redesigned=False)
 
 
 if __name__ == "__main__":
