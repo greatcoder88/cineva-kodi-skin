@@ -249,13 +249,17 @@ def search_detail_variables(theme):
     for name, field in (("Title", "Label"), ("Year", "Year"), ("Genre", "Genre"), ("Plot", "Plot")):
         var = ET.SubElement(theme, "variable", {"name": f"FrameSearch{name}"})
         suffix = ",  •  " if name == "Genre" else ""
+        for container in (19011, 19012):
+            ET.SubElement(var, "value", {
+                "condition": f"Control.HasFocus({container})",
+            }).text = f"$INFO[Container({container}).ListItem.{field}{suffix}]"
         ET.SubElement(var, "value", {
             "condition": "ControlGroup(2000).HasFocus + !String.IsEmpty(ListItem.Label)",
         }).text = f"$INFO[ListItem.{field}{suffix}]"
-        ET.SubElement(var, "value", {
-            "condition": "!String.IsEmpty(Container(19011).ListItem.Label)",
-        }).text = f"$INFO[Container(19011).ListItem.{field}{suffix}]"
-        ET.SubElement(var, "value").text = f"$INFO[Container(19012).ListItem.{field}{suffix}]"
+        for container in (19011, 19012):
+            ET.SubElement(var, "value", {
+                "condition": f"!String.IsEmpty(Container({container}).ListItem.Label)",
+            }).text = f"$INFO[Container({container}).ListItem.{field}{suffix}]"
 
 
 def apply_home_rating_slots(xml):
@@ -875,6 +879,12 @@ def apply_video_cards(xml):
     fixedlist = search.find("definition/control[@type='fixedlist']")
     fixedlist.remove(fixedlist.find("include[@content='WidgetVisibilityAnimations']"))
     fixedlist.remove(fixedlist.find("animation"))
+    # The two primary shelves are always inside the same viewport. Link them
+    # directly when both have results, retaining normal navigation for others.
+    for direction, source, target in (("ondown", 19011, 19012), ("onup", 19012, 19011)):
+        ET.SubElement(fixedlist, direction, {
+            "condition": f"Integer.IsEqual($PARAM[list_id],{source}) + Control.IsVisible({target}) + Integer.IsGreater(Container({target}).NumItems,0)",
+        }).text = f"SetFocus({target})"
     set_fields(fixedlist, {"right": "685", "height": "362", "top": "6", "movement": "3"})
     for layout in (fixedlist.find("itemlayout"), fixedlist.find("focusedlayout")):
         layout.attrib.update(width="235", height="362")
