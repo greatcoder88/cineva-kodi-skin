@@ -79,6 +79,12 @@ def main():
     handle = int(sys.argv[1])
     query = parse_qs(sys.argv[2].lstrip("?")) if len(sys.argv) > 2 else {}
     action = query.get("action", [""])[-1]
+    if action == "source_picker":
+        rows = [f"Source {index:02d} · 1080p" for index in range(1, 25)]
+        chosen = xbmcgui.Dialog().select("Frame source list fixture", rows)
+        xbmcgui.Window(10000).setProperty("FrameSourceFixtureSelection", str(chosen))
+        xbmcplugin.setResolvedUrl(handle, False, xbmcgui.ListItem())
+        return
     search_term = query.get("query", [""])[-1].strip().casefold()
     # Kodi invokes default.py with the add-on root in sys.argv[0]; nested
     # plugin:// paths are not preserved there. Route playback explicitly via

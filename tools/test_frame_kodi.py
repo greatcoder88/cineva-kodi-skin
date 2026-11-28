@@ -289,6 +289,21 @@ def verify_search_and_settings():
     screenshot("skin-settings")
 
 
+def verify_source_picker():
+    rpc("Player.Open", item={"file": "plugin://plugin.video.pov/?action=source_picker"})
+    wait_for("Kodi opens the simulated source list", lambda: window_id() == 12000 and has_focus(3))
+    for index in range(2, 5):
+        press("down")
+        field = "Container(3).ListItem.Label"
+        wait_for(f"Source focus moves to row {index}",
+                 lambda: rpc("XBMC.GetInfoLabels", labels=[field])[field].startswith(f"Source {index:02d}"))
+    screenshot("source-picker")
+    press("select")
+    prop = "Window(Home).Property(FrameSourceFixtureSelection)"
+    wait_for("The source picker returns the selected result",
+             lambda: rpc("XBMC.GetInfoLabels", labels=[prop])[prop] == "3")
+
+
 def verify_playback_osd():
     rpc("Player.Open", item={"file": str(PLAYBACK_FIXTURE)})
     wait_for("Kodi starts the local video fixture", lambda: window_id() == 12005 and rpc("Player.GetActivePlayers"))
@@ -359,6 +374,7 @@ def main():
         try:
             verify_home()
             verify_search_and_settings()
+            verify_source_picker()
             verify_playback_osd()
         except Exception:
             try:

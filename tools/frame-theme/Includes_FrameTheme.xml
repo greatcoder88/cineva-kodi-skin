@@ -52,7 +52,6 @@
       <control type="group">
         <width>306</width>
         <height>172</height>
-        <animation effect="zoom" start="100" end="103" center="auto" time="85" tween="cubic" easing="out" condition="$PARAM[focused] + Control.HasFocus($PARAM[list_id])">Conditional</animation>
         <control type="image">
           <texture diffuse="masks/flixscape-widget.png" colordiffuse="primary_content_panel_bg">colors/white.png</texture>
         </control>
@@ -86,8 +85,8 @@
         <control type="image">
           <left>12</left>
           <top>8</top>
-          <width>28</width>
-          <height>4</height>
+          <width>38</width>
+          <height>5</height>
           <texture border="2" colordiffuse="frame_track_accent">masks/focus-long.png</texture>
           <visible>$PARAM[focused] + Control.HasFocus($PARAM[list_id])</visible>
         </control>
@@ -100,7 +99,6 @@
       <control type="group">
         <width>188</width>
         <height>280</height>
-        <animation effect="zoom" start="100" end="103" center="auto" time="85" tween="cubic" easing="out" condition="$PARAM[focused] + Control.HasFocus($PARAM[list_id])">Conditional</animation>
         <control type="image">
           <texture diffuse="masks/poster-big.png" colordiffuse="primary_content_panel_bg">colors/white.png</texture>
         </control>
@@ -128,8 +126,8 @@
         <control type="image">
           <left>12</left>
           <top>8</top>
-          <width>28</width>
-          <height>4</height>
+          <width>38</width>
+          <height>5</height>
           <texture border="2" colordiffuse="frame_track_accent">masks/focus-long.png</texture>
           <visible>$PARAM[focused] + Control.HasFocus($PARAM[list_id])</visible>
         </control>
@@ -213,16 +211,8 @@
         <left>704</left>
         <width>1088</width>
         <height>568</height>
-        <texture background="true">$VAR[FrameFeatureArt]</texture>
+        <texture background="true" diffuse="frame/feature-mask.png">$VAR[FrameFeatureArt]</texture>
         <aspectratio align="right" aligny="center">keep</aspectratio>
-        <visible>$EXP[FrameFeatureHasFanart]</visible>
-        <fadetime>55</fadetime>
-      </control>
-      <control type="image">
-        <left>704</left>
-        <width>1088</width>
-        <height>568</height>
-        <texture>frame/feature-scrim.png</texture>
         <visible>$EXP[FrameFeatureHasFanart]</visible>
       </control>
       <control type="group">
@@ -294,11 +284,6 @@
         <width>$PARAM[width]</width>
         <height>24</height>
         <visible>ListItem.IsResumable + !String.IsEmpty(ListItem.PercentPlayed)</visible>
-        <control type="image">
-          <width>$PARAM[width]</width>
-          <height>24</height>
-          <texture border="8" colordiffuse="EC161B23">masks/focus-long.png</texture>
-        </control>
         <control type="progress">
           <left>7</left>
           <top>10</top>
@@ -316,6 +301,7 @@
           <aligny>center</aligny>
           <font>FrameProgress</font>
           <textcolor>unfocused_text</textcolor>
+          <shadowcolor>FF000000</shadowcolor>
           <label>$INFO[ListItem.PercentPlayed,,%]</label>
         </control>
       </control>

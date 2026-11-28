@@ -332,6 +332,36 @@ def apply_settings_and_dialogs(xml):
     write_xml(tree, path)
 
 
+def apply_source_dialogs(xml):
+    path = xml / "DialogBusy.xml"
+    tree = read_xml(path)
+    root = tree.getroot()
+    for animation in root.findall("animation"):
+        root.remove(animation)
+    busy = root.find("controls/control")
+    for animation in busy.findall("animation"):
+        busy.remove(animation)
+    spinner = next(control for control in busy.iter("control")
+                   if control.findtext("texture") == "loading.gif")
+    spinner.find("texture").attrib.clear()
+    set_fields(spinner, {"width": "56", "height": "56", "texture": "frame/loading-ring.png"})
+    ET.SubElement(spinner, "animation", {"effect": "rotate", "start": "0", "end": "360",
+                                         "center": "auto", "time": "850", "loop": "true",
+                                         "condition": "true"}).text = "Conditional"
+    write_xml(tree, path)
+
+    path = xml / "DialogSelect.xml"
+    tree = read_xml(path)
+    tree.getroot().remove(tree.getroot().find("include[.='Animation_DialogPopupOpenClose']"))
+    write_xml(tree, path)
+    path = xml / "Includes_DialogSelect.xml"
+    tree = read_xml(path)
+    layouts = tree.getroot().find("include[@name='DefaultDialogSelectLayout']")
+    for control in layouts.findall(".//control[@type='list']"):
+        set_fields(control, {"scrolltime": "75"})
+    write_xml(tree, path)
+
+
 def apply_playback(xml):
     path = xml / "VideoOSD.xml"
     tree = read_xml(path)
@@ -488,11 +518,10 @@ def apply_playback(xml):
     write_xml(tree, path)
 
 
-def write_feature_scrim(skin):
+def write_feature_mask(skin):
     # One small stretchable texture keeps the title legible over bright artwork.
     # Fade the edge of the artwork into the matching solid skin background.
     width, height = 224, 82
-    color = bytes.fromhex(PALETTE["background"][2:])
     rows = bytearray()
     for y in range(height):
         rows.append(0)
@@ -500,11 +529,11 @@ def write_feature_scrim(skin):
             horizontal = 1 - min(1, x / (width - 1) / 0.40)
             horizontal = horizontal ** 2 * (3 - 2 * horizontal)
             vertical = max(0, (y / (height - 1) - 0.65) / 0.35) ** 2
-            alpha = round(255 * (1 - (1 - horizontal) * (1 - vertical)))
-            rows.extend(color)
+            alpha = round(255 * (1 - horizontal) * (1 - vertical))
+            rows.extend((255, 255, 255))
             rows.append(alpha)
 
-    write_rgba_png(skin / "media/frame/feature-scrim.png", width, height, rows)
+    write_rgba_png(skin / "media/frame/feature-mask.png", width, height, rows)
 
 
 def write_rgba_png(path, width, height, rows):
@@ -520,6 +549,15 @@ def write_rgba_png(path, width, height, rows):
 def write_playback_textures(skin):
     media = skin / "media/frame"
     write_rgba_png(media / "transparent.png", 1, 1, bytes(5))
+    ring = bytearray()
+    for y in range(56):
+        ring.append(0)
+        for x in range(56):
+            dx, dy = x - 27.5, y - 27.5
+            edge = max(0, min(1, 2 - abs(math.hypot(dx, dy) - 23)))
+            sweep = (math.atan2(dy, dx) % math.tau) / math.tau
+            ring.extend((161, 235, 221, round(255 * edge * (0.12 + 0.88 * sweep ** 2))))
+    write_rgba_png(media / "loading-ring.png", 56, 56, ring)
     rows = b"".join(bytes((0, 4, 7, 12, round(253 * (1 - (1 - y / 127) ** 2.4)))) for y in range(128))
     write_rgba_png(media / "playback-scrim.png", 1, 128, rows)
 
@@ -658,10 +696,11 @@ def apply_theme(skin, theme_source):
     apply_search(xml)
     apply_title_details(xml)
     apply_settings_and_dialogs(xml)
+    apply_source_dialogs(xml)
     apply_playback(xml)
     apply_video_cards(xml)
     apply_motion(xml)
-    write_feature_scrim(skin)
+    write_feature_mask(skin)
     write_playback_textures(skin)
     target = xml / theme_source.name
     theme = read_xml(theme_source)
