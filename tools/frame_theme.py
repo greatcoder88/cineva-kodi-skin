@@ -138,7 +138,7 @@ def apply_home(xml):
         shelf.remove(slide)
         shelf.insert(0, ET.Element("itemgap"))
         shelf.insert(0, ET.Element("height"))
-        set_fields(shelf, {"height": "574", "itemgap": "12"})
+        set_fields(shelf, {"height": "574", "itemgap": "0"})
 
     content = next(group for group in root.iter("control") if widgets in group)
     top_bar = content.find("include[@content='TopBar']")
@@ -643,7 +643,9 @@ def apply_video_cards(xml):
     ):
         layout = root.find(f"include[@name='WidgetList{kind}']/definition")
         fixedlist = layout.find("control[@type='fixedlist']")
-        set_fields(fixedlist, {"movement": movement, "top": "118"})
+        # The grouplist stacks the heading before the card list. This top offset
+        # is additional padding, measured from the end of the heading control.
+        set_fields(fixedlist, {"movement": movement, "top": "18"})
         set_fields(fixedlist, {"height": "428" if kind == "Poster" else "210"})
         for tag in ("itemlayout", "focusedlayout"):
             item = fixedlist.find(tag)
