@@ -14,8 +14,8 @@ def request(method, **params):
     return json.loads(xbmc.executeJSONRPC(json.dumps(payload))).get("result")
 
 
-def add_track(handle, row, index):
-    item = xbmcgui.ListItem(label=row)
+def add_track(handle, row, index, secondary=""):
+    item = xbmcgui.ListItem(label=row, label2=secondary)
     item.setProperty("FrameTrackIndex", str(index))
     xbmcplugin.addDirectoryItem(handle, sys.argv[0], item)
 
@@ -61,11 +61,10 @@ def main():
         language = track.get("language", "")
         language = xbmc.convertLanguage(language, xbmc.ENGLISH_NAME) or language
         label = " · ".join(dict.fromkeys(filter(None, (language, track.get("name", "")))))
-        if audio and track.get("channels"):
-            label = f"{label}  ·  {track['channels']} ch".strip(" ·")
+        channels = f"{track['channels']} ch" if audio and track.get("channels") else ""
         if not label:
             label = str(track["index"] + 1)
-        add_track(handle, label, track["index"])
+        add_track(handle, label, track["index"], channels)
     xbmcplugin.endOfDirectory(handle, cacheToDisc=False)
 
 

@@ -7,6 +7,14 @@ import xml.etree.ElementTree as ET
 import zlib
 
 
+OSD_BUTTON_WIDTH = 112
+OSD_BUTTON_HEIGHT = 82
+OSD_BUTTON_GAP = 38
+TRACK_PANEL_WIDTH = 432
+TRACK_ROW_HEIGHT = 62
+TRACK_HEADER_HEIGHT = 92
+TRACK_PANEL_TAIL = 13
+
 PALETTE = {
     "primary_background": "FF091221",
     "primary_content_panel_bg": "FF1B232D",
@@ -22,7 +30,7 @@ PALETTE = {
     "frame_panel": "FF161E27",
     "frame_selection": "FF293844",
     "frame_track_accent": "FF72EBC5",
-    "frame_track_ring": "FF74808C",
+    "frame_track_focus": "FF2B4153",
     "focused_text": "FF141414",
     "unfocused_text": "FFF5F5F5",
     "artwork_dim": "FFFFFFFF",
@@ -169,6 +177,12 @@ def feature_metadata(theme):
     source_visible = " | ".join([focused_card, *section_labels])
     visibility = ET.SubElement(theme, "expression", {"name": "FrameFeatureVisible"})
     visibility.text = f"!Player.HasMedia + !String.IsEqual(Skin.String(HomeArtworkChoice),2) + [{source_visible}]"
+    ET.SubElement(theme, "expression", {"name": "FrameRatingCurrent"}).text = (
+        "!String.IsEmpty(Window(Home).Property(nimbus.frameRatingPath)) + "
+        "String.IsEqual(Window(Home).Property(nimbus.frameRatingPath),ListItem.FilenameAndPath) + "
+        "String.IsEqual(Window(Home).Property(nimbus.frameRatingLabel),ListItem.Label) + "
+        "String.IsEqual(Window(Home).Property(nimbus.frameRatingYear),ListItem.Year)"
+    )
     art_sources = ["[ControlGroup(2000).HasFocus + !String.IsEmpty(ListItem.Art(fanart))]"]
     art_sources.extend(
         f"[!ControlGroup(2000).HasFocus + String.IsEqual(Container(9000).ListItem.Property(id),{section}) + "
@@ -390,29 +404,25 @@ def apply_playback(xml):
         for kind in ("audio", "subtitle"):
             ET.SubElement(tree.getroot(), event).text = f"ClearProperty(FrameActiveTrack.{kind})"
         ET.SubElement(tree.getroot(), event).text = "ClearProperty(FrameTrackPicker)"
+    width = str(OSD_BUTTON_WIDTH)
+    height = str(OSD_BUTTON_HEIGHT)
+    gap = str(OSD_BUTTON_GAP)
     for group in default_osd.findall("control[@type='grouplist']"):
         if group.findtext("top") == "120":
             set_fields(group, {"top": "169", "height": "122"})
     transport = find_control(default_osd, 700)
-    set_fields(transport, {"left": "90", "width": "705", "align": "left", "itemgap": "24"})
-    for button in transport.findall("control[@type='button']"):
-        ET.SubElement(button, "texturenofocus").text = "frame/transparent.png"
-        button.insert(0, button.find("texturenofocus"))
+    set_fields(transport, {"left": "90", "width": "900", "align": "left", "itemgap": gap})
     play = find_control(transport, 703)
+    set_fields(play, {"textcolor": "frame_track_accent", "focusedcolor": "frame_track_accent"})
+    include = play.find("include")
+    play.remove(include)
+    play.append(include)
     stop = find_control(transport, 704)
     forward = find_control(transport, 705)
     transport.remove(stop)
     transport.insert(list(transport).index(forward) + 1, stop)
-    play_include = play.find("include")
-    play.remove(play_include)
-    set_fields(play, {"width": "68", "textcolor": "focused_text"})
-    for tag in ("texturefocus", "alttexturefocus", "texturenofocus", "alttexturenofocus"):
-        ET.SubElement(play, tag, {
-            "colordiffuse": "button_focus" if "nofocus" in tag else "frame_track_accent",
-        }).text = "frame/play-disc.png"
-    play.append(play_include)
     utilities = find_control(default_osd, 707)
-    set_fields(utilities, {"left": "1328", "width": "506", "align": "right", "itemgap": "38"})
+    set_fields(utilities, {"left": "1328", "width": "506", "align": "right", "itemgap": gap})
     buttons = {
         708: ("audio", "$LOCALIZE[292]", 8708, "Integer.IsGreater(VideoPlayer.AudioStreamCount,0)"),
         709: ("subtitles", "$LOCALIZE[287]", 8709, "VideoPlayer.HasSubtitles"),
@@ -425,13 +435,13 @@ def apply_playback(xml):
             utilities.remove(group)
             continue
         kind, title, list_id, availability = buttons[button_id]
-        set_fields(group, {"width": "112", "height": "122", "itemgap": "5", "align": "left"})
+        set_fields(group, {"width": width, "height": "122", "itemgap": "5", "align": "left"})
         group.remove(group.find("control[@type='label']"))
         for tag in ("include", "font", "label", "textoffsety"):
             element = button.find(tag)
             if element is not None:
                 button.remove(element)
-        set_fields(button, {"width": "112", "height": "82", "description": title,
+        set_fields(button, {"width": width, "height": height, "description": title,
                             "texturefocus": f"frame/{kind}-focus.png",
                             "texturenofocus": f"frame/{kind}.png"})
         # Slot links make the three-button row independent of stock utility IDs.
@@ -445,7 +455,7 @@ def apply_playback(xml):
         focus = f"Control.HasFocus({button_id})"
         if list_id:
             focus += f" | Control.HasFocus({list_id})"
-        set_fields(label, {"width": "112", "height": "30", "align": "center", "aligny": "center",
+        set_fields(label, {"width": width, "height": "30", "align": "center", "aligny": "center",
                            "label": title, "font": "FrameProgress", "textcolor": "unfocused_text", "visible": focus})
         if list_id:
             for visible in group.findall("visible"):
@@ -457,7 +467,7 @@ def apply_playback(xml):
             ET.SubElement(group, "onup").text = str(list_id)
             picker = ET.SubElement(controls, "include", {"content": "FramePlaybackTracks"})
             for name, value in (("button", button_id), ("id", list_id), ("kind", "audio" if button_id == 708 else "subtitle"),
-                                ("available", availability), ("right", 253 if button_id == 708 else 103), ("title", title)):
+                                ("available", availability), ("right", 226 if button_id == 708 else 76), ("title", title)):
                 ET.SubElement(picker, "param", {"name": name, "value": str(value)})
             # The helper uses singular "subtitle" as its picker state.
             if button_id == 709:
@@ -469,6 +479,24 @@ def apply_playback(xml):
     alternate_row.remove(alternate_row.find("top"))
     set_fields(alternate_row, {"bottom": "15"})
     alternate_osd.append(alternate_row)
+    alternate_transport = find_control(alternate_osd, 700)
+    set_fields(alternate_transport, {"bottom": "55", "height": height, "left": "90",
+                                     "width": "900", "itemgap": gap})
+    alternate_play = find_control(alternate_transport, 703)
+    set_fields(alternate_play, {"width": width, "height": height})
+    hitbox = find_control(alternate_play, 7031)
+    set_fields(hitbox, {"width": width, "height": height})
+    hitbox.remove(hitbox.find("animation"))
+    for tag, suffix in (("texturefocus", "-focus"), ("texturenofocus", "")):
+        texture = hitbox.find(tag)
+        texture.attrib.clear()
+        texture.text = f"frame/transport{suffix}.png"
+    for image in alternate_play.findall("control[@type='image']"):
+        animation = image.find("animation")
+        if animation is not None:
+            image.remove(animation)
+        set_fields(image, {"left": "36", "top": "21"})
+        image.find("texture").set("colordiffuse", "frame_track_accent")
     write_xml(tree, path)
 
     path = xml / "Includes_Seekbar.xml"
@@ -508,20 +536,22 @@ def apply_playback(xml):
     buttons = tree.getroot()
     alternate = buttons.find("include[@name='OSDButton']")
     alternate.remove(alternate.find("animation"))
-    for tag, color in (("texturefocus", "button_focus"), ("texturenofocus", "frame_osd_control")):
-        texture = alternate.find(tag)
-        texture.attrib.update({"border": "22", "colordiffuse": color})
-        texture.text = "masks/focus.png"
+    set_fields(alternate, {"width": width, "height": height, "radioposx": "36", "radioposy": "21"})
+    for texture in alternate:
+        if texture.tag.startswith("textureradio") and texture.get("colordiffuse") != "disabled":
+            texture.set("colordiffuse", "osd_light")
     player = buttons.find("include[@name='PlayerButton']")
-    set_fields(player, {"width": "68", "height": "68", "align": "center", "aligny": "center",
+    set_fields(player, {"width": width, "height": height, "align": "center", "aligny": "center",
                         "textoffsetx": "0", "textoffsety": "0",
-                        "textcolor": "osd_light", "focusedcolor": "focused_text"})
-    for tag in ("texturefocus", "alttexturefocus"):
-        texture = player.find(tag)
-        texture.text = "masks/focus.png"
-        texture.attrib.update({"colordiffuse": "button_focus", "border": "22"})
-    for tag in ("texturenofocus", "alttexturenofocus"):
-        ET.SubElement(player, tag, {"colordiffuse": "frame_osd_control", "border": "22"}).text = "masks/focus.png"
+                        "textcolor": "osd_light", "focusedcolor": "osd_light"})
+    for button_include in (player, alternate):
+        for tag in ("texturefocus", "alttexturefocus", "texturenofocus", "alttexturenofocus"):
+            texture = button_include.find(tag)
+            if texture is None:
+                texture = ET.SubElement(button_include, tag)
+            texture.attrib.clear()
+            suffix = "-focus" if tag.endswith("focus") and "nofocus" not in tag else ""
+            texture.text = f"frame/transport{suffix}.png"
     for name in ("DefaultDialogButton", "DefaultSettingButton", "DefaultAddonSettingsButton"):
         definition = buttons.find(f"include[@name='{name}']/definition")
         for font in definition.iter("font"):
@@ -560,35 +590,66 @@ def write_rgba_png(path, width, height, rows):
 
 def write_playback_textures(skin):
     media = skin / "media/frame"
-    write_rgba_png(media / "transparent.png", 1, 1, bytes(5))
     rows = b"".join(bytes((0, 4, 7, 12, round(253 * (1 - (1 - y / 127) ** 2.4)))) for y in range(128))
     write_rgba_png(media / "playback-scrim.png", 1, 128, rows)
-
-    disc = bytearray()
-    for y in range(68):
-        disc.append(0)
-        for x in range(68):
-            distance = ((x - 33.5) ** 2 + (y - 33.5) ** 2) ** 0.5
-            alpha = round(255 * max(0, min(1, 34 - distance)))
-            disc.extend((255, 255, 255, alpha))
-    write_rgba_png(media / "play-disc.png", 68, 68, disc)
-
-    for kind, icon in (("audio", waveform_pixel), ("subtitles", captions_pixel), ("settings", gear_pixel)):
+    for kind, icon in (("transport", None), ("audio", waveform_pixel),
+                       ("subtitles", captions_pixel), ("settings", gear_pixel)):
         for active in (False, True):
             write_utility_texture(media, kind, icon, active)
 
-    pointer = bytearray()
-    for y in range(14):
-        pointer.append(0)
-        for x in range(25):
-            edge = 12 - abs(x - 12) - y
-            pointer.extend((116, 128, 140, 255) if edge == 0 else
-                           (22, 27, 35, 255) if edge > 0 else (0, 0, 0, 0))
-    write_rgba_png(media / "track-pointer.png", 25, 14, pointer)
+    for track_count in range(1, 5):
+        write_track_panel(media, track_count)
+
+
+def write_track_panel(media, track_count):
+    width = TRACK_PANEL_WIDTH
+    body = TRACK_HEADER_HEIGHT + TRACK_ROW_HEIGHT * track_count
+    height = body + TRACK_PANEL_TAIL
+    radius = 26
+    center = (width - 1) / 2
+    rows = bytearray()
+    for y in range(height):
+        rows.append(0)
+        for x in range(width):
+            if y < body:
+                dx = max(radius - x, x - (width - radius - 1), 0)
+                dy = max(radius - y, y - (body - radius - 1), 0)
+                edge = min(radius - math.hypot(dx, dy), x, width - 1 - x, y, body - 1 - y)
+            else:
+                edge = TRACK_PANEL_TAIL - abs(x - center) - (y - body)
+            if edge < 0:
+                rows.extend((0, 0, 0, 0))
+            elif edge < 1.4 and not (abs(x - center) < TRACK_PANEL_TAIL - 1 and y == body - 1):
+                rows.extend((82, 101, 121, 255))
+            else:
+                lift = round(9 * (1 - min(y, body) / body))
+                rows.extend((15 + lift, 24 + lift, 36 + lift, 250))
+    write_rgba_png(media / f"track-panel-{track_count}.png", width, height, rows)
+
+
+def track_panel_geometry(theme):
+    panel = theme.find("include[@name='FramePlaybackTracks']/definition/control")
+    track_list = panel.find("control[@type='list']")
+    set_fields(panel, {"width": str(TRACK_PANEL_WIDTH),
+                       "height": str(TRACK_HEADER_HEIGHT + 4 * TRACK_ROW_HEIGHT)})
+    for count in range(1, 5):
+        found = f"Container($PARAM[id]).NumItems"
+        condition = f"Integer.IsEqual({found},{count})" if count < 4 else f"!Integer.IsLess({found},4)"
+        if count < 4:
+            ET.SubElement(panel, "animation", {"effect": "slide", "end": f"0,{(4 - count) * TRACK_ROW_HEIGHT}",
+                                                "time": "0", "condition": condition}).text = "Conditional"
+        image = ET.Element("control", {"type": "image"})
+        set_fields(image, {"width": str(TRACK_PANEL_WIDTH),
+                           "height": str(TRACK_HEADER_HEIGHT + count * TRACK_ROW_HEIGHT + TRACK_PANEL_TAIL),
+                           "texture": f"frame/track-panel-{count}.png", "visible": condition})
+        panel.insert(count - 1, image)
+    set_fields(track_list, {"height": str(TRACK_ROW_HEIGHT * 4)})
+    for tag in ("itemlayout", "focusedlayout"):
+        track_list.find(tag).set("height", str(TRACK_ROW_HEIGHT))
 
 
 def write_utility_texture(media, kind, icon, active):
-    width, height, radius = 112, 82, 21
+    width, height, radius = OSD_BUTTON_WIDTH, OSD_BUTTON_HEIGHT, 21
     outline = (244, 248, 250) if active else (108, 124, 138)
     stroke = 3.2 if active else 2.4
     rows = bytearray()
@@ -598,7 +659,7 @@ def write_utility_texture(media, kind, icon, active):
             dx = max(radius - x, x - (width - radius - 1), 0)
             dy = max(radius - y, y - (height - radius - 1), 0)
             distance = math.hypot(dx, dy)
-            if icon(x - width / 2, y - height / 2):
+            if icon is not None and icon(x - width / 2, y - height / 2):
                 rows.extend((246, 250, 252, 255))
             elif distance >= radius:
                 rows.extend((0, 0, 0, 0))
@@ -714,6 +775,7 @@ def apply_theme(skin, theme_source):
     target = xml / theme_source.name
     theme = read_xml(theme_source)
     feature_metadata(theme.getroot())
+    track_panel_geometry(theme.getroot())
     write_xml(theme, target)
     include_path = xml / "Includes.xml"
     includes = read_xml(include_path)
