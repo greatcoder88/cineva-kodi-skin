@@ -136,8 +136,9 @@ def apply_home(xml):
         if slide is None or shelf.find("include[.='WidgetGroupListCommon']") is None:
             continue
         shelf.remove(slide)
+        shelf.insert(0, ET.Element("itemgap"))
         shelf.insert(0, ET.Element("height"))
-        set_fields(shelf, {"height": "574"})
+        set_fields(shelf, {"height": "574", "itemgap": "12"})
 
     content = next(group for group in root.iter("control") if widgets in group)
     top_bar = content.find("include[@content='TopBar']")
@@ -218,10 +219,14 @@ def apply_search(xml):
     set_fields(results_group, {"top": "262"})
     results_list = find_control(results_group, 19001)
     results_list.remove(results_list.find("include[@content='Animation_Widget_Poster_Slide']"))
+    results_list.insert(0, ET.Element("itemgap"))
     results_list.insert(0, ET.Element("height"))
-    set_fields(results_list, {"height": "764"})
+    set_fields(results_list, {"height": "764", "itemgap": "18"})
     content = next(group for group in controls.findall("control") if results_group in group)
     content.remove(content.find("include[@content='TopBar']"))
+    preview = next(group for group in content.iter("control") if group.find("include[.='FlixPanel']") is not None)
+    preview_parent = next(group for group in content.iter("control") if preview in group)
+    preview_parent.remove(preview)
     chrome = ET.Element("control", {"type": "group"})
     set_fields(chrome, {"left": "72", "top": "153", "width": "1280", "height": "76",
                         "visible": "!String.IsEmpty(Window(Home).Property(nimbus.search.input))"})
@@ -476,6 +481,9 @@ def apply_playback(xml):
             set_fields(control, {"height": "7"})
         if control.findtext("label") in {"$VAR[PlayerElapsedTimeVar]", "$VAR[PlayerTimeRemainingVar]"}:
             set_fields(control, {"top": "86", "height": "34", "font": "FrameProgress", "aligny": "center"})
+    end_time = seek_controls.find("control[label='$VAR[PlayerEndTimeVar]']")
+    if end_time is not None:
+        seek_controls.remove(end_time)
     backgrounds = tree.getroot().find("include[@name='OSDBackgrounds']")
     first = backgrounds.find("control")
     first.find("visible").text = f"String.IsEqual(Skin.String(OSDStyleSetting),1) + [{first.findtext('visible')}]"
@@ -636,8 +644,7 @@ def apply_video_cards(xml):
         layout = root.find(f"include[@name='WidgetList{kind}']/definition")
         fixedlist = layout.find("control[@type='fixedlist']")
         set_fields(fixedlist, {"movement": movement, "top": "118"})
-        if kind == "Poster":
-            set_fields(fixedlist, {"height": "428"})
+        set_fields(fixedlist, {"height": "428" if kind == "Poster" else "210"})
         for tag in ("itemlayout", "focusedlayout"):
             item = fixedlist.find(tag)
             item.set("width", width)

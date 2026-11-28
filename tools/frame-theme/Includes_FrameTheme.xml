@@ -213,18 +213,18 @@
       </control>
       <control type="group">
         <left>76</left>
-        <top>80</top>
+        <top>47</top>
         <control type="image">
           <top>2</top>
           <width>660</width>
-          <height>105</height>
+          <height>154</height>
           <aspectratio align="left" aligny="bottom">keep</aspectratio>
           <texture background="true">$VAR[FrameFeatureLogo]</texture>
           <visible>$EXP[FrameFeatureHasLogo]</visible>
         </control>
         <control type="textbox">
-          <width>820</width>
-          <height>110</height>
+          <width>920</width>
+          <height>168</height>
           <font>FrameHeroTitle</font>
           <aligny>bottom</aligny>
           <textcolor>unfocused_text</textcolor>
@@ -233,7 +233,7 @@
           <visible>!$EXP[FrameFeatureHasLogo]</visible>
         </control>
         <control type="label">
-          <top>121</top>
+          <top>174</top>
           <width>795</width>
           <height>42</height>
           <font>FrameTVLabel</font>
@@ -242,16 +242,16 @@
           <label>$VAR[FrameFeatureYear]$VAR[FrameFeatureGenre]$VAR[FrameFeatureRuntime]</label>
         </control>
         <control type="textbox">
-          <top>172</top>
+          <top>223</top>
           <width>750</width>
-          <height>123</height>
+          <height>113</height>
           <font>FrameBody</font>
           <textcolor>unfocused_text</textcolor>
           <shadowcolor>C8000000</shadowcolor>
           <label>$VAR[FrameFeaturePlot]</label>
         </control>
         <control type="group">
-          <top>309</top>
+          <top>351</top>
           <width>1100</width>
           <height>44</height>
           <visible>!Skin.HasSetting(Disable.AutoInfoRatings)</visible>
@@ -269,7 +269,7 @@
           </control>
         </control>
         <width>820</width>
-        <height>365</height>
+        <height>413</height>
       </control>
     </control>
   </include>
