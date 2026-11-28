@@ -431,7 +431,7 @@
         <width>$PARAM[width]</width>
         <height>$PARAM[height]</height>
         <visible>$PARAM[focused] + Control.HasFocus($PARAM[list_id])</visible>
-        <texture colordiffuse="$VAR[FrameAccent]">$PARAM[mask]</texture>
+        <texture colordiffuse="$VAR[FrameAccent]" border="20" infill="false">$PARAM[mask]</texture>
         <left>-6</left>
         <top>-6</top>
       </control>
