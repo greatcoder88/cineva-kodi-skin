@@ -310,17 +310,6 @@ def apply_settings_and_dialogs(xml):
     write_xml(tree, path)
 
 
-def apply_addon_browser(xml):
-    """Keep repository browsing on a stable canvas while the list moves."""
-    path = xml / "AddonBrowser.xml"
-    tree = read_xml(path)
-    controls = tree.getroot().find("controls")
-    artwork = next(group for group in controls.findall("control[@type='group']")
-                   if group.find("include[.='MediaMenuAnimations']") is not None)
-    controls.remove(artwork)
-    write_xml(tree, path)
-
-
 def apply_playback(xml):
     path = xml / "VideoOSD.xml"
     tree = read_xml(path)
@@ -372,9 +361,9 @@ def apply_playback(xml):
     write_xml(tree, path)
 
 
-def write_feature_scrim(skin):
+def write_feature_mask(skin):
     # One small stretchable texture keeps the title legible over bright artwork.
-    # Grayscale + alpha PNG, using a left-weighted falloff and transparent corners.
+    # White RGB contribution in a grayscale+alpha mask, blended with the artwork.
     width, height, radius = 224, 82, 3
     rows = bytearray()
     for y in range(height):
@@ -383,12 +372,12 @@ def write_feature_scrim(skin):
             dx = max(radius - x, x - (width - 1 - radius), 0)
             dy = max(radius - y, y - (height - 1 - radius), 0)
             alpha = round(28 + 184 * (1 - x / (width - 1)) ** 2)
-            rows.extend((0, alpha if dx * dx + dy * dy <= radius * radius else 0))
+            rows.extend((255, 255 - alpha if dx * dx + dy * dy <= radius * radius else 0))
 
     def chunk(kind, data):
         return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
 
-    path = skin / "media/frame/feature-scrim.png"
+    path = skin / "media/frame/feature-mask.png"
     path.parent.mkdir(parents=True, exist_ok=True)
     header = struct.pack(">IIBBBBB", width, height, 8, 4, 0, 0, 0)
     path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header)
@@ -447,11 +436,10 @@ def apply_theme(skin, theme_source):
     apply_search(xml)
     apply_title_details(xml)
     apply_settings_and_dialogs(xml)
-    apply_addon_browser(xml)
     apply_playback(xml)
     apply_video_cards(xml)
     apply_motion(xml)
-    write_feature_scrim(skin)
+    write_feature_mask(skin)
     target = xml / theme_source.name
     theme = read_xml(theme_source)
     feature_metadata(theme.getroot())
