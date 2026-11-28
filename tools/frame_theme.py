@@ -182,12 +182,27 @@ def feature_metadata(theme):
         "String.IsEqual(Window(Home).Property(nimbus.frameRatingLabel),ListItem.Label) + "
         "String.IsEqual(Window(Home).Property(nimbus.frameRatingYear),ListItem.Year)"
     )
-    art_sources = ["[ControlGroup(2000).HasFocus + !String.IsEmpty(ListItem.Art(fanart))]"]
-    art_sources.extend(
-        f"[!ControlGroup(2000).HasFocus + String.IsEqual(Container(9000).ListItem.Property(id),{section}) + "
-        f"!String.IsEmpty(Container({container}).ListItem.Art(fanart))]"
-        for section, container in sections
+    # Follow the user's Nimbus art preference while keeping fallbacks tied to the focused item.
+    art = ET.SubElement(theme, "variable", {"name": "FrameFeatureArt"})
+    art_sources = []
+    focus = "ControlGroup(2000).HasFocus"
+    prefer_landscape = (
+        "[String.IsEqual(Skin.String(HomeArtworkChoice),1) + String.IsEqual(Skin.String(HomeLandscapeFanart),0)] | "
+        "[$EXP[isEpisode] + String.IsEqual(Skin.String(HomeEpisodeArtworkChoice),2)]"
     )
+    for source, condition, field in (
+        ("ListItem", f"{focus} + [{prefer_landscape}]", "Art(landscape)"),
+        ("ListItem", focus, "Art(fanart)"),
+        ("ListItem", focus, "Art(landscape)"),
+        ("ListItem", focus, "Art(tvshow.fanart)"),
+        ("ListItem", f"{focus} + $EXP[isEpisode]", "Art(thumb)"),
+        *((f"Container({container}).ListItem",
+           f"!{focus} + String.IsEqual(Container(9000).ListItem.Property(id),{section})", field)
+          for section, container in sections for field in ("Art(fanart)", "Art(landscape)", "Art(tvshow.fanart)")),
+    ):
+        present = f"{condition} + !String.IsEmpty({source}.{field})"
+        art_sources.append(f"[{present}]")
+        ET.SubElement(art, "value", {"condition": present}).text = f"$INFO[{source}.{field}]"
     ET.SubElement(theme, "expression", {"name": "FrameFeatureHasFanart"}).text = " | ".join(art_sources)
     logo_sources = [f"[{focused_card} + !String.IsEmpty(ListItem.Art(clearlogo))]"]
     logo_sources.extend(
@@ -198,7 +213,7 @@ def feature_metadata(theme):
     logo_visible = ET.SubElement(theme, "expression", {"name": "FrameFeatureHasLogo"})
     logo_visible.text = f"Skin.HasSetting(Enable.Clearlogo) + [{' | '.join(logo_sources)}]"
     fields = {
-        "Title": ("Label", ""), "Art": ("Art(fanart)", ""), "Year": ("Year", ""),
+        "Title": ("Label", ""), "Year": ("Year", ""),
         "Genre": ("Genre", ",  •  "), "Runtime": ("Duration", ",  •  "), "Plot": ("Plot", ""), "Logo": ("Art(clearlogo)", ""),
         "Rating": ("Rating", ",★  "),
         "Tomatometer": ("Property(Rating.tomatoes.Percent)", ",   ·   RT  ,%"),
@@ -229,47 +244,55 @@ def search_detail_variables(theme):
 
 
 def apply_home_rating_slots(xml):
-    """Keep configured Nimbus slots and use media-item scores before remote scores."""
+    """Keep rating icons and slot geometry fixed while a title's scores resolve."""
     path = xml / "Variables_Ratings.xml"
     tree = read_xml(path)
     root = tree.getroot()
-    template = deepcopy(root.find("include[@name='HorizontalRatingSlotTemplate']"))
-    template.set("name", "FrameHomeRatingSlot")
-    layout = template.find("control")
-    layout.find("visible").text = "$PARAM[rating_visible]"
-    layout.find("control[@type='label']").set("id", "$PARAM[control_id]")
-    root.append(template)
-
+    sources = {
+        "imdb": "imdb.png", "rtc": "rtfresh.png", "rta": "popcorn.png",
+        "imdbpop": "blueflame.png", "tmdb": "tmdb.png", "mdblist": "mdblist.png",
+        "metacritic": "metacritic.png", "trakt": "trakt.png", "letterboxd": "letterboxd.png",
+    }
     local_scores = (
-        ("imdb", "Rating(imdb)", "Integer.IsGreater(ListItem.Votes(imdb),0)", "", "imdb.png"),
-        ("rtc", "Property(Rating.tomatoes.Percent)", "!String.IsEmpty(ListItem.Property(Rating.tomatoes.Percent))",
-         "%", "rtfresh.png"),
+        ("imdb", "Rating(imdb)", "Integer.IsGreater(ListItem.Votes(imdb),0)", ""),
+        ("rtc", "Property(Rating.tomatoes.Percent)", "!String.IsEmpty(ListItem.Property(Rating.tomatoes.Percent))", "%"),
     )
+    has_key = "!String.IsEmpty(Skin.String(valid_api_key))"
     slots = ET.SubElement(root, "include", {"name": "FrameHomeRatings"})
-    group = ET.SubElement(slots, "control", {"type": "grouplist"})
-    set_fields(group, {"orientation": "horizontal", "width": "1100", "height": "42",
-                       "itemgap": "12", "align": "left"})
+    rail = ET.SubElement(slots, "control", {"type": "grouplist"})
+    set_fields(rail, {"orientation": "horizontal", "width": "1100", "height": "44",
+                      "itemgap": "12", "align": "left"})
     for slot in range(1, 7):
-        available_scores = []
         label = ET.SubElement(root, "variable", {"name": f"FrameRating{slot}Value"})
         icon = ET.SubElement(root, "variable", {"name": f"FrameRating{slot}Image"})
-        for source, field, present, suffix, image in local_scores:
-            available = f"String.IsEqual(Skin.String(RatingSlot{slot}),{source}) + {present}"
-            available_scores.append(available)
+        default = {1: "imdb", 2: "rtc"}.get(slot)
+        conditions = {}
+        for source, asset in sources.items():
+            condition = f"[{has_key} + String.IsEqual(Skin.String(RatingSlot{slot}),{source})]"
+            if source == default:
+                condition = f"[{condition} | ![{has_key}]]"
+            conditions[source] = condition
+            ET.SubElement(icon, "value", {"condition": condition}).text = f"special://skin/resources/rating_images/{asset}"
+        for source, field, present, suffix in local_scores:
+            available = f"{conditions[source]} + {present}"
             ET.SubElement(label, "value", {"condition": available}).text = f"$INFO[ListItem.{field},,{suffix}]"
-            ET.SubElement(icon, "value", {"condition": available}).text = f"special://skin/resources/rating_images/{image}"
         stock = root.find(f"variable[@name='Rating{slot}ValueVar']")
         for value in stock.findall("value"):
             field = value.text.split("$INFO[", 1)[1].split("]", 1)[0]
-            test = f"$EXP[FrameRatingCurrent] + {value.get('condition')} + !String.IsEmpty({field})"
-            available_scores.append(test)
+            test = f"$EXP[FrameRatingCurrent] + {has_key} + {value.get('condition')} + !String.IsEmpty({field})"
             ET.SubElement(label, "value", {"condition": test}).text = value.text
-        ET.SubElement(icon, "value", {"condition": "$EXP[FrameRatingCurrent]"}).text = f"$VAR[Rating{slot}ImageVar]"
-        control = ET.SubElement(group, "include", {"content": "FrameHomeRatingSlot"})
-        for name, value in (("rating_slot", f"RatingSlot{slot}"), ("rating_image", f"$VAR[FrameRating{slot}Image]"),
-                            ("rating_value", f"$VAR[FrameRating{slot}Value]"), ("control_id", str(8990 + slot)),
-                            ("rating_visible", " | ".join(f"[{test}]" for test in available_scores))):
-            ET.SubElement(control, "param", {"name": name, "value": value})
+        ET.SubElement(label, "value").text = "—"
+        cell = ET.SubElement(rail, "control", {"type": "group"})
+        enabled = f"{has_key} + !String.IsEmpty(Skin.String(RatingSlot{slot})) + !String.IsEqual(Skin.String(RatingSlot{slot}),none)"
+        if default:
+            enabled = f"[{enabled}] | ![{has_key}]"
+        set_fields(cell, {"width": "138", "height": "42", "visible": enabled})
+        badge = ET.SubElement(cell, "control", {"type": "image", "id": str(8970 + slot)})
+        set_fields(badge, {"left": "0", "top": "4", "width": "55", "height": "32", "aspectratio": "keep",
+                           "texture": f"$VAR[FrameRating{slot}Image]"})
+        number = ET.SubElement(cell, "control", {"type": "label", "id": str(8990 + slot)})
+        set_fields(number, {"left": "64", "width": "74", "height": "42", "aligny": "center",
+                            "font": "FrameTab", "label": f"$VAR[FrameRating{slot}Value]", "textcolor": "unfocused_text"})
     write_xml(tree, path)
 
 
@@ -630,8 +653,9 @@ def write_feature_mask(skin):
         rows.append(0)
         vertical = min(1, (height - 1 - y) / 24)
         for x in range(width):
-            horizontal = min(1, x / 86)
-            alpha = round(255 * horizontal ** 1.6 * vertical ** 1.5)
+            horizontal = min(1, x / 98)
+            fade = horizontal * horizontal * (3 - 2 * horizontal)
+            alpha = round(255 * fade * vertical ** 1.35)
             rows.extend((255, 255, 255, alpha))
     write_rgba_png(skin / "media/frame/feature-mask.png", width, height, rows)
 

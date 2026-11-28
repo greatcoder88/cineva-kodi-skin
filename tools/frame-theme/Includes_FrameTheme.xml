@@ -197,13 +197,13 @@
       <height>612</height>
       <visible>$EXP[FrameFeatureVisible]</visible>
       <control type="image" id="8983">
-        <width>1350</width>
+        <width>1430</width>
         <height>612</height>
         <texture diffuse="frame/feature-mask.png" background="true">$VAR[FrameFeatureArt]</texture>
         <aspectratio align="right" aligny="center" scalediffuse="false">scale</aspectratio>
         <visible>$EXP[FrameFeatureHasFanart]</visible>
-        <fadetime>80</fadetime>
-        <left>570</left>
+        <fadetime>65</fadetime>
+        <left>490</left>
       </control>
       <control type="group">
         <left>76</left>
@@ -255,11 +255,11 @@
             <font>FrameTab</font>
             <textcolor>unfocused_text</textcolor>
             <label>$VAR[FrameFeatureRating]$VAR[FrameFeatureTomatometer]</label>
-            <visible>String.IsEmpty(Skin.String(valid_api_key)) | !ControlGroup(2000).HasFocus</visible>
+            <visible>!ControlGroup(2000).HasFocus</visible>
           </control>
           <control type="group">
             <visible>ControlGroup(2000).HasFocus</visible>
-            <include condition="!String.IsEmpty(Skin.String(valid_api_key))" content="FrameHomeRatings" />
+            <include>FrameHomeRatings</include>
           </control>
         </control>
         <width>820</width>

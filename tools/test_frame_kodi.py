@@ -319,7 +319,7 @@ def verify_home(has_track_picker, redesigned):
     panel = "Control.IsVisible(8985)"
     wait_for("the side menu hides while browsing cards",
              lambda: not rpc("XBMC.GetInfoBooleans", booleans=[panel])[panel])
-    rating = "Control.GetLabel(8984)"
+    rating = f"Control.GetLabel({8991 if redesigned else 8984})"
     wait_for("the focused title's Kodi rating is present in the hero",
              lambda: "8.4" in rpc("XBMC.GetInfoLabels", labels=[rating])[rating])
     fanart = "Control.IsVisible(8983)"
@@ -332,6 +332,10 @@ def verify_home(has_track_picker, redesigned):
     if has_track_picker:
         rpc("Files.GetDirectory", directory="plugin://plugin.video.pov/?action=hold_ratings", media="files")
         if redesigned:
+            missing_rt, rt_badge = "Control.GetLabel(8992)", "Control.IsVisible(8972)"
+            wait_for("Rotten Tomatoes icon stays visible with a dash while its score is missing",
+                     lambda: rpc("XBMC.GetInfoBooleans", booleans=[rt_badge])[rt_badge]
+                     and rpc("XBMC.GetInfoLabels", labels=[missing_rt])[missing_rt] == "—")
             slot = "Control.GetLabel(8991)"
             wait_for("IMDb stays on the focused item's native score instead of switching to the delayed response",
                      lambda: rpc("XBMC.GetInfoLabels", labels=[slot])[slot] in {"9", "9.0"})

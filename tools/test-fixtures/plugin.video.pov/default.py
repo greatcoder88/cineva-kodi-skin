@@ -85,6 +85,7 @@ def main():
             window.setProperty(f"nimbus.frameRating{prop}", xbmc.getInfoLabel(f"ListItem.{infolabel}"))
         window.setProperty("nimbus.imdbRating", "7.1")
         xbmc.executebuiltin("Skin.SetString(RatingSlot1,imdb)")
+        xbmc.executebuiltin("Skin.SetString(RatingSlot2,rtc)")
         xbmc.executebuiltin("Skin.SetString(valid_api_key,true)")
         xbmcplugin.endOfDirectory(handle, cacheToDisc=False)
         return
