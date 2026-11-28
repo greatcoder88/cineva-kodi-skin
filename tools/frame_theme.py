@@ -387,7 +387,8 @@ def apply_playback(xml):
                        if group.find("include[@content='Seekbar']") is not None)
     set_fields(default_osd, {"height": "295"})
     for event in ("onload", "onunload"):
-        ET.SubElement(tree.getroot(), event).text = "ClearProperty(FrameTracksRevision)"
+        for kind in ("audio", "subtitle"):
+            ET.SubElement(tree.getroot(), event).text = f"ClearProperty(FrameActiveTrack.{kind})"
         ET.SubElement(tree.getroot(), event).text = "ClearProperty(FrameTrackPicker)"
     for group in default_osd.findall("control[@type='grouplist']"):
         if group.findtext("top") == "120":

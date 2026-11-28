@@ -14,10 +14,9 @@ def request(method, **params):
     return json.loads(xbmc.executeJSONRPC(json.dumps(payload))).get("result")
 
 
-def add_track(handle, row, index, active):
+def add_track(handle, row, index):
     item = xbmcgui.ListItem(label=row)
     item.setProperty("FrameTrackIndex", str(index))
-    item.setProperty("FrameTrackActive", "true" if active else "false")
     xbmcplugin.addDirectoryItem(handle, sys.argv[0], item)
 
 
@@ -38,22 +37,26 @@ def main():
     tracks = state.get(listing, [])
     active = (state.get(current) or {}).get("index") if audio or state.get("subtitleenabled") else None
 
+    window = xbmcgui.Window(12901)
+    active_property = f"FrameActiveTrack.{kind}"
     selection = options.get("select", [""])[0]
     if selection:
         index = next((track["index"] for track in tracks if str(track["index"]) == selection), None)
+        result = None
         if audio and index is not None:
-            request("Player.SetAudioStream", playerid=player, stream=index)
+            result = request("Player.SetAudioStream", playerid=player, stream=index)
         elif not audio and (selection == "off" or index is not None):
-            request("Player.SetSubtitle", playerid=player,
-                    subtitle="off" if selection == "off" else index, enable=selection != "off")
-        window = xbmcgui.Window(12901)
-        revision = int(window.getProperty("FrameTracksRevision") or 0) + 1
-        window.setProperty("FrameTracksRevision", str(revision))
+            result = request("Player.SetSubtitle", playerid=player,
+                             subtitle="off" if selection == "off" else index, enable=selection != "off")
+        if result == "OK":
+            # Keep the list and its focus intact while reflecting the new selection.
+            window.setProperty(active_property, selection)
         xbmcplugin.endOfDirectory(handle, cacheToDisc=False)
         return
 
+    window.setProperty(active_property, str(active) if active is not None else "off")
     if not audio:
-        add_track(handle, xbmc.getLocalizedString(351), "off", active is None)
+        add_track(handle, xbmc.getLocalizedString(351), "off")
     for track in tracks:
         language = track.get("language", "")
         language = xbmc.convertLanguage(language, xbmc.ENGLISH_NAME) or language
@@ -62,7 +65,7 @@ def main():
             label = f"{label}  ·  {track['channels']} ch".strip(" ·")
         if not label:
             label = str(track["index"] + 1)
-        add_track(handle, label, track["index"], track["index"] == active)
+        add_track(handle, label, track["index"])
     xbmcplugin.endOfDirectory(handle, cacheToDisc=False)
 
 

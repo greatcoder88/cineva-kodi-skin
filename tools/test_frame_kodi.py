@@ -468,6 +468,8 @@ def verify_playback_osd(has_track_picker):
     selected = "Container(8709).ListItem.Property(FrameTrackIndex)"
     if rpc("XBMC.GetInfoLabels", labels=[selected])[selected] != "off":
         press("up")
+    wait_for("The Off row is focused before selecting",
+             lambda: rpc("XBMC.GetInfoLabels", labels=[selected])[selected] == "off")
     press("select")
     wait_for("Off disables subtitles",
              lambda: not rpc("Player.GetProperties", playerid=player,
