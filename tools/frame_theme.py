@@ -346,11 +346,14 @@ def apply_playback(xml):
     transport = find_control(default_osd, 700)
     set_fields(transport, {"left": "120", "width": "705", "align": "left", "itemgap": "14"})
     play = find_control(transport, 703)
+    play_include = play.find("include")
+    play.remove(play_include)
     set_fields(play, {"width": "68", "textcolor": "focused_text"})
     for tag in ("texturefocus", "alttexturefocus", "texturenofocus", "alttexturenofocus"):
         ET.SubElement(play, tag, {
             "colordiffuse": "button_focus" if "nofocus" in tag else "frame_track_accent",
         }).text = "frame/play-disc.png"
+    play.append(play_include)
     utilities = find_control(default_osd, 707)
     set_fields(utilities, {"left": "1010", "width": "790", "align": "right", "itemgap": "14"})
     for group in utilities.findall("control[@type='grouplist']"):
@@ -470,7 +473,7 @@ def write_rgba_png(path, width, height, rows):
 
 def write_playback_textures(skin):
     media = skin / "media/frame"
-    rows = b"".join(bytes((0, 4, 7, 12, round(250 * (y / 127) ** 1.6))) for y in range(128))
+    rows = b"".join(bytes((0, 4, 7, 12, round(253 * (1 - (1 - y / 127) ** 2.4)))) for y in range(128))
     write_rgba_png(media / "playback-scrim.png", 1, 128, rows)
 
     disc = bytearray()
