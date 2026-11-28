@@ -16,8 +16,8 @@ from frame_theme import apply_theme
 ROOT = Path(__file__).resolve().parents[1]
 THEME_SOURCE = ROOT / "tools/frame-theme/Includes_FrameTheme.xml"
 SKIN_ID = "skin.frame"
-SKIN_VERSION = "0.1.69"
-HELPER_VERSION = "0.0.57"
+SKIN_VERSION = "0.1.70"
+HELPER_VERSION = "0.0.58"
 HELPER_ID = "script.frame.nimbus"
 ADDONS = (
     ("ivarbrandt/skin.nimbus", "8b5071b8cd0db3a8e813eb00e9a821d3efad2454", SKIN_ID, "Frame"),
@@ -42,6 +42,13 @@ def patch_ratings_monitor(path):
          'self._set_ratings_from_cache(media_id, cached_ratings, meta["frame_selection"])'),
         ('self._update_window_properties(cached_data)',
          'self._update_window_properties(cached_data, meta["frame_selection"])'),
+        ('            if media_id != self.pending_id:\n                return\n\n            if result:',
+         '            if result:'),
+        ('                self._cache_ratings(media_id, result)\n                self._update_window_properties(result)',
+         '                self._cache_ratings(media_id, result)\n'
+         '                if media_id != self.pending_id:\n'
+         '                    return\n'
+         '                self._update_window_properties(result)'),
         ('self._update_window_properties(result)\n                self.last_set_id',
          'self._update_window_properties(result, meta["frame_selection"])\n                self.last_set_id'),
         ('    def _update_window_properties(self, result: Dict[str, Any]) -> None:\n'
@@ -83,34 +90,6 @@ def patch_ratings_monitor(path):
         source = source.replace(upstream, replacement, 1)
     compile(source, str(path), "exec")
     path.write_text(source, encoding="utf-8")
-
-
-def install_art_accent(root):
-    monitors = root / "resources/lib/modules/monitors"
-    accent = monitors / "art_accent.py"
-    accent.write_bytes(THEME_SOURCE.with_name(accent.name).read_bytes())
-    compile(accent.read_bytes(), str(accent), "exec")
-    image = monitors / "image.py"
-    source = image.read_text(encoding="utf-8")
-    for before, after in (
-        ("from ..image import ImageBlur", "from ..image import ImageBlur\nfrom .art_accent import ArtAccent"),
-        ("        self.daemon = True", "        self.daemon = True\n        self.art_accent = ArtAccent()"),
-        ("                if current_config.enabled:", """                adaptive = xbmc.getCondVisibility(
-                    "Skin.HasSetting(Frame.AdaptiveAccent) + ControlGroup(2000).HasFocus + "
-                    "[Window.IsActive(Home) | Window.IsActive(11121)]"
-                )
-                if adaptive:
-                    self.art_accent.tick()
-
-                if current_config.enabled:"""),
-        ("                else:\n                    monitor.waitForAbort(3)",
-         "                else:\n                    monitor.waitForAbort(0.2 if adaptive else 3)"),
-    ):
-        if source.count(before) != 1:
-            raise RuntimeError("Unexpected Nimbus image monitor source")
-        source = source.replace(before, after, 1)
-    compile(source, str(image), "exec")
-    image.write_text(source, encoding="utf-8")
 
 
 def package_addon(archive, root, output, addon_id, name):
@@ -156,7 +135,6 @@ def package_addon(archive, root, output, addon_id, name):
     else:
         manifest.set("version", HELPER_VERSION)
         patch_ratings_monitor(root / "resources/lib/modules/monitors/ratings.py")
-        install_art_accent(root)
         extension = ET.SubElement(manifest, "extension", {
             "point": "xbmc.python.pluginsource", "library": "resources/lib/playback_tracks.py",
         })

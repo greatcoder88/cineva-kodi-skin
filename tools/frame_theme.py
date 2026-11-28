@@ -182,12 +182,27 @@ def feature_metadata(theme):
         "String.IsEqual(Window(Home).Property(nimbus.frameRatingLabel),ListItem.Label) + "
         "String.IsEqual(Window(Home).Property(nimbus.frameRatingYear),ListItem.Year)"
     )
-    art_sources = ["[ControlGroup(2000).HasFocus + !String.IsEmpty(ListItem.Art(fanart))]"]
-    art_sources.extend(
-        f"[!ControlGroup(2000).HasFocus + String.IsEqual(Container(9000).ListItem.Property(id),{section}) + "
-        f"!String.IsEmpty(Container({container}).ListItem.Art(fanart))]"
-        for section, container in sections
+    # Follow the user's Nimbus art preference while keeping fallbacks tied to the focused item.
+    art = ET.SubElement(theme, "variable", {"name": "FrameFeatureArt"})
+    art_sources = []
+    focus = "ControlGroup(2000).HasFocus"
+    prefer_landscape = (
+        "[String.IsEqual(Skin.String(HomeArtworkChoice),1) + String.IsEqual(Skin.String(HomeLandscapeFanart),0)] | "
+        "[$EXP[isEpisode] + String.IsEqual(Skin.String(HomeEpisodeArtworkChoice),2)]"
     )
+    for source, condition, field in (
+        ("ListItem", f"{focus} + [{prefer_landscape}]", "Art(landscape)"),
+        ("ListItem", focus, "Art(fanart)"),
+        ("ListItem", focus, "Art(landscape)"),
+        ("ListItem", focus, "Art(tvshow.fanart)"),
+        ("ListItem", f"{focus} + $EXP[isEpisode]", "Art(thumb)"),
+        *((f"Container({container}).ListItem",
+           f"!{focus} + String.IsEqual(Container(9000).ListItem.Property(id),{section})", field)
+          for section, container in sections for field in ("Art(fanart)", "Art(landscape)", "Art(tvshow.fanart)")),
+    ):
+        present = f"{condition} + !String.IsEmpty({source}.{field})"
+        art_sources.append(f"[{present}]")
+        ET.SubElement(art, "value", {"condition": present}).text = f"$INFO[{source}.{field}]"
     ET.SubElement(theme, "expression", {"name": "FrameFeatureHasFanart"}).text = " | ".join(art_sources)
     logo_sources = [f"[{focused_card} + !String.IsEmpty(ListItem.Art(clearlogo))]"]
     logo_sources.extend(
@@ -198,7 +213,7 @@ def feature_metadata(theme):
     logo_visible = ET.SubElement(theme, "expression", {"name": "FrameFeatureHasLogo"})
     logo_visible.text = f"Skin.HasSetting(Enable.Clearlogo) + [{' | '.join(logo_sources)}]"
     fields = {
-        "Title": ("Label", ""), "Art": ("Art(fanart)", ""), "Year": ("Year", ""),
+        "Title": ("Label", ""), "Year": ("Year", ""),
         "Genre": ("Genre", ",  •  "), "Runtime": ("Duration", ",  •  "), "Plot": ("Plot", ""), "Logo": ("Art(clearlogo)", ""),
         "Rating": ("Rating", ",★  "),
         "Tomatometer": ("Property(Rating.tomatoes.Percent)", ",   ·   RT  ,%"),
@@ -219,6 +234,68 @@ def feature_metadata(theme):
             )
 
 
+def search_detail_variables(theme):
+    use_show = "Control.HasFocus(19012) | String.IsEmpty(Container(19011).ListItem.Label)"
+    for name, field in (("Title", "Label"), ("Year", "Year"), ("Genre", "Genre"), ("Plot", "Plot")):
+        var = ET.SubElement(theme, "variable", {"name": f"FrameSearch{name}"})
+        for container, condition in ((19012, use_show), (19011, "")):
+            attrs = {"condition": condition} if condition else {}
+            ET.SubElement(var, "value", attrs).text = f"$INFO[Container({container}).ListItem.{field}{',  •  ' if name == 'Genre' else ''}]"
+
+
+def apply_home_rating_slots(xml):
+    """Keep rating icons and slot geometry fixed while a title's scores resolve."""
+    path = xml / "Variables_Ratings.xml"
+    tree = read_xml(path)
+    root = tree.getroot()
+    sources = {
+        "imdb": "imdb.png", "rtc": "rtfresh.png", "rta": "popcorn.png",
+        "imdbpop": "blueflame.png", "tmdb": "tmdb.png", "mdblist": "mdblist.png",
+        "metacritic": "metacritic.png", "trakt": "trakt.png", "letterboxd": "letterboxd.png",
+    }
+    local_scores = (
+        ("imdb", "Rating(imdb)", "Integer.IsGreater(ListItem.Votes(imdb),0)", ""),
+        ("rtc", "Property(Rating.tomatoes.Percent)", "!String.IsEmpty(ListItem.Property(Rating.tomatoes.Percent))", "%"),
+    )
+    has_key = "!String.IsEmpty(Skin.String(valid_api_key))"
+    slots = ET.SubElement(root, "include", {"name": "FrameHomeRatings"})
+    rail = ET.SubElement(slots, "control", {"type": "grouplist"})
+    set_fields(rail, {"orientation": "horizontal", "width": "1100", "height": "44",
+                      "itemgap": "12", "align": "left"})
+    for slot in range(1, 7):
+        label = ET.SubElement(root, "variable", {"name": f"FrameRating{slot}Value"})
+        icon = ET.SubElement(root, "variable", {"name": f"FrameRating{slot}Image"})
+        default = {1: "imdb", 2: "rtc"}.get(slot)
+        conditions = {}
+        for source, asset in sources.items():
+            condition = f"[{has_key} + String.IsEqual(Skin.String(RatingSlot{slot}),{source})]"
+            if source == default:
+                condition = f"[{condition} | ![{has_key}]]"
+            conditions[source] = condition
+            ET.SubElement(icon, "value", {"condition": condition}).text = f"special://skin/resources/rating_images/{asset}"
+        for source, field, present, suffix in local_scores:
+            available = f"{conditions[source]} + {present}"
+            ET.SubElement(label, "value", {"condition": available}).text = f"$INFO[ListItem.{field},,{suffix}]"
+        stock = root.find(f"variable[@name='Rating{slot}ValueVar']")
+        for value in stock.findall("value"):
+            field = value.text.split("$INFO[", 1)[1].split("]", 1)[0]
+            test = f"$EXP[FrameRatingCurrent] + {has_key} + {value.get('condition')} + !String.IsEmpty({field})"
+            ET.SubElement(label, "value", {"condition": test}).text = value.text
+        ET.SubElement(label, "value").text = "—"
+        cell = ET.SubElement(rail, "control", {"type": "group"})
+        enabled = f"{has_key} + !String.IsEmpty(Skin.String(RatingSlot{slot})) + !String.IsEqual(Skin.String(RatingSlot{slot}),none)"
+        if default:
+            enabled = f"[{enabled}] | ![{has_key}]"
+        set_fields(cell, {"width": "138", "height": "42", "visible": enabled})
+        badge = ET.SubElement(cell, "control", {"type": "image", "id": str(8970 + slot)})
+        set_fields(badge, {"left": "0", "top": "4", "width": "55", "height": "32", "aspectratio": "keep",
+                           "texture": f"$VAR[FrameRating{slot}Image]"})
+        number = ET.SubElement(cell, "control", {"type": "label", "id": str(8990 + slot)})
+        set_fields(number, {"left": "64", "width": "74", "height": "42", "aligny": "center",
+                            "font": "FrameTab", "label": f"$VAR[FrameRating{slot}Value]", "textcolor": "unfocused_text"})
+    write_xml(tree, path)
+
+
 def apply_search(xml):
     path = xml / "Custom_1121_SearchResults.xml"
     tree = read_xml(path)
@@ -234,14 +311,14 @@ def apply_search(xml):
     results_list.remove(results_list.find("include[@content='Animation_Widget_Poster_Slide']"))
     results_list.insert(0, ET.Element("itemgap"))
     results_list.insert(0, ET.Element("height"))
-    set_fields(results_list, {"height": "827", "itemgap": "4"})
+    set_fields(results_list, {"height": "827", "itemgap": "10"})
     content = next(group for group in controls.findall("control") if results_group in group)
     content.remove(content.find("include[@content='TopBar']"))
     preview = next(group for group in content.iter("control") if group.find("include[.='FlixPanel']") is not None)
     preview_parent = next(group for group in content.iter("control") if preview in group)
     preview_parent.remove(preview)
     chrome = ET.Element("control", {"type": "group"})
-    set_fields(chrome, {"left": "72", "top": "153", "width": "1280", "height": "76",
+    set_fields(chrome, {"left": "72", "top": "153", "width": "1090", "height": "76",
                         "visible": "!String.IsEmpty(Window(Home).Property(nimbus.search.input))"})
     ET.SubElement(chrome, "include").text = "SearchMenuAnimations"
     surface = ET.SubElement(chrome, "control", {"type": "image"})
@@ -253,6 +330,8 @@ def apply_search(xml):
                        "font": "FramePanelTitle", "textcolor": "unfocused_text",
                        "label": "$INFO[Window(Home).Property(nimbus.search.input)]"})
     content.insert(list(content).index(results_group), chrome)
+    details = ET.SubElement(content, "include")
+    details.text = "FrameSearchDetails"
 
     history = find_control(root, 9000)
     set_fields(history, {"top": "300", "width": "555", "scrolltime": "175"})
@@ -289,7 +368,7 @@ def apply_search(xml):
     for widget in results.findall("include"):
         list_id = widget.find("param[@name='list_id']")
         if list_id is not None and list_id.get("value") in {"19011", "19012"}:
-            widget.set("content", "WidgetListLandscape")
+            widget.set("content", "FrameSearchPosters")
     write_xml(tree, path)
 
     path = xml / "Variables_Search.xml"
@@ -367,12 +446,6 @@ def apply_settings_and_dialogs(xml):
     accent = find_control(root, 63703)
     set_fields(accent, {"label": "Frame accent color", "label2": "$VAR[FrameAccentLabel]",
                          "onclick": "RunPlugin(plugin://script.frame.nimbus/?kind=accent)"})
-    parent = next(node for node in root.iter("control") if accent in list(node))
-    adaptive = ET.Element("control", {"type": "radiobutton", "id": "63730"})
-    set_fields(adaptive, {"label": "Match card focus to poster colors", "include": "DefaultSettingButton",
-                           "selected": "Skin.HasSetting(Frame.AdaptiveAccent)",
-                           "onclick": "Skin.ToggleSetting(Frame.AdaptiveAccent)"})
-    parent.insert(list(parent).index(accent) + 1, adaptive)
     write_xml(tree, path)
 
     for name in ("Settings.xml", "SettingsCategory.xml", "Custom_1107_SearchDialog.xml"):
@@ -580,8 +653,9 @@ def write_feature_mask(skin):
         rows.append(0)
         vertical = min(1, (height - 1 - y) / 24)
         for x in range(width):
-            horizontal = min(1, x / 86)
-            alpha = round(255 * horizontal ** 1.6 * vertical ** 1.5)
+            horizontal = min(1, x / 98)
+            fade = horizontal * horizontal * (3 - 2 * horizontal)
+            alpha = round(255 * fade * vertical ** 1.35)
             rows.extend((255, 255, 255, alpha))
     write_rgba_png(skin / "media/frame/feature-mask.png", width, height, rows)
 
@@ -594,6 +668,28 @@ def write_rgba_png(path, width, height, rows):
     header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
     path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header)
                      + chunk(b"IDAT", zlib.compress(rows, 9)) + chunk(b"IEND", b""))
+
+
+def write_focus_glow(skin, name, width, height):
+    """Bake the accent ring and its falloff into a single focus-only texture."""
+    inset = 6
+    radius = 13
+    render_width, render_height = width + 2 * inset, height + 2 * inset
+    rows = bytearray()
+    for y in range(render_height):
+        rows.append(0)
+        for x in range(render_width):
+            dx = abs(x - (render_width - 1) / 2) - (width / 2 - radius)
+            dy = abs(y - (render_height - 1) / 2) - (height / 2 - radius)
+            distance = math.hypot(max(dx, 0), max(dy, 0)) + min(max(dx, dy), 0) - radius
+            if -2.5 <= distance <= 1.25:
+                alpha = 255
+            elif 1.25 < distance < 6:
+                alpha = round(148 * ((6 - distance) / 4.75) ** 1.4)
+            else:
+                alpha = round(max(0, 1 - abs(distance + 2.5)) * 220)
+            rows.extend((255, 255, 255, alpha))
+    write_rgba_png(skin / f"media/frame/focus-{name}.png", render_width, render_height, rows)
 
 
 def write_playback_textures(skin):
@@ -716,6 +812,19 @@ def apply_video_cards(xml):
             group = item.find("control")
             set_fields(group, {"left": "72", "top": "12"})
             group.find(f"include[@content='{original}']").set("content", f"Frame{kind}Card")
+    search = deepcopy(root.find("include[@name='WidgetListPoster']"))
+    search.set("name", "FrameSearchPosters")
+    fixedlist = search.find("definition/control[@type='fixedlist']")
+    set_fields(fixedlist, {"right": "772", "height": "287", "movement": "4"})
+    for layout in (fixedlist.find("itemlayout"), fixedlist.find("focusedlayout")):
+        layout.attrib.update(width="186", height="287")
+        group = layout.find("control")
+        group.find("include[@content='FramePosterCard']").set("content", "FrameSearchPosterCard")
+        for name in ("HomeTrailerControl", "ClearLandscapeProperties"):
+            include = group.find(f"include[.='{name}']")
+            if include is not None:
+                group.remove(include)
+    root.append(search)
     category = root.find("include[@name='CategoryLabel']/definition/control")
     set_fields(category, {"left": "72", "top": "37", "height": "56"})
     for control in category.findall("control[@type='label']"):
@@ -758,6 +867,29 @@ def apply_motion(xml):
     write_xml(tree, path)
 
 
+def apply_existing_focus_glows(xml):
+    """Use Frame's accent in Nimbus artwork views that have focus glow controls."""
+    masks = {"masks/poster-glow.png", "masks/poster-glow-widget.png",
+             "masks/landscape-glow.png", "masks/flixscape-glow.png"}
+    names = ("View_52_IconWall.xml", "View_54_Flix.xml", "View_55_FlixScape.xml",
+             "Includes_HomeLayouts.xml", "Includes.xml")
+    for name in names:
+        path = xml / name
+        tree = read_xml(path)
+        changed = False
+        for control in tree.getroot().iter("control"):
+            texture = control.find("texture")
+            if texture is None or texture.text not in masks:
+                continue
+            texture.set("colordiffuse", "$VAR[FrameAccent]")
+            for animation in control.findall("include"):
+                if animation.get("content") == "GlowPulse" or animation.text == "Animation_FocusTextureFade":
+                    control.remove(animation)
+            changed = True
+        if changed:
+            write_xml(tree, path)
+
+
 def apply_accent(xml):
     """Route Frame's accent aliases through the same saved color."""
     aliases = {name for name, color in PALETTE.items() if color == "FF72EBC5"}
@@ -782,6 +914,7 @@ def apply_theme(skin, theme_source):
     apply_palette(skin)
     apply_typography(xml)
     apply_home(xml)
+    apply_home_rating_slots(xml)
     apply_search(xml)
     apply_title_details(xml)
     apply_settings_and_dialogs(xml)
@@ -789,12 +922,15 @@ def apply_theme(skin, theme_source):
     apply_video_cards(xml)
     apply_motion(xml)
     write_feature_mask(skin)
+    for name, width, height in (("poster", 276, 409), ("landscape", 420, 236), ("search", 168, 252)):
+        write_focus_glow(skin, name, width, height)
     write_rgba_png(skin / "media/frame/landscape-empty.png", 1, 1, bytes((0, 27, 35, 45, 255)))
     write_playback_textures(skin)
     target = xml / theme_source.name
     theme = read_xml(theme_source)
     feature_metadata(theme.getroot())
     track_panel_geometry(theme.getroot())
+    search_detail_variables(theme.getroot())
     write_xml(theme, target)
     include_path = xml / "Includes.xml"
     includes = read_xml(include_path)
@@ -808,4 +944,5 @@ def apply_theme(skin, theme_source):
     landscape = widgets.getroot().find("include[@name='WidgetListLandscape']/definition/control[@type='fixedlist']/visible")
     landscape.text += " | [Window.IsVisible(11121) + String.IsEqual(Window(Home).Property(nimbus.search.refreshing),true)]"
     write_xml(widgets, path)
+    apply_existing_focus_glows(xml)
     apply_accent(xml)

@@ -84,9 +84,9 @@
           <param name="badge" value="345" />
         </include>
         <include content="FrameCardFocusBorder">
-          <param name="width" value="420" />
-          <param name="height" value="236" />
-          <param name="mask" value="masks/flixscape-border-widget.png" />
+          <param name="width" value="432" />
+          <param name="height" value="248" />
+          <param name="mask" value="frame/focus-landscape.png" />
           <param name="focused" value="$PARAM[focused]" />
           <param name="list_id" value="$PARAM[list_id]" />
         </include>
@@ -121,9 +121,9 @@
           <param name="badge" value="209" />
         </include>
         <include content="FrameCardFocusBorder">
-          <param name="width" value="276" />
-          <param name="height" value="409" />
-          <param name="mask" value="masks/poster-big-border.png" />
+          <param name="width" value="288" />
+          <param name="height" value="421" />
+          <param name="mask" value="frame/focus-poster.png" />
           <param name="focused" value="$PARAM[focused]" />
           <param name="list_id" value="$PARAM[list_id]" />
         </include>
@@ -197,13 +197,13 @@
       <height>612</height>
       <visible>$EXP[FrameFeatureVisible]</visible>
       <control type="image" id="8983">
-        <width>1350</width>
+        <width>1430</width>
         <height>612</height>
         <texture diffuse="frame/feature-mask.png" background="true">$VAR[FrameFeatureArt]</texture>
         <aspectratio align="right" aligny="center" scalediffuse="false">scale</aspectratio>
         <visible>$EXP[FrameFeatureHasFanart]</visible>
-        <fadetime>80</fadetime>
-        <left>570</left>
+        <fadetime>65</fadetime>
+        <left>490</left>
       </control>
       <control type="group">
         <left>76</left>
@@ -255,11 +255,11 @@
             <font>FrameTab</font>
             <textcolor>unfocused_text</textcolor>
             <label>$VAR[FrameFeatureRating]$VAR[FrameFeatureTomatometer]</label>
-            <visible>String.IsEmpty(Skin.String(valid_api_key)) | !ControlGroup(2000).HasFocus | !$EXP[FrameRatingCurrent]</visible>
+            <visible>!ControlGroup(2000).HasFocus</visible>
           </control>
           <control type="group">
-            <visible>ControlGroup(2000).HasFocus + $EXP[FrameRatingCurrent]</visible>
-            <include condition="!String.IsEmpty(Skin.String(valid_api_key))" content="HorizontalRatings" />
+            <visible>ControlGroup(2000).HasFocus</visible>
+            <include>FrameHomeRatings</include>
           </control>
         </control>
         <width>820</width>
@@ -425,18 +425,94 @@
     <value condition="!String.IsEmpty(Skin.String(Frame.AccentLabel))">$INFO[Skin.String(Frame.AccentLabel)]</value>
     <value>Mint</value>
   </variable>
-  <variable name="FrameCardAccent">
-    <value condition="Skin.HasSetting(Frame.AdaptiveAccent) + !String.IsEmpty(Window(Home).Property(Frame.ArtAccent)) + String.IsEqual(Window(Home).Property(Frame.ArtAccentPoster),ListItem.Art(poster))">$INFO[Window(Home).Property(Frame.ArtAccent)]</value>
-    <value>$VAR[FrameAccent]</value>
-  </variable>
   <include name="FrameCardFocusBorder">
     <definition>
       <control type="image">
         <width>$PARAM[width]</width>
         <height>$PARAM[height]</height>
         <visible>$PARAM[focused] + Control.HasFocus($PARAM[list_id])</visible>
-        <texture colordiffuse="$VAR[FrameCardAccent]" border="16" infill="false">$PARAM[mask]</texture>
+        <texture colordiffuse="$VAR[FrameAccent]" border="20" infill="false">$PARAM[mask]</texture>
+        <left>-6</left>
+        <top>-6</top>
       </control>
     </definition>
+  </include>
+  <include name="FrameSearchPosterCard">
+    <param name="focused">false</param>
+    <definition>
+      <control type="group">
+        <width>168</width>
+        <height>270</height>
+        <control type="image">
+          <width>168</width>
+          <height>252</height>
+          <aspectratio>scale</aspectratio>
+          <texture background="true" fallback="frame/landscape-empty.png" diffuse="masks/poster-big.png">$INFO[ListItem.Art(poster)]</texture>
+        </control>
+        <control type="textbox">
+          <left>9</left>
+          <top>115</top>
+          <width>150</width>
+          <height>100</height>
+          <font>FrameProgress</font>
+          <textcolor>unfocused_text</textcolor>
+          <label>$INFO[ListItem.Label]</label>
+          <visible>String.IsEmpty(ListItem.Art(poster))</visible>
+        </control>
+        <include content="FrameCardFocusBorder">
+          <param name="width" value="180" />
+          <param name="height" value="264" />
+          <param name="mask" value="frame/focus-search.png" />
+          <param name="focused" value="$PARAM[focused]" />
+          <param name="list_id" value="$PARAM[list_id]" />
+        </include>
+      </control>
+    </definition>
+  </include>
+  <include name="FrameSearchDetails">
+    <control type="group" id="8890">
+      <left>1213</left>
+      <top>153</top>
+      <width>634</width>
+      <height>715</height>
+      <visible>!String.IsEmpty(Window(Home).Property(nimbus.search.input)) + [!String.IsEmpty(Container(19011).ListItem.Label) | !String.IsEmpty(Container(19012).ListItem.Label)]</visible>
+      <control type="image">
+        <texture border="25" colordiffuse="primary_content_panel_bg">masks/focus-long.png</texture>
+      </control>
+      <control type="textbox" id="8891">
+        <left>38</left>
+        <top>42</top>
+        <width>558</width>
+        <height>84</height>
+        <font>FramePanelTitle</font>
+        <textcolor>unfocused_text</textcolor>
+        <label>$VAR[FrameSearchTitle]</label>
+      </control>
+      <control type="label" id="8892">
+        <left>38</left>
+        <top>138</top>
+        <width>558</width>
+        <height>45</height>
+        <font>FrameTVLabel</font>
+        <textcolor>grey</textcolor>
+        <label>$VAR[FrameSearchYear]$VAR[FrameSearchGenre]</label>
+      </control>
+      <control type="image">
+        <left>38</left>
+        <top>194</top>
+        <width>558</width>
+        <height>2</height>
+        <texture colordiffuse="frame_selection">colors/white.png</texture>
+      </control>
+      <control type="textbox" id="8893">
+        <left>38</left>
+        <top>225</top>
+        <width>558</width>
+        <height>365</height>
+        <font>FrameBody</font>
+        <textcolor>unfocused_text</textcolor>
+        <label>$VAR[FrameSearchPlot]</label>
+      </control>
+    </control>
   </include>
 </includes>
