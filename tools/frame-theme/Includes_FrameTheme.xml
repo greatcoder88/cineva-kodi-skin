@@ -16,7 +16,7 @@
       <control type="image">
         <width>328</width>
         <height>64</height>
-        <texture border="24" colordiffuse="button_focus">masks/focus-long.png</texture>
+        <texture border="24" colordiffuse="frame_selection">masks/focus-long.png</texture>
         <visible>Control.HasFocus(20000)</visible>
       </control>
       <control type="label">
@@ -25,7 +25,7 @@
         <height>64</height>
         <aligny>center</aligny>
         <font>FrameTVLabel</font>
-        <textcolor>focused_text</textcolor>
+        <textcolor>unfocused_text</textcolor>
         <label>$INFO[ListItem.Label]</label>
         <visible>Control.HasFocus(20000)</visible>
       </control>
@@ -357,7 +357,7 @@
     <definition>
       <control type="group">
         <right>$PARAM[right]</right>
-        <bottom>290</bottom>
+        <bottom>279</bottom>
         <width>377</width>
         <height>307</height>
         <visible>[$PARAM[available]] + [Control.HasFocus($PARAM[button]) | Control.HasFocus($PARAM[id]) | String.IsEqual(Window(VideoOSD).Property(FrameTrackPicker),$PARAM[kind])]</visible>
@@ -459,7 +459,7 @@
           <width>321</width>
           <height>42</height>
           <aligny>center</aligny>
-          <font>FrameTVLabel</font>
+          <font>FramePanelTitle</font>
           <textcolor>unfocused_text</textcolor>
           <label>$PARAM[title]</label>
         </control>

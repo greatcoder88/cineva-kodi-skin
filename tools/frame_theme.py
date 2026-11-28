@@ -1,24 +1,26 @@
 """Apply the Frame TV theme to stock Nimbus before packaging the skin."""
 
+from copy import deepcopy
+import math
 import struct
 import xml.etree.ElementTree as ET
 import zlib
 
 
 PALETTE = {
-    "primary_background": "FF121316",
-    "primary_content_panel_bg": "FF202226",
-    "background": "FF0E0F11",
-    "dialog_tint": "FF17181B",
-    "dialog_bg": "F517181B",
-    "dialog_bg2": "FA17181B",
-    "dialog_bg3": "FF17181B",
+    "primary_background": "FF11161D",
+    "primary_content_panel_bg": "FF1B232D",
+    "background": "FF0B1016",
+    "dialog_tint": "FF161E27",
+    "dialog_bg": "F5161E27",
+    "dialog_bg2": "FA161E27",
+    "dialog_bg3": "FF161E27",
     "button_focus": "FFF5F5F5",
-    "button_focus2": "FF343B48",
+    "button_focus2": "FF293844",
     "frame_card_focus": "FFE1E5EF",
     "frame_osd_control": "EE262B34",
-    "frame_panel": "FF161B23",
-    "frame_selection": "FF343B48",
+    "frame_panel": "FF161E27",
+    "frame_selection": "FF293844",
     "frame_track_accent": "FFA1EBDD",
     "frame_track_ring": "FF74808C",
     "focused_text": "FF141414",
@@ -90,6 +92,7 @@ def apply_typography(xml):
             ("FrameBody", label, "29"),
             ("FrameTab", "Inter-SemiBold.ttf" if inter else label, "26"),
             ("FrameProgress", label, "21"),
+            ("FramePanelTitle", "Inter-SemiBold.ttf" if inter else label, "33"),
             ("FramePlaybackTitle", "Inter-Bold.ttf" if inter else title, "44"),
         )
         for name, face, size in fonts:
@@ -260,7 +263,7 @@ def apply_title_details(xml):
     action_group = next(group for group in root.iter("control") if actions in group)
     poster = next(control for control in action_group.findall("control[@type='image']")
                   if control.findtext("texture") == "$VAR[FlixPosterVar]")
-    set_fields(poster, {"width": "790", "height": "565", "right": "66", "top": "211"})
+    set_fields(poster, {"width": "790", "height": "445", "right": "66", "top": "200"})
     poster.remove(poster.find("bottom"))
     artwork = poster.find("texture")
     artwork.text = "$INFO[ListItem.Art(fanart)]"
@@ -271,7 +274,7 @@ def apply_title_details(xml):
         label = control.findtext("label")
         if label == "[B]$VAR[DialogInfoTitle][/B]":
             metadata = next(group for group in root.iter("control") if control in group)
-            set_fields(metadata, {"width": "610"})
+            set_fields(metadata, {"width": "610", "itemgap": "10"})
             control.set("id", "8982")
             set_fields(control, {"font": "FrameHeroTitle", "align": "left"})
             # Stock Nimbus omits the closing group delimiter in this expression.
@@ -362,43 +365,63 @@ def apply_playback(xml):
         }).text = "frame/play-disc.png"
     play.append(play_include)
     utilities = find_control(default_osd, 707)
-    set_fields(utilities, {"left": "1000", "width": "830", "align": "right", "itemgap": "20"})
+    set_fields(utilities, {"left": "1328", "width": "506", "align": "right", "itemgap": "38"})
+    buttons = {
+        708: ("audio", "$LOCALIZE[292]", 8708, "Integer.IsGreater(VideoPlayer.AudioStreamCount,0)"),
+        709: ("subtitles", "$LOCALIZE[287]", 8709, "VideoPlayer.HasSubtitles"),
+        716: ("settings", "$LOCALIZE[5]", None, None),
+    }
     for group in utilities.findall("control[@type='grouplist']"):
-        set_fields(group, {"width": "68", "height": "106", "itemgap": "3"})
-        for button in group.findall("control[@type='button']"):
-            include = button.find("include")
-            button.remove(include)
-            for tag, texture in (("texturefocus", "utility-active.png"), ("texturenofocus", "utility-idle.png")):
-                ET.SubElement(button, tag, {"border": "22"}).text = "frame/" + texture
-            set_fields(button, {"focusedcolor": "unfocused_text"})
-            button.append(include)
-        for label in group.findall("control[@type='label']"):
-            set_fields(label, {"width": "68", "height": "32", "textcolor": "grey", "font": "FrameTab", "aligny": "center"})
-    for button_id, list_id, kind, availability in (
-        (708, 8708, "audio", "Integer.IsGreater(VideoPlayer.AudioStreamCount,0)"),
-        (709, 8709, "subtitle", "VideoPlayer.HasSubtitles"),
-    ):
-        for button in controls.findall(f".//control[@id='{button_id}']"):
-            parent = next(group for group in controls.iter("control") if button in group)
-            if parent in list(utilities):
-                language = parent.find("control[@type='label']")
-                set_fields(language, {"label": "$LOCALIZE[292]" if kind == "audio" else "$LOCALIZE[287]",
-                                      "width": "92", "font": "FrameProgress",
-                                      "visible": f"Control.HasFocus({button_id}) | Control.HasFocus({list_id})"})
-            else:
-                set_fields(parent, {"width": "72", "height": "104", "itemgap": "3"})
-            visible = parent.find("visible")
-            if visible is not None:
-                visible.text = f"[{visible.text}] | {availability}"
+        button = group.find("control[@type='button']")
+        button_id = int(button.get("id")) if button is not None else None
+        if button_id not in buttons:
+            utilities.remove(group)
+            continue
+        kind, title, list_id, availability = buttons[button_id]
+        set_fields(group, {"width": "112", "height": "122", "itemgap": "5", "align": "left"})
+        group.remove(group.find("control[@type='label']"))
+        for tag in ("include", "font", "label", "textoffsety"):
+            element = button.find(tag)
+            if element is not None:
+                button.remove(element)
+        set_fields(button, {"width": "112", "height": "82", "description": title,
+                            "texturefocus": f"frame/{kind}-focus.png",
+                            "texturenofocus": f"frame/{kind}.png"})
+        # Slot links make the three-button row independent of stock utility IDs.
+        set_fields(button, {"onleft": str({708: 703, 709: 708, 716: 709}[button_id]),
+                            "onright": str({708: 709, 709: 716, 716: 703}[button_id])})
+        for direction in ("onleft", "onright"):
+            for duplicate in button.findall(direction)[1:]:
+                button.remove(duplicate)
+            button.find(direction).attrib.clear()
+        label = ET.SubElement(group, "control", {"type": "label"})
+        focus = f"Control.HasFocus({button_id})"
+        if list_id:
+            focus += f" | Control.HasFocus({list_id})"
+        set_fields(label, {"width": "112", "height": "30", "align": "center", "aligny": "center",
+                           "label": title, "font": "FrameProgress", "textcolor": "unfocused_text", "visible": focus})
+        if list_id:
+            for visible in group.findall("visible"):
+                group.remove(visible)
             for action in button.findall("onclick"):
                 action.set("condition", f"[{action.get('condition', 'true')}] + !{availability}")
             ET.SubElement(button, "onclick", {"condition": availability}).text = f"SetProperty(FrameTrackPicker,{kind})"
             ET.SubElement(button, "onclick", {"condition": availability}).text = f"SetFocus({list_id})"
-            ET.SubElement(parent, "onup").text = str(list_id)
-        picker = ET.SubElement(controls, "include", {"content": "FramePlaybackTracks"})
-        for name, value in (("button", button_id), ("id", list_id), ("kind", kind),
-                            ("available", availability), ("right", 288 if kind == "audio" else 200), ("title", "$LOCALIZE[292]" if kind == "audio" else "$LOCALIZE[287]")):
-            ET.SubElement(picker, "param", {"name": name, "value": str(value)})
+            ET.SubElement(group, "onup").text = str(list_id)
+            picker = ET.SubElement(controls, "include", {"content": "FramePlaybackTracks"})
+            for name, value in (("button", button_id), ("id", list_id), ("kind", "audio" if button_id == 708 else "subtitle"),
+                                ("available", availability), ("right", 253 if button_id == 708 else 103), ("title", title)):
+                ET.SubElement(picker, "param", {"name": name, "value": str(value)})
+            # The helper uses singular "subtitle" as its picker state.
+            if button_id == 709:
+                button.findall("onclick")[-2].text = "SetProperty(FrameTrackPicker,subtitle)"
+    alternate_utilities = controls.findall(".//control[@id='707']")[1]
+    alternate_osd = next(group for group in controls.iter("control") if alternate_utilities in group)
+    alternate_osd.remove(alternate_utilities)
+    alternate_row = deepcopy(utilities)
+    alternate_row.remove(alternate_row.find("top"))
+    set_fields(alternate_row, {"bottom": "15"})
+    alternate_osd.append(alternate_row)
     write_xml(tree, path)
 
     path = xml / "Includes_Seekbar.xml"
@@ -505,21 +528,9 @@ def write_playback_textures(skin):
             disc.extend((255, 255, 255, alpha))
     write_rgba_png(media / "play-disc.png", 68, 68, disc)
 
-    for name, outline in (("utility-active", (242, 248, 252)), ("utility-idle", (100, 115, 130))):
-        pixels = bytearray()
-        for y in range(68):
-            pixels.append(0)
-            for x in range(68):
-                dx = max(18 - x, x - 49, 0)
-                dy = max(18 - y, y - 49, 0)
-                distance = (dx * dx + dy * dy) ** 0.5
-                if distance > 18:
-                    pixels.extend((0, 0, 0, 0))
-                elif distance > 15.5:
-                    pixels.extend((*outline, 255))
-                else:
-                    pixels.extend((18, 24, 30, 205))
-        write_rgba_png(media / (name + ".png"), 68, 68, pixels)
+    for kind, icon in (("audio", waveform_pixel), ("subtitles", captions_pixel), ("settings", gear_pixel)):
+        for active in (False, True):
+            write_utility_texture(media, kind, icon, active)
 
     pointer = bytearray()
     for y in range(14):
@@ -529,6 +540,53 @@ def write_playback_textures(skin):
             pointer.extend((116, 128, 140, 255) if edge == 0 else
                            (22, 27, 35, 255) if edge > 0 else (0, 0, 0, 0))
     write_rgba_png(media / "track-pointer.png", 25, 14, pointer)
+
+
+def write_utility_texture(media, kind, icon, active):
+    width, height, radius = 112, 82, 21
+    outline = (244, 248, 250) if active else (108, 124, 138)
+    stroke = 3.2 if active else 2.4
+    rows = bytearray()
+    for y in range(height):
+        rows.append(0)
+        for x in range(width):
+            dx = max(radius - x, x - (width - radius - 1), 0)
+            dy = max(radius - y, y - (height - radius - 1), 0)
+            distance = math.hypot(dx, dy)
+            if icon(x - width / 2, y - height / 2):
+                rows.extend((246, 250, 252, 255))
+            elif distance >= radius:
+                rows.extend((0, 0, 0, 0))
+            elif distance >= radius - stroke or min(x, y, width - 1 - x, height - 1 - y) < stroke:
+                rows.extend((*outline, 255))
+            else:
+                rows.extend((13, 21, 28, 220 if active else 185))
+    name = f"{kind}-focus.png" if active else f"{kind}.png"
+    write_rgba_png(media / name, width, height, rows)
+
+
+def waveform_pixel(x, y):
+    bars = ((-21, 5), (-14, 10), (-7, 16), (0, 21), (7, 15), (14, 10), (21, 5))
+    return any(math.hypot(x - center, max(abs(y) - half, 0)) <= 2 for center, half in bars)
+
+
+def captions_pixel(x, y):
+    box = math.hypot(max(abs(x) - 20, 0), max(abs(y) - 11, 0))
+    if 2.2 <= box <= 5.3:
+        return True
+    for center in (-9, 9):
+        radius = math.hypot(x - center, y * 0.92)
+        if 4.2 <= radius <= 7.4 and not (x - center > 2 and abs(y) < 4):
+            return True
+    return False
+
+
+def gear_pixel(x, y):
+    radius = math.hypot(x, y)
+    angle = math.atan2(y, x)
+    outside = 17.5 + 4 * (math.cos(8 * angle) > 0.32)
+    inside = 14.2 + 4 * (math.cos(8 * angle) > 0.32)
+    return inside <= radius <= outside or 6 <= radius <= 9.5
 
 
 def apply_video_cards(xml):
