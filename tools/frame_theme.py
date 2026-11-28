@@ -128,15 +128,19 @@ def apply_home(xml):
     items.text = "FrameSideMenuItems"
     menu.insert(list(menu).index(menu.find("content")), items)
 
-    # Keep all generated widget paths and list IDs. Present them below the
-    # feature artwork and bring them up as soon as a shelf takes focus.
-    set_fields(widgets, {"top": "735"})
+    # Widget headings and cards share a bounded shelf area below the hero.
+    # Kodi scrolls the focused row into view, using its actual height.
+    set_fields(widgets, {"top": "611"})
     widgets.remove(widgets.find("include[.='MainMenuAnimations']"))
-    animation = ET.SubElement(widgets, "animation", {
-        "type": "Conditional", "condition": "ControlGroup(2000).HasFocus", "reversible": "true",
-    })
-    ET.SubElement(animation, "effect", {"type": "slide", "start": "0,0", "end": "0,-92",
-                                         "time": "125", "tween": "cubic", "easing": "out"})
+    for shelf in widgets.iter("control"):
+        slide = shelf.find("include[@content='Animation_Widget_Poster_Slide']")
+        if slide is None or shelf.find("include[.='WidgetGroupListCommon']") is None:
+            continue
+        shelf.remove(slide)
+        set_fields(shelf, {"height": "438", "scrolltime": "100"})
+        height = shelf.find("height")
+        shelf.remove(height)
+        shelf.insert(0, height)
 
     content = next(group for group in root.iter("control") if widgets in group)
     top_bar = content.find("include[@content='TopBar']")
@@ -634,8 +638,15 @@ def apply_motion(xml):
                                       "start": "98" if is_opening else "100",
                                       "end": "100" if is_opening else "99"})
     widgets = root.find("include[@name='WidgetVisibilityAnimations']")
-    for effect in widgets.findall(".//effect"):
-        effect.set("time", "150" if effect.get("type") == "fade" else "105")
+    for animation in widgets.findall("animation"):
+        if animation.find("effect[@type='fadediffuse']") is not None:
+            widgets.remove(animation)
+        else:
+            for effect in animation.findall("effect"):
+                effect.set("time", "80")
+    navigation = root.find("include[@name='WidgetNavigationAnimations']")
+    for animation in navigation.findall("animation"):
+        animation.set("time", "100")
     write_xml(tree, path)
 
 
@@ -671,7 +682,7 @@ def apply_theme(skin, theme_source):
     path = xml / "Includes_Home.xml"
     widgets = read_xml(path)
     list_common = widgets.getroot().find("include[@name='WidgetListCommon']")
-    set_fields(list_common, {"scrolltime": "150"})
+    set_fields(list_common, {"scrolltime": "105"})
     landscape = widgets.getroot().find("include[@name='WidgetListLandscape']/definition/control[@type='fixedlist']/visible")
     landscape.text += " | [Window.IsVisible(11121) + String.IsEqual(Window(Home).Property(nimbus.search.refreshing),true)]"
     write_xml(widgets, path)
