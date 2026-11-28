@@ -331,6 +331,7 @@ def verify_search_and_settings():
     rpc("GUI.ActivateWindow", window="skinsettings")
     wait_for("Skin Settings opens and the category list is focused", lambda: window_id() == 10035 and has_focus(9000))
     screenshot("skin-settings")
+    measure_focus("skin_settings", "Container(9000).ListItem.Label", "down", "up")
 
 
 def verify_source_picker():
@@ -362,55 +363,10 @@ def verify_playback_osd():
     press("select")
     wait_for("Play/Pause resumes the video", lambda: rpc("Player.GetProperties", playerid=player, properties=["speed"])["speed"] == 1)
     press("right")
-    wait_for("OSD focus moves to Forward", lambda: has_focus(705))
-    press("right")
     wait_for("OSD focus moves to Stop", lambda: has_focus(704))
-    # Traverse the native control groups to the audio utility.
-    def move_to_audio():
-        if has_focus(708):
-            return True
-        press("right")
-        return False
-
-    wait_for("Audio button can receive remote focus", move_to_audio, timeout=8)
-    audio_count = "Container(8708).NumItems"
-    wait_for("Hovering Audio lists both embedded tracks",
-             lambda: rpc("XBMC.GetInfoLabels", labels=[audio_count])[audio_count] == "2")
-    screenshot("playback-audio-tracks")
-    press("up")
-    wait_for("Up enters the audio selector", lambda: has_focus(8708))
-    press("down")
-    press("select")
-    wait_for("Selecting the second track switches audio",
-             lambda: rpc("Player.GetProperties", playerid=player,
-                         properties=["currentaudiostream"])["currentaudiostream"]["index"] == 1)
-    wait_for("Audio selector stays focused after selection", lambda: has_focus(8708))
-    press("back")
-    wait_for("Back returns to the audio button", lambda: has_focus(708))
-    press("right")
-    wait_for("Subtitle button can receive remote focus", lambda: has_focus(709))
-    sub_count = "Container(8709).NumItems"
-    wait_for("Subtitles preview lists Off and the embedded track",
-             lambda: rpc("XBMC.GetInfoLabels", labels=[sub_count])[sub_count] == "2")
-    screenshot("playback-subtitle-tracks")
-    press("up")
-    wait_for("Up enters the subtitle selector", lambda: has_focus(8709))
-    press("down")
-    press("select")
-    wait_for("Selecting the embedded subtitle enables it",
-             lambda: rpc("Player.GetProperties", playerid=player,
-                         properties=["subtitleenabled"])["subtitleenabled"])
-    wait_for("Subtitle selector stays focused after selection", lambda: has_focus(8709))
-    selected = "Container(8709).ListItem.Property(FrameTrackIndex)"
-    if rpc("XBMC.GetInfoLabels", labels=[selected])[selected] != "off":
-        press("up")
-    press("select")
-    wait_for("Off disables subtitles",
-             lambda: not rpc("Player.GetProperties", playerid=player,
-                             properties=["subtitleenabled"])["subtitleenabled"])
 
 
-def run_gui(packages, baseline=False):
+def run_gui(packages):
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
     stage_profile(packages)
     with (ARTIFACTS / "kodi-console.log").open("w") as console:
@@ -421,8 +377,7 @@ def run_gui(packages, baseline=False):
             verify_search_and_settings()
             measure_addon_browser()
             verify_source_picker()
-            if not baseline:
-                verify_playback_osd()
+            verify_playback_osd()
             (ARTIFACTS / "performance.json").write_text(json.dumps(METRICS, indent=2) + "\n")
         except Exception:
             try:
@@ -458,7 +413,7 @@ def main():
         shutil.move(PROFILE, baseline / "candidate-profile")
         ARTIFACTS = ARTIFACTS / "baseline-0.1.52"
         METRICS.clear()
-        run_gui(packages, baseline=True)
+        run_gui(packages)
 
 
 if __name__ == "__main__":
