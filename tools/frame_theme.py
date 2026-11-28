@@ -137,7 +137,7 @@ def apply_home(xml):
         if slide is None or shelf.find("include[.='WidgetGroupListCommon']") is None:
             continue
         shelf.remove(slide)
-        set_fields(shelf, {"height": "438", "scrolltime": "140"})
+        set_fields(shelf, {"height": "438", "scrolltime": "100"})
         height = shelf.find("height")
         shelf.remove(height)
         shelf.insert(0, height)
@@ -638,8 +638,15 @@ def apply_motion(xml):
                                       "start": "98" if is_opening else "100",
                                       "end": "100" if is_opening else "99"})
     widgets = root.find("include[@name='WidgetVisibilityAnimations']")
-    for effect in widgets.findall(".//effect"):
-        effect.set("time", "150" if effect.get("type") == "fade" else "105")
+    for animation in widgets.findall("animation"):
+        if animation.find("effect[@type='fadediffuse']") is not None:
+            widgets.remove(animation)
+        else:
+            for effect in animation.findall("effect"):
+                effect.set("time", "80")
+    navigation = root.find("include[@name='WidgetNavigationAnimations']")
+    for animation in navigation.findall("animation"):
+        animation.set("time", "100")
     write_xml(tree, path)
 
 
@@ -675,7 +682,7 @@ def apply_theme(skin, theme_source):
     path = xml / "Includes_Home.xml"
     widgets = read_xml(path)
     list_common = widgets.getroot().find("include[@name='WidgetListCommon']")
-    set_fields(list_common, {"scrolltime": "150"})
+    set_fields(list_common, {"scrolltime": "105"})
     landscape = widgets.getroot().find("include[@name='WidgetListLandscape']/definition/control[@type='fixedlist']/visible")
     landscape.text += " | [Window.IsVisible(11121) + String.IsEqual(Window(Home).Property(nimbus.search.refreshing),true)]"
     write_xml(widgets, path)

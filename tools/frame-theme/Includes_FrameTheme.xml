@@ -52,7 +52,7 @@
       <control type="group">
         <width>306</width>
         <height>172</height>
-        <animation effect="zoom" start="100" end="104" center="auto" time="125" tween="cubic" easing="out" condition="$PARAM[focused] + Control.HasFocus($PARAM[list_id])">Conditional</animation>
+        <animation effect="zoom" start="100" end="103" center="auto" time="85" tween="cubic" easing="out" condition="$PARAM[focused] + Control.HasFocus($PARAM[list_id])">Conditional</animation>
         <control type="image">
           <texture diffuse="masks/flixscape-widget.png" colordiffuse="primary_content_panel_bg">colors/white.png</texture>
         </control>
@@ -100,7 +100,7 @@
       <control type="group">
         <width>188</width>
         <height>280</height>
-        <animation effect="zoom" start="100" end="104" center="auto" time="125" tween="cubic" easing="out" condition="$PARAM[focused] + Control.HasFocus($PARAM[list_id])">Conditional</animation>
+        <animation effect="zoom" start="100" end="103" center="auto" time="85" tween="cubic" easing="out" condition="$PARAM[focused] + Control.HasFocus($PARAM[list_id])">Conditional</animation>
         <control type="image">
           <texture diffuse="masks/poster-big.png" colordiffuse="primary_content_panel_bg">colors/white.png</texture>
         </control>
@@ -216,7 +216,7 @@
         <texture background="true">$VAR[FrameFeatureArt]</texture>
         <aspectratio align="right" aligny="center">keep</aspectratio>
         <visible>$EXP[FrameFeatureHasFanart]</visible>
-        <fadetime>105</fadetime>
+        <fadetime>55</fadetime>
       </control>
       <control type="image">
         <left>704</left>
