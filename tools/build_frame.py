@@ -16,8 +16,8 @@ from frame_theme import apply_theme
 ROOT = Path(__file__).resolve().parents[1]
 THEME_SOURCE = ROOT / "tools/frame-theme/Includes_FrameTheme.xml"
 SKIN_ID = "skin.frame"
-SKIN_VERSION = "0.1.70"
-HELPER_VERSION = "0.0.58"
+SKIN_VERSION = "0.1.71"
+HELPER_VERSION = "0.0.59"
 HELPER_ID = "script.frame.nimbus"
 ADDONS = (
     ("ivarbrandt/skin.nimbus", "8b5071b8cd0db3a8e813eb00e9a821d3efad2454", SKIN_ID, "Frame"),
@@ -34,10 +34,23 @@ def patch_ratings_monitor(path):
         ('        meta = self._get_current_item_meta()\n        if not meta:',
          '        selection = self._selected_rating_item()\n'
          '        meta = self._get_current_item_meta()\n'
-         '        if not meta or selection != self._selected_rating_item():'),
-        ('            self._process_ratings(media_id, meta)',
+         '        if selection != self._selected_rating_item():\n'
+         '            return\n'
+         '        if not meta:\n'
+         '            self._update_window_properties({}, selection)'),
+        ('        if not media_id:\n            return',
+         '        if not media_id:\n'
+         '            self._update_window_properties({}, selection)\n'
+         '            return'),
+        ('        if media_id != self.last_set_id or media_id != self.pending_id:\n'
+         '            self._process_ratings(media_id, meta)',
+         '        if not self._frame_displayed or self._frame_displayed[0] != selection:\n'
          '            meta["frame_selection"] = selection\n'
          '            self._process_ratings(media_id, meta)'),
+        ('        if self.pending_id != media_id:\n            self.pending_id = media_id',
+         '        if (self.pending_id != media_id or not self.current_ratings_thread\n'
+         '                or not self.current_ratings_thread.is_alive()):\n'
+         '            self.pending_id = media_id'),
         ('self._set_ratings_from_cache(media_id, cached_ratings)',
          'self._set_ratings_from_cache(media_id, cached_ratings, meta["frame_selection"])'),
         ('self._update_window_properties(cached_data)',
@@ -49,6 +62,13 @@ def patch_ratings_monitor(path):
          '                if media_id != self.pending_id:\n'
          '                    return\n'
          '                self._update_window_properties(result)'),
+        ('        except Exception as e:\n            xbmc.log(f"Error fetching ratings:',
+         '            elif media_id == self.pending_id:\n'
+         '                self._update_window_properties({}, meta["frame_selection"])\n'
+         '        except Exception as e:\n'
+         '            if media_id == self.pending_id:\n'
+         '                self._update_window_properties({}, meta["frame_selection"])\n'
+         '            xbmc.log(f"Error fetching ratings:'),
         ('self._update_window_properties(result)\n                self.last_set_id',
          'self._update_window_properties(result, meta["frame_selection"])\n                self.last_set_id'),
         ('    def _update_window_properties(self, result: Dict[str, Any]) -> None:\n'

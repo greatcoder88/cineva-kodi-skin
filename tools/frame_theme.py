@@ -9,7 +9,7 @@ import zlib
 
 OSD_BUTTON_WIDTH = 112
 OSD_BUTTON_HEIGHT = 82
-OSD_BUTTON_GAP = 38
+OSD_BUTTON_GAP = 16
 TRACK_PANEL_WIDTH = 540
 TRACK_ROW_HEIGHT = 70
 TRACK_HEADER_HEIGHT = 96
@@ -92,6 +92,9 @@ def apply_typography(xml):
         label = fontset.find("font[name='font27_title']/filename").text
         for name, size in (("PlayerIcon", "49"), ("PlayerIconSmall", "40")):
             fontset.find(f"font[name='{name}']/size").text = size
+        play_font = deepcopy(fontset.find("font[name='PlayerIcon']"))
+        set_fields(play_font, {"name": "FramePlayIcon", "size": "60"})
+        fontset.append(play_font)
         inter = title == "Inter-Regular.ttf"
         fonts = (
             ("FrameHeroTitle", "Inter-Bold.ttf" if inter else title, "72"),
@@ -129,7 +132,15 @@ def apply_home(xml):
     })
     ET.SubElement(slide, "effect", {"type": "slide", "start": "0,0", "end": "580,0",
                                      "time": "150", "tween": "cubic", "easing": "out"})
-    set_fields(menu, {"left": "50", "width": "420", "scrolltime": "180"})
+    set_fields(menu, {"left": "46", "top": "180", "width": "411", "height": "670",
+                      "movement": "8", "scrolltime": "160", "ondown": "700"})
+    shortcuts = find_control(menu_group, 700)
+    shortcut_group = next(group for group in menu_group.findall("control") if shortcuts in group)
+    set_fields(shortcut_group, {"left": "46", "top": "904", "width": "416", "height": "112"})
+    set_fields(shortcuts, {"width": "416", "itemgap": "-17"})
+    # Keep Nimbus' native actions, direction shortcuts, and conditional buttons.
+    set_fields(shortcut_group.find("control[@type='label']"),
+               {"left": "5", "top": "84", "width": "406", "font": "FrameProgress", "align": "center"})
     menu.remove(menu.find("include[@content='List']"))
     items = ET.Element("include")
     items.text = "FrameSideMenuItems"
@@ -235,12 +246,16 @@ def feature_metadata(theme):
 
 
 def search_detail_variables(theme):
-    use_show = "Control.HasFocus(19012) | String.IsEmpty(Container(19011).ListItem.Label)"
     for name, field in (("Title", "Label"), ("Year", "Year"), ("Genre", "Genre"), ("Plot", "Plot")):
         var = ET.SubElement(theme, "variable", {"name": f"FrameSearch{name}"})
-        for container, condition in ((19012, use_show), (19011, "")):
-            attrs = {"condition": condition} if condition else {}
-            ET.SubElement(var, "value", attrs).text = f"$INFO[Container({container}).ListItem.{field}{',  •  ' if name == 'Genre' else ''}]"
+        suffix = ",  •  " if name == "Genre" else ""
+        ET.SubElement(var, "value", {
+            "condition": "ControlGroup(2000).HasFocus + !String.IsEmpty(ListItem.Label)",
+        }).text = f"$INFO[ListItem.{field}{suffix}]"
+        ET.SubElement(var, "value", {
+            "condition": "!String.IsEmpty(Container(19011).ListItem.Label)",
+        }).text = f"$INFO[Container(19011).ListItem.{field}{suffix}]"
+        ET.SubElement(var, "value").text = f"$INFO[Container(19012).ListItem.{field}{suffix}]"
 
 
 def apply_home_rating_slots(xml):
@@ -273,20 +288,25 @@ def apply_home_rating_slots(xml):
                 condition = f"[{condition} | ![{has_key}]]"
             conditions[source] = condition
             ET.SubElement(icon, "value", {"condition": condition}).text = f"special://skin/resources/rating_images/{asset}"
+        resolved = []
         for source, field, present, suffix in local_scores:
             available = f"{conditions[source]} + {present}"
+            resolved.append(f"[{available}]")
             ET.SubElement(label, "value", {"condition": available}).text = f"$INFO[ListItem.{field},,{suffix}]"
         stock = root.find(f"variable[@name='Rating{slot}ValueVar']")
         for value in stock.findall("value"):
             field = value.text.split("$INFO[", 1)[1].split("]", 1)[0]
             test = f"$EXP[FrameRatingCurrent] + {has_key} + {value.get('condition')} + !String.IsEmpty({field})"
+            resolved.append(f"[{test}]")
             ET.SubElement(label, "value", {"condition": test}).text = value.text
-        ET.SubElement(label, "value").text = "—"
+        pending = f"{has_key} + !$EXP[FrameRatingCurrent] + [$EXP[isMovie] | $EXP[isTVShow]]"
+        ET.SubElement(label, "value", {"condition": pending}).text = "…"
+        resolved.append(f"[{pending}]")
         cell = ET.SubElement(rail, "control", {"type": "group"})
         enabled = f"{has_key} + !String.IsEmpty(Skin.String(RatingSlot{slot})) + !String.IsEqual(Skin.String(RatingSlot{slot}),none)"
         if default:
             enabled = f"[{enabled}] | ![{has_key}]"
-        set_fields(cell, {"width": "138", "height": "42", "visible": enabled})
+        set_fields(cell, {"width": "138", "height": "42", "visible": f"[{enabled}] + [{' | '.join(resolved)}]"})
         badge = ET.SubElement(cell, "control", {"type": "image", "id": str(8970 + slot)})
         set_fields(badge, {"left": "0", "top": "4", "width": "55", "height": "32", "aspectratio": "keep",
                            "texture": f"$VAR[FrameRating{slot}Image]"})
@@ -306,19 +326,19 @@ def apply_search(xml):
                    if group.find("include[.='MediaMenuAnimations']") is not None)
     controls.remove(artwork)
     results_group = find_control(root, 2000)
-    set_fields(results_group, {"top": "233"})
+    set_fields(results_group, {"top": "213"})
     results_list = find_control(results_group, 19001)
     results_list.remove(results_list.find("include[@content='Animation_Widget_Poster_Slide']"))
     results_list.insert(0, ET.Element("itemgap"))
     results_list.insert(0, ET.Element("height"))
-    set_fields(results_list, {"height": "827", "itemgap": "10"})
+    set_fields(results_list, {"height": "835", "itemgap": "10"})
     content = next(group for group in controls.findall("control") if results_group in group)
     content.remove(content.find("include[@content='TopBar']"))
     preview = next(group for group in content.iter("control") if group.find("include[.='FlixPanel']") is not None)
     preview_parent = next(group for group in content.iter("control") if preview in group)
     preview_parent.remove(preview)
     chrome = ET.Element("control", {"type": "group"})
-    set_fields(chrome, {"left": "72", "top": "153", "width": "1090", "height": "76",
+    set_fields(chrome, {"left": "72", "top": "115", "width": "1170", "height": "68",
                         "visible": "!String.IsEmpty(Window(Home).Property(nimbus.search.input))"})
     ET.SubElement(chrome, "include").text = "SearchMenuAnimations"
     surface = ET.SubElement(chrome, "control", {"type": "image"})
@@ -326,7 +346,7 @@ def apply_search(xml):
         "masks/focus-long.png"
     )
     query = ET.SubElement(chrome, "control", {"type": "label"})
-    set_fields(query, {"left": "28", "right": "28", "height": "76", "aligny": "center",
+    set_fields(query, {"left": "28", "right": "28", "height": "68", "aligny": "center",
                        "font": "FramePanelTitle", "textcolor": "unfocused_text",
                        "label": "$INFO[Window(Home).Property(nimbus.search.input)]"})
     content.insert(list(content).index(results_group), chrome)
@@ -480,7 +500,12 @@ def apply_playback(xml):
             controls.remove(control)
     default_osd = next(group for group in controls.findall("control[@type='group']")
                        if group.find("include[@content='Seekbar']") is not None)
-    set_fields(default_osd, {"height": "295"})
+    set_fields(default_osd, {"bottom": "32", "height": "278"})
+    # Floating playback dock. The timeline and controls share a single surface.
+    dock = ET.Element("control", {"type": "image"})
+    set_fields(dock, {"left": "62", "right": "62", "height": "278"})
+    ET.SubElement(dock, "texture", {"border": "30"}).text = "frame/playback-dock.png"
+    default_osd.insert(list(default_osd).index(default_osd.find("include[@content='Seekbar']")), dock)
     for event in ("onload", "onunload"):
         for kind in ("audio", "subtitle"):
             ET.SubElement(tree.getroot(), event).text = f"ClearProperty(FrameActiveTrack.{kind})"
@@ -490,13 +515,18 @@ def apply_playback(xml):
     gap = str(OSD_BUTTON_GAP)
     for group in default_osd.findall("control[@type='grouplist']"):
         if group.findtext("top") == "120":
-            set_fields(group, {"top": "169", "height": "122"})
+            set_fields(group, {"top": "147", "height": "122"})
     transport = find_control(default_osd, 700)
-    set_fields(transport, {"left": "90", "width": "900", "align": "left", "itemgap": gap})
+    set_fields(transport, {"left": "545", "width": "830", "align": "center", "itemgap": gap})
     play = find_control(transport, 703)
     set_fields(play, {"textcolor": "frame_track_accent", "focusedcolor": "focused_text"})
     include = play.find("include")
     play.remove(include)
+    set_fields(play, {"width": "132", "font": "FramePlayIcon",
+                      "texturefocus": "frame/primary-play-focus.png",
+                      "alttexturefocus": "frame/primary-play-focus.png",
+                      "texturenofocus": "frame/primary-play.png",
+                      "alttexturenofocus": "frame/primary-play.png"})
     play.append(include)
     stop = find_control(transport, 704)
     forward = find_control(transport, 705)
@@ -537,7 +567,7 @@ def apply_playback(xml):
         if list_id:
             focus += f" | Control.HasFocus({list_id})"
         set_fields(label, {"width": width, "height": "30", "align": "center", "aligny": "center",
-                           "label": title, "font": "FrameProgress", "textcolor": "unfocused_text", "visible": focus})
+                           "label": title, "font": "FrameProgress", "textcolor": "grey", "visible": focus})
         if list_id:
             for visible in group.findall("visible"):
                 group.remove(visible)
@@ -548,7 +578,7 @@ def apply_playback(xml):
             ET.SubElement(group, "onup").text = str(list_id)
             picker = ET.SubElement(controls, "include", {"content": "FramePlaybackTracks"})
             for name, value in (("button", button_id), ("id", list_id), ("kind", "audio" if button_id == 708 else "subtitle"),
-                                ("available", availability), ("right", 86), ("title", title)):
+                                ("available", availability), ("right", 105 if button_id == 709 else 230), ("title", title)):
                 ET.SubElement(picker, "param", {"name": name, "value": str(value)})
             # The helper uses singular "subtitle" as its picker state.
             if button_id == 709:
@@ -560,9 +590,12 @@ def apply_playback(xml):
     alternate_row.remove(alternate_row.find("top"))
     set_fields(alternate_row, {"bottom": "15"})
     alternate_osd.append(alternate_row)
+    alternate_dock = deepcopy(dock)
+    set_fields(alternate_dock, {"height": "133", "bottom": "16"})
+    alternate_osd.insert(0, alternate_dock)
     alternate_transport = find_control(alternate_osd, 700)
-    set_fields(alternate_transport, {"bottom": "55", "height": height, "left": "90",
-                                     "width": "900", "itemgap": gap})
+    set_fields(alternate_transport, {"bottom": "55", "height": height, "left": "545",
+                                     "width": "830", "align": "center", "itemgap": gap})
     alternate_play = find_control(alternate_transport, 703)
     set_fields(alternate_play, {"width": width, "height": height})
     hitbox = find_control(alternate_play, 7031)
@@ -586,11 +619,11 @@ def apply_playback(xml):
     seek_controls = seekbar.find("control[@type='group']")
     for control in seek_controls.findall("control"):
         if control.get("type") in {"group", "ranges", "slider"} and control.findtext("width") == "1680":
-            set_fields(control, {"left": "240", "width": "1415"})
+            set_fields(control, {"left": "240", "width": "1440"})
         if control.get("type") == "group" and control.findtext("top") == "100":
             set_fields(control, {"height": "7"})
         if control.findtext("label") in {"$VAR[PlayerElapsedTimeVar]", "$VAR[PlayerTimeRemainingVar]"}:
-            set_fields(control, {"top": "86", "height": "34", "font": "FrameProgress", "aligny": "center"})
+            set_fields(control, {"top": "87", "height": "34", "font": "FrameProgress", "aligny": "center"})
     end_time = seek_controls.find("control[label='$VAR[PlayerEndTimeVar]']")
     if end_time is not None:
         seek_controls.remove(end_time)
@@ -607,7 +640,7 @@ def apply_playback(xml):
         if control.get("type") == "label" and any(
             token in label for token in ("$INFO[VideoPlayer.Title]", "$INFO[Player.Title]", "$VAR[PlayerTitle", "$VAR[NowPlayingLabelVar]")
         ):
-            set_fields(control, {"font": "FramePlaybackTitle", "textcolor": "osd_light", "top": "20", "height": "63", "width": "1140", "scroll": "false"})
+            set_fields(control, {"font": "FramePlaybackTitle", "textcolor": "osd_light", "top": "19", "left": "120", "height": "63", "width": "1140", "scroll": "false"})
         for midtexture in control.findall("midtexture[@colordiffuse='accent_color']"):
             midtexture.set("colordiffuse", "frame_track_accent")
     write_xml(tree, path)
@@ -701,6 +734,21 @@ def write_playback_textures(skin):
         for active in (False, True):
             write_utility_texture(media, kind, icon, active)
 
+    for active in (False, True):
+        write_utility_texture(media, "primary-play", None, active)
+    # Rounded dock texture includes its subtle top-to-bottom lighting.
+    dock = bytearray()
+    for y in range(278):
+        dock.append(0)
+        for x in range(96):
+            dx = max(28 - x, x - 67, 0)
+            dy = max(28 - y, y - 249, 0)
+            edge = min(28 - math.hypot(dx, dy), x, 95 - x, y, 277 - y)
+            tint = round(12 * (1 - y / 277))
+            color = (62, 76, 92) if 0 <= edge < 1 else (13 + tint, 19 + tint, 28 + tint)
+            dock.extend((*color, round(min(1, max(0, edge + 0.5)) * 245)))
+    write_rgba_png(media / "playback-dock.png", 96, 278, dock)
+
     for track_count in range(1, 5):
         write_track_panel(media, track_count)
 
@@ -747,7 +795,7 @@ def track_panel_geometry(theme):
 
 
 def write_utility_texture(media, kind, icon, active):
-    width, height, radius = OSD_BUTTON_WIDTH, OSD_BUTTON_HEIGHT, 21
+    width, height = OSD_BUTTON_WIDTH, OSD_BUTTON_HEIGHT
     # A restrained surface becomes a solid, high-contrast pill on focus.
     rows = bytearray()
     for y in range(height):
@@ -759,8 +807,16 @@ def write_utility_texture(media, kind, icon, active):
             if icon is not None and icon(x - width / 2, y - height / 2):
                 rows.extend((20, 30, 43, 255) if active else (241, 246, 251, 255))
             elif edge > 0:
-                color = (241, 246, 251) if active else (35, 47, 64)
-                rows.extend((*color, round(min(edge, 1) * (255 if active else 177))))
+                if active:
+                    color = (243, 248, 251)
+                elif kind == "primary-play":
+                    color = (52, 65, 79)
+                elif edge < 1.5:
+                    color = (72, 86, 101)
+                else:
+                    light = round(10 * (1 - y / height))
+                    color = (20 + light, 27 + light, 37 + light)
+                rows.extend((*color, round(min(edge, 1) * (255 if active else 218))))
             else:
                 rows.extend((0, 0, 0, 0))
     name = f"{kind}-focus.png" if active else f"{kind}.png"
@@ -804,7 +860,7 @@ def apply_video_cards(xml):
         # The grouplist stacks the heading before the card list. This top offset
         # is additional padding, measured from the end of the heading control.
         set_fields(fixedlist, {"movement": movement, "top": "18"})
-        set_fields(fixedlist, {"height": "428" if kind == "Poster" else "282"})
+        set_fields(fixedlist, {"height": "452" if kind == "Poster" else "282"})
         for tag in ("itemlayout", "focusedlayout"):
             item = fixedlist.find(tag)
             item.set("width", width)
@@ -814,10 +870,14 @@ def apply_video_cards(xml):
             group.find(f"include[@content='{original}']").set("content", f"Frame{kind}Card")
     search = deepcopy(root.find("include[@name='WidgetListPoster']"))
     search.set("name", "FrameSearchPosters")
+    search_heading = search.find("definition/include[@content='CategoryLabel']")
+    search_heading.set("content", "FrameSearchHeading")
     fixedlist = search.find("definition/control[@type='fixedlist']")
-    set_fields(fixedlist, {"right": "772", "height": "287", "movement": "4"})
+    fixedlist.remove(fixedlist.find("include[@content='WidgetVisibilityAnimations']"))
+    fixedlist.remove(fixedlist.find("animation"))
+    set_fields(fixedlist, {"right": "685", "height": "362", "top": "6", "movement": "3"})
     for layout in (fixedlist.find("itemlayout"), fixedlist.find("focusedlayout")):
-        layout.attrib.update(width="186", height="287")
+        layout.attrib.update(width="235", height="362")
         group = layout.find("control")
         group.find("include[@content='FramePosterCard']").set("content", "FrameSearchPosterCard")
         for name in ("HomeTrailerControl", "ClearLandscapeProperties"):
@@ -922,9 +982,13 @@ def apply_theme(skin, theme_source):
     apply_video_cards(xml)
     apply_motion(xml)
     write_feature_mask(skin)
-    for name, width, height in (("poster", 276, 409), ("landscape", 420, 236), ("search", 168, 252)):
+    for name, width, height in (("poster", 276, 409), ("landscape", 420, 236), ("search", 214, 321)):
         write_focus_glow(skin, name, width, height)
     write_rgba_png(skin / "media/frame/landscape-empty.png", 1, 1, bytes((0, 27, 35, 45, 255)))
+    # A single baked gradient softens the menu edge without an overlay pass.
+    sidebar = bytes((0,)) + b"".join(bytes((15, 22, 32, 253 - round(253 * max(0, (x - 474) / 46))))
+                                        for x in range(521))
+    write_rgba_png(skin / "media/frame/sidebar-panel.png", 478, 1, sidebar)
     write_playback_textures(skin)
     target = xml / theme_source.name
     theme = read_xml(theme_source)

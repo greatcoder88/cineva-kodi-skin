@@ -98,8 +98,9 @@
     <definition>
       <control type="group">
         <width>276</width>
-        <height>409</height>
+        <height>437</height>
         <control type="image">
+          <height>409</height>
           <texture diffuse="masks/poster-big.png" background="true" fallback="frame/landscape-empty.png">$INFO[ListItem.Art(poster)]</texture>
           <aspectratio scalediffuse="false">scale</aspectratio>
         </control>
@@ -114,11 +115,12 @@
           <visible>String.IsEmpty(ListItem.Art(poster))</visible>
         </control>
         <include content="FrameResumeProgress">
-          <param name="top" value="379" />
+          <param name="top" value="413" />
           <param name="left" value="8" />
           <param name="width" value="260" />
           <param name="bar" value="197" />
           <param name="badge" value="209" />
+          <param name="overlay" value="false" />
         </include>
         <include content="FrameCardFocusBorder">
           <param name="width" value="288" />
@@ -153,40 +155,70 @@
     </definition>
   </include>
   <include name="FrameSideMenuPanel">
-    <control type="image" id="8985">
-      <width>465</width>
+    <control type="group" id="8985">
+      <width>521</width>
       <height>1080</height>
-      <texture colordiffuse="dialog_bg3">colors/white.png</texture>
       <visible>Control.HasFocus(9000) | ControlGroup(700).HasFocus</visible>
+      <control type="image">
+        <texture>frame/sidebar-panel.png</texture>
+      </control>
+      <control type="label">
+        <left>48</left><top>57</top><width>405</width><height>62</height>
+        <font>FramePanelTitle</font><aligny>center</aligny>
+        <textcolor>unfocused_text</textcolor><label>Frame</label>
+      </control>
+      <control type="image">
+        <left>48</left><top>135</top><width>405</width><height>1</height>
+        <texture colordiffuse="frame_selection">colors/white.png</texture>
+      </control>
+      <control type="image">
+        <left>48</left><top>870</top><width>405</width><height>1</height>
+        <texture colordiffuse="frame_selection">colors/white.png</texture>
+      </control>
     </control>
   </include>
-  <include name="FrameSideMenuItems">
-    <itemlayout width="420" height="70">
-      <control type="label">
-        <left>22</left>
-        <width>365</width>
-        <height>63</height>
-        <aligny>center</aligny>
-        <font>FrameTVLabel</font>
-        <textcolor>grey</textcolor>
-        <label>$INFO[ListItem.Label]</label>
-      </control>
-    </itemlayout>
-    <focusedlayout width="420" height="70">
+  <variable name="FrameNavigationIcon">
+    <value condition="String.IsEqual(ListItem.Property(id),movies)">DefaultMovies.png</value>
+    <value condition="String.IsEqual(ListItem.Property(id),tvshows)">DefaultTVShows.png</value>
+    <value condition="String.IsEqual(ListItem.Property(id),addons)">DefaultAddon.png</value>
+    <value condition="String.IsEqual(ListItem.Property(id),music)">DefaultMusic.png</value>
+    <value condition="String.IsEqual(ListItem.Property(id),pictures)">DefaultPicture.png</value>
+    <value condition="String.IsEqual(ListItem.Property(id),favorites)">icons/favourites.png</value>
+    <value>DefaultFolder.png</value>
+  </variable>
+  <include name="FrameNavigationRow">
+    <param name="focused">false</param>
+    <definition>
       <control type="image">
-        <width>391</width>
-        <height>63</height>
-        <texture border="23" colordiffuse="button_focus2">masks/focus-long.png</texture>
+        <width>411</width><height>66</height><top>3</top>
+        <texture border="24" colordiffuse="button_focus2">masks/focus-long.png</texture>
+        <visible>$PARAM[focused]</visible>
+      </control>
+      <control type="image">
+        <left>19</left><top>21</top><width>30</width><height>30</height>
+        <texture colordiffuse="unfocused_text" fallback="DefaultFolder.png">$VAR[FrameNavigationIcon]</texture>
+        <aspectratio>keep</aspectratio>
       </control>
       <control type="label">
-        <left>22</left>
-        <width>365</width>
-        <height>63</height>
-        <aligny>center</aligny>
-        <font>FrameTVLabel</font>
-        <textcolor>unfocused_text</textcolor>
+        <left>68</left><width>310</width><height>72</height><aligny>center</aligny>
+        <font>FrameTVLabel</font><textcolor>unfocused_text</textcolor>
         <label>$INFO[ListItem.Label]</label>
       </control>
+      <control type="image">
+        <left>390</left><top>28</top><width>5</width><height>16</height>
+        <texture colordiffuse="$VAR[FrameAccent]">colors/white.png</texture>
+        <visible>$PARAM[focused] + Control.HasFocus(9000)</visible>
+      </control>
+    </definition>
+  </include>
+  <include name="FrameSideMenuItems">
+    <itemlayout width="411" height="72">
+      <include content="FrameNavigationRow" />
+    </itemlayout>
+    <focusedlayout width="411" height="72">
+      <include content="FrameNavigationRow">
+        <param name="focused" value="true" />
+      </include>
     </focusedlayout>
   </include>
   <include name="FrameHomeFeature">
@@ -262,12 +294,31 @@
             <include>FrameHomeRatings</include>
           </control>
         </control>
+        <control type="group" id="8998">
+          <top>401</top>
+          <width>275</width>
+          <height>36</height>
+          <visible>Skin.HasSetting(Enable.SmartStatus) + ControlGroup(2000).HasFocus + $EXP[isMovie] + $EXP[FrameRatingCurrent] + !String.IsEmpty(Window(Home).Property(nimbus.digital_release_date)) + [String.IsEqual(Window(Home).Property(nimbus.digital_release_flag),true) | String.IsEqual(Window(Home).Property(nimbus.digital_release_flag),recently) | String.IsEqual(Window(Home).Property(nimbus.digital_release_flag),false)]</visible>
+          <control type="image">
+            <texture border="13" colordiffuse="$VAR[DigitalReleaseColor]">masks/flixicon-filled.png</texture>
+          </control>
+          <control type="label" id="8999">
+            <left>14</left>
+            <right>12</right>
+            <height>36</height>
+            <aligny>center</aligny>
+            <font>FrameProgress</font>
+            <textcolor>$VAR[DigitalReleaseTextColor]</textcolor>
+            <label>$VAR[DigitalReleaseValue]</label>
+          </control>
+        </control>
         <width>820</width>
-        <height>413</height>
+        <height>440</height>
       </control>
     </control>
   </include>
   <include name="FrameResumeProgress">
+    <param name="overlay">true</param>
     <definition>
       <control type="group">
         <left>$PARAM[left]</left>
@@ -278,6 +329,7 @@
         <control type="image">
           <width>$PARAM[width]</width>
           <height>24</height>
+          <visible>$PARAM[overlay]</visible>
           <texture border="8" colordiffuse="EC161B23">masks/focus-long.png</texture>
         </control>
         <control type="progress">
@@ -286,7 +338,7 @@
           <width>$PARAM[bar]</width>
           <height>4</height>
           <texturebg colordiffuse="osd_grey">osd/ProgressBack.png</texturebg>
-          <midtexture colordiffuse="frame_track_accent">osd/Progress.png</midtexture>
+          <midtexture colordiffuse="$VAR[FrameAccent]">osd/Progress.png</midtexture>
           <info>ListItem.PercentPlayed</info>
         </control>
         <control type="label">
@@ -310,7 +362,7 @@
         <width>492</width>
         <height>62</height>
         <texture border="22" colordiffuse="frame_track_focus">masks/focus-long.png</texture>
-        <visible>[$PARAM[focused] + Control.HasFocus($PARAM[id])] | String.IsEqual(Window(VideoOSD).Property(FrameActiveTrack.$PARAM[kind]),ListItem.Property(FrameTrackIndex))</visible>
+        <visible>$PARAM[focused] + Control.HasFocus($PARAM[id])</visible>
         <top>4</top>
       </control>
       <control type="image">
@@ -360,7 +412,7 @@
     <definition>
       <control type="group">
         <right>$PARAM[right]</right>
-        <bottom>279</bottom>
+        <bottom>321</bottom>
         <width>377</width>
         <height>307</height>
         <visible>[$PARAM[available]] + [Control.HasFocus($PARAM[button]) | Control.HasFocus($PARAM[id]) | String.IsEqual(Window(VideoOSD).Property(FrameTrackPicker),$PARAM[kind])]</visible>
@@ -437,31 +489,61 @@
       </control>
     </definition>
   </include>
+  <include name="FrameSearchHeading">
+    <definition>
+      <control type="label">
+        <left>72</left>
+        <width>1120</width>
+        <height>43</height>
+        <aligny>center</aligny>
+        <font>FrameTVLabel</font>
+        <textcolor>unfocused_text</textcolor>
+        <label>$PARAM[label]</label>
+        <visible>Integer.IsGreater(Container($PARAM[list_id]).NumItems,0) | Container($PARAM[list_id]).IsUpdating</visible>
+      </control>
+    </definition>
+  </include>
   <include name="FrameSearchPosterCard">
     <param name="focused">false</param>
     <definition>
       <control type="group">
-        <width>168</width>
-        <height>270</height>
+        <width>214</width>
+        <height>350</height>
         <control type="image">
-          <width>168</width>
-          <height>252</height>
+          <width>214</width>
+          <height>321</height>
           <aspectratio>scale</aspectratio>
           <texture background="true" fallback="frame/landscape-empty.png" diffuse="masks/poster-big.png">$INFO[ListItem.Art(poster)]</texture>
         </control>
         <control type="textbox">
           <left>9</left>
-          <top>115</top>
-          <width>150</width>
+          <top>155</top>
+          <width>196</width>
           <height>100</height>
           <font>FrameProgress</font>
           <textcolor>unfocused_text</textcolor>
           <label>$INFO[ListItem.Label]</label>
           <visible>String.IsEmpty(ListItem.Art(poster))</visible>
         </control>
+        <include content="FrameResumeProgress">
+          <param name="top" value="326" />
+          <param name="left" value="0" />
+          <param name="width" value="214" />
+          <param name="bar" value="148" />
+          <param name="badge" value="161" />
+          <param name="overlay" value="false" />
+        </include>
+        <control type="image">
+          <left>173</left>
+          <top>12</top>
+          <width>29</width>
+          <height>29</height>
+          <texture>OverlayWatched.png</texture>
+          <visible>!ListItem.IsResumable + [Integer.IsGreater(ListItem.PlayCount,0) | String.IsEqual(ListItem.Overlay,OverlayWatched.png)]</visible>
+        </control>
         <include content="FrameCardFocusBorder">
-          <param name="width" value="180" />
-          <param name="height" value="264" />
+          <param name="width" value="226" />
+          <param name="height" value="333" />
           <param name="mask" value="frame/focus-search.png" />
           <param name="focused" value="$PARAM[focused]" />
           <param name="list_id" value="$PARAM[list_id]" />
@@ -471,18 +553,18 @@
   </include>
   <include name="FrameSearchDetails">
     <control type="group" id="8890">
-      <left>1213</left>
-      <top>153</top>
-      <width>634</width>
+      <left>1266</left>
+      <top>115</top>
+      <width>581</width>
       <height>715</height>
-      <visible>!String.IsEmpty(Window(Home).Property(nimbus.search.input)) + [!String.IsEmpty(Container(19011).ListItem.Label) | !String.IsEmpty(Container(19012).ListItem.Label)]</visible>
+      <visible>!String.IsEmpty(Window(Home).Property(nimbus.search.input)) + [[ControlGroup(2000).HasFocus + !String.IsEmpty(ListItem.Label)] | !String.IsEmpty(Container(19011).ListItem.Label) | !String.IsEmpty(Container(19012).ListItem.Label)]</visible>
       <control type="image">
         <texture border="25" colordiffuse="primary_content_panel_bg">masks/focus-long.png</texture>
       </control>
       <control type="textbox" id="8891">
         <left>38</left>
         <top>42</top>
-        <width>558</width>
+        <width>505</width>
         <height>84</height>
         <font>FramePanelTitle</font>
         <textcolor>unfocused_text</textcolor>
@@ -491,7 +573,7 @@
       <control type="label" id="8892">
         <left>38</left>
         <top>138</top>
-        <width>558</width>
+        <width>505</width>
         <height>45</height>
         <font>FrameTVLabel</font>
         <textcolor>grey</textcolor>
@@ -500,14 +582,14 @@
       <control type="image">
         <left>38</left>
         <top>194</top>
-        <width>558</width>
+        <width>505</width>
         <height>2</height>
         <texture colordiffuse="frame_selection">colors/white.png</texture>
       </control>
       <control type="textbox" id="8893">
         <left>38</left>
         <top>225</top>
-        <width>558</width>
+        <width>505</width>
         <height>365</height>
         <font>FrameBody</font>
         <textcolor>unfocused_text</textcolor>

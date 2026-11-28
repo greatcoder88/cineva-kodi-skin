@@ -79,11 +79,16 @@ def main():
     handle = int(sys.argv[1])
     query = parse_qs(sys.argv[2].lstrip("?")) if len(sys.argv) > 2 else {}
     action = query.get("action", [""])[-1]
-    if action == "hold_ratings":
+    if action in ("begin_ratings", "hold_ratings"):
         window = xbmcgui.Window(10000)
-        for prop, infolabel in (("Path", "FilenameAndPath"), ("Label", "Label"), ("Year", "Year")):
-            window.setProperty(f"nimbus.frameRating{prop}", xbmc.getInfoLabel(f"ListItem.{infolabel}"))
-        window.setProperty("nimbus.imdbRating", "7.1")
+        window.clearProperty("nimbus.frameRatingPath")
+        if action == "hold_ratings":
+            for prop, infolabel in (("Path", "FilenameAndPath"), ("Label", "Label"), ("Year", "Year")):
+                window.setProperty(f"nimbus.frameRating{prop}", xbmc.getInfoLabel(f"ListItem.{infolabel}"))
+            window.setProperty("nimbus.imdbRating", "7.1")
+            window.setProperty("nimbus.digital_release_date", "20 Nov 2026")
+            window.setProperty("nimbus.digital_release_flag", "recently")
+            xbmc.executebuiltin("Skin.SetBool(Enable.SmartStatus)")
         xbmc.executebuiltin("Skin.SetString(RatingSlot1,imdb)")
         xbmc.executebuiltin("Skin.SetString(RatingSlot2,rtc)")
         xbmc.executebuiltin("Skin.SetString(valid_api_key,true)")
@@ -169,7 +174,7 @@ def main():
         item.setProperty("IsPlayable", "true")
         # Continue Watching fixtures need real resume metadata so the skin's
         # progress strips are exercised in both normal and focused card states.
-        if "in_progress" in action:
+        if "in_progress" in action or action == "tmdb_movies_search":
             item.getVideoInfoTag().setResumePoint(90 + index * 80, 900)
         item.setProperty("Cineva.TestFixture", "true")
         entries.append((play_url, item, False))

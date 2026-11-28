@@ -23,7 +23,7 @@ ARTIFACTS = ROOT / "artifacts/frame-gui"
 MOVIES = "plugin://plugin.video.pov/?action=movies"
 SHOWS = "plugin://plugin.video.pov/?action=tvshows"
 PLAYBACK_FIXTURE = PROFILE / "userdata/frame-playback.mkv"
-BASELINE = "d5b65b5b816ae6266d20ebb367b14d3fa129003a"
+BASELINE = "64a5cfde681b8bec71309e78283e44a6b57ce1c7"
 METRICS = {}
 DEPENDENCIES = {
     "certifi": "2023.5.7",
@@ -265,7 +265,7 @@ def focused_card(container, prefix):
     return rpc("XBMC.GetInfoLabels", labels=[field])[field].startswith(prefix)
 
 
-def verify_home(has_track_picker, redesigned):
+def verify_home(has_track_picker, redesigned, polished):
     wait_for("Kodi JSON-RPC is ready", lambda: rpc("JSONRPC.Ping") == "pong", timeout=100)
     for name in DEPENDENCIES:
         rpc("Addons.SetAddonEnabled", addonid=f"script.module.{name}", enabled=True)
@@ -330,12 +330,24 @@ def verify_home(has_track_picker, redesigned):
     press("right")
     wait_for("Right moves to a second movie card", lambda: focused_card(19011, "The Dark Knight"))
     if has_track_picker:
+        missing_rt, rt_badge = "Control.GetLabel(8992)", "Control.IsVisible(8972)"
+        if polished:
+            rpc("Files.GetDirectory", directory="plugin://plugin.video.pov/?action=begin_ratings", media="files")
+            wait_for("Pending Rotten Tomatoes rating shows an ellipsis",
+                     lambda: rpc("XBMC.GetInfoBooleans", booleans=[rt_badge])[rt_badge]
+                     and rpc("XBMC.GetInfoLabels", labels=[missing_rt])[missing_rt] == "…")
         rpc("Files.GetDirectory", directory="plugin://plugin.video.pov/?action=hold_ratings", media="files")
         if redesigned:
-            missing_rt, rt_badge = "Control.GetLabel(8992)", "Control.IsVisible(8972)"
-            wait_for("Rotten Tomatoes icon stays visible with a dash while its score is missing",
-                     lambda: rpc("XBMC.GetInfoBooleans", booleans=[rt_badge])[rt_badge]
-                     and rpc("XBMC.GetInfoLabels", labels=[missing_rt])[missing_rt] == "—")
+            if polished:
+                digital_date = "Control.GetLabel(8999)"
+                wait_for("Completed result hides a missing provider and shows the Nimbus release status",
+                         lambda: not rpc("XBMC.GetInfoBooleans", booleans=[rt_badge])[rt_badge]
+                         and "20 Nov 2026" in rpc("XBMC.GetInfoLabels", labels=[digital_date])[digital_date])
+                screenshot("home-smart-status")
+            else:
+                wait_for("Rotten Tomatoes icon stays visible with a dash when its score is missing",
+                         lambda: rpc("XBMC.GetInfoBooleans", booleans=[rt_badge])[rt_badge]
+                         and rpc("XBMC.GetInfoLabels", labels=[missing_rt])[missing_rt] == "—")
             slot = "Control.GetLabel(8991)"
             wait_for("IMDb stays on the focused item's native score instead of switching to the delayed response",
                      lambda: rpc("XBMC.GetInfoLabels", labels=[slot])[slot] in {"9", "9.0"})
@@ -378,7 +390,7 @@ def verify_home(has_track_picker, redesigned):
              lambda: window_id() == 10000 and focused_card(19012, "Breaking Bad"))
 
 
-def verify_search_and_settings(redesigned):
+def verify_search_and_settings(redesigned, polished):
     press("back")
     wait_for("Home side menu regains focus", lambda: has_focus(9000))
     press("up")
@@ -422,6 +434,12 @@ def verify_search_and_settings(redesigned):
         press("down")
         wait_for("Moving to TV results shows that title's release year",
                  lambda: has_focus(19012) and "2017" in rpc("XBMC.GetInfoLabels", labels=[year])[year])
+        if polished:
+            shelves = ["Control.IsVisible(19011)", "Control.IsVisible(19012)"]
+            resume = "Container(19011).ListItem.PercentPlayed"
+            wait_for("TV focus keeps both shelves displayed, with movie resume metadata",
+                     lambda: all(rpc("XBMC.GetInfoBooleans", booleans=shelves).values())
+                     and int(rpc("XBMC.GetInfoLabels", labels=[resume])[resume] or 0) > 0)
         screenshot("search-tv-result-details")
         press("up")
         wait_for("Returning to movies restores the movie details", lambda: has_focus(19011))
@@ -522,7 +540,7 @@ def verify_playback_osd(has_track_picker):
 
 
 
-def run_gui(packages, has_track_picker=True, redesigned=True):
+def run_gui(packages, has_track_picker=True, redesigned=True, polished=True):
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
     stage_profile(packages)
     trace_library = ARTIFACTS / "frame-swap-trace.so"
@@ -535,8 +553,8 @@ def run_gui(packages, has_track_picker=True, redesigned=True):
                                  "tv.kodi.Kodi//beta", "--standalone", "--windowing=x11"],
                                 stdout=console, stderr=subprocess.STDOUT)
         try:
-            verify_home(has_track_picker, redesigned)
-            verify_search_and_settings(redesigned)
+            verify_home(has_track_picker, redesigned, polished)
+            verify_search_and_settings(redesigned, polished)
             measure_addon_browser()
             verify_source_picker()
             verify_playback_osd(has_track_picker)
@@ -577,9 +595,9 @@ def main():
         packages = baseline / "packages"
         subprocess.run(["python3", str(baseline / "tools/build_frame.py"), "--output", str(packages)], check=True)
         shutil.move(PROFILE, baseline / "candidate-profile")
-        ARTIFACTS = ARTIFACTS / "baseline-0.1.69"
+        ARTIFACTS = ARTIFACTS / "baseline-0.1.70"
         METRICS.clear()
-        run_gui(packages, redesigned=False)
+        run_gui(packages, polished=False)
 
 
 if __name__ == "__main__":
