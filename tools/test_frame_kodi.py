@@ -356,7 +356,8 @@ def verify_home(has_track_picker, redesigned, polished):
                 wait_for("Completed result hides the missing provider's slot",
                          lambda: not rpc("XBMC.GetInfoBooleans", booleans=[rt_slot])[rt_slot])
                 wait_for("Nimbus Smart Status shows the selected movie's digital release date",
-                         lambda: "20 Nov 2026" in rpc("XBMC.GetInfoLabels", labels=[digital_date])[digital_date])
+                         lambda: "Recently released digitally" in rpc("XBMC.GetInfoLabels", labels=[digital_date])[digital_date]
+                         and "20 Nov 2026" in rpc("XBMC.GetInfoLabels", labels=[digital_date])[digital_date])
                 screenshot("home-smart-status")
             else:
                 wait_for("Rotten Tomatoes icon stays visible with a dash when its score is missing",

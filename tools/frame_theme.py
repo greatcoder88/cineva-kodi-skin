@@ -145,8 +145,8 @@ def apply_home(xml):
         control_id = int(item.find("param[@name='control_id']").get("value"))
         label, glyph = {
             801: ("$LOCALIZE[13012]", "power"), 802: ("$LOCALIZE[5]", "settings"),
-            803: ("$LOCALIZE[137]", "search"), 804: ("$LOCALIZE[24048]", "updates"),
-            805: ("$LOCALIZE[19932]", "fullscreen"),
+            803: ("$LOCALIZE[137]", "search"), 804: ("$LOCALIZE[31993]", "updates"),
+            805: ("$LOCALIZE[31994]", "fullscreen"),
         }[control_id]
         if control_id in (801, 802, 803):
             item.find("param[@name='icon']").set("value", f"frame/sidebar-{glyph}.png")
@@ -1009,8 +1009,8 @@ def apply_theme(skin, theme_source):
     apply_palette(skin)
     strings = skin / "language/resource.language.en_gb/strings.po"
     with strings.open("a", encoding="utf-8") as translations:
-        for key, label in ((32951, "Recently released digitally"), (32952, "Digital release scheduled"),
-                           (32953, "Available digitally")):
+        for key, label in ((31990, "Recently released digitally"), (31991, "Digital release scheduled"),
+                           (31992, "Available digitally"), (31993, "Updates"), (31994, "Fullscreen")):
             translations.write(f'\nmsgctxt "#{key}"\nmsgid "{label}"\nmsgstr ""\n')
     apply_typography(xml)
     apply_home(xml)

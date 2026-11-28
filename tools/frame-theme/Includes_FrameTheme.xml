@@ -250,9 +250,9 @@
     </focusedlayout>
   </include>
   <variable name="FrameDigitalReleaseStatus">
-    <value condition="String.IsEqual(Window(Home).Property(nimbus.digital_release_flag),recently)">$LOCALIZE[32951]</value>
-    <value condition="String.IsEqual(Window(Home).Property(nimbus.digital_release_flag),false)">$LOCALIZE[32952]</value>
-    <value>$LOCALIZE[32953]</value>
+    <value condition="String.IsEqual(Window(Home).Property(nimbus.digital_release_flag),recently)">$LOCALIZE[31990]</value>
+    <value condition="String.IsEqual(Window(Home).Property(nimbus.digital_release_flag),false)">$LOCALIZE[31991]</value>
+    <value>$LOCALIZE[31992]</value>
   </variable>
   <include name="FrameHomeFeature">
     <control type="group" id="8980">
@@ -271,6 +271,7 @@
         <left>490</left>
       </control>
       <control type="group">
+        <visible>![Control.HasFocus(9000) | ControlGroup(700).HasFocus]</visible>
         <left>76</left>
         <top>47</top>
         <control type="image">
