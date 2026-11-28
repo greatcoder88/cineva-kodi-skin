@@ -151,11 +151,56 @@ def press(action):
     rpc("Input.ExecuteAction", action=action)
 
 
+def cpu_snapshot():
+    """Read per-thread CPU counters from the one Kodi process in this runner."""
+    for process in Path("/proc").glob("[0-9]*"):
+        try:
+            if (process / "comm").read_text().strip() != "kodi.bin":
+                continue
+        except OSError:
+            continue
+        counters = {}
+        for task in (process / "task").iterdir():
+            try:
+                line = (task / "stat").read_text()
+                name, fields = line.split("(", 1)[1].rsplit(")", 1)
+                fields = fields.split()
+                counters[task.name] = (name, int(fields[11]) + int(fields[12]))
+            except (OSError, ValueError, IndexError):
+                continue
+        return counters
+    return {}
+
+
+def render_profile(start, end, before, after):
+    trace = PROFILE / "frame-swaps.tsv"
+    rows = [line.split() for line in trace.read_text().splitlines()] if trace.exists() else []
+    swaps = [(int(a), int(b), api) for a, b, api in rows if start <= int(a) <= end]
+    gaps = [(b[0] - a[0]) / 1e6 for a, b in zip(swaps, swaps[1:])]
+    threads = {}
+    for ident, (name, ticks) in after.items():
+        if ident in before:
+            threads[name] = threads.get(name, 0) + ticks - before[ident][1]
+    tick_rate = os.sysconf("SC_CLK_TCK")
+    heavy = sorted(threads, key=threads.get, reverse=True)[:5]
+    return {
+        "swap_samples": len(swaps),
+        "swap_api": sorted({api for _, _, api in swaps}),
+        "median_swap_gap_ms": round(statistics.median(gaps), 2) if gaps else None,
+        "p95_swap_gap_ms": round(sorted(gaps)[int((len(gaps) - 1) * 0.95)], 2) if gaps else None,
+        "p95_swap_call_ms": round(sorted((b - a) / 1e6 for a, b, _ in swaps)[int((len(swaps) - 1) * 0.95)], 2) if swaps else None,
+        "swap_gaps_over_33ms": sum(gap > 33.33 for gap in gaps),
+        "thread_cpu_ms": {name: round(threads[name] * 1000 / tick_rate) for name in heavy},
+    }
+
+
 def measure_focus(name, field, forward, reverse):
     """Measure action-to-Kodi-focus, and sample Kodi's rolling GUI FPS."""
     fps_field = "System.FPS"
     wait_for(f"{name} has a selected item", lambda: rpc("XBMC.GetInfoLabels", labels=[field])[field])
     delays, fps = [], []
+    before = cpu_snapshot()
+    profile_start = time.monotonic_ns()
     for action in (forward, reverse) * 12:
         previous = rpc("XBMC.GetInfoLabels", labels=[field])[field]
         start = time.perf_counter()
@@ -173,7 +218,10 @@ def measure_focus(name, field, forward, reverse):
                 break
             time.sleep(0.005)
         time.sleep(0.12)
+    profile_end = time.monotonic_ns()
+    after = cpu_snapshot()
     METRICS[name] = {
+        "profile": render_profile(profile_start, profile_end, before, after),
         "sample_count": len(delays),
         "timeouts": 24 - len(delays),
         "median_focus_ms": statistics.median(delays) if delays else None,
@@ -369,9 +417,15 @@ def verify_playback_osd():
 def run_gui(packages):
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
     stage_profile(packages)
+    trace_library = ARTIFACTS / "frame-swap-trace.so"
+    subprocess.run(["cc", "-shared", "-fPIC", "-O2", "-Wall", "-Wextra",
+                    str(ROOT / "tools/frame_swap_trace.c"), "-ldl", "-o", str(trace_library)], check=True)
     with (ARTIFACTS / "kodi-console.log").open("w") as console:
-        kodi = subprocess.Popen(["flatpak", "run", "--user", "tv.kodi.Kodi//beta",
-                                 "--standalone", "--windowing=x11"], stdout=console, stderr=subprocess.STDOUT)
+        kodi = subprocess.Popen(["flatpak", "run", "--user",
+                                 f"--filesystem={trace_library.parent}:ro",
+                                 f"--env=LD_PRELOAD={trace_library}",
+                                 "tv.kodi.Kodi//beta", "--standalone", "--windowing=x11"],
+                                stdout=console, stderr=subprocess.STDOUT)
         try:
             verify_home()
             verify_search_and_settings()
@@ -394,6 +448,10 @@ def run_gui(packages):
             log = PROFILE / "temp/kodi.log"
             if log.is_file():
                 shutil.copy2(log, ARTIFACTS / "kodi.log")
+            trace = PROFILE / "frame-swaps.tsv"
+            if trace.is_file():
+                shutil.copy2(trace, ARTIFACTS / trace.name)
+            trace_library.unlink(missing_ok=True)
 
 
 def main():
