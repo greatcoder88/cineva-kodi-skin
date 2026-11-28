@@ -57,6 +57,15 @@
           <aspectratio scalediffuse="false">scale</aspectratio>
           <texture diffuse="masks/flixscape-widget.png" background="true" fallback="frame/landscape-empty.png">$VAR[FrameCardArt]</texture>
         </control>
+        <control type="image">
+          <left>141</left>
+          <top>10</top>
+          <width>138</width>
+          <height>216</height>
+          <aspectratio>keep</aspectratio>
+          <visible>String.IsEmpty(ListItem.Art(landscape)) + String.IsEmpty(ListItem.Art(fanart)) + !String.IsEmpty(ListItem.Art(poster))</visible>
+          <texture background="true">$INFO[ListItem.Art(poster)]</texture>
+        </control>
         <control type="label">
           <left>3</left>
           <top>243</top>
@@ -91,10 +100,7 @@
         <width>276</width>
         <height>409</height>
         <control type="image">
-          <texture diffuse="masks/poster-big.png" colordiffuse="primary_content_panel_bg">colors/white.png</texture>
-        </control>
-        <control type="image">
-          <texture diffuse="masks/poster-big.png" background="true">$INFO[ListItem.Art(poster)]</texture>
+          <texture diffuse="masks/poster-big.png" background="true" fallback="frame/landscape-empty.png">$INFO[ListItem.Art(poster)]</texture>
           <aspectratio scalediffuse="false">scale</aspectratio>
         </control>
         <control type="textbox">
