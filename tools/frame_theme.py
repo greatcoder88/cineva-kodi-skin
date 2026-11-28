@@ -346,7 +346,7 @@ def apply_playback(xml):
     transport = find_control(default_osd, 700)
     set_fields(transport, {"left": "90", "width": "705", "align": "left", "itemgap": "24"})
     for button in transport.findall("control[@type='button']"):
-        ET.SubElement(button, "texturenofocus", {"colordiffuse": "00000000"}).text = "colors/white.png"
+        ET.SubElement(button, "texturenofocus").text = "frame/transparent.png"
         button.insert(0, button.find("texturenofocus"))
     play = find_control(transport, 703)
     stop = find_control(transport, 704)
@@ -365,6 +365,13 @@ def apply_playback(xml):
     set_fields(utilities, {"left": "1000", "width": "830", "align": "right", "itemgap": "20"})
     for group in utilities.findall("control[@type='grouplist']"):
         set_fields(group, {"width": "68", "height": "106", "itemgap": "3"})
+        for button in group.findall("control[@type='button']"):
+            include = button.find("include")
+            button.remove(include)
+            for tag, texture in (("texturefocus", "utility-active.png"), ("texturenofocus", "utility-idle.png")):
+                ET.SubElement(button, tag, {"border": "22"}).text = "frame/" + texture
+            set_fields(button, {"focusedcolor": "unfocused_text"})
+            button.append(include)
         for label in group.findall("control[@type='label']"):
             set_fields(label, {"width": "68", "height": "32", "textcolor": "grey", "font": "FrameTab", "aligny": "center"})
     for button_id, list_id, kind, availability in (
@@ -378,12 +385,6 @@ def apply_playback(xml):
                 set_fields(language, {"label": "$LOCALIZE[292]" if kind == "audio" else "$LOCALIZE[287]",
                                       "width": "92", "font": "FrameProgress",
                                       "visible": f"Control.HasFocus({button_id}) | Control.HasFocus({list_id})"})
-                include = button.find("include")
-                button.remove(include)
-                for tag, texture in (("texturefocus", "utility-active.png"), ("texturenofocus", "utility-idle.png")):
-                    ET.SubElement(button, tag, {"border": "22"}).text = "frame/" + texture
-                set_fields(button, {"focusedcolor": "unfocused_text"})
-                button.append(include)
             else:
                 set_fields(parent, {"width": "72", "height": "104", "itemgap": "3"})
             visible = parent.find("visible")
@@ -491,6 +492,7 @@ def write_rgba_png(path, width, height, rows):
 
 def write_playback_textures(skin):
     media = skin / "media/frame"
+    write_rgba_png(media / "transparent.png", 1, 1, bytes(5))
     rows = b"".join(bytes((0, 4, 7, 12, round(253 * (1 - (1 - y / 127) ** 2.4)))) for y in range(128))
     write_rgba_png(media / "playback-scrim.png", 1, 128, rows)
 
