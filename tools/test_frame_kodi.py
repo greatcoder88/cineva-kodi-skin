@@ -75,7 +75,7 @@ def stage_profile():
         db.executemany("INSERT INTO custom_paths VALUES (?, ?, ?, ?, ?)", (
             ("movie.main_menu", MOVIES, "Movies", "", "Movies"),
             ("movie.widget.1", MOVIES + "_in_progress", "In Progress", "WidgetListPoster", "In Progress"),
-            ("movie.widget.2", SHOWS, "Fixture shows", "WidgetListLandscape", "Fixture shows"),
+            ("movie.widget.2", SHOWS, "Fixture shows", "WidgetListPoster", "Fixture shows"),
         ))
     captions = PLAYBACK_FIXTURE.with_suffix(".srt")
     captions.write_text("1\n00:00:02,000 --> 00:00:06,000\nFrame embedded subtitle\n")

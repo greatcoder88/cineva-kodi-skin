@@ -128,15 +128,19 @@ def apply_home(xml):
     items.text = "FrameSideMenuItems"
     menu.insert(list(menu).index(menu.find("content")), items)
 
-    # Keep all generated widget paths and list IDs. Present them below the
-    # feature artwork and bring them up as soon as a shelf takes focus.
-    set_fields(widgets, {"top": "735"})
+    # Widget headings and cards share a bounded shelf area below the hero.
+    # Kodi scrolls the focused row into view, using its actual height.
+    set_fields(widgets, {"top": "611"})
     widgets.remove(widgets.find("include[.='MainMenuAnimations']"))
-    animation = ET.SubElement(widgets, "animation", {
-        "type": "Conditional", "condition": "ControlGroup(2000).HasFocus", "reversible": "true",
-    })
-    ET.SubElement(animation, "effect", {"type": "slide", "start": "0,0", "end": "0,-92",
-                                         "time": "125", "tween": "cubic", "easing": "out"})
+    for shelf in widgets.iter("control"):
+        slide = shelf.find("include[@content='Animation_Widget_Poster_Slide']")
+        if slide is None or shelf.find("include[.='WidgetGroupListCommon']") is None:
+            continue
+        shelf.remove(slide)
+        set_fields(shelf, {"height": "438", "scrolltime": "140"})
+        height = shelf.find("height")
+        shelf.remove(height)
+        shelf.insert(0, height)
 
     content = next(group for group in root.iter("control") if widgets in group)
     top_bar = content.find("include[@content='TopBar']")
