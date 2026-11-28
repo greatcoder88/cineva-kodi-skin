@@ -2,10 +2,13 @@
 """Run Frame's packaged skin in Kodi against two deterministic add-on rows."""
 
 import json
+import os
 import shutil
 import socket
 import sqlite3
 import subprocess
+import statistics
+import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -19,6 +22,8 @@ ARTIFACTS = ROOT / "artifacts/frame-gui"
 MOVIES = "plugin://plugin.video.pov/?action=movies"
 SHOWS = "plugin://plugin.video.pov/?action=tvshows"
 PLAYBACK_FIXTURE = PROFILE / "userdata/frame-playback.mkv"
+BASELINE = "63ee6c64e36ede61a259dbad5324464fc75f17f3"
+METRICS = {}
 DEPENDENCIES = {
     "certifi": "2023.5.7",
     "chardet": "5.1.0",
@@ -35,17 +40,18 @@ def stage_dependency(item):
     url = f"https://mirrors.kodi.tv/addons/omega/{addon_id}/{filename}"
     target = ROOT / "dist/frame-dependencies" / filename
     target.parent.mkdir(parents=True, exist_ok=True)
-    with urlopen(url, timeout=30) as response, target.open("wb") as output:
-        shutil.copyfileobj(response, output)
+    if not target.exists():
+        with urlopen(url, timeout=30) as response, target.open("wb") as output:
+            shutil.copyfileobj(response, output)
     with ZipFile(target) as archive:
         archive.extractall(PROFILE / "addons")
 
 
-def stage_profile():
+def stage_profile(packages):
     addons = PROFILE / "addons"
     addons.mkdir(parents=True, exist_ok=True)
     for addon_id in ("skin.frame", "script.frame.nimbus"):
-        package, = (ROOT / "dist/frame").glob(f"{addon_id}-*.zip")
+        package, = packages.glob(f"{addon_id}-*.zip")
         with ZipFile(package) as archive:
             archive.extractall(addons)
     with ThreadPoolExecutor() as pool:
@@ -145,6 +151,43 @@ def press(action):
     rpc("Input.ExecuteAction", action=action)
 
 
+def measure_focus(name, field, forward, reverse):
+    """Measure action-to-Kodi-focus, and sample Kodi's rolling GUI FPS."""
+    fps_field = "System.FPS"
+    wait_for(f"{name} has a selected item", lambda: rpc("XBMC.GetInfoLabels", labels=[field])[field])
+    delays, fps = [], []
+    for action in (forward, reverse) * 12:
+        previous = rpc("XBMC.GetInfoLabels", labels=[field])[field]
+        start = time.perf_counter()
+        press(action)
+        while time.perf_counter() - start < 1:
+            values = rpc("XBMC.GetInfoLabels", labels=[field, fps_field])
+            if values[field] and values[field] != previous:
+                delays.append(round((time.perf_counter() - start) * 1000, 1))
+                try:
+                    value = float(values[fps_field])
+                    if value > 0:
+                        fps.append(value)
+                except ValueError:
+                    pass
+                break
+            time.sleep(0.005)
+        time.sleep(0.12)
+    METRICS[name] = {
+        "sample_count": len(delays),
+        "timeouts": 24 - len(delays),
+        "median_focus_ms": statistics.median(delays) if delays else None,
+        "p95_focus_ms": sorted(delays)[int((len(delays) - 1) * 0.95)] if delays else None,
+        "median_reported_fps": statistics.median(fps) if fps else None,
+    }
+
+
+def measure_addon_browser():
+    rpc("GUI.ActivateWindow", window="addonbrowser", parameters=["addons://user/"])
+    wait_for("Add-on Browser is open", lambda: window_id() == 10040)
+    measure_focus("addon_browser", "Container.ListItem.Label", "down", "up")
+
+
 def screenshot(name):
     # Kodi exposes the new window and focus before its fade completes.
     time.sleep(0.65)
@@ -224,6 +267,7 @@ def verify_home():
     wait_for("the focused movie's fanart is shown in the hero",
              lambda: rpc("XBMC.GetInfoBooleans", booleans=[fanart])[fanart])
     screenshot("home-first-widget")
+    measure_focus("home_poster", "Container(19011).ListItem.Label", "right", "left")
     press("right")
     wait_for("Right moves to a second movie card", lambda: focused_card(19011, "The Dark Knight"))
     press("info")
@@ -292,6 +336,7 @@ def verify_search_and_settings():
 def verify_source_picker():
     rpc("Player.Open", item={"file": "plugin://plugin.video.pov/?action=source_picker"})
     wait_for("Kodi opens the simulated source list", lambda: window_id() == 12000 and has_focus(3))
+    measure_focus("source_picker", "Container(3).ListItem.Label", "down", "up")
     for index in range(2, 5):
         press("down")
         field = "Container(3).ListItem.Label"
@@ -365,17 +410,20 @@ def verify_playback_osd():
                              properties=["subtitleenabled"])["subtitleenabled"])
 
 
-def main():
+def run_gui(packages, baseline=False):
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
-    stage_profile()
+    stage_profile(packages)
     with (ARTIFACTS / "kodi-console.log").open("w") as console:
         kodi = subprocess.Popen(["flatpak", "run", "--user", "tv.kodi.Kodi//beta",
                                  "--standalone", "--windowing=x11"], stdout=console, stderr=subprocess.STDOUT)
         try:
             verify_home()
             verify_search_and_settings()
+            measure_addon_browser()
             verify_source_picker()
-            verify_playback_osd()
+            if not baseline:
+                verify_playback_osd()
+            (ARTIFACTS / "performance.json").write_text(json.dumps(METRICS, indent=2) + "\n")
         except Exception:
             try:
                 print(f"Final Kodi GUI state: {gui()}", flush=True)
@@ -391,6 +439,26 @@ def main():
             log = PROFILE / "temp/kodi.log"
             if log.is_file():
                 shutil.copy2(log, ARTIFACTS / "kodi.log")
+
+
+def main():
+    global ARTIFACTS
+    run_gui(ROOT / "dist/frame")
+    # CI has a disposable Kodi profile. Recreate it so the older skin is
+    # measured with the same fixtures and without the candidate's caches.
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        return
+    with tempfile.TemporaryDirectory(prefix="frame-baseline-") as workspace:
+        baseline = Path(workspace)
+        subprocess.run(["git", "fetch", "--no-tags", "--depth=1", "origin", BASELINE], cwd=ROOT, check=True)
+        archive = subprocess.check_output(["git", "archive", BASELINE, "tools"], cwd=ROOT)
+        subprocess.run(["tar", "-xf", "-", "-C", workspace], input=archive, check=True)
+        packages = baseline / "packages"
+        subprocess.run(["python3", str(baseline / "tools/build_frame.py"), "--output", str(packages)], check=True)
+        shutil.move(PROFILE, baseline / "candidate-profile")
+        ARTIFACTS = ARTIFACTS / "baseline-0.1.52"
+        METRICS.clear()
+        run_gui(packages, baseline=True)
 
 
 if __name__ == "__main__":

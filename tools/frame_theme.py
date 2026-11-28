@@ -332,6 +332,17 @@ def apply_settings_and_dialogs(xml):
     write_xml(tree, path)
 
 
+def apply_addon_browser(xml):
+    """Keep repository browsing on a stable canvas while the list moves."""
+    path = xml / "AddonBrowser.xml"
+    tree = read_xml(path)
+    controls = tree.getroot().find("controls")
+    artwork = next(group for group in controls.findall("control[@type='group']")
+                   if group.find("include[.='MediaMenuAnimations']") is not None)
+    controls.remove(artwork)
+    write_xml(tree, path)
+
+
 def apply_source_dialogs(xml):
     path = xml / "DialogBusy.xml"
     tree = read_xml(path)
@@ -669,12 +680,11 @@ def apply_motion(xml):
     for animation in dialogs.findall("animation"):
         is_opening = animation.get("type") == "WindowOpen"
         for effect in animation.findall("effect"):
-            effect.attrib.pop("delay", None)
-            effect.set("time", "135" if is_opening else "95")
             if effect.get("type") == "zoom":
-                effect.attrib.update({"tween": "cubic", "easing": "out",
-                                      "start": "98" if is_opening else "100",
-                                      "end": "100" if is_opening else "99"})
+                animation.remove(effect)
+            else:
+                effect.attrib.pop("delay", None)
+                effect.set("time", "105" if is_opening else "75")
     widgets = root.find("include[@name='WidgetVisibilityAnimations']")
     for animation in widgets.findall("animation"):
         if animation.find("effect[@type='fadediffuse']") is not None:
@@ -696,6 +706,7 @@ def apply_theme(skin, theme_source):
     apply_search(xml)
     apply_title_details(xml)
     apply_settings_and_dialogs(xml)
+    apply_addon_browser(xml)
     apply_source_dialogs(xml)
     apply_playback(xml)
     apply_video_cards(xml)

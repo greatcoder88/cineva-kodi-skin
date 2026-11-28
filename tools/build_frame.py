@@ -16,7 +16,7 @@ from frame_theme import apply_theme
 ROOT = Path(__file__).resolve().parents[1]
 THEME_SOURCE = ROOT / "tools/frame-theme/Includes_FrameTheme.xml"
 SKIN_ID = "skin.frame"
-SKIN_VERSION = "0.1.61"
+SKIN_VERSION = "0.1.62"
 HELPER_VERSION = "0.0.54"
 HELPER_ID = "script.frame.nimbus"
 ADDONS = (
