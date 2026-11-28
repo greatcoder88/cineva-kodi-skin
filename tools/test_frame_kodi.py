@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Run Frame's packaged skin in Kodi against two deterministic add-on rows."""
 
+from bisect import bisect_left
 import json
 import os
 import shutil
@@ -172,11 +173,17 @@ def cpu_snapshot():
     return {}
 
 
-def render_profile(start, end, before, after):
+def render_profile(start, end, before, after, inputs):
     trace = PROFILE / "frame-swaps.tsv"
     rows = [line.split() for line in trace.read_text().splitlines()] if trace.exists() else []
     swaps = [(int(a), int(b), api) for a, b, api in rows if start <= int(a) <= end]
     gaps = [(b[0] - a[0]) / 1e6 for a, b in zip(swaps, swaps[1:])]
+    completed = sorted(b for _, b, _ in swaps)
+    after_focus = []
+    for sent, observed in inputs:
+        first = bisect_left(completed, observed)
+        if first < len(completed):
+            after_focus.append((completed[first] - sent) / 1e6)
     threads = {}
     for ident, (name, ticks) in after.items():
         if ident in before:
@@ -185,6 +192,8 @@ def render_profile(start, end, before, after):
     heavy = sorted(threads, key=threads.get, reverse=True)[:5]
     return {
         "swap_samples": len(swaps),
+        "post_focus_swap_samples": len(after_focus),
+        "median_input_to_post_focus_swap_ms": round(statistics.median(after_focus), 2) if after_focus else None,
         "swap_api": sorted({api for _, _, api in swaps}),
         "median_swap_gap_ms": round(statistics.median(gaps), 2) if gaps else None,
         "p95_swap_gap_ms": round(sorted(gaps)[int((len(gaps) - 1) * 0.95)], 2) if gaps else None,
@@ -198,16 +207,18 @@ def measure_focus(name, field, forward, reverse):
     """Measure action-to-Kodi-focus, and sample Kodi's rolling GUI FPS."""
     fps_field = "System.FPS"
     wait_for(f"{name} has a selected item", lambda: rpc("XBMC.GetInfoLabels", labels=[field])[field])
-    delays, fps = [], []
+    delays, fps, inputs = [], [], []
     before = cpu_snapshot()
     profile_start = time.monotonic_ns()
     for action in (forward, reverse) * 12:
         previous = rpc("XBMC.GetInfoLabels", labels=[field])[field]
         start = time.perf_counter()
+        sent = time.monotonic_ns()
         press(action)
         while time.perf_counter() - start < 1:
             values = rpc("XBMC.GetInfoLabels", labels=[field, fps_field])
             if values[field] and values[field] != previous:
+                inputs.append((sent, time.monotonic_ns()))
                 delays.append(round((time.perf_counter() - start) * 1000, 1))
                 try:
                     value = float(values[fps_field])
@@ -221,7 +232,7 @@ def measure_focus(name, field, forward, reverse):
     profile_end = time.monotonic_ns()
     after = cpu_snapshot()
     METRICS[name] = {
-        "profile": render_profile(profile_start, profile_end, before, after),
+        "profile": render_profile(profile_start, profile_end, before, after, inputs),
         "sample_count": len(delays),
         "timeouts": 24 - len(delays),
         "median_focus_ms": statistics.median(delays) if delays else None,

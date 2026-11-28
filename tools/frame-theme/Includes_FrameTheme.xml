@@ -210,6 +210,7 @@
         <texture diffuse="frame/feature-mask.png" background="true">$VAR[FrameFeatureArt]</texture>
         <aspectratio align="right" aligny="center" scalediffuse="false">scale</aspectratio>
         <visible>$EXP[FrameFeatureHasFanart]</visible>
+        <fadetime>100</fadetime>
       </control>
       <control type="group">
         <left>50</left>
