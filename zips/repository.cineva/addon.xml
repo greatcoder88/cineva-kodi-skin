@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<addon id="repository.cineva" name="CINÉVA Add-on Repository" version="0.1.4" provider-name="CINÉVA">
+  <extension point="xbmc.addon.repository" name="CINÉVA Repository">
+    <dir>
+      <info>https://greatcoder88.github.io/cineva-kodi-skin/addons.xml</info>
+      <checksum>https://greatcoder88.github.io/cineva-kodi-skin/addons.xml.md5</checksum>
+      <datadir zip="true">https://greatcoder88.github.io/cineva-kodi-skin/zips/</datadir>
+    </dir>
+  </extension>
+  <extension point="xbmc.addon.metadata">
+    <summary lang="en_GB">Official CINÉVA add-on repository</summary>
+    <description lang="en_GB">Install and update CINÉVA skin and widget helper.</description>
+    <platform>all</platform>
+  </extension>
+</addon>
