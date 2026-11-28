@@ -17,9 +17,10 @@ PALETTE = {
     "button_focus2": "FF343B48",
     "frame_card_focus": "FFE1E5EF",
     "frame_osd_control": "EE262B34",
-    "frame_panel": "FC161B23",
+    "frame_panel": "FF161B23",
     "frame_selection": "FF343B48",
-    "frame_track_accent": "FF9DE2D4",
+    "frame_track_accent": "FFA1EBDD",
+    "frame_track_ring": "668F9CAB",
     "focused_text": "FF141414",
     "unfocused_text": "FFF5F5F5",
     "artwork_dim": "FFFFFFFF",
@@ -88,6 +89,8 @@ def apply_typography(xml):
             ("FrameTVLabel", "Inter-SemiBold.ttf" if inter else label, "27"),
             ("FrameBody", label, "29"),
             ("FrameTab", "Inter-SemiBold.ttf" if inter else label, "26"),
+            ("FrameProgress", label, "21"),
+            ("FramePlaybackTitle", "Inter-Bold.ttf" if inter else title, "44"),
         )
         for name, face, size in fonts:
             set_fields(ET.SubElement(fontset, "font"), {"name": name, "filename": face, "size": size})
@@ -343,7 +346,14 @@ def apply_playback(xml):
     transport = find_control(default_osd, 700)
     set_fields(transport, {"left": "120", "width": "705", "align": "left", "itemgap": "14"})
     play = find_control(transport, 703)
-    set_fields(play, {"width": "96"})
+    play_include = play.find("include")
+    play.remove(play_include)
+    set_fields(play, {"width": "68", "textcolor": "focused_text"})
+    for tag in ("texturefocus", "alttexturefocus", "texturenofocus", "alttexturenofocus"):
+        ET.SubElement(play, tag, {
+            "colordiffuse": "button_focus" if "nofocus" in tag else "frame_track_accent",
+        }).text = "frame/play-disc.png"
+    play.append(play_include)
     utilities = find_control(default_osd, 707)
     set_fields(utilities, {"left": "1010", "width": "790", "align": "right", "itemgap": "14"})
     for group in utilities.findall("control[@type='grouplist']"):
@@ -368,13 +378,27 @@ def apply_playback(xml):
             ET.SubElement(parent, "onup").text = str(list_id)
         picker = ET.SubElement(controls, "include", {"content": "FramePlaybackTracks"})
         for name, value in (("button", button_id), ("id", list_id), ("kind", kind),
-                            ("available", availability), ("title", "$LOCALIZE[292]" if kind == "audio" else "$LOCALIZE[287]")):
+                            ("available", availability), ("right", 187 if kind == "audio" else 120), ("title", "$LOCALIZE[292]" if kind == "audio" else "$LOCALIZE[287]")):
             ET.SubElement(picker, "param", {"name": name, "value": str(value)})
     write_xml(tree, path)
 
     path = xml / "Includes_Seekbar.xml"
     tree = read_xml(path)
     seekbar = tree.getroot().find("include[@name='Seekbar']")
+    seek_controls = seekbar.find("control[@type='group']")
+    for control in seek_controls.findall("control"):
+        if control.get("type") in {"group", "ranges", "slider"} and control.findtext("width") == "1680":
+            set_fields(control, {"left": "240", "width": "1415"})
+        if control.get("type") == "group" and control.findtext("top") == "100":
+            set_fields(control, {"height": "7"})
+        if control.findtext("label") in {"$VAR[PlayerElapsedTimeVar]", "$VAR[PlayerTimeRemainingVar]"}:
+            set_fields(control, {"top": "86", "height": "34", "font": "FrameProgress", "aligny": "center"})
+    backgrounds = tree.getroot().find("include[@name='OSDBackgrounds']")
+    first = backgrounds.find("control")
+    first.find("visible").text = f"String.IsEqual(Skin.String(OSDStyleSetting),1) + [{first.findtext('visible')}]"
+    scrim = ET.SubElement(backgrounds, "control", {"type": "image"})
+    set_fields(scrim, {"bottom": "0", "width": "1920", "height": "362", "texture": "frame/playback-scrim.png",
+                       "visible": "!String.IsEqual(Skin.String(OSDStyleSetting),1)"})
     for animation in seekbar.findall(".//animation[@time='500']"):
         animation.set("time", "125")
     for control in tree.getroot().iter("control"):
@@ -382,9 +406,9 @@ def apply_playback(xml):
         if control.get("type") == "label" and any(
             token in label for token in ("$INFO[VideoPlayer.Title]", "$INFO[Player.Title]", "$VAR[PlayerTitle", "$VAR[NowPlayingLabelVar]")
         ):
-            set_fields(control, {"font": "FrameTVLabel", "textcolor": "osd_light"})
+            set_fields(control, {"font": "FramePlaybackTitle", "textcolor": "osd_light", "top": "20", "height": "63", "width": "1140", "scroll": "false"})
         for midtexture in control.findall("midtexture[@colordiffuse='accent_color']"):
-            midtexture.set("colordiffuse", "red")
+            midtexture.set("colordiffuse", "frame_track_accent")
     write_xml(tree, path)
 
     path = xml / "Includes_Buttons.xml"
@@ -434,14 +458,32 @@ def write_feature_scrim(skin):
             rows.extend(color)
             rows.append(alpha)
 
+    write_rgba_png(skin / "media/frame/feature-scrim.png", width, height, rows)
+
+
+def write_rgba_png(path, width, height, rows):
     def chunk(kind, data):
         return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
 
-    path = skin / "media/frame/feature-scrim.png"
     path.parent.mkdir(parents=True, exist_ok=True)
     header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
     path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header)
                      + chunk(b"IDAT", zlib.compress(rows, 9)) + chunk(b"IEND", b""))
+
+
+def write_playback_textures(skin):
+    media = skin / "media/frame"
+    rows = b"".join(bytes((0, 4, 7, 12, round(253 * (1 - (1 - y / 127) ** 2.4)))) for y in range(128))
+    write_rgba_png(media / "playback-scrim.png", 1, 128, rows)
+
+    disc = bytearray()
+    for y in range(68):
+        disc.append(0)
+        for x in range(68):
+            distance = ((x - 33.5) ** 2 + (y - 33.5) ** 2) ** 0.5
+            alpha = round(255 * max(0, min(1, 34 - distance)))
+            disc.extend((255, 255, 255, alpha))
+    write_rgba_png(media / "play-disc.png", 68, 68, disc)
 
 
 def apply_video_cards(xml):
@@ -506,6 +548,7 @@ def apply_theme(skin, theme_source):
     apply_video_cards(xml)
     apply_motion(xml)
     write_feature_scrim(skin)
+    write_playback_textures(skin)
     target = xml / theme_source.name
     theme = read_xml(theme_source)
     feature_metadata(theme.getroot())
