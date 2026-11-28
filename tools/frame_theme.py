@@ -8,30 +8,30 @@ import zlib
 
 
 PALETTE = {
-    "primary_background": "FF11161D",
+    "primary_background": "FF091221",
     "primary_content_panel_bg": "FF1B232D",
-    "background": "FF0B1016",
+    "background": "FF091221",
     "dialog_tint": "FF161E27",
     "dialog_bg": "F5161E27",
     "dialog_bg2": "FA161E27",
     "dialog_bg3": "FF161E27",
     "button_focus": "FFF5F5F5",
     "button_focus2": "FF293844",
-    "frame_card_focus": "FFE1E5EF",
+    "frame_card_focus": "FF72EBC5",
     "frame_osd_control": "EE262B34",
     "frame_panel": "FF161E27",
     "frame_selection": "FF293844",
-    "frame_track_accent": "FFA1EBDD",
+    "frame_track_accent": "FF72EBC5",
     "frame_track_ring": "FF74808C",
     "focused_text": "FF141414",
     "unfocused_text": "FFF5F5F5",
     "artwork_dim": "FFFFFFFF",
-    "accent_color": "FFE50914",
-    "selected": "FFE50914",
+    "accent_color": "FF72EBC5",
+    "selected": "FF72EBC5",
     "keyboard_selected": "FF505050",
     "bg_overlay": "55000000",
     "grey": "FFB6B8BE",
-    "red": "FFE50914",
+    "red": "FF72EBC5",
     "osd_dark": "E6191919",
     "player_cache": "FF666666",
 }
@@ -87,7 +87,7 @@ def apply_typography(xml):
             fontset.find(f"font[name='{name}']/size").text = size
         inter = title == "Inter-Regular.ttf"
         fonts = (
-            ("FrameHeroTitle", "Inter-Bold.ttf" if inter else title, "61"),
+            ("FrameHeroTitle", "Inter-Bold.ttf" if inter else title, "72"),
             ("FrameTVLabel", "Inter-SemiBold.ttf" if inter else label, "27"),
             ("FrameBody", label, "29"),
             ("FrameTab", "Inter-SemiBold.ttf" if inter else label, "26"),
@@ -128,19 +128,17 @@ def apply_home(xml):
     items.text = "FrameSideMenuItems"
     menu.insert(list(menu).index(menu.find("content")), items)
 
-    # Widget headings and cards share a bounded shelf area below the hero.
-    # Kodi scrolls the focused row into view, using its actual height.
-    set_fields(widgets, {"top": "611"})
+    # Use a stable shelf viewport. Kodi brings the focused row into view.
+    set_fields(widgets, {"top": "490"})
     widgets.remove(widgets.find("include[.='MainMenuAnimations']"))
     for shelf in widgets.iter("control"):
         slide = shelf.find("include[@content='Animation_Widget_Poster_Slide']")
         if slide is None or shelf.find("include[.='WidgetGroupListCommon']") is None:
             continue
         shelf.remove(slide)
-        set_fields(shelf, {"height": "438", "scrolltime": "100"})
-        height = shelf.find("height")
-        shelf.remove(height)
-        shelf.insert(0, height)
+        shelf.insert(0, ET.Element("itemgap"))
+        shelf.insert(0, ET.Element("height"))
+        set_fields(shelf, {"height": "574", "itemgap": "0"})
 
     content = next(group for group in root.iter("control") if widgets in group)
     top_bar = content.find("include[@content='TopBar']")
@@ -188,7 +186,7 @@ def feature_metadata(theme):
     logo_visible.text = f"Skin.HasSetting(Enable.Clearlogo) + [{' | '.join(logo_sources)}]"
     fields = {
         "Title": ("Label", ""), "Art": ("Art(fanart)", ""), "Year": ("Year", ""),
-        "Genre": ("Genre", ",  •  "), "Plot": ("Plot", ""), "Logo": ("Art(clearlogo)", ""),
+        "Genre": ("Genre", ",  •  "), "Runtime": ("Duration", ",  •  "), "Plot": ("Plot", ""), "Logo": ("Art(clearlogo)", ""),
         "Rating": ("Rating", ",★  "),
         "Tomatometer": ("Property(Rating.tomatoes.Percent)", ",   ·   RT  ,%"),
     }
@@ -214,22 +212,62 @@ def apply_search(xml):
     root = tree.getroot()
     controls = root.find("controls")
     add_section_header(controls, "$LOCALIZE[137]")
-    set_fields(find_control(root, 2000), {"top": "430"})
+    artwork = next(group for group in controls.findall("control[@type='group']")
+                   if group.find("include[.='MediaMenuAnimations']") is not None)
+    controls.remove(artwork)
+    results_group = find_control(root, 2000)
+    set_fields(results_group, {"top": "262"})
+    results_list = find_control(results_group, 19001)
+    results_list.remove(results_list.find("include[@content='Animation_Widget_Poster_Slide']"))
+    results_list.insert(0, ET.Element("itemgap"))
+    results_list.insert(0, ET.Element("height"))
+    set_fields(results_list, {"height": "764", "itemgap": "18"})
+    content = next(group for group in controls.findall("control") if results_group in group)
+    content.remove(content.find("include[@content='TopBar']"))
+    preview = next(group for group in content.iter("control") if group.find("include[.='FlixPanel']") is not None)
+    preview_parent = next(group for group in content.iter("control") if preview in group)
+    preview_parent.remove(preview)
+    chrome = ET.Element("control", {"type": "group"})
+    set_fields(chrome, {"left": "72", "top": "153", "width": "1280", "height": "76",
+                        "visible": "!String.IsEmpty(Window(Home).Property(nimbus.search.input))"})
+    ET.SubElement(chrome, "include").text = "SearchMenuAnimations"
+    surface = ET.SubElement(chrome, "control", {"type": "image"})
+    ET.SubElement(surface, "texture", {"border": "24", "colordiffuse": "primary_content_panel_bg"}).text = (
+        "masks/focus-long.png"
+    )
+    query = ET.SubElement(chrome, "control", {"type": "label"})
+    set_fields(query, {"left": "28", "right": "28", "height": "76", "aligny": "center",
+                       "font": "FramePanelTitle", "textcolor": "unfocused_text",
+                       "label": "$INFO[Window(Home).Property(nimbus.search.input)]"})
+    content.insert(list(content).index(results_group), chrome)
 
     history = find_control(root, 9000)
-    set_fields(history, {"top": "254", "width": "590", "scrolltime": "200"})
+    set_fields(history, {"top": "300", "width": "555", "scrolltime": "175"})
+    history_group = next(group for group in root.iter("control") if history in group)
+    history_group.find("animation/effect").set("time", "135")
     for label in root.iter("label"):
         if label.text == "$VAR[RecentSearchesCaseVar]":
             heading = next(control for control in root.iter("control") if label in control)
-            set_fields(heading, {"top": "182", "height": "65", "font": "FrameTVLabel"})
+            set_fields(heading, {"top": "235", "height": "54", "font": "FramePanelTitle", "textcolor": "unfocused_text"})
         elif label.text and label.text.startswith("Search results for:"):
             heading = next(control for control in root.iter("control") if label in control)
-            label.text = "Results for ‘$INFO[Window(home).Property(nimbus.search.input)]’"
-            set_fields(heading, {"left": "64", "top": "436", "font": "FrameTVLabel", "textcolor": "grey"})
+            content.remove(heading)
         elif label.text == "$INFO[Window(home).Property(nimbus.search.history.empty)]":
             message = next(control for control in root.iter("control") if label in control)
-            set_fields(message, {"left": "570", "top": "205", "width": "960", "height": "95",
+            set_fields(message, {"left": "84", "top": "286", "width": "476", "height": "105",
                                  "font": "FrameTVLabel", "textcolor": "grey"})
+    write_xml(tree, path)
+
+    path = xml / "DialogKeyboard.xml"
+    tree = read_xml(path)
+    root = tree.getroot()
+    for control in root.iter("control"):
+        font = control.find("font")
+        if font is not None and font.text == "font45":
+            font.text = "FramePanelTitle"
+        texture = control.find("texture")
+        if texture is not None and texture.get("colordiffuse") == "$VAR[FocusColorTheme]":
+            texture.set("colordiffuse", "button_focus2")
     write_xml(tree, path)
 
     path = xml / "Includes_Search.xml"
@@ -267,7 +305,7 @@ def apply_title_details(xml):
     action_group = next(group for group in root.iter("control") if actions in group)
     poster = next(control for control in action_group.findall("control[@type='image']")
                   if control.findtext("texture") == "$VAR[FlixPosterVar]")
-    set_fields(poster, {"width": "790", "height": "445", "right": "66", "top": "200"})
+    set_fields(poster, {"width": "790", "height": "565", "right": "66", "top": "211"})
     poster.remove(poster.find("bottom"))
     artwork = poster.find("texture")
     artwork.text = "$INFO[ListItem.Art(fanart)]"
@@ -277,8 +315,6 @@ def apply_title_details(xml):
     for control in root.iter("control"):
         label = control.findtext("label")
         if label == "[B]$VAR[DialogInfoTitle][/B]":
-            metadata = next(group for group in root.iter("control") if control in group)
-            set_fields(metadata, {"width": "610", "itemgap": "10"})
             control.set("id", "8982")
             set_fields(control, {"font": "FrameHeroTitle", "align": "left"})
             # Stock Nimbus omits the closing group delimiter in this expression.
@@ -312,13 +348,19 @@ def apply_settings_and_dialogs(xml):
         for control in layout.findall("control"):
             set_fields(control, {"height": "75"})
             if control.get("type") == "label":
-                set_fields(control, {"font": "FrameTVLabel", "aligny": "center",
-                                     "textoffsety": "0", "textcolor": "unfocused_text"})
+                set_fields(control, {"font": "FrameTVLabel", "aligny": "center", "textoffsety": "0"})
             elif control.get("type") == "image":
-                control.find("texture").attrib.update({"border": "22", "colordiffuse": "frame_selection"})
-            elif control.get("type") == "button":
-                set_fields(control, {"font": "FrameTVLabel"})
+                control.find("texture").set("border", "22")
     write_xml(tree, path)
+
+    for name in ("Settings.xml", "SettingsCategory.xml", "Custom_1107_SearchDialog.xml"):
+        path = xml / name
+        tree = read_xml(path)
+        for control in tree.getroot().iter("control"):
+            font = control.find("font")
+            if font is not None and font.text in {"font36_title", "font45", "font45_title"}:
+                font.text = "FramePanelTitle"
+        write_xml(tree, path)
 
     path = xml / "DialogContextMenu.xml"
     tree = read_xml(path)
@@ -329,36 +371,6 @@ def apply_settings_and_dialogs(xml):
     header = next(control for control in root.iter("control")
                   if control.findtext("label") == "$VAR[ContextMenuTitleVar]")
     set_fields(header, {"font": "font32_title", "scroll": "true", "scrollspeed": "35"})
-    write_xml(tree, path)
-
-
-def apply_source_dialogs(xml):
-    path = xml / "DialogBusy.xml"
-    tree = read_xml(path)
-    root = tree.getroot()
-    for animation in root.findall("animation"):
-        root.remove(animation)
-    busy = root.find("controls/control")
-    for animation in busy.findall("animation"):
-        busy.remove(animation)
-    spinner = next(control for control in busy.iter("control")
-                   if control.findtext("texture") == "loading.gif")
-    spinner.find("texture").attrib.clear()
-    set_fields(spinner, {"width": "56", "height": "56", "texture": "frame/loading-ring.png"})
-    ET.SubElement(spinner, "animation", {"effect": "rotate", "start": "0", "end": "360",
-                                         "center": "auto", "time": "850", "loop": "true",
-                                         "condition": "true"}).text = "Conditional"
-    write_xml(tree, path)
-
-    path = xml / "DialogSelect.xml"
-    tree = read_xml(path)
-    tree.getroot().remove(tree.getroot().find("include[.='Animation_DialogPopupOpenClose']"))
-    write_xml(tree, path)
-    path = xml / "Includes_DialogSelect.xml"
-    tree = read_xml(path)
-    layouts = tree.getroot().find("include[@name='DefaultDialogSelectLayout']")
-    for control in layouts.findall(".//control[@type='list']"):
-        set_fields(control, {"scrolltime": "75"})
     write_xml(tree, path)
 
 
@@ -375,7 +387,8 @@ def apply_playback(xml):
                        if group.find("include[@content='Seekbar']") is not None)
     set_fields(default_osd, {"height": "295"})
     for event in ("onload", "onunload"):
-        ET.SubElement(tree.getroot(), event).text = "ClearProperty(FrameTracksRevision)"
+        for kind in ("audio", "subtitle"):
+            ET.SubElement(tree.getroot(), event).text = f"ClearProperty(FrameActiveTrack.{kind})"
         ET.SubElement(tree.getroot(), event).text = "ClearProperty(FrameTrackPicker)"
     for group in default_osd.findall("control[@type='grouplist']"):
         if group.findtext("top") == "120":
@@ -469,6 +482,9 @@ def apply_playback(xml):
             set_fields(control, {"height": "7"})
         if control.findtext("label") in {"$VAR[PlayerElapsedTimeVar]", "$VAR[PlayerTimeRemainingVar]"}:
             set_fields(control, {"top": "86", "height": "34", "font": "FrameProgress", "aligny": "center"})
+    end_time = seek_controls.find("control[label='$VAR[PlayerEndTimeVar]']")
+    if end_time is not None:
+        seek_controls.remove(end_time)
     backgrounds = tree.getroot().find("include[@name='OSDBackgrounds']")
     first = backgrounds.find("control")
     first.find("visible").text = f"String.IsEqual(Skin.String(OSDStyleSetting),1) + [{first.findtext('visible')}]"
@@ -519,20 +535,16 @@ def apply_playback(xml):
 
 
 def write_feature_mask(skin):
-    # One small stretchable texture keeps the title legible over bright artwork.
-    # Fade the edge of the artwork into the matching solid skin background.
-    width, height = 224, 82
+    # Bake both gradients into the diffuse texture for a single hero image.
+    width, height = 224, 96
     rows = bytearray()
     for y in range(height):
         rows.append(0)
+        vertical = min(1, (height - 1 - y) / 24)
         for x in range(width):
-            horizontal = 1 - min(1, x / (width - 1) / 0.40)
-            horizontal = horizontal ** 2 * (3 - 2 * horizontal)
-            vertical = max(0, (y / (height - 1) - 0.65) / 0.35) ** 2
-            alpha = round(255 * (1 - horizontal) * (1 - vertical))
-            rows.extend((255, 255, 255))
-            rows.append(alpha)
-
+            horizontal = min(1, x / 86)
+            alpha = round(255 * horizontal ** 1.6 * vertical ** 1.5)
+            rows.extend((255, 255, 255, alpha))
     write_rgba_png(skin / "media/frame/feature-mask.png", width, height, rows)
 
 
@@ -549,15 +561,6 @@ def write_rgba_png(path, width, height, rows):
 def write_playback_textures(skin):
     media = skin / "media/frame"
     write_rgba_png(media / "transparent.png", 1, 1, bytes(5))
-    ring = bytearray()
-    for y in range(56):
-        ring.append(0)
-        for x in range(56):
-            dx, dy = x - 27.5, y - 27.5
-            edge = max(0, min(1, 2 - abs(math.hypot(dx, dy) - 23)))
-            sweep = (math.atan2(dy, dx) % math.tau) / math.tau
-            ring.extend((161, 235, 221, round(255 * edge * (0.12 + 0.88 * sweep ** 2))))
-    write_rgba_png(media / "loading-ring.png", 56, 56, ring)
     rows = b"".join(bytes((0, 4, 7, 12, round(253 * (1 - (1 - y / 127) ** 2.4)))) for y in range(128))
     write_rgba_png(media / "playback-scrim.png", 1, 128, rows)
 
@@ -637,27 +640,39 @@ def apply_video_cards(xml):
     root = tree.getroot()
     for kind, original, width, movement in (
         ("Landscape", "FlixScapeWidgetMovieLayout", "326", "5"),
-        ("Poster", "FlixWidgetMovieLayout", "208", "7"),
+        ("Poster", "FlixWidgetMovieLayout", "298", "5"),
     ):
         layout = root.find(f"include[@name='WidgetList{kind}']/definition")
         fixedlist = layout.find("control[@type='fixedlist']")
-        set_fields(fixedlist, {"movement": movement})
+        # The grouplist stacks the heading before the card list. This top offset
+        # is additional padding, measured from the end of the heading control.
+        set_fields(fixedlist, {"movement": movement, "top": "18"})
+        set_fields(fixedlist, {"height": "428" if kind == "Poster" else "210"})
         for tag in ("itemlayout", "focusedlayout"):
             item = fixedlist.find(tag)
             item.set("width", width)
+            if kind == "Poster":
+                item.set("height", "428")
             group = item.find("control")
-            set_fields(group, {"left": "64", "top": "12"})
+            set_fields(group, {"left": "72", "top": "12"})
             group.find(f"include[@content='{original}']").set("content", f"Frame{kind}Card")
     category = root.find("include[@name='CategoryLabel']/definition/control")
-    set_fields(category, {"left": "64", "top": "52"})
+    set_fields(category, {"left": "72", "top": "37", "height": "56"})
     for control in category.findall("control[@type='label']"):
-        set_fields(control, {"top": "0", "height": "40", "aligny": "center",
-                             "font": "FrameTVLabel", "textcolor": "unfocused_text",
+        set_fields(control, {"left": "0", "top": "0", "height": "56", "aligny": "center",
+                             "font": "FramePanelTitle", "textcolor": "unfocused_text",
                              "label": "$PARAM[label]", "scroll": "false"})
-        if control.find("left") is not None:
-            set_fields(control, {"left": "0"})
         for animation in control.findall("animation"):
             control.remove(animation)
+    # Reserve the far-right gutter for widget navigation indicators.
+    include_path = xml / "Includes.xml"
+    includes = read_xml(include_path)
+    arrows = includes.getroot().find("include[@name='WidgetUpDownArrows']/definition")
+    for control in arrows.findall("control"):
+        direction = control.find("texturefocus").get("flipy")
+        set_fields(control, {"left": "1854", "top": "39" if direction else "70",
+                             "width": "24", "height": "24"})
+    write_xml(includes, include_path)
     write_xml(tree, path)
 
 
@@ -665,26 +680,21 @@ def apply_motion(xml):
     path = xml / "Includes_Animations.xml"
     tree = read_xml(path)
     root = tree.getroot()
+    search_slide = root.find("include[@name='SearchMenuAnimations']/animation/effect")
+    search_slide.set("time", "135")
+    search_slide.set("end", "552,0")
     dialogs = root.find("include[@name='Animation_DialogPopupOpenClose']")
     for animation in dialogs.findall("animation"):
         is_opening = animation.get("type") == "WindowOpen"
         for effect in animation.findall("effect"):
-            effect.attrib.pop("delay", None)
-            effect.set("time", "135" if is_opening else "95")
             if effect.get("type") == "zoom":
-                effect.attrib.update({"tween": "cubic", "easing": "out",
-                                      "start": "98" if is_opening else "100",
-                                      "end": "100" if is_opening else "99"})
+                animation.remove(effect)
+            else:
+                effect.attrib.pop("delay", None)
+                effect.set("time", "105" if is_opening else "75")
     widgets = root.find("include[@name='WidgetVisibilityAnimations']")
-    for animation in widgets.findall("animation"):
-        if animation.find("effect[@type='fadediffuse']") is not None:
-            widgets.remove(animation)
-        else:
-            for effect in animation.findall("effect"):
-                effect.set("time", "80")
-    navigation = root.find("include[@name='WidgetNavigationAnimations']")
-    for animation in navigation.findall("animation"):
-        animation.set("time", "100")
+    for effect in widgets.findall(".//effect"):
+        effect.set("time", "150" if effect.get("type") == "fade" else "105")
     write_xml(tree, path)
 
 
@@ -696,7 +706,6 @@ def apply_theme(skin, theme_source):
     apply_search(xml)
     apply_title_details(xml)
     apply_settings_and_dialogs(xml)
-    apply_source_dialogs(xml)
     apply_playback(xml)
     apply_video_cards(xml)
     apply_motion(xml)
@@ -708,20 +717,13 @@ def apply_theme(skin, theme_source):
     write_xml(theme, target)
     include_path = xml / "Includes.xml"
     includes = read_xml(include_path)
-    arrows = includes.getroot().find("include[@name='WidgetUpDownArrows']/definition")
-    for control in arrows.findall("control"):
-        texture = control.find("texturefocus")
-        upward = texture.get("flipy") == "true"
-        set_fields(control, {"left": "19", "top": "112" if upward else "145", "width": "20", "height": "20"})
-        for tag in ("texturefocus", "texturenofocus"):
-            control.find(tag).set("colordiffuse", "988F9CAB")
     ET.SubElement(includes.getroot(), "include", {"file": target.name})
     write_xml(includes, include_path)
 
     path = xml / "Includes_Home.xml"
     widgets = read_xml(path)
     list_common = widgets.getroot().find("include[@name='WidgetListCommon']")
-    set_fields(list_common, {"scrolltime": "105"})
+    set_fields(list_common, {"scrolltime": "220"})
     landscape = widgets.getroot().find("include[@name='WidgetListLandscape']/definition/control[@type='fixedlist']/visible")
     landscape.text += " | [Window.IsVisible(11121) + String.IsEqual(Window(Home).Property(nimbus.search.refreshing),true)]"
     write_xml(widgets, path)
